@@ -1,8 +1,9 @@
-import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Bot, FileText, User } from "lucide-react";
 import { HIITLogo } from "./HIITLogo";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useProfile } from "@/hooks/useProfile";
 
 interface BottomNavProps {
   onCenterClick: () => void;
@@ -19,6 +20,7 @@ const navItems = [
 export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { profile } = useProfile();
 
   const getActiveTab = () => {
     const current = navItems.find(item => item.path === location.pathname);
@@ -48,7 +50,16 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
                     className="relative -mt-6 sm:-mt-8 transition-transform duration-300 hover:scale-110 active:scale-95 touch-manipulation"
                     aria-label="Open quick actions menu"
                   >
-                    <HIITLogo size="lg" showGlow />
+                    {profile?.avatar_url ? (
+                      <Avatar className="w-16 h-16 border-2 border-primary pulse-glow">
+                        <AvatarImage src={profile.avatar_url} alt="Profile" />
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {profile.display_name?.slice(0, 2).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <HIITLogo size="lg" showGlow />
+                    )}
                   </button>
                 );
               }
