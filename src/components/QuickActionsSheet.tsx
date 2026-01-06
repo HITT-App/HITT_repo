@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { 
   Heart, 
   Activity, 
@@ -26,18 +27,19 @@ interface QuickActionsSheetProps {
 }
 
 const quickActions = [
-  { id: "health", icon: Heart, label: "Health Metrics", color: "text-red-400" },
-  { id: "activity", icon: Activity, label: "Activity", color: "text-green-400" },
-  { id: "sleep", icon: Moon, label: "Sleep", color: "text-blue-400" },
-  { id: "nutrition", icon: Apple, label: "Nutrition", color: "text-orange-400" },
-  { id: "workouts", icon: Dumbbell, label: "Workouts", color: "text-purple-400" },
-  { id: "coaching", icon: Calendar, label: "Coach Book...", color: "text-pink-400" },
-  { id: "community", icon: Users, label: "Community", color: "text-cyan-400" },
-  { id: "hiit-ai", icon: Bot, label: "HIIT AI", color: "text-yellow-400" },
-  { id: "resources", icon: BookOpen, label: "Resources", color: "text-emerald-400" },
+  { id: "health", icon: Heart, label: "Health Metrics", color: "text-red-400", path: null },
+  { id: "activity", icon: Activity, label: "Activity", color: "text-green-400", path: null },
+  { id: "sleep", icon: Moon, label: "Sleep", color: "text-blue-400", path: null },
+  { id: "nutrition", icon: Apple, label: "Nutrition", color: "text-orange-400", path: null },
+  { id: "workouts", icon: Dumbbell, label: "Workouts", color: "text-purple-400", path: null },
+  { id: "coaching", icon: Calendar, label: "Coach Book...", color: "text-pink-400", path: null },
+  { id: "community", icon: Users, label: "Community", color: "text-cyan-400", path: null },
+  { id: "hiit-ai", icon: Bot, label: "HIIT AI", color: "text-yellow-400", path: "/ai-coach" },
+  { id: "resources", icon: BookOpen, label: "Resources", color: "text-emerald-400", path: null },
 ];
 
 export const QuickActionsSheet = ({ open, onOpenChange }: QuickActionsSheetProps) => {
+  const navigate = useNavigate();
   const { signOut } = useAuth();
   const { toast } = useToast();
 
@@ -48,6 +50,13 @@ export const QuickActionsSheet = ({ open, onOpenChange }: QuickActionsSheetProps
       title: "Signed out",
       description: "See you next workout!",
     });
+  };
+
+  const handleActionClick = (action: typeof quickActions[0]) => {
+    if (action.path) {
+      navigate(action.path);
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -68,6 +77,7 @@ export const QuickActionsSheet = ({ open, onOpenChange }: QuickActionsSheetProps
               return (
                 <button
                   key={action.id}
+                  onClick={() => handleActionClick(action)}
                   className={cn(
                     "flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl sm:rounded-2xl",
                     "bg-muted/30 active:bg-muted/60 sm:hover:bg-muted/50 transition-all duration-300",

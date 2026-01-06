@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Bot, FileText, User } from "lucide-react";
 import { HIITLogo } from "./HIITLogo";
 import { cn } from "@/lib/utils";
@@ -8,15 +9,27 @@ interface BottomNavProps {
 }
 
 const navItems = [
-  { id: "home", icon: Home, label: "Home" },
-  { id: "hiit-ai", icon: Bot, label: "HIIT AI" },
-  { id: "center", icon: null, label: "Menu" },
-  { id: "resources", icon: FileText, label: "Resources" },
-  { id: "profile", icon: User, label: "Profile" },
+  { id: "home", icon: Home, label: "Home", path: "/" },
+  { id: "hiit-ai", icon: Bot, label: "HIIT AI", path: "/ai-coach" },
+  { id: "center", icon: null, label: "Menu", path: null },
+  { id: "resources", icon: FileText, label: "Resources", path: null },
+  { id: "profile", icon: User, label: "Profile", path: null },
 ];
 
 export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
-  const [activeTab, setActiveTab] = useState("home");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getActiveTab = () => {
+    const current = navItems.find(item => item.path === location.pathname);
+    return current?.id || "home";
+  };
+
+  const handleNavClick = (item: typeof navItems[0]) => {
+    if (item.path) {
+      navigate(item.path);
+    }
+  };
 
   return (
     <nav 
@@ -41,12 +54,12 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
               }
 
               const Icon = item.icon!;
-              const isActive = activeTab === item.id;
+              const isActive = getActiveTab() === item.id;
 
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleNavClick(item)}
                   className={cn(
                     "nav-item py-2 px-2 sm:px-3 min-w-[44px] min-h-[44px] touch-manipulation",
                     isActive && "active"
