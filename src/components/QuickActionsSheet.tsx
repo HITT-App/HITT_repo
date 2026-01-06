@@ -37,34 +37,38 @@ const quickActions = [
 export const QuickActionsSheet = ({ open, onOpenChange }: QuickActionsSheetProps) => {
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="bg-popover max-h-[60vh]">
+      <DrawerContent 
+        className="bg-popover max-h-[65vh]"
+        style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}
+      >
         <DrawerHeader className="pb-2">
-          <DrawerTitle className="text-popover-foreground text-center font-semibold">
+          <DrawerTitle className="text-popover-foreground text-center font-semibold text-base sm:text-lg">
             Quick Actions
           </DrawerTitle>
         </DrawerHeader>
-        <div className="px-6 pb-8">
-          <div className="grid grid-cols-3 gap-4">
+        <div className="px-4 sm:px-6 pb-6 sm:pb-8">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               return (
                 <button
                   key={action.id}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-2 p-4 rounded-2xl",
-                    "bg-muted/30 hover:bg-muted/50 transition-all duration-300",
-                    "hover:scale-105 active:scale-95 cursor-pointer",
-                    "opacity-0 animate-scale-in"
+                    "flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl sm:rounded-2xl",
+                    "bg-muted/30 active:bg-muted/60 sm:hover:bg-muted/50 transition-all duration-300",
+                    "sm:hover:scale-105 active:scale-95 cursor-pointer touch-manipulation",
+                    "opacity-0 animate-scale-in min-h-[80px] sm:min-h-[100px]"
                   )}
                   style={{ animationDelay: `${index * 50}ms`, animationFillMode: "forwards" }}
+                  aria-label={action.label}
                 >
                   <div className={cn(
-                    "w-12 h-12 rounded-xl flex items-center justify-center",
+                    "w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center",
                     "bg-popover-foreground/5"
                   )}>
-                    <Icon size={24} className={action.color} strokeWidth={1.5} />
+                    <Icon size={20} className={cn(action.color, "sm:w-6 sm:h-6")} strokeWidth={1.5} />
                   </div>
-                  <span className="text-xs text-popover-foreground/80 font-medium text-center leading-tight">
+                  <span className="text-[10px] sm:text-xs text-popover-foreground/80 font-medium text-center leading-tight line-clamp-2">
                     {action.label}
                   </span>
                 </button>
