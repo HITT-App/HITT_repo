@@ -7,7 +7,8 @@ import {
   Calendar,
   Users,
   Bot,
-  BookOpen
+  BookOpen,
+  LogOut
 } from "lucide-react";
 import {
   Drawer,
@@ -16,6 +17,8 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface QuickActionsSheetProps {
   open: boolean;
@@ -35,10 +38,22 @@ const quickActions = [
 ];
 
 export const QuickActionsSheet = ({ open, onOpenChange }: QuickActionsSheetProps) => {
+  const { signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    await signOut();
+    onOpenChange(false);
+    toast({
+      title: "Signed out",
+      description: "See you next workout!",
+    });
+  };
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent 
-        className="bg-popover max-h-[65vh]"
+        className="bg-popover max-h-[70vh]"
         style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}
       >
         <DrawerHeader className="pb-2">
@@ -75,6 +90,19 @@ export const QuickActionsSheet = ({ open, onOpenChange }: QuickActionsSheetProps
               );
             })}
           </div>
+          
+          {/* Sign Out Button */}
+          <button
+            onClick={handleSignOut}
+            className={cn(
+              "w-full mt-4 flex items-center justify-center gap-2 p-3 rounded-xl",
+              "bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all duration-300",
+              "active:scale-[0.98] touch-manipulation"
+            )}
+          >
+            <LogOut size={18} />
+            <span className="text-sm font-medium">Sign Out</span>
+          </button>
         </div>
       </DrawerContent>
     </Drawer>
