@@ -1,32 +1,38 @@
 import { useState } from "react";
 import { HomeHero } from "@/components/HomeHero";
 import { StatsGrid } from "@/components/StatsGrid";
-import { TodaysWorkouts } from "@/components/TodaysWorkouts";
 import { BottomNav } from "@/components/BottomNav";
 import { QuickActionsSheet } from "@/components/QuickActionsSheet";
+import { RecommendationsSection } from "@/components/dashboard/RecommendationsSection";
+import { WorkoutPlanCard } from "@/components/dashboard/WorkoutPlanCard";
+import { MealPlanCard } from "@/components/dashboard/MealPlanCard";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const { user } = useAuth();
   
-  // Get display name from user metadata or email
   const displayName = user?.user_metadata?.display_name || 
                       user?.email?.split("@")[0] || 
                       "Athlete";
 
   return (
     <div className="min-h-screen bg-background flex justify-center">
-      {/* Mobile Container - Simulates phone viewport */}
-      <div className="w-full max-w-md min-h-screen relative overflow-hidden">
+      <div className="w-full max-w-md min-h-screen relative overflow-hidden pb-24">
         {/* Hero Section */}
         <HomeHero userName={displayName} />
         
-        {/* Stats Grid - Overlapping hero */}
+        {/* Stats Grid */}
         <StatsGrid />
         
-        {/* Today's Workouts */}
-        <TodaysWorkouts />
+        {/* Workout Plan */}
+        <WorkoutPlanCard />
+        
+        {/* Recommendations */}
+        <RecommendationsSection />
+        
+        {/* Meal Plan */}
+        <MealPlanCard />
         
         {/* Bottom Navigation */}
         <BottomNav onCenterClick={() => setQuickActionsOpen(true)} />
