@@ -27,15 +27,15 @@ interface QuickActionsSheetProps {
 }
 
 const quickActions = [
-  { id: "health", icon: Heart, label: "Health Metrics", color: "text-red-400", path: null },
-  { id: "activity", icon: Activity, label: "Activity", color: "text-green-400", path: null },
-  { id: "sleep", icon: Moon, label: "Sleep", color: "text-blue-400", path: null },
-  { id: "nutrition", icon: Apple, label: "Nutrition", color: "text-orange-400", path: null },
-  { id: "workouts", icon: Dumbbell, label: "Workouts", color: "text-purple-400", path: null },
-  { id: "coaching", icon: Calendar, label: "Coach Book...", color: "text-pink-400", path: null },
-  { id: "community", icon: Users, label: "Community", color: "text-cyan-400", path: null },
+  { id: "health", icon: Heart, label: "Health Metrics", color: "text-red-400", path: "/health-metrics" },
+  { id: "activity", icon: Activity, label: "Activity", color: "text-green-400", path: "/activity" },
+  { id: "sleep", icon: Moon, label: "Sleep", color: "text-blue-400", path: "/sleep" },
+  { id: "nutrition", icon: Apple, label: "Nutrition", color: "text-orange-400", path: "/nutrition" },
+  { id: "workouts", icon: Dumbbell, label: "Workouts", color: "text-purple-400", path: "/workouts" },
+  { id: "coaching", icon: Calendar, label: "Coach Booking", color: "text-pink-400", path: "/coach-booking" },
+  { id: "community", icon: Users, label: "Community", color: "text-cyan-400", path: "/community" },
   { id: "hiit-ai", icon: Bot, label: "HIIT AI", color: "text-yellow-400", path: "/ai-coach" },
-  { id: "resources", icon: BookOpen, label: "Resources", color: "text-emerald-400", path: null },
+  { id: "resources", icon: BookOpen, label: "Resources", color: "text-emerald-400", path: "/resources" },
 ];
 
 export const QuickActionsSheet = ({ open, onOpenChange }: QuickActionsSheetProps) => {
