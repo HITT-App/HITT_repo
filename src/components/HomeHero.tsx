@@ -31,7 +31,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
         </div>
 
         {/* Bottom Section - Greeting */}
-        <div className="mb-6 sm:mb-8 opacity-0 animate-fade-up" style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}>
+        <div className="mb-16 sm:mb-20 opacity-0 animate-fade-up" style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
             Hello, <span className="text-primary">{userName}!</span>
           </h1>
