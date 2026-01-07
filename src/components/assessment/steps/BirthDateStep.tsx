@@ -1,14 +1,12 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { Calendar } from "@/components/ui/calendar";
+import { ArrowRight } from "lucide-react";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface BirthDateStepProps {
   value: { month: string; day: string; year: string };
@@ -16,42 +14,35 @@ interface BirthDateStepProps {
   onContinue: () => void;
 }
 
-export const BirthDateStep = ({ value, onChange, onContinue }: BirthDateStepProps) => {
-  const [open, setOpen] = useState(false);
-  
-  // Convert value to Date object
-  const getDateFromValue = () => {
-    if (value.month && value.day && value.year) {
-      const monthIndex = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(value.month);
-      if (monthIndex !== -1) {
-        return new Date(parseInt(value.year), monthIndex, parseInt(value.day));
-      }
-    }
-    return undefined;
-  };
+const months = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
-  const date = getDateFromValue();
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
+
+export const BirthDateStep = ({ value, onChange, onContinue }: BirthDateStepProps) => {
   const isComplete = value.month && value.day && value.year;
 
-  const handleDateSelect = (selectedDate: Date | undefined) => {
-    if (selectedDate) {
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      onChange({
-        month: months[selectedDate.getMonth()],
-        day: String(selectedDate.getDate()).padStart(2, "0"),
-        year: String(selectedDate.getFullYear()),
-      });
-      setOpen(false);
-    }
+  // Get days in selected month
+  const getDaysInMonth = () => {
+    if (!value.month || !value.year) return 31;
+    const monthIndex = months.indexOf(value.month);
+    return new Date(parseInt(value.year), monthIndex + 1, 0).getDate();
   };
+
+  const days = Array.from({ length: getDaysInMonth() }, (_, i) => i + 1);
 
   // Calculate age
   const calculateAge = () => {
-    if (!date) return null;
+    if (!value.month || !value.day || !value.year) return null;
+    const monthIndex = months.indexOf(value.month);
+    const birthDate = new Date(parseInt(value.year), monthIndex, parseInt(value.day));
     const today = new Date();
-    let age = today.getFullYear() - date.getFullYear();
-    const monthDiff = today.getMonth() - date.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
     return age;
@@ -61,51 +52,65 @@ export const BirthDateStep = ({ value, onChange, onContinue }: BirthDateStepProp
 
   return (
     <div className="flex-1 flex flex-col p-6 pb-10">
-      {/* Content */}
       <div className="flex-1">
         <h1 className="text-2xl font-bold text-foreground mb-8">
           When were you born?
         </h1>
 
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal h-14 text-lg",
-                !date && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-3 h-5 w-5" />
-              {date ? format(date, "MMMM d, yyyy") : <span>Select your birth date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="center">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={handleDateSelect}
-              disabled={(date) =>
-                date > new Date() || date < new Date("1920-01-01")
-              }
-              defaultMonth={date || new Date(2000, 0)}
-              captionLayout="dropdown-buttons"
-              fromYear={1920}
-              toYear={new Date().getFullYear()}
-              initialFocus
-              className={cn("p-3 pointer-events-auto")}
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="flex gap-3">
+          {/* Month */}
+          <Select
+            value={value.month}
+            onValueChange={(v) => onChange({ ...value, month: v })}
+          >
+            <SelectTrigger className="flex-1 h-14 text-base bg-background">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent className="bg-background max-h-60">
+              {months.map((m) => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {age !== null && (
-          <p className="text-sm text-muted-foreground text-center mt-4">
-            I'm {age} years of age
+          {/* Day */}
+          <Select
+            value={value.day}
+            onValueChange={(v) => onChange({ ...value, day: v })}
+          >
+            <SelectTrigger className="w-24 h-14 text-base bg-background">
+              <SelectValue placeholder="Day" />
+            </SelectTrigger>
+            <SelectContent className="bg-background max-h-60">
+              {days.map((d) => (
+                <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Year */}
+          <Select
+            value={value.year}
+            onValueChange={(v) => onChange({ ...value, year: v })}
+          >
+            <SelectTrigger className="w-28 h-14 text-base bg-background">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent className="bg-background max-h-60">
+              {years.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {age !== null && age >= 0 && (
+          <p className="text-sm text-muted-foreground text-center mt-6">
+            You are {age} years old
           </p>
         )}
       </div>
 
-      {/* Continue Button */}
       <Button
         onClick={onContinue}
         disabled={!isComplete}
