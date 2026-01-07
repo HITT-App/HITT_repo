@@ -1,6 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface BirthDateStepProps {
   value: { month: string; day: string; year: string };
@@ -8,74 +16,48 @@ interface BirthDateStepProps {
   onContinue: () => void;
 }
 
-const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const days = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
-const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 80 }, (_, i) => String(currentYear - 18 - i));
-
-interface WheelPickerProps {
-  items: string[];
-  value: string;
-  onChange: (value: string) => void;
-}
-
-const WheelPicker = ({ items, value, onChange }: WheelPickerProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const itemHeight = 44;
-
-  useEffect(() => {
-    if (containerRef.current) {
-      const index = items.indexOf(value);
-      if (index !== -1) {
-        containerRef.current.scrollTop = index * itemHeight;
+export const BirthDateStep = ({ value, onChange, onContinue }: BirthDateStepProps) => {
+  const [open, setOpen] = useState(false);
+  
+  // Convert value to Date object
+  const getDateFromValue = () => {
+    if (value.month && value.day && value.year) {
+      const monthIndex = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(value.month);
+      if (monthIndex !== -1) {
+        return new Date(parseInt(value.year), monthIndex, parseInt(value.day));
       }
     }
-  }, [value, items]);
+    return undefined;
+  };
 
-  const handleScroll = () => {
-    if (containerRef.current) {
-      const scrollTop = containerRef.current.scrollTop;
-      const index = Math.round(scrollTop / itemHeight);
-      const newValue = items[Math.min(Math.max(0, index), items.length - 1)];
-      if (newValue !== value) {
-        onChange(newValue);
-      }
+  const date = getDateFromValue();
+  const isComplete = value.month && value.day && value.year;
+
+  const handleDateSelect = (selectedDate: Date | undefined) => {
+    if (selectedDate) {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      onChange({
+        month: months[selectedDate.getMonth()],
+        day: String(selectedDate.getDate()).padStart(2, "0"),
+        year: String(selectedDate.getFullYear()),
+      });
+      setOpen(false);
     }
   };
 
-  return (
-    <div className="relative h-[220px] overflow-hidden">
-      {/* Selection Highlight */}
-      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-11 bg-primary rounded-lg pointer-events-none z-10" />
-      
-      {/* Gradient Overlays */}
-      <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-background to-transparent pointer-events-none z-20" />
-      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent pointer-events-none z-20" />
-      
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="h-full overflow-y-auto scrollbar-hide snap-y snap-mandatory"
-        style={{ scrollSnapType: "y mandatory", paddingTop: "88px", paddingBottom: "88px" }}
-      >
-        {items.map((item) => (
-          <div
-            key={item}
-            className={`h-11 flex items-center justify-center text-lg font-medium snap-center transition-colors ${
-              item === value ? "text-white" : "text-muted-foreground"
-            }`}
-            style={{ scrollSnapAlign: "center" }}
-          >
-            {item}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+  // Calculate age
+  const calculateAge = () => {
+    if (!date) return null;
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
-export const BirthDateStep = ({ value, onChange, onContinue }: BirthDateStepProps) => {
-  const isComplete = value.month && value.day && value.year;
+  const age = calculateAge();
 
   return (
     <div className="flex-1 flex flex-col p-6 pb-10">
@@ -85,27 +67,42 @@ export const BirthDateStep = ({ value, onChange, onContinue }: BirthDateStepProp
           When were you born?
         </h1>
 
-        <div className="grid grid-cols-3 gap-4">
-          <WheelPicker
-            items={months}
-            value={value.month || "Jan"}
-            onChange={(month) => onChange({ ...value, month })}
-          />
-          <WheelPicker
-            items={days}
-            value={value.day || "01"}
-            onChange={(day) => onChange({ ...value, day })}
-          />
-          <WheelPicker
-            items={years}
-            value={value.year || "2000"}
-            onChange={(year) => onChange({ ...value, year })}
-          />
-        </div>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal h-14 text-lg",
+                !date && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-3 h-5 w-5" />
+              {date ? format(date, "MMMM d, yyyy") : <span>Select your birth date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={handleDateSelect}
+              disabled={(date) =>
+                date > new Date() || date < new Date("1920-01-01")
+              }
+              defaultMonth={date || new Date(2000, 0)}
+              captionLayout="dropdown-buttons"
+              fromYear={1920}
+              toYear={new Date().getFullYear()}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
 
-        <p className="text-sm text-muted-foreground text-center mt-4">
-          I'm 18 years of age
-        </p>
+        {age !== null && (
+          <p className="text-sm text-muted-foreground text-center mt-4">
+            I'm {age} years of age
+          </p>
+        )}
       </div>
 
       {/* Continue Button */}
