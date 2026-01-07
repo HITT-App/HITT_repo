@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import hiitLogo from "@/assets/hiit-logo.jpg";
 
 interface HIITLogoProps {
   size?: "sm" | "md" | "lg" | "xl";
@@ -15,38 +16,15 @@ const sizeClasses = {
 
 export const HIITLogo = ({ size = "md", className, showGlow = false }: HIITLogoProps) => {
   return (
-    <div
+    <img
+      src={hiitLogo}
+      alt="HIIT Logo"
       className={cn(
-        "flex items-center justify-center rounded-full bg-primary",
+        "rounded-full object-cover",
         sizeClasses[size],
         showGlow && "pulse-glow",
         className
       )}
-    >
-      <svg
-        viewBox="0 0 40 40"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-3/5 h-3/5"
-      >
-        {/* H shape with I in the middle - HIIT logo */}
-        <path
-          d="M8 8V32M8 20H16M16 8V32"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-primary-foreground"
-        />
-        <path
-          d="M24 8V32M24 20H32M32 8V32"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-primary-foreground"
-        />
-      </svg>
-    </div>
+    />
   );
 };
