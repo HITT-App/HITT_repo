@@ -2,9 +2,10 @@ import { cn } from "@/lib/utils";
 import hiitLogo from "@/assets/hiit-logo.jpg";
 
 interface HIITLogoProps {
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
   showGlow?: boolean;
+  variant?: "default" | "white" | "orange";
 }
 
 const sizeClasses = {
@@ -12,17 +13,22 @@ const sizeClasses = {
   md: "w-12 h-12",
   lg: "w-16 h-16",
   xl: "w-24 h-24",
+  "2xl": "w-32 h-32",
 };
 
-export const HIITLogo = ({ size = "md", className, showGlow = false }: HIITLogoProps) => {
+export const HIITLogo = ({ size = "md", className, showGlow = false, variant = "default" }: HIITLogoProps) => {
+  // For white variant, we'll use CSS filter to make it white
+  const filterClass = variant === "white" ? "brightness-0 invert" : "";
+  
   return (
     <img
       src={hiitLogo}
       alt="HIIT Logo"
       className={cn(
-        "rounded-full object-cover",
+        "rounded-lg object-contain",
         sizeClasses[size],
         showGlow && "pulse-glow",
+        filterClass,
         className
       )}
     />
