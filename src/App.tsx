@@ -11,6 +11,9 @@ import Welcome from "./pages/Welcome";
 import Assessment from "./pages/Assessment";
 import AICoach from "./pages/AICoach";
 import Profile from "./pages/Profile";
+import ProfileSetup from "./pages/ProfileSetup";
+import AssessmentResults from "./pages/AssessmentResults";
+import Subscription from "./pages/Subscription";
 import HealthMetrics from "./pages/HealthMetrics";
 import ActivityTracker from "./pages/ActivityTracker";
 import SleepTracker from "./pages/SleepTracker";
@@ -66,6 +69,9 @@ const App = () => (
             <Route path="/coach-booking" element={<ProtectedRoute><CoachBooking /></ProtectedRoute>} />
             <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
             <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
+            <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
+            <Route path="/assessment-results" element={<ProtectedRoute><AssessmentResults /></ProtectedRoute>} />
+            <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
