@@ -22,6 +22,13 @@ import Workouts from "./pages/Workouts";
 import CoachBooking from "./pages/CoachBooking";
 import Community from "./pages/Community";
 import Resources from "./pages/Resources";
+import HeartRate from "./pages/HeartRate";
+import Steps from "./pages/Steps";
+import Weight from "./pages/Weight";
+import Hydration from "./pages/Hydration";
+import BloodPressure from "./pages/BloodPressure";
+import Mood from "./pages/Mood";
+import HealthRecommendations from "./pages/HealthRecommendations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +79,13 @@ const App = () => (
             <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
             <Route path="/assessment-results" element={<ProtectedRoute><AssessmentResults /></ProtectedRoute>} />
             <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+            <Route path="/heart-rate" element={<ProtectedRoute><HeartRate /></ProtectedRoute>} />
+            <Route path="/steps" element={<ProtectedRoute><Steps /></ProtectedRoute>} />
+            <Route path="/weight" element={<ProtectedRoute><Weight /></ProtectedRoute>} />
+            <Route path="/hydration" element={<ProtectedRoute><Hydration /></ProtectedRoute>} />
+            <Route path="/blood-pressure" element={<ProtectedRoute><BloodPressure /></ProtectedRoute>} />
+            <Route path="/mood" element={<ProtectedRoute><Mood /></ProtectedRoute>} />
+            <Route path="/health-recommendations" element={<ProtectedRoute><HealthRecommendations /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

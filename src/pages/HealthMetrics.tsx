@@ -1,48 +1,74 @@
-import { ArrowLeft, Heart, Activity, Thermometer, Droplet } from "lucide-react";
+import { ArrowLeft, Heart, Activity, Droplets, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 const metrics = [
-  { label: "Heart Rate", value: "72", unit: "bpm", icon: Heart, color: "text-red-500" },
-  { label: "Blood Pressure", value: "120/80", unit: "mmHg", icon: Activity, color: "text-blue-500" },
-  { label: "Body Temp", value: "98.6", unit: "°F", icon: Thermometer, color: "text-orange-500" },
-  { label: "Blood Oxygen", value: "98", unit: "%", icon: Droplet, color: "text-cyan-500" },
+  { label: "Heart Rate", value: "72", unit: "bpm", icon: Heart, color: "text-red-500", bgColor: "bg-red-100", path: "/heart-rate" },
+  { label: "Blood Pressure", value: "128/80", unit: "mmHg", icon: Activity, color: "text-purple-500", bgColor: "bg-purple-100", path: "/blood-pressure" },
+  { label: "Steps", value: "5,158", unit: "steps", icon: Footprints, color: "text-primary", bgColor: "bg-primary/10", path: "/steps" },
+  { label: "Weight", value: "67.8", unit: "kg", icon: Scale, color: "text-green-500", bgColor: "bg-green-100", path: "/weight" },
+  { label: "Hydration", value: "1,287", unit: "ml", icon: Droplets, color: "text-blue-500", bgColor: "bg-blue-100", path: "/hydration" },
+  { label: "Sleep", value: "7h 15m", unit: "", icon: Moon, color: "text-indigo-500", bgColor: "bg-indigo-100", path: "/sleep" },
+  { label: "Mood", value: "Happy", unit: "", icon: Smile, color: "text-yellow-500", bgColor: "bg-yellow-100", path: "/mood" },
 ];
 
 const HealthMetrics = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-6">
       <header className="flex items-center gap-3 p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold text-foreground">Health Metrics</h1>
+        <h1 className="text-lg font-semibold text-foreground">My Fitness Metrics</h1>
       </header>
 
       <div className="p-4 space-y-4">
+        <p className="text-sm text-muted-foreground">See details about your health metrics.</p>
+
+        {/* Metrics Grid */}
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
-            <Card key={metric.label} className="p-4 flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-full bg-muted flex items-center justify-center`}>
+            <Card 
+              key={metric.label} 
+              className="p-4 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => navigate(metric.path)}
+            >
+              <div className={`w-12 h-12 rounded-full ${metric.bgColor} flex items-center justify-center`}>
                 <Icon className={`w-6 h-6 ${metric.color}`} />
               </div>
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground">{metric.label}</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-xl font-bold text-foreground">
                   {metric.value} <span className="text-sm font-normal text-muted-foreground">{metric.unit}</span>
                 </p>
               </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </Card>
           );
         })}
 
-        <p className="text-center text-sm text-muted-foreground mt-8">
-          Connect a wearable device to sync your health data
-        </p>
+        {/* AI Recommendations */}
+        <Card 
+          className="p-4 bg-primary/5 border-primary/20 cursor-pointer"
+          onClick={() => navigate("/health-recommendations")}
+        >
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-6 h-6 text-primary" />
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">AI Recommendations</p>
+              <p className="text-sm text-muted-foreground">3 personalized suggestions</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-primary" />
+          </div>
+        </Card>
+
+        <Button className="w-full" onClick={() => navigate("/health-recommendations")}>
+          Save Settings
+        </Button>
       </div>
     </div>
   );
