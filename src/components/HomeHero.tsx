@@ -32,8 +32,8 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
 
         {/* Bottom Section - Greeting */}
         <div className="mb-16 sm:mb-20 opacity-0 animate-fade-up" style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            Hello, <span className="text-primary">{userName}!</span>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+            Hello, <span className="text-primary drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">{userName}!</span>
           </h1>
         </div>
       </div>
