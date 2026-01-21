@@ -1,19 +1,72 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Clock, Flame } from 'lucide-react';
+import { Play, Clock, Flame, Calendar, ChevronRight, Dumbbell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { format, startOfWeek, addDays, isToday, isSameDay } from 'date-fns';
 
-const workoutDays = [
-  { day: 'Mon', active: true, completed: true },
-  { day: 'Tue', active: true, completed: true },
-  { day: 'Wed', active: true, completed: false },
-  { day: 'Thu', active: false, completed: false },
-  { day: 'Fri', active: true, completed: false },
-  { day: 'Sat', active: false, completed: false },
-  { day: 'Sun', active: false, completed: false },
-];
+interface ScheduledWorkout {
+  id: string;
+  scheduled_date: string;
+  status: string;
+  workout: {
+    id: string;
+    title: string;
+    duration_minutes: number;
+    calories_burned: number;
+  };
+}
 
 export function WorkoutPlanCard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
+  const [todaysWorkout, setTodaysWorkout] = useState<ScheduledWorkout | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchScheduledWorkouts();
+    }
+  }, [user]);
+
+  const fetchScheduledWorkouts = async () => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const weekEnd = addDays(weekStart, 6);
+
+    const { data } = await supabase
+      .from('scheduled_workouts')
+      .select(`
+        id, scheduled_date, status,
+        workout:workouts (id, title, duration_minutes, calories_burned)
+      `)
+      .eq('user_id', user?.id)
+      .gte('scheduled_date', format(weekStart, 'yyyy-MM-dd'))
+      .lte('scheduled_date', format(weekEnd, 'yyyy-MM-dd'))
+      .order('scheduled_date');
+
+    if (data) {
+      // Type assertion to handle the join response
+      const workouts = data as unknown as ScheduledWorkout[];
+      setScheduledWorkouts(workouts);
+      const today = workouts.find(w => 
+        isSameDay(new Date(w.scheduled_date), new Date()) && w.status !== 'completed'
+      );
+      setTodaysWorkout(today || null);
+    }
+  };
+
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), i);
+    const scheduled = scheduledWorkouts.find(w => isSameDay(new Date(w.scheduled_date), date));
+    return {
+      day: format(date, 'EEE'),
+      date,
+      active: !!scheduled,
+      completed: scheduled?.status === 'completed',
+      isToday: isToday(date)
+    };
+  });
 
   return (
     <div className="px-4 py-2">
@@ -21,13 +74,18 @@ export function WorkoutPlanCard() {
         <div className="flex items-start justify-between mb-4">
           <div>
             <p className="text-sm opacity-90">This Week's Plan</p>
-            <h3 className="text-xl font-bold">Muscle Building</h3>
+            <h3 className="text-xl font-bold">
+              {todaysWorkout?.workout?.title || 'Your Workout Schedule'}
+            </h3>
           </div>
           <Button
             size="icon"
             variant="secondary"
             className="bg-white/20 hover:bg-white/30 text-white border-0"
-            onClick={() => navigate('/workouts')}
+            onClick={() => todaysWorkout 
+              ? navigate(`/workout-player/${todaysWorkout.workout.id}`)
+              : navigate('/workout-library')
+            }
           >
             <Play className="w-5 h-5" />
           </Button>
@@ -37,32 +95,56 @@ export function WorkoutPlanCard() {
         <div className="flex gap-4 mb-4">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 opacity-80" />
-            <span className="text-sm">45 min/day</span>
+            <span className="text-sm">
+              {todaysWorkout?.workout?.duration_minutes || 30} min
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Flame className="w-4 h-4 opacity-80" />
-            <span className="text-sm">~400 cal</span>
+            <span className="text-sm">
+              ~{todaysWorkout?.workout?.calories_burned || 300} cal
+            </span>
           </div>
         </div>
 
         {/* Weekly Progress */}
-        <div className="flex justify-between">
-          {workoutDays.map((item, index) => (
+        <div className="flex justify-between mb-4">
+          {weekDays.map((item, index) => (
             <div key={index} className="flex flex-col items-center gap-1">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
                   item.completed
                     ? 'bg-white text-primary'
                     : item.active
                     ? 'bg-white/20 text-white'
                     : 'bg-white/10 text-white/50'
-                }`}
+                } ${item.isToday ? 'ring-2 ring-white ring-offset-2 ring-offset-primary' : ''}`}
               >
                 {item.completed ? '✓' : item.day.charAt(0)}
               </div>
               <span className="text-[10px] opacity-80">{item.day}</span>
             </div>
           ))}
+        </div>
+
+        {/* Quick Links */}
+        <div className="flex gap-2">
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="flex-1 bg-white/20 hover:bg-white/30 text-white border-0"
+            onClick={() => navigate('/workout-schedule')}
+          >
+            <Calendar className="w-4 h-4 mr-1" /> Schedule
+          </Button>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="flex-1 bg-white/20 hover:bg-white/30 text-white border-0"
+            onClick={() => navigate('/workout-library')}
+          >
+            <Dumbbell className="w-4 h-4 mr-1" /> Browse
+          </Button>
         </div>
       </div>
     </div>

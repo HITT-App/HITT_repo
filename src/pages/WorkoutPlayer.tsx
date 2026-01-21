@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { HIITLogo } from '@/components/HIITLogo';
+import { AIFormAnalysis } from '@/components/workout/AIFormAnalysis';
 import { 
   ArrowLeft, Play, Pause, SkipForward, SkipBack, 
-  MoreHorizontal, Volume2, Settings, Download, Share2
+  MoreHorizontal, Volume2, Settings, Download, Share2, Camera
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -48,6 +49,7 @@ export default function WorkoutPlayer() {
   const [showMenu, setShowMenu] = useState(false);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showFormAnalysis, setShowFormAnalysis] = useState(false);
   const [rating, setRating] = useState(0);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -329,6 +331,9 @@ export default function WorkoutPlayer() {
       <Sheet open={showMenu} onOpenChange={setShowMenu}>
         <SheetContent side="top" className="rounded-b-3xl">
           <div className="py-4 space-y-2">
+            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { setShowMenu(false); setShowFormAnalysis(true); }}>
+              <Camera className="w-5 h-5" /> AI Form Check
+            </Button>
             <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { setShowMenu(false); setShowPlaylist(true); }}>
               <Settings className="w-5 h-5" /> Settings
             </Button>
@@ -368,7 +373,7 @@ export default function WorkoutPlayer() {
               >
                 <div className={cn(
                   "w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold",
-                  index < currentExerciseIndex ? "bg-green-500/10 text-green-500" :
+                  index < currentExerciseIndex ? "bg-accent text-accent-foreground" :
                   index === currentExerciseIndex ? "bg-primary text-primary-foreground" : "bg-secondary"
                 )}>
                   Part {index + 1}
@@ -384,6 +389,13 @@ export default function WorkoutPlayer() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* AI Form Analysis */}
+      <AIFormAnalysis 
+        exerciseName={currentExercise?.title || workout?.title || 'Exercise'}
+        isOpen={showFormAnalysis}
+        onClose={() => setShowFormAnalysis(false)}
+      />
     </div>
   );
 }
