@@ -16,6 +16,12 @@ import AssessmentResults from "./pages/AssessmentResults";
 import Subscription from "./pages/Subscription";
 import HealthMetrics from "./pages/HealthMetrics";
 import ActivityTracker from "./pages/ActivityTracker";
+import ActivityOnboarding from "./pages/ActivityOnboarding";
+import ActivityDashboard from "./pages/ActivityDashboard";
+import ActivityLive from "./pages/ActivityLive";
+import ActivityHistory from "./pages/ActivityHistory";
+import ActivityGoals from "./pages/ActivityGoals";
+import LogActivity from "./pages/LogActivity";
 import SleepTracker from "./pages/SleepTracker";
 import Nutrition from "./pages/Nutrition";
 import Workouts from "./pages/Workouts";
@@ -88,6 +94,13 @@ const App = () => (
             />
             <Route path="/health-metrics" element={<ProtectedRoute><HealthMetrics /></ProtectedRoute>} />
             <Route path="/activity" element={<ProtectedRoute><ActivityTracker /></ProtectedRoute>} />
+            <Route path="/activity-onboarding" element={<ProtectedRoute><ActivityOnboarding /></ProtectedRoute>} />
+            <Route path="/activity-dashboard" element={<ProtectedRoute><ActivityDashboard /></ProtectedRoute>} />
+            <Route path="/activity-live" element={<ProtectedRoute><ActivityLive /></ProtectedRoute>} />
+            <Route path="/activity-history" element={<ProtectedRoute><ActivityHistory /></ProtectedRoute>} />
+            <Route path="/activity-goals" element={<ProtectedRoute><ActivityGoals /></ProtectedRoute>} />
+            <Route path="/log-activity" element={<ProtectedRoute><LogActivity /></ProtectedRoute>} />
+            <Route path="/sleep" element={<ProtectedRoute><SleepTracker /></ProtectedRoute>} />
             <Route path="/sleep" element={<ProtectedRoute><SleepTracker /></ProtectedRoute>} />
             <Route path="/nutrition" element={<ProtectedRoute><Nutrition /></ProtectedRoute>} />
             <Route path="/workouts" element={<ProtectedRoute><Workouts /></ProtectedRoute>} />

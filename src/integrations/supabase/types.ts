@@ -14,6 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_goals: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          weekly_activities: number | null
+          weekly_calories: number | null
+          weekly_distance_km: number | null
+          weekly_duration_minutes: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          weekly_activities?: number | null
+          weekly_calories?: number | null
+          weekly_distance_km?: number | null
+          weekly_duration_minutes?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          weekly_activities?: number | null
+          weekly_calories?: number | null
+          weekly_distance_km?: number | null
+          weekly_duration_minutes?: number | null
+        }
+        Relationships: []
+      }
+      activity_logs: {
+        Row: {
+          activity_type: string
+          avg_heart_rate: number | null
+          calories_burned: number | null
+          created_at: string
+          distance_km: number | null
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          intensity_level: number | null
+          notes: string | null
+          route_data: Json | null
+          route_end_address: string | null
+          route_start_address: string | null
+          score_impact: number | null
+          started_at: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          avg_heart_rate?: number | null
+          calories_burned?: number | null
+          created_at?: string
+          distance_km?: number | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          intensity_level?: number | null
+          notes?: string | null
+          route_data?: Json | null
+          route_end_address?: string | null
+          route_start_address?: string | null
+          score_impact?: number | null
+          started_at?: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          avg_heart_rate?: number | null
+          calories_burned?: number | null
+          created_at?: string
+          distance_km?: number | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          intensity_level?: number | null
+          notes?: string | null
+          route_data?: Json | null
+          route_end_address?: string | null
+          route_start_address?: string | null
+          score_impact?: number | null
+          started_at?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      activity_preferences: {
+        Row: {
+          activity_types: string[] | null
+          created_at: string
+          id: string
+          intensity_level: number | null
+          onboarding_completed: boolean | null
+          preferred_time: string | null
+          typical_duration_minutes: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_types?: string[] | null
+          created_at?: string
+          id?: string
+          intensity_level?: number | null
+          onboarding_completed?: boolean | null
+          preferred_time?: string | null
+          typical_duration_minutes?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_types?: string[] | null
+          created_at?: string
+          id?: string
+          intensity_level?: number | null
+          onboarding_completed?: boolean | null
+          preferred_time?: string | null
+          typical_duration_minutes?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      activity_recommendations: {
+        Row: {
+          activity_type: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          estimated_calories: number | null
+          id: string
+          intensity: string | null
+          score_reward: number | null
+          status: string | null
+          suggested_duration_minutes: number | null
+          suggested_time: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_calories?: number | null
+          id?: string
+          intensity?: string | null
+          score_reward?: number | null
+          status?: string | null
+          suggested_duration_minutes?: number | null
+          suggested_time?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_calories?: number | null
+          id?: string
+          intensity?: string | null
+          score_reward?: number | null
+          status?: string | null
+          suggested_duration_minutes?: number | null
+          suggested_time?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           category: string
