@@ -23,6 +23,13 @@ import ActivityHistory from "./pages/ActivityHistory";
 import ActivityGoals from "./pages/ActivityGoals";
 import LogActivity from "./pages/LogActivity";
 import SleepTracker from "./pages/SleepTracker";
+import SleepOnboarding from "./pages/SleepOnboarding";
+import SleepDashboard from "./pages/SleepDashboard";
+import SleepSchedule from "./pages/SleepSchedule";
+import SleepHistory from "./pages/SleepHistory";
+import StartSleep from "./pages/StartSleep";
+import Sleeping from "./pages/Sleeping";
+import LogSleep from "./pages/LogSleep";
 import Nutrition from "./pages/Nutrition";
 import Workouts from "./pages/Workouts";
 import CoachBooking from "./pages/CoachBooking";
@@ -101,7 +108,13 @@ const App = () => (
             <Route path="/activity-goals" element={<ProtectedRoute><ActivityGoals /></ProtectedRoute>} />
             <Route path="/log-activity" element={<ProtectedRoute><LogActivity /></ProtectedRoute>} />
             <Route path="/sleep" element={<ProtectedRoute><SleepTracker /></ProtectedRoute>} />
-            <Route path="/sleep" element={<ProtectedRoute><SleepTracker /></ProtectedRoute>} />
+            <Route path="/sleep-onboarding" element={<ProtectedRoute><SleepOnboarding /></ProtectedRoute>} />
+            <Route path="/sleep-dashboard" element={<ProtectedRoute><SleepDashboard /></ProtectedRoute>} />
+            <Route path="/sleep-schedule" element={<ProtectedRoute><SleepSchedule /></ProtectedRoute>} />
+            <Route path="/sleep-history" element={<ProtectedRoute><SleepHistory /></ProtectedRoute>} />
+            <Route path="/start-sleep" element={<ProtectedRoute><StartSleep /></ProtectedRoute>} />
+            <Route path="/sleeping" element={<ProtectedRoute><Sleeping /></ProtectedRoute>} />
+            <Route path="/log-sleep" element={<ProtectedRoute><LogSleep /></ProtectedRoute>} />
             <Route path="/nutrition" element={<ProtectedRoute><Nutrition /></ProtectedRoute>} />
             <Route path="/workouts" element={<ProtectedRoute><Workouts /></ProtectedRoute>} />
             <Route path="/coach-booking" element={<ProtectedRoute><CoachBooking /></ProtectedRoute>} />
