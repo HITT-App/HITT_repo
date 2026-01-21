@@ -1,42 +1,81 @@
 import { TrendingUp, Flame, Clock, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const stats = [
-  { 
-    id: "calories", 
-    icon: Flame, 
-    value: "1,248", 
-    label: "Calories", 
-    color: "text-orange-400",
-    bgColor: "bg-orange-400/10" 
-  },
-  { 
-    id: "workouts", 
-    icon: Target, 
-    value: "12", 
-    label: "Workouts", 
-    color: "text-green-400",
-    bgColor: "bg-green-400/10" 
-  },
-  { 
-    id: "minutes", 
-    icon: Clock, 
-    value: "342", 
-    label: "Minutes", 
-    color: "text-blue-400",
-    bgColor: "bg-blue-400/10" 
-  },
-  { 
-    id: "streak", 
-    icon: TrendingUp, 
-    value: "7", 
-    label: "Day Streak", 
-    color: "text-purple-400",
-    bgColor: "bg-purple-400/10" 
-  },
-];
+import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export const StatsGrid = () => {
+  const { user } = useAuth();
+  const { streak } = useStreaksAndBadges();
+  const [totalMinutes, setTotalMinutes] = useState(0);
+  const [totalCalories, setTotalCalories] = useState(0);
+  const [workoutCount, setWorkoutCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
+
+  const fetchStats = async () => {
+    if (!user) return;
+
+    try {
+      // Get workout progress with workout details
+      const { data: progressData } = await supabase
+        .from('workout_progress')
+        .select('duration_seconds, workout_id')
+        .eq('user_id', user.id);
+
+      if (progressData) {
+        const totalSecs = progressData.reduce((acc, p) => acc + (p.duration_seconds || 0), 0);
+        setTotalMinutes(Math.floor(totalSecs / 60));
+        setWorkoutCount(progressData.length);
+
+        // Estimate calories (rough estimate: ~7 cal/min for moderate workout)
+        setTotalCalories(Math.floor(totalSecs / 60 * 7));
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const stats = [
+    { 
+      id: "calories", 
+      icon: Flame, 
+      value: totalCalories > 0 ? totalCalories.toLocaleString() : "0", 
+      label: "Calories", 
+      color: "text-orange-400",
+      bgColor: "bg-orange-400/10" 
+    },
+    { 
+      id: "workouts", 
+      icon: Target, 
+      value: workoutCount.toString(), 
+      label: "Workouts", 
+      color: "text-green-400",
+      bgColor: "bg-green-400/10" 
+    },
+    { 
+      id: "minutes", 
+      icon: Clock, 
+      value: totalMinutes.toString(), 
+      label: "Minutes", 
+      color: "text-blue-400",
+      bgColor: "bg-blue-400/10" 
+    },
+    { 
+      id: "streak", 
+      icon: TrendingUp, 
+      value: streak?.current_streak?.toString() || "0", 
+      label: "Day Streak", 
+      color: "text-purple-400",
+      bgColor: "bg-purple-400/10" 
+    },
+  ];
+
   return (
     <div className="px-3 sm:px-4 -mt-12 sm:-mt-16 relative z-10">
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
