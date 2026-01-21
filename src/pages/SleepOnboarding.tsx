@@ -40,7 +40,7 @@ const SleepOnboarding = () => {
     if (step > 0) {
       setStep(step - 1);
     } else {
-      navigate(-1);
+      navigate("/");
     }
   };
 
