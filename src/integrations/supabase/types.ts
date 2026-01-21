@@ -876,6 +876,174 @@ export type Database = {
           },
         ]
       }
+      sleep_logs: {
+        Row: {
+          awake_minutes: number | null
+          bedtime: string
+          created_at: string
+          deep_sleep_minutes: number | null
+          duration_minutes: number | null
+          id: string
+          light_sleep_minutes: number | null
+          notes: string | null
+          rem_sleep_minutes: number | null
+          score_impact: number | null
+          sleep_date: string
+          sleep_quality: number | null
+          user_id: string
+          wake_time: string
+        }
+        Insert: {
+          awake_minutes?: number | null
+          bedtime: string
+          created_at?: string
+          deep_sleep_minutes?: number | null
+          duration_minutes?: number | null
+          id?: string
+          light_sleep_minutes?: number | null
+          notes?: string | null
+          rem_sleep_minutes?: number | null
+          score_impact?: number | null
+          sleep_date: string
+          sleep_quality?: number | null
+          user_id: string
+          wake_time: string
+        }
+        Update: {
+          awake_minutes?: number | null
+          bedtime?: string
+          created_at?: string
+          deep_sleep_minutes?: number | null
+          duration_minutes?: number | null
+          id?: string
+          light_sleep_minutes?: number | null
+          notes?: string | null
+          rem_sleep_minutes?: number | null
+          score_impact?: number | null
+          sleep_date?: string
+          sleep_quality?: number | null
+          user_id?: string
+          wake_time?: string
+        }
+        Relationships: []
+      }
+      sleep_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          onboarding_completed: boolean | null
+          preferred_bedtime: string | null
+          preferred_wake_time: string | null
+          sleep_issues: string | null
+          target_hours: number
+          target_minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          onboarding_completed?: boolean | null
+          preferred_bedtime?: string | null
+          preferred_wake_time?: string | null
+          sleep_issues?: string | null
+          target_hours?: number
+          target_minutes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          onboarding_completed?: boolean | null
+          preferred_bedtime?: string | null
+          preferred_wake_time?: string | null
+          sleep_issues?: string | null
+          target_hours?: number
+          target_minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sleep_recommendations: {
+        Row: {
+          category: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          score_reward: number | null
+          status: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          score_reward?: number | null
+          status?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          score_reward?: number | null
+          status?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sleep_schedules: {
+        Row: {
+          active_days: string[] | null
+          alarm_sound: string | null
+          bedtime: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          repeat_alarm: string | null
+          updated_at: string
+          user_id: string
+          vibration_enabled: boolean | null
+          wake_time: string
+        }
+        Insert: {
+          active_days?: string[] | null
+          alarm_sound?: string | null
+          bedtime?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          repeat_alarm?: string | null
+          updated_at?: string
+          user_id: string
+          vibration_enabled?: boolean | null
+          wake_time?: string
+        }
+        Update: {
+          active_days?: string[] | null
+          alarm_sound?: string | null
+          bedtime?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          repeat_alarm?: string | null
+          updated_at?: string
+          user_id?: string
+          vibration_enabled?: boolean | null
+          wake_time?: string
+        }
+        Relationships: []
+      }
       user_badges: {
         Row: {
           badge_id: string
