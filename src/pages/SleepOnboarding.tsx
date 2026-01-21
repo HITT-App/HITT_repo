@@ -104,7 +104,7 @@ const SleepOnboarding = () => {
           <div className="flex flex-col items-center text-center">
             <HIITLogo className="w-16 h-16 mb-6" />
             <p className="text-muted-foreground mb-8">
-              Hey! I'm coach sandow AI, and today I'll help you setup your sleep. Are you ready? 😊
+              Hey! I'm HIIT, your AI coach, and today I'll help you setup your sleep. Are you ready? 😊
             </p>
           </div>
         );
