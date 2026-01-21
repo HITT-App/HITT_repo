@@ -102,10 +102,18 @@ export default function MealScanner() {
 
       const result = await response.json();
       
-      if (result.error || !result.name) {
+      if (!result.success || result.error) {
         setScanState('error');
       } else {
-        setDetectedFood(result);
+        setDetectedFood({
+          name: result.food_name,
+          description: result.description,
+          calories: result.calories,
+          fat_grams: result.fat_grams,
+          protein_grams: result.protein_grams,
+          fiber_grams: result.fiber_grams,
+          servings: 1,
+        });
         setScanState('result');
       }
     } catch (error) {
