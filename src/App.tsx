@@ -61,6 +61,13 @@ import WorkoutDetail from "./pages/WorkoutDetail";
 import WorkoutPlayer from "./pages/WorkoutPlayer";
 import WorkoutSchedule from "./pages/WorkoutSchedule";
 import NotFound from "./pages/NotFound";
+import Notifications from "./pages/Notifications";
+import Search from "./pages/Search";
+import ServerError from "./pages/ServerError";
+import NoInternet from "./pages/NoInternet";
+import Maintenance from "./pages/Maintenance";
+import FeatureLocked from "./pages/FeatureLocked";
+import UpdateRequired from "./pages/UpdateRequired";
 
 const queryClient = new QueryClient();
 
@@ -148,6 +155,14 @@ const App = () => (
             <Route path="/workout/:id" element={<ProtectedRoute><WorkoutDetail /></ProtectedRoute>} />
             <Route path="/workout-player/:id" element={<ProtectedRoute><WorkoutPlayer /></ProtectedRoute>} />
             <Route path="/workout-schedule" element={<ProtectedRoute><WorkoutSchedule /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+            {/* Utility/Error Pages */}
+            <Route path="/server-error" element={<ServerError />} />
+            <Route path="/no-internet" element={<NoInternet />} />
+            <Route path="/maintenance" element={<Maintenance />} />
+            <Route path="/feature-locked" element={<FeatureLocked />} />
+            <Route path="/update-required" element={<UpdateRequired />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
