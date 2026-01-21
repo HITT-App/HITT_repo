@@ -20,6 +20,12 @@ import SleepTracker from "./pages/SleepTracker";
 import Nutrition from "./pages/Nutrition";
 import Workouts from "./pages/Workouts";
 import CoachBooking from "./pages/CoachBooking";
+import CoachOnboarding from "./pages/CoachOnboarding";
+import BrowseCoaches from "./pages/BrowseCoaches";
+import CoachProfile from "./pages/CoachProfile";
+import BookCoach from "./pages/BookCoach";
+import CoachAppointments from "./pages/CoachAppointments";
+import LiveSession from "./pages/LiveSession";
 import Community from "./pages/Community";
 import Resources from "./pages/Resources";
 import HeartRate from "./pages/HeartRate";
@@ -86,6 +92,12 @@ const App = () => (
             <Route path="/nutrition" element={<ProtectedRoute><Nutrition /></ProtectedRoute>} />
             <Route path="/workouts" element={<ProtectedRoute><Workouts /></ProtectedRoute>} />
             <Route path="/coach-booking" element={<ProtectedRoute><CoachBooking /></ProtectedRoute>} />
+            <Route path="/coach-onboarding" element={<ProtectedRoute><CoachOnboarding /></ProtectedRoute>} />
+            <Route path="/browse-coaches" element={<ProtectedRoute><BrowseCoaches /></ProtectedRoute>} />
+            <Route path="/coach/:id" element={<ProtectedRoute><CoachProfile /></ProtectedRoute>} />
+            <Route path="/book-coach/:id" element={<ProtectedRoute><BookCoach /></ProtectedRoute>} />
+            <Route path="/coach-appointments" element={<ProtectedRoute><CoachAppointments /></ProtectedRoute>} />
+            <Route path="/live-session/:id" element={<ProtectedRoute><LiveSession /></ProtectedRoute>} />
             <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
             <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
             <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
