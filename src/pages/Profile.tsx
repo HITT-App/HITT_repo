@@ -2,12 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
+import { useStreaksAndBadges } from '@/hooks/useStreaksAndBadges';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Camera, Loader2, User, Target, Save } from 'lucide-react';
+import { StreakCard } from '@/components/gamification/StreakCard';
+import { BadgesDisplay } from '@/components/gamification/BadgesDisplay';
+import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const FITNESS_GOALS = [
@@ -24,6 +27,7 @@ export default function Profile() {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const { profile, loading, updating, updateProfile, uploadAvatar } = useProfile();
+  const { streak, allBadges, earnedBadges, loading: streaksLoading } = useStreaksAndBadges();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState('');
@@ -97,13 +101,15 @@ export default function Profile() {
     return user?.email?.slice(0, 2).toUpperCase() || 'U';
   };
 
-  if (loading) {
+  if (loading || streaksLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
+
+  const earnedBadgeIds = earnedBadges.map(eb => eb.badge_id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -151,6 +157,29 @@ export default function Profile() {
             />
           </div>
           <p className="text-sm text-muted-foreground">{user?.email}</p>
+        </div>
+
+        {/* Streak Card */}
+        {streak && (
+          <StreakCard
+            currentStreak={streak.current_streak}
+            longestStreak={streak.longest_streak}
+            totalWorkouts={streak.total_workouts}
+            lastWorkoutDate={streak.last_workout_date}
+          />
+        )}
+
+        {/* Badges Section */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-muted-foreground" />
+            Badges & Achievements
+          </Label>
+          <BadgesDisplay 
+            allBadges={allBadges} 
+            earnedBadgeIds={earnedBadgeIds}
+            showLocked={true}
+          />
         </div>
 
         {/* Display Name */}

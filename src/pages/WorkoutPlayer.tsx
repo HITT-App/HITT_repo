@@ -3,11 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useStreaksAndBadges } from '@/hooks/useStreaksAndBadges';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { HIITLogo } from '@/components/HIITLogo';
 import { AIFormAnalysis } from '@/components/workout/AIFormAnalysis';
+import { NewBadgeModal } from '@/components/gamification/NewBadgeModal';
 import { 
   ArrowLeft, Play, Pause, SkipForward, SkipBack, 
   MoreHorizontal, Volume2, Settings, Download, Share2, Camera
@@ -38,6 +40,7 @@ export default function WorkoutPlayer() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { recordWorkout, newBadges, clearNewBadges } = useStreaksAndBadges();
   
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -151,6 +154,9 @@ export default function WorkoutPlayer() {
           workout_id: workout.id,
           duration_seconds: totalElapsed,
         });
+        
+        // Update streak and check for new badges
+        await recordWorkout();
       } catch (error) {
         console.error('Error saving progress:', error);
       }
@@ -158,6 +164,7 @@ export default function WorkoutPlayer() {
   };
 
   const handleFinish = () => {
+    clearNewBadges();
     toast({ title: 'Great workout!', description: 'Your progress has been saved.' });
     navigate('/workout-library');
   };
@@ -396,6 +403,9 @@ export default function WorkoutPlayer() {
         isOpen={showFormAnalysis}
         onClose={() => setShowFormAnalysis(false)}
       />
+
+      {/* New Badge Modal */}
+      <NewBadgeModal badges={newBadges} onClose={clearNewBadges} />
     </div>
   );
 }
