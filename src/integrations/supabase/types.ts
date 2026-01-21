@@ -38,6 +38,140 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_logs: {
+        Row: {
+          calories: number | null
+          carbs_grams: number | null
+          category: string
+          created_at: string
+          custom_name: string | null
+          fat_grams: number | null
+          fiber_grams: number | null
+          id: string
+          image_url: string | null
+          logged_at: string
+          meal_id: string | null
+          notes: string | null
+          protein_grams: number | null
+          servings: number | null
+          user_id: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_grams?: number | null
+          category: string
+          created_at?: string
+          custom_name?: string | null
+          fat_grams?: number | null
+          fiber_grams?: number | null
+          id?: string
+          image_url?: string | null
+          logged_at?: string
+          meal_id?: string | null
+          notes?: string | null
+          protein_grams?: number | null
+          servings?: number | null
+          user_id: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_grams?: number | null
+          category?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_grams?: number | null
+          fiber_grams?: number | null
+          id?: string
+          image_url?: string | null
+          logged_at?: string
+          meal_id?: string | null
+          notes?: string | null
+          protein_grams?: number | null
+          servings?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_logs_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meals: {
+        Row: {
+          calories: number | null
+          carbs_grams: number | null
+          category: string
+          cook_time_minutes: number | null
+          created_at: string
+          cuisine_type: string | null
+          description: string | null
+          fat_grams: number | null
+          fiber_grams: number | null
+          id: string
+          image_url: string | null
+          ingredients: Json | null
+          instructions: Json | null
+          is_featured: boolean | null
+          name: string
+          prep_time_minutes: number | null
+          protein_grams: number | null
+          rating: number | null
+          rating_count: number | null
+          servings: number | null
+          tags: string[] | null
+        }
+        Insert: {
+          calories?: number | null
+          carbs_grams?: number | null
+          category: string
+          cook_time_minutes?: number | null
+          created_at?: string
+          cuisine_type?: string | null
+          description?: string | null
+          fat_grams?: number | null
+          fiber_grams?: number | null
+          id?: string
+          image_url?: string | null
+          ingredients?: Json | null
+          instructions?: Json | null
+          is_featured?: boolean | null
+          name: string
+          prep_time_minutes?: number | null
+          protein_grams?: number | null
+          rating?: number | null
+          rating_count?: number | null
+          servings?: number | null
+          tags?: string[] | null
+        }
+        Update: {
+          calories?: number | null
+          carbs_grams?: number | null
+          category?: string
+          cook_time_minutes?: number | null
+          created_at?: string
+          cuisine_type?: string | null
+          description?: string | null
+          fat_grams?: number | null
+          fiber_grams?: number | null
+          id?: string
+          image_url?: string | null
+          ingredients?: Json | null
+          instructions?: Json | null
+          is_featured?: boolean | null
+          name?: string
+          prep_time_minutes?: number | null
+          protein_grams?: number | null
+          rating?: number | null
+          rating_count?: number | null
+          servings?: number | null
+          tags?: string[] | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -69,6 +203,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      nutrition_goals: {
+        Row: {
+          created_at: string
+          daily_calories: number | null
+          daily_carbs_grams: number | null
+          daily_fat_grams: number | null
+          daily_protein_grams: number | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_calories?: number | null
+          daily_carbs_grams?: number | null
+          daily_fat_grams?: number | null
+          daily_protein_grams?: number | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_calories?: number | null
+          daily_carbs_grams?: number | null
+          daily_fat_grams?: number | null
+          daily_protein_grams?: number | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nutrition_profiles: {
+        Row: {
+          allergies: string[] | null
+          created_at: string
+          daily_calorie_target: number | null
+          food_preferences: string[] | null
+          id: string
+          notes: string | null
+          onboarding_completed: boolean | null
+          protein_intake: string | null
+          snack_frequency: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allergies?: string[] | null
+          created_at?: string
+          daily_calorie_target?: number | null
+          food_preferences?: string[] | null
+          id?: string
+          notes?: string | null
+          onboarding_completed?: boolean | null
+          protein_intake?: string | null
+          snack_frequency?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allergies?: string[] | null
+          created_at?: string
+          daily_calorie_target?: number | null
+          food_preferences?: string[] | null
+          id?: string
+          notes?: string | null
+          onboarding_completed?: boolean | null
+          protein_intake?: string | null
+          snack_frequency?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
