@@ -6,11 +6,16 @@ import { QuickActionsSheet } from "@/components/QuickActionsSheet";
 import { RecommendationsSection } from "@/components/dashboard/RecommendationsSection";
 import { WorkoutPlanCard } from "@/components/dashboard/WorkoutPlanCard";
 import { MealPlanCard } from "@/components/dashboard/MealPlanCard";
+import { WorkoutRecommendations } from "@/components/workout/WorkoutRecommendations";
 import { useAuth } from "@/hooks/useAuth";
+import { ChevronRight, Dumbbell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const displayName = user?.user_metadata?.display_name || 
                       user?.email?.split("@")[0] || 
@@ -27,6 +32,25 @@ const Index = () => {
         
         {/* Workout Plan */}
         <WorkoutPlanCard />
+        
+        {/* AI Workout Recommendations */}
+        <div className="px-4 py-2">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold flex items-center gap-2">
+              <Dumbbell className="w-4 h-4 text-primary" />
+              Recommended For You
+            </h2>
+            <Button 
+              variant="link" 
+              size="sm" 
+              className="text-primary p-0"
+              onClick={() => navigate('/workout-library')}
+            >
+              See all <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+          <WorkoutRecommendations limit={3} showMessage={true} />
+        </div>
         
         {/* Recommendations */}
         <RecommendationsSection />
