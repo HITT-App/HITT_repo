@@ -5,13 +5,13 @@ import { Switch } from '@/components/ui/switch';
 import { Check, Lock, Sparkles, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface SandowPlusSheetProps {
+interface HIITPlusSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubscribe: (plan: 'free' | 'plus') => void;
 }
 
-export function SandowPlusSheet({ open, onOpenChange, onSubscribe }: SandowPlusSheetProps) {
+export function HIITPlusSheet({ open, onOpenChange, onSubscribe }: HIITPlusSheetProps) {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annually'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'plus'>('plus');
 
@@ -35,11 +35,11 @@ export function SandowPlusSheet({ open, onOpenChange, onSubscribe }: SandowPlusS
 
           <SheetHeader className="text-center mb-4">
             <SheetTitle className="flex items-center justify-center gap-2 text-xl">
-              sandow Plus
+              HIIT Plus
               <span className="text-xl">🌟</span>
             </SheetTitle>
             <p className="text-sm text-muted-foreground">
-              Explore sandow plus and its benefits here.
+              Explore HIIT Plus and its benefits here.
             </p>
           </SheetHeader>
 

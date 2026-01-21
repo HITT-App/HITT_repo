@@ -69,7 +69,7 @@ export default function ChatSettings() {
   const [insightSuggestions, setInsightSuggestions] = useState(INSIGHT_SUGGESTIONS);
 
   // Customize settings state
-  const [assistantName, setAssistantName] = useState('sandow AI');
+  const [assistantName, setAssistantName] = useState('HIIT');
   const [selectedVoice, setSelectedVoice] = useState('peter');
   const [selectedLanguage, setSelectedLanguage] = useState('en-gb');
   const [selectedAvatar, setSelectedAvatar] = useState('bot');
@@ -185,7 +185,7 @@ export default function ChatSettings() {
 
               {/* Share Data Toggle */}
               <div className="flex items-center justify-between py-2">
-                <Label>Share data to sandow</Label>
+                <Label>Share data to HIIT</Label>
                 <Switch checked={shareData} onCheckedChange={setShareData} />
               </div>
 
@@ -371,7 +371,7 @@ export default function ChatSettings() {
                   onClick={handleExportData}
                 >
                   <span className="text-sm text-muted-foreground">
-                    Export your data and conversations with sandow AI
+                    Export your data and conversations with HIIT
                   </span>
                   <Upload className="w-4 h-4" />
                 </Button>

@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 
 interface RichContent {
   type: 'goal_progress' | 'hydration' | 'heart_rate' | 'workout' | 'recipe' | 
-        'nutrition' | 'activity_suggestion' | 'sandow_score' | 'blood_pressure' | 
+        'nutrition' | 'activity_suggestion' | 'hiit_score' | 'blood_pressure' | 
         'steps' | 'sleep' | 'weight' | 'workout_list' | 'select_options' | 'image_analysis';
   data?: any;
 }
@@ -44,8 +44,8 @@ const detectRichContent = (content: string): RichContent | undefined => {
   if (lowerContent.includes('activity') && lowerContent.includes('suggest')) {
     return { type: 'activity_suggestion' };
   }
-  if (lowerContent.includes('sandow') || lowerContent.includes('score') || lowerContent.includes('fitness score')) {
-    return { type: 'sandow_score' };
+  if (lowerContent.includes('hiit') || lowerContent.includes('score') || lowerContent.includes('fitness score')) {
+    return { type: 'hiit_score' };
   }
   if (lowerContent.includes('blood pressure') || lowerContent.includes('bp')) {
     return { type: 'blood_pressure' };
