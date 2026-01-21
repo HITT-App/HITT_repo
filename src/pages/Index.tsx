@@ -6,6 +6,7 @@ import { QuickActionsSheet } from "@/components/QuickActionsSheet";
 import { RecommendationsSection } from "@/components/dashboard/RecommendationsSection";
 import { WorkoutPlanCard } from "@/components/dashboard/WorkoutPlanCard";
 import { MealPlanCard } from "@/components/dashboard/MealPlanCard";
+import { CoachingCard } from "@/components/dashboard/CoachingCard";
 import { WorkoutRecommendations } from "@/components/workout/WorkoutRecommendations";
 import { useAuth } from "@/hooks/useAuth";
 import { ChevronRight, Dumbbell } from "lucide-react";
@@ -51,6 +52,9 @@ const Index = () => {
           </div>
           <WorkoutRecommendations limit={3} showMessage={true} />
         </div>
+        
+        {/* Personal Coaching */}
+        <CoachingCard />
         
         {/* Recommendations */}
         <RecommendationsSection />
