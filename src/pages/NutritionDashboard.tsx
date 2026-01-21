@@ -371,7 +371,7 @@ export default function NutritionDashboard() {
         </div>
       </ScrollArea>
 
-      <BottomNav />
+      <BottomNav onCenterClick={() => {}} />
     </div>
   );
 }

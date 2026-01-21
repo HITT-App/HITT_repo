@@ -28,6 +28,7 @@ type Meal = {
   tags: string[];
   rating: number;
   is_featured: boolean;
+  servings: number | null;
 };
 
 const CATEGORIES = [
