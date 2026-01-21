@@ -47,6 +47,313 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_availability: {
+        Row: {
+          coach_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_available: boolean | null
+          start_time: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_available?: boolean | null
+          start_time: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_available?: boolean | null
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_availability_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_reviews: {
+        Row: {
+          coach_id: string
+          created_at: string
+          experience_emoji: string | null
+          id: string
+          is_verified: boolean | null
+          rating: number
+          review_text: string | null
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          experience_emoji?: string | null
+          id?: string
+          is_verified?: boolean | null
+          rating: number
+          review_text?: string | null
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          experience_emoji?: string | null
+          id?: string
+          is_verified?: boolean | null
+          rating?: number
+          review_text?: string | null
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_reviews_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_reviews_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaches: {
+        Row: {
+          available_days: string[] | null
+          available_hours_end: string | null
+          available_hours_start: string | null
+          avatar_url: string | null
+          bio: string | null
+          certifications: string[] | null
+          coaching_types: string[] | null
+          created_at: string
+          experience_years: number | null
+          gallery_urls: string[] | null
+          gender: string | null
+          id: string
+          is_available: boolean | null
+          is_featured: boolean | null
+          languages: string[] | null
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
+          name: string
+          price_per_session_max: number | null
+          price_per_session_min: number | null
+          rating: number | null
+          review_count: number | null
+          session_count: number | null
+          specialties: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          available_days?: string[] | null
+          available_hours_end?: string | null
+          available_hours_start?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          certifications?: string[] | null
+          coaching_types?: string[] | null
+          created_at?: string
+          experience_years?: number | null
+          gallery_urls?: string[] | null
+          gender?: string | null
+          id?: string
+          is_available?: boolean | null
+          is_featured?: boolean | null
+          languages?: string[] | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name: string
+          price_per_session_max?: number | null
+          price_per_session_min?: number | null
+          rating?: number | null
+          review_count?: number | null
+          session_count?: number | null
+          specialties?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          available_days?: string[] | null
+          available_hours_end?: string | null
+          available_hours_start?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          certifications?: string[] | null
+          coaching_types?: string[] | null
+          created_at?: string
+          experience_years?: number | null
+          gallery_urls?: string[] | null
+          gender?: string | null
+          id?: string
+          is_available?: boolean | null
+          is_featured?: boolean | null
+          languages?: string[] | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name?: string
+          price_per_session_max?: number | null
+          price_per_session_min?: number | null
+          rating?: number | null
+          review_count?: number | null
+          session_count?: number | null
+          specialties?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coaching_preferences: {
+        Row: {
+          budget_max: number | null
+          budget_min: number | null
+          coaching_type: string | null
+          created_at: string
+          exercise_frequency: string | null
+          id: string
+          onboarding_completed: boolean | null
+          preferred_coach_gender: string | null
+          preferred_workout_types: string[] | null
+          session_duration_minutes: number | null
+          supplements: string[] | null
+          target_body_areas: string[] | null
+          updated_at: string
+          user_id: string
+          workout_time_preference: string | null
+        }
+        Insert: {
+          budget_max?: number | null
+          budget_min?: number | null
+          coaching_type?: string | null
+          created_at?: string
+          exercise_frequency?: string | null
+          id?: string
+          onboarding_completed?: boolean | null
+          preferred_coach_gender?: string | null
+          preferred_workout_types?: string[] | null
+          session_duration_minutes?: number | null
+          supplements?: string[] | null
+          target_body_areas?: string[] | null
+          updated_at?: string
+          user_id: string
+          workout_time_preference?: string | null
+        }
+        Update: {
+          budget_max?: number | null
+          budget_min?: number | null
+          coaching_type?: string | null
+          created_at?: string
+          exercise_frequency?: string | null
+          id?: string
+          onboarding_completed?: boolean | null
+          preferred_coach_gender?: string | null
+          preferred_workout_types?: string[] | null
+          session_duration_minutes?: number | null
+          supplements?: string[] | null
+          target_body_areas?: string[] | null
+          updated_at?: string
+          user_id?: string
+          workout_time_preference?: string | null
+        }
+        Relationships: []
+      }
+      coaching_sessions: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          coach_id: string
+          completed_at: string | null
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          meeting_link: string | null
+          notes: string | null
+          price: number
+          scheduled_date: string
+          scheduled_time: string
+          session_type: string
+          status: string
+          updated_at: string
+          user_email: string | null
+          user_full_name: string | null
+          user_id: string
+          user_phone: string | null
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          coach_id: string
+          completed_at?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          meeting_link?: string | null
+          notes?: string | null
+          price: number
+          scheduled_date: string
+          scheduled_time: string
+          session_type?: string
+          status?: string
+          updated_at?: string
+          user_email?: string | null
+          user_full_name?: string | null
+          user_id: string
+          user_phone?: string | null
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          coach_id?: string
+          completed_at?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          meeting_link?: string | null
+          notes?: string | null
+          price?: number
+          scheduled_date?: string
+          scheduled_time?: string
+          session_type?: string
+          status?: string
+          updated_at?: string
+          user_email?: string | null
+          user_full_name?: string | null
+          user_id?: string
+          user_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_sessions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
