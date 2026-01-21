@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
-  ArrowLeft, 
   Calendar, 
   ChevronRight, 
   Flame, 
@@ -9,8 +7,7 @@ import {
   Plus, 
   Timer,
   TrendingUp,
-  Target,
-  Sparkles
+  Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,6 +17,7 @@ import { useActivity } from "@/hooks/useActivity";
 import { useProfile } from "@/hooks/useProfile";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { AIRecommendationsCard } from "@/components/activity/AIRecommendationsCard";
 
 const activityIcons: Record<string, string> = {
   jogging: "🏃",
@@ -242,41 +240,12 @@ const ActivityDashboard = () => {
         </div>
 
         {/* AI Recommendations */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              AI Recommendations
-            </h2>
-            <Button variant="link" size="sm" className="text-primary p-0" onClick={() => navigate("/activity-recommendations")}>
-              See All
-            </Button>
-          </div>
-          
-          {recommendations.length === 0 ? (
-            <Card className="p-6 text-center">
-              <Sparkles className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">You have no recommendation</p>
-              <p className="text-sm text-muted-foreground">You have no sleep data in your history</p>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {recommendations.slice(0, 2).map((rec) => (
-                <Card key={rec.id} className="p-4 border-l-4 border-l-primary">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 text-primary text-xs px-2 py-1 rounded">Activity</div>
-                    <div className="flex-1">
-                      <h3 className="font-medium">{rec.title}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{rec.description}</p>
-                      <p className="text-xs text-primary mt-1">+{rec.score_reward} Score Increase</p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+        <AIRecommendationsCard 
+          recommendations={recommendations} 
+          isLoading={preferencesLoading}
+          limit={2}
+          showRefresh={true}
+        />
       </div>
 
       {/* Floating Action Button */}
