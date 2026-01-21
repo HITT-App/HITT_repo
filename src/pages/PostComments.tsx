@@ -1,102 +1,76 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Settings, Heart, Send, Paperclip, Smile, Mic } from "lucide-react";
+import { ArrowLeft, Settings, Heart, Send, Paperclip, Smile, Mic, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface Comment {
-  id: string;
-  author: {
-    name: string;
-    avatar: string;
-  };
-  content: string;
-  likes: number;
-  replies: number;
-  timestamp: string;
-  isLiked: boolean;
-}
-
-const mockComments: Comment[] = [
-  {
-    id: "1",
-    author: { name: "Julienne Anderson", avatar: "" },
-    content: "Amet lacinia penatibus nulla pellentesque nibh eu praesent eros. Quisque et torquent conubia a interdum venenatis purus. Curae vel ad velit varius urna a conubia",
-    likes: 15,
-    replies: 2587,
-    timestamp: "25m ago",
-    isLiked: false
-  },
-  {
-    id: "2",
-    author: { name: "Mary F. Smith", avatar: "" },
-    content: "Lorem ipsum odor amet, consectetuer adipiscing elit. Erat rutrum mi nisl accumsan ad aptent.",
-    likes: 16,
-    replies: 2587,
-    timestamp: "8min ago",
-    isLiked: false
-  },
-  {
-    id: "3",
-    author: { name: "Mary F. Smith", avatar: "" },
-    content: "Lorem ipsum odor amet, consectetuer adipiscing elit. Erat rutrum mi nisl accumsan ad aptent.",
-    likes: 15,
-    replies: 2587,
-    timestamp: "8min ago",
-    isLiked: false
-  },
-  {
-    id: "4",
-    author: { name: "Julienne Anderson", avatar: "" },
-    content: "Amet lacinia penatibus nulla pellentesque nibh eu praesent eros. Quisque et torquent conubia a interdum venenatis purus. Curae vel ad velit varius urna a conubia",
-    likes: 15,
-    replies: 2587,
-    timestamp: "25m ago",
-    isLiked: false
-  },
-  {
-    id: "5",
-    author: { name: "Julienne Anderson", avatar: "" },
-    content: "Amet lacinia penatibus nulla pellentesque nibh eu praesent eros. Quisque et torquent conubia a interdum venenatis purus. Curae vel ad velit varius urna a conubia",
-    likes: 15,
-    replies: 2587,
-    timestamp: "25m ago",
-    isLiked: false
-  },
-];
+import { useCommunityComments } from "@/hooks/useCommunity";
+import { useAuth } from "@/hooks/useAuth";
+import { formatDistanceToNow } from "date-fns";
 
 const PostComments = () => {
   const navigate = useNavigate();
   const { postId } = useParams();
-  const [comments, setComments] = useState(mockComments);
+  const { user } = useAuth();
+  const { comments, loading, addComment, likeComment, unlikeComment } = useCommunityComments(postId || "");
   const [newComment, setNewComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [likingComments, setLikingComments] = useState<string[]>([]);
 
-  const toggleLike = (commentId: string) => {
-    setComments(comments.map(c => 
-      c.id === commentId 
-        ? { ...c, isLiked: !c.isLiked, likes: c.isLiked ? c.likes - 1 : c.likes + 1 }
-        : c
-    ));
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "U";
+    return name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
   };
 
-  const handleSubmit = () => {
-    if (!newComment.trim()) return;
+  const formatTimestamp = (dateStr: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateStr), { addSuffix: false }) + " ago";
+    } catch {
+      return "recently";
+    }
+  };
+
+  const handleLike = async (commentId: string, isLiked: boolean) => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
     
-    const comment: Comment = {
-      id: Date.now().toString(),
-      author: { name: "You", avatar: "" },
-      content: newComment,
-      likes: 0,
-      replies: 0,
-      timestamp: "Just now",
-      isLiked: false
-    };
+    if (likingComments.includes(commentId)) return;
     
-    setComments([comment, ...comments]);
+    setLikingComments(prev => [...prev, commentId]);
+    
+    if (isLiked) {
+      await unlikeComment(commentId);
+    } else {
+      await likeComment(commentId);
+    }
+    
+    setLikingComments(prev => prev.filter(id => id !== commentId));
+  };
+
+  const handleSubmit = async () => {
+    if (!newComment.trim() || submitting) return;
+    
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    
+    setSubmitting(true);
+    await addComment(newComment);
     setNewComment("");
+    setSubmitting(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -114,42 +88,73 @@ const PostComments = () => {
       {/* Comments List */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-6">
+          {comments.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
+            </div>
+          )}
+          
           {comments.map((comment) => (
             <div key={comment.id}>
               <div className="flex gap-3">
                 <Avatar className="w-10 h-10">
-                  <AvatarImage src={comment.author.avatar} />
+                  <AvatarImage src={comment.profile?.avatar_url || ""} />
                   <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                    {comment.author.name.split(" ").map(n => n[0]).join("")}
+                    {getInitials(comment.profile?.display_name || comment.profile?.username)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm">{comment.author.name}</span>
-                    <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
+                    <span className="font-medium text-sm">
+                      {comment.profile?.display_name || comment.profile?.username || "Anonymous"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{formatTimestamp(comment.created_at)}</span>
                   </div>
                   <p className="text-sm text-muted-foreground mb-2">{comment.content}</p>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <button 
-                      className={`flex items-center gap-1 ${comment.isLiked ? "text-red-500" : ""}`}
-                      onClick={() => toggleLike(comment.id)}
+                      className={`flex items-center gap-1 transition-colors ${comment.is_liked ? "text-red-500" : ""}`}
+                      onClick={() => handleLike(comment.id, comment.is_liked || false)}
+                      disabled={likingComments.includes(comment.id)}
                     >
-                      <Heart className={`w-4 h-4 ${comment.isLiked ? "fill-current" : ""}`} />
-                      {comment.likes}
+                      <Heart className={`w-4 h-4 ${comment.is_liked ? "fill-current" : ""}`} />
+                      {comment.likes_count}
                     </button>
-                    <button className="flex items-center gap-1">
-                      💬 {comment.replies.toLocaleString()}
-                    </button>
-                    <button className="text-primary">View All Replies</button>
+                    {comment.replies && comment.replies.length > 0 && (
+                      <span className="flex items-center gap-1">
+                        💬 {comment.replies.length} replies
+                      </span>
+                    )}
                   </div>
+                  
+                  {/* Replies */}
+                  {comment.replies && comment.replies.length > 0 && (
+                    <div className="mt-4 ml-4 space-y-4 border-l-2 border-border pl-4">
+                      {comment.replies.map((reply) => (
+                        <div key={reply.id} className="flex gap-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={reply.profile?.avatar_url || ""} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {getInitials(reply.profile?.display_name || reply.profile?.username)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">
+                                {reply.profile?.display_name || reply.profile?.username || "Anonymous"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">{formatTimestamp(reply.created_at)}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{reply.content}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           ))}
-          
-          <Button variant="link" className="w-full text-primary">
-            Show All
-          </Button>
         </div>
       </ScrollArea>
 
@@ -161,11 +166,12 @@ const PostComments = () => {
           </Button>
           <div className="flex-1 relative">
             <Input
-              placeholder="Type to write comment..."
+              placeholder={user ? "Type to write comment..." : "Log in to comment"}
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               className="pr-20"
+              disabled={!user}
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -180,8 +186,9 @@ const PostComments = () => {
             size="icon" 
             className="bg-primary hover:bg-primary/90 rounded-full shrink-0"
             onClick={handleSubmit}
+            disabled={!newComment.trim() || submitting || !user}
           >
-            <Send className="w-4 h-4" />
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
       </div>

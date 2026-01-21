@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Settings, Image, Video, Mic, Paperclip, Smile, X, Check } from "lucide-react";
+import { ArrowLeft, Settings, Image, Mic, Paperclip, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,6 +10,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useCommunityActions } from "@/hooks/useCommunity";
+import { useAuth } from "@/hooks/useAuth";
 
 const postCategories = [
   { id: "workout", label: "Workout", icon: "💪" },
@@ -19,10 +21,13 @@ const postCategories = [
   { id: "other", label: "Other", icon: "⚙️" },
 ];
 
-const suggestedTags = ["fitnessrock", "hiitAI"];
+const suggestedTags = ["fitnessrock", "hiitAI", "healthylifestyle", "workout"];
 
 const CreatePost = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { createPost } = useCommunityActions();
+  
   const [content, setContent] = useState("");
   const [postType, setPostType] = useState<"text" | "poll" | "before-after">("text");
   const [category, setCategory] = useState("workout");
@@ -32,11 +37,47 @@ const CreatePost = () => {
   const [showMediaSheet, setShowMediaSheet] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [pollOptions, setPollOptions] = useState(["", "", "", ""]);
-  const [beforeImage, setBeforeImage] = useState<string | null>(null);
-  const [afterImage, setAfterImage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    setShowSuccessDialog(true);
+  const getInitials = (email: string | undefined) => {
+    if (!email) return "U";
+    return email.substring(0, 2).toUpperCase();
+  };
+
+  const handleSubmit = async () => {
+    if (!content.trim() || submitting) return;
+    
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    setSubmitting(true);
+
+    const postData: Parameters<typeof createPost>[0] = {
+      content: content.trim(),
+      post_type: postType,
+      category,
+      tags,
+    };
+
+    if (postType === "poll") {
+      const validOptions = pollOptions.filter(opt => opt.trim());
+      if (validOptions.length >= 2) {
+        postData.poll_options = {
+          options: validOptions,
+          votes: validOptions.map(() => 0),
+        };
+      }
+    }
+
+    const result = await createPost(postData);
+    
+    setSubmitting(false);
+    
+    if (result) {
+      setShowSuccessDialog(true);
+    }
   };
 
   const addTag = (tag: string) => {
@@ -47,6 +88,11 @@ const CreatePost = () => {
 
   const removeTag = (tag: string) => {
     setTags(tags.filter(t => t !== tag));
+  };
+
+  const getCategoryIcon = () => {
+    const cat = postCategories.find(c => c.id === category);
+    return cat?.icon || "💪";
   };
 
   return (
@@ -67,7 +113,9 @@ const CreatePost = () => {
         <div className="flex gap-3 mb-4">
           <Avatar className="w-10 h-10">
             <AvatarImage src="" />
-            <AvatarFallback className="bg-primary/10 text-primary">MK</AvatarFallback>
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {getInitials(user?.email)}
+            </AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <Textarea
@@ -78,26 +126,6 @@ const CreatePost = () => {
             />
           </div>
         </div>
-
-        {/* Before/After Images */}
-        {postType === "before-after" && (
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30">
-              {beforeImage ? (
-                <img src={beforeImage} alt="Before" className="w-full h-full object-cover rounded-xl" />
-              ) : (
-                <span className="text-sm text-muted-foreground">Before</span>
-              )}
-            </div>
-            <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30">
-              {afterImage ? (
-                <img src={afterImage} alt="After" className="w-full h-full object-cover rounded-xl" />
-              ) : (
-                <span className="text-sm text-muted-foreground">After</span>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Poll Options */}
         {postType === "poll" && (
@@ -127,7 +155,7 @@ const CreatePost = () => {
           <Sheet open={showCategorySheet} onOpenChange={setShowCategorySheet}>
             <SheetTrigger asChild>
               <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-primary/10">
-                <span>💪</span> {category.charAt(0).toUpperCase() + category.slice(1)}
+                <span>{getCategoryIcon()}</span> {category.charAt(0).toUpperCase() + category.slice(1)}
               </Badge>
             </SheetTrigger>
             <SheetContent side="bottom" className="rounded-t-3xl">
@@ -192,14 +220,14 @@ const CreatePost = () => {
         <Sheet open={showTypeSheet} onOpenChange={setShowTypeSheet}>
           <SheetTrigger asChild>
             <Button variant="outline" className="w-full mb-4">
-              Choose Post Type
+              Choose Post Type: {postType === "text" ? "Text" : postType === "poll" ? "Poll" : "Before vs After"}
             </Button>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-3xl">
             <SheetHeader>
               <SheetTitle>Choose Post Type</SheetTitle>
             </SheetHeader>
-            <RadioGroup value={postType} onValueChange={(v) => setPostType(v as any)} className="mt-4 space-y-3">
+            <RadioGroup value={postType} onValueChange={(v) => setPostType(v as typeof postType)} className="mt-4 space-y-3">
               <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <span className="text-lg">T</span>
@@ -226,7 +254,7 @@ const CreatePost = () => {
               className="w-full mt-6 bg-primary hover:bg-primary/90"
               onClick={() => setShowTypeSheet(false)}
             >
-              Submit Post →
+              Confirm Selection
             </Button>
           </SheetContent>
         </Sheet>
@@ -235,9 +263,16 @@ const CreatePost = () => {
         <Button 
           className="w-full bg-primary hover:bg-primary/90"
           onClick={handleSubmit}
-          disabled={!content.trim()}
+          disabled={!content.trim() || submitting}
         >
-          Submit Post →
+          {submitting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            "Submit Post →"
+          )}
         </Button>
       </div>
 
@@ -276,18 +311,21 @@ const CreatePost = () => {
           <div className="py-8">
             <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center relative overflow-hidden">
               <span className="text-6xl">✅</span>
-              <div className="absolute inset-0 bg-[url('/placeholder.svg')] opacity-20" />
             </div>
             <h2 className="text-2xl font-bold mb-2">Post submitted.</h2>
             <p className="text-muted-foreground mb-6">Post submitted successfully.</p>
             <Button 
               className="w-full bg-primary hover:bg-primary/90 mb-3"
+              onClick={() => navigate("/community/feed")}
+            >
+              View Feed →
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
               onClick={() => navigate("/community/profile")}
             >
-              See My Post →
-            </Button>
-            <Button variant="outline" className="w-full gap-2">
-              💝 Share
+              See My Profile
             </Button>
           </div>
         </DialogContent>
