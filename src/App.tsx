@@ -31,6 +31,11 @@ import Mood from "./pages/Mood";
 import HealthRecommendations from "./pages/HealthRecommendations";
 import ChatSettings from "./pages/ChatSettings";
 import MyConversations from "./pages/MyConversations";
+import NutritionOnboarding from "./pages/NutritionOnboarding";
+import NutritionDashboard from "./pages/NutritionDashboard";
+import MealScanner from "./pages/MealScanner";
+import BrowseMeals from "./pages/BrowseMeals";
+import LogMeal from "./pages/LogMeal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -90,6 +95,11 @@ const App = () => (
             <Route path="/health-recommendations" element={<ProtectedRoute><HealthRecommendations /></ProtectedRoute>} />
             <Route path="/chat-settings" element={<ProtectedRoute><ChatSettings /></ProtectedRoute>} />
             <Route path="/my-conversations" element={<ProtectedRoute><MyConversations /></ProtectedRoute>} />
+            <Route path="/nutrition-onboarding" element={<ProtectedRoute><NutritionOnboarding /></ProtectedRoute>} />
+            <Route path="/nutrition-dashboard" element={<ProtectedRoute><NutritionDashboard /></ProtectedRoute>} />
+            <Route path="/meal-scanner" element={<ProtectedRoute><MealScanner /></ProtectedRoute>} />
+            <Route path="/browse-meals" element={<ProtectedRoute><BrowseMeals /></ProtectedRoute>} />
+            <Route path="/log-meal" element={<ProtectedRoute><LogMeal /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
