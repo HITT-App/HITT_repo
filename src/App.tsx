@@ -40,6 +40,15 @@ import BookCoach from "./pages/BookCoach";
 import CoachAppointments from "./pages/CoachAppointments";
 import LiveSession from "./pages/LiveSession";
 import Community from "./pages/Community";
+import CommunityOnboarding from "./pages/CommunityOnboarding";
+import CommunityFeed from "./pages/CommunityFeed";
+import CommunitySearch from "./pages/CommunitySearch";
+import CommunityProfile from "./pages/CommunityProfile";
+import CommunityProfileSettings from "./pages/CommunityProfileSettings";
+import CommunityChat from "./pages/CommunityChat";
+import CommunityNotifications from "./pages/CommunityNotifications";
+import CreatePost from "./pages/CreatePost";
+import PostComments from "./pages/PostComments";
 import Resources from "./pages/Resources";
 import HeartRate from "./pages/HeartRate";
 import Steps from "./pages/Steps";
@@ -132,6 +141,16 @@ const App = () => (
             <Route path="/coach-appointments" element={<ProtectedRoute><CoachAppointments /></ProtectedRoute>} />
             <Route path="/live-session/:id" element={<ProtectedRoute><LiveSession /></ProtectedRoute>} />
             <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+            <Route path="/community/onboarding" element={<ProtectedRoute><CommunityOnboarding /></ProtectedRoute>} />
+            <Route path="/community/feed" element={<ProtectedRoute><CommunityFeed /></ProtectedRoute>} />
+            <Route path="/community/search" element={<ProtectedRoute><CommunitySearch /></ProtectedRoute>} />
+            <Route path="/community/profile" element={<ProtectedRoute><CommunityProfile /></ProtectedRoute>} />
+            <Route path="/community/profile/settings" element={<ProtectedRoute><CommunityProfileSettings /></ProtectedRoute>} />
+            <Route path="/community/chat/:userId" element={<ProtectedRoute><CommunityChat /></ProtectedRoute>} />
+            <Route path="/community/notifications" element={<ProtectedRoute><CommunityNotifications /></ProtectedRoute>} />
+            <Route path="/community/create" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
+            <Route path="/community/post/:postId/comments" element={<ProtectedRoute><PostComments /></ProtectedRoute>} />
+            <Route path="/community/user/:userId" element={<ProtectedRoute><CommunityProfile /></ProtectedRoute>} />
             <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
             <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
             <Route path="/assessment-results" element={<ProtectedRoute><AssessmentResults /></ProtectedRoute>} />
