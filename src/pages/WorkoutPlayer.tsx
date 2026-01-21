@@ -1,0 +1,389 @@
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { HIITLogo } from '@/components/HIITLogo';
+import { 
+  ArrowLeft, Play, Pause, SkipForward, SkipBack, 
+  MoreHorizontal, Volume2, Settings, Download, Share2
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+type Workout = {
+  id: string;
+  title: string;
+  description: string;
+  duration_minutes: number;
+  calories_burned: number;
+};
+
+type Exercise = {
+  id: string;
+  title: string;
+  description: string;
+  duration_seconds: number;
+  body_area: string;
+  order_index: number;
+};
+
+type PlayerState = 'countdown' | 'playing' | 'paused' | 'completed';
+
+export default function WorkoutPlayer() {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [workout, setWorkout] = useState<Workout | null>(null);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [playerState, setPlayerState] = useState<PlayerState>('countdown');
+  const [countdown, setCountdown] = useState(3);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [totalElapsed, setTotalElapsed] = useState(0);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showPlaylist, setShowPlaylist] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [rating, setRating] = useState(0);
+  
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      fetchWorkoutData();
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (playerState === 'countdown' && countdown > 0) {
+      timerRef.current = setTimeout(() => setCountdown(c => c - 1), 1000);
+    } else if (playerState === 'countdown' && countdown === 0) {
+      startExercise();
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [countdown, playerState]);
+
+  useEffect(() => {
+    if (playerState === 'playing' && timeRemaining > 0) {
+      timerRef.current = setTimeout(() => {
+        setTimeRemaining(t => t - 1);
+        setTotalElapsed(t => t + 1);
+      }, 1000);
+    } else if (playerState === 'playing' && timeRemaining === 0 && exercises.length > 0) {
+      nextExercise();
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [timeRemaining, playerState]);
+
+  const fetchWorkoutData = async () => {
+    try {
+      const { data: workoutData } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (workoutData) setWorkout(workoutData);
+
+      const { data: exercisesData } = await supabase
+        .from('workout_exercises')
+        .select('*')
+        .eq('workout_id', id)
+        .order('order_index');
+
+      if (exercisesData && exercisesData.length > 0) {
+        setExercises(exercisesData);
+        setTimeRemaining(exercisesData[0].duration_seconds || 45);
+      }
+    } catch (error) {
+      console.error('Error fetching workout:', error);
+    }
+  };
+
+  const startExercise = () => {
+    setPlayerState('playing');
+    if (exercises[currentExerciseIndex]) {
+      setTimeRemaining(exercises[currentExerciseIndex].duration_seconds || 45);
+    }
+  };
+
+  const togglePlayPause = () => {
+    setPlayerState(prev => prev === 'playing' ? 'paused' : 'playing');
+  };
+
+  const nextExercise = () => {
+    if (currentExerciseIndex < exercises.length - 1) {
+      setCurrentExerciseIndex(prev => prev + 1);
+      setTimeRemaining(exercises[currentExerciseIndex + 1].duration_seconds || 45);
+    } else {
+      completeWorkout();
+    }
+  };
+
+  const prevExercise = () => {
+    if (currentExerciseIndex > 0) {
+      setCurrentExerciseIndex(prev => prev - 1);
+      setTimeRemaining(exercises[currentExerciseIndex - 1].duration_seconds || 45);
+    }
+  };
+
+  const completeWorkout = async () => {
+    setPlayerState('completed');
+    setShowCompleted(true);
+
+    if (user && workout) {
+      try {
+        await supabase.from('workout_progress').insert({
+          user_id: user.id,
+          workout_id: workout.id,
+          duration_seconds: totalElapsed,
+        });
+      } catch (error) {
+        console.error('Error saving progress:', error);
+      }
+    }
+  };
+
+  const handleFinish = () => {
+    toast({ title: 'Great workout!', description: 'Your progress has been saved.' });
+    navigate('/workout-library');
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const currentExercise = exercises[currentExerciseIndex];
+  const progress = exercises.length > 0 ? ((currentExerciseIndex + 1) / exercises.length) * 100 : 0;
+  const totalDuration = exercises.reduce((acc, ex) => acc + (ex.duration_seconds || 45), 0);
+
+  // Countdown Screen
+  if (playerState === 'countdown') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <p className="text-xl mb-8">
+          {countdown === 3 ? 'Are you ready?' : countdown === 2 ? 'Just do your best.' : 'Good Luck!'}
+        </p>
+        <div className="text-[200px] font-bold text-primary leading-none">{countdown}</div>
+        <HIITLogo size="lg" className="mt-16" />
+      </div>
+    );
+  }
+
+  // Completed Screen
+  if (showCompleted) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center mb-8">
+          <span className="text-6xl">🏋️</span>
+        </div>
+        
+        <h1 className="text-3xl font-bold mb-2">Workout Completed.</h1>
+        <p className="text-muted-foreground mb-8">Good Job! Here is your quick post-workout summary.</p>
+
+        <div className="flex items-center justify-center gap-8 mb-8">
+          <div className="text-center">
+            <p className="text-3xl font-bold">{Math.floor(totalElapsed / 60)}</p>
+            <p className="text-xs text-muted-foreground">Minute</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold">{workout?.calories_burned || 158}</p>
+            <p className="text-xs text-muted-foreground">kcal</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold">128</p>
+            <p className="text-xs text-muted-foreground">BPM</p>
+          </div>
+        </div>
+
+        {/* Rating */}
+        <div className="mb-8">
+          <p className="text-lg font-semibold mb-4">How was the workout?</p>
+          <p className="text-sm text-muted-foreground mb-4">Please rate your experience to better improve our platform.</p>
+          <div className="flex justify-center gap-2">
+            {[1, 2, 3, 4, 5].map(star => (
+              <button
+                key={star}
+                onClick={() => setRating(star)}
+                className="text-4xl transition-transform hover:scale-110"
+              >
+                {star <= rating ? '⭐' : '☆'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="w-full space-y-3">
+          <Button variant="outline" className="w-full h-12 rounded-2xl">
+            Submit Feedback →
+          </Button>
+          <Button onClick={handleFinish} className="w-full h-12 rounded-2xl">
+            Continue
+          </Button>
+          <Button variant="ghost" className="w-full text-primary" onClick={handleFinish}>
+            Skip this
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Video/Exercise Area */}
+      <div className="relative flex-1 bg-gradient-to-b from-secondary to-background">
+        {/* Header */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-10">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="bg-background/50 backdrop-blur">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h2 className="font-semibold">{currentExercise?.title || workout?.title}</h2>
+          <Button variant="ghost" size="icon" className="bg-background/50 backdrop-blur" onClick={() => setShowMenu(true)}>
+            <MoreHorizontal className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Exercise Display */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-6xl font-bold mb-2">{formatTime(timeRemaining)}</p>
+            <p className="text-muted-foreground">
+              {currentExercise?.body_area ? `Target: ${currentExercise.body_area}` : 'Focus on your form'}
+            </p>
+          </div>
+        </div>
+
+        {/* Paused Overlay */}
+        {playerState === 'paused' && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur flex items-center justify-center">
+            <p className="text-2xl font-bold">Paused</p>
+          </div>
+        )}
+      </div>
+
+      {/* Controls */}
+      <div className="p-6 space-y-6">
+        {/* Coming up next */}
+        {currentExerciseIndex < exercises.length - 1 && (
+          <div className="flex items-center justify-between bg-card p-3 rounded-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="font-bold text-primary">{currentExerciseIndex + 2}</span>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Coming up next</p>
+                <p className="font-medium">{exercises[currentExerciseIndex + 1]?.title}</p>
+              </div>
+            </div>
+            <Button size="icon" className="rounded-full" onClick={nextExercise}>
+              <Play className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
+
+        {/* Progress */}
+        <div className="space-y-2">
+          <Progress value={progress} className="h-1" />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{formatTime(totalElapsed)}</span>
+            <span>-{formatTime(totalDuration - totalElapsed)}</span>
+          </div>
+        </div>
+
+        {/* Playback Controls */}
+        <div className="flex items-center justify-center gap-8">
+          <Button variant="ghost" size="icon" className="rounded-full w-14 h-14" onClick={prevExercise}>
+            <SkipBack className="w-6 h-6" />
+          </Button>
+          <Button 
+            size="icon" 
+            className="rounded-full w-16 h-16 bg-primary hover:bg-primary/90"
+            onClick={togglePlayPause}
+          >
+            {playerState === 'playing' ? (
+              <Pause className="w-8 h-8" />
+            ) : (
+              <Play className="w-8 h-8 ml-1" />
+            )}
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full w-14 h-14" onClick={nextExercise}>
+            <SkipForward className="w-6 h-6" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Menu Sheet */}
+      <Sheet open={showMenu} onOpenChange={setShowMenu}>
+        <SheetContent side="top" className="rounded-b-3xl">
+          <div className="py-4 space-y-2">
+            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { setShowMenu(false); setShowPlaylist(true); }}>
+              <Settings className="w-5 h-5" /> Settings
+            </Button>
+            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => setShowPlaylist(true)}>
+              <Play className="w-5 h-5" /> Playlist
+            </Button>
+            <Button variant="ghost" className="w-full justify-start gap-3">
+              <Download className="w-5 h-5" /> Download
+            </Button>
+            <Button variant="ghost" className="w-full justify-start gap-3">
+              <Share2 className="w-5 h-5" /> Share
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Playlist Sheet */}
+      <Sheet open={showPlaylist} onOpenChange={setShowPlaylist}>
+        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl">
+          <SheetHeader>
+            <SheetTitle>Workout Playlist</SheetTitle>
+          </SheetHeader>
+          <p className="text-sm text-muted-foreground mb-4">{workout?.title}: Strength Starts Here</p>
+          <div className="space-y-3">
+            {exercises.map((exercise, index) => (
+              <button
+                key={exercise.id}
+                onClick={() => {
+                  setCurrentExerciseIndex(index);
+                  setTimeRemaining(exercise.duration_seconds || 45);
+                  setShowPlaylist(false);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left",
+                  index === currentExerciseIndex ? "bg-primary/10 border border-primary" : "hover:bg-secondary"
+                )}
+              >
+                <div className={cn(
+                  "w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold",
+                  index < currentExerciseIndex ? "bg-green-500/10 text-green-500" :
+                  index === currentExerciseIndex ? "bg-primary text-primary-foreground" : "bg-secondary"
+                )}>
+                  Part {index + 1}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">{exercise.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {Math.floor((exercise.duration_seconds || 45) / 60)}min · {exercise.body_area || 'Full Body'}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}

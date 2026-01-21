@@ -36,6 +36,11 @@ import NutritionDashboard from "./pages/NutritionDashboard";
 import MealScanner from "./pages/MealScanner";
 import BrowseMeals from "./pages/BrowseMeals";
 import LogMeal from "./pages/LogMeal";
+import WorkoutOnboarding from "./pages/WorkoutOnboarding";
+import WorkoutLibrary from "./pages/WorkoutLibrary";
+import WorkoutDetail from "./pages/WorkoutDetail";
+import WorkoutPlayer from "./pages/WorkoutPlayer";
+import WorkoutSchedule from "./pages/WorkoutSchedule";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -100,6 +105,11 @@ const App = () => (
             <Route path="/meal-scanner" element={<ProtectedRoute><MealScanner /></ProtectedRoute>} />
             <Route path="/browse-meals" element={<ProtectedRoute><BrowseMeals /></ProtectedRoute>} />
             <Route path="/log-meal" element={<ProtectedRoute><LogMeal /></ProtectedRoute>} />
+            <Route path="/workout-onboarding" element={<ProtectedRoute><WorkoutOnboarding /></ProtectedRoute>} />
+            <Route path="/workout-library" element={<ProtectedRoute><WorkoutLibrary /></ProtectedRoute>} />
+            <Route path="/workout/:id" element={<ProtectedRoute><WorkoutDetail /></ProtectedRoute>} />
+            <Route path="/workout-player/:id" element={<ProtectedRoute><WorkoutPlayer /></ProtectedRoute>} />
+            <Route path="/workout-schedule" element={<ProtectedRoute><WorkoutSchedule /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

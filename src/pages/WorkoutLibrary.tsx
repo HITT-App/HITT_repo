@@ -1,0 +1,479 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { HIITLogo } from '@/components/HIITLogo';
+import { BottomNav } from '@/components/BottomNav';
+import { 
+  Search, Filter, Clock, Flame, Star, ChevronRight, 
+  Dumbbell, Heart, Zap, Play, Users, ArrowRight
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+type Workout = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: string;
+  duration_minutes: number;
+  calories_burned: number;
+  body_areas: string[];
+  equipment: string[];
+  instructor_name: string;
+  thumbnail_url: string | null;
+  is_featured: boolean;
+  rating: number;
+  rating_count: number;
+};
+
+const CATEGORIES = [
+  { id: 'all', label: 'All', icon: null },
+  { id: 'strength', label: 'Strength', icon: Dumbbell },
+  { id: 'cardio', label: 'Cardio', icon: Heart },
+  { id: 'hiit', label: 'HIIT', icon: Zap },
+  { id: 'flexibility', label: 'Flexibility', icon: null },
+];
+
+const BODY_AREAS = [
+  { id: 'legs', label: 'Lower Leg' },
+  { id: 'upper-leg', label: 'Upper Leg' },
+  { id: 'chest', label: 'Chest' },
+  { id: 'arms', label: 'Arms' },
+  { id: 'back', label: 'Back' },
+  { id: 'shoulders', label: 'Shoulders' },
+  { id: 'abs', label: 'Abs' },
+  { id: 'full-body', label: 'Full Body' },
+];
+
+const EQUIPMENT_LIST = [
+  { id: 'none', label: 'No Equipment' },
+  { id: 'dumbbells', label: 'Dumbbells' },
+  { id: 'barbell', label: 'Barbell' },
+  { id: 'kettlebell', label: 'Kettlebell' },
+  { id: 'resistance-bands', label: 'Resistance Bands' },
+  { id: 'pull-up-bar', label: 'Pull-up Bar' },
+];
+
+export default function WorkoutLibrary() {
+  const navigate = useNavigate();
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedBodyAreas, setSelectedBodyAreas] = useState<string[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
+
+  useEffect(() => {
+    fetchWorkouts();
+  }, []);
+
+  const fetchWorkouts = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('workouts')
+        .select('*')
+        .order('is_featured', { ascending: false })
+        .order('rating', { ascending: false });
+
+      if (error) throw error;
+      setWorkouts(data || []);
+    } catch (error) {
+      console.error('Error fetching workouts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredWorkouts = workouts.filter(workout => {
+    const matchesSearch = workout.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      workout.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || workout.category === selectedCategory;
+    const matchesBodyArea = selectedBodyAreas.length === 0 || 
+      workout.body_areas?.some(area => selectedBodyAreas.includes(area));
+    const matchesEquipment = selectedEquipment.length === 0 ||
+      workout.equipment?.some(eq => selectedEquipment.includes(eq));
+    const matchesDifficulty = !selectedDifficulty || workout.difficulty === selectedDifficulty;
+    
+    return matchesSearch && matchesCategory && matchesBodyArea && matchesEquipment && matchesDifficulty;
+  });
+
+  const featuredWorkouts = filteredWorkouts.filter(w => w.is_featured);
+  const activeWorkouts = filteredWorkouts.slice(0, 3);
+
+  const toggleBodyArea = (id: string) => {
+    setSelectedBodyAreas(prev => 
+      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
+    );
+  };
+
+  const toggleEquipment = (id: string) => {
+    setSelectedEquipment(prev => 
+      prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedBodyAreas([]);
+    setSelectedEquipment([]);
+    setSelectedDifficulty('');
+  };
+
+  const activeFilterCount = selectedBodyAreas.length + selectedEquipment.length + (selectedDifficulty ? 1 : 0);
+
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      <ScrollArea className="h-[calc(100vh-96px)]">
+        <div className="p-4 space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <HIITLogo size="sm" />
+            <p className="text-sm text-muted-foreground">Workouts</p>
+          </div>
+
+          {/* AI Greeting */}
+          <Card className="bg-card border-border/50">
+            <CardContent className="p-4">
+              <div className="flex gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <HIITLogo size="sm" />
+                </div>
+                <div>
+                  <p className="text-sm">
+                    Ok Makise, Here is a good workout exercise for you to get started with! 💪
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Featured Workout */}
+          {featuredWorkouts[0] && (
+            <Card 
+              className="overflow-hidden cursor-pointer"
+              onClick={() => navigate(`/workout/${featuredWorkouts[0].id}`)}
+            >
+              <div className="relative h-40 bg-gradient-to-br from-primary/20 to-primary/5">
+                {featuredWorkouts[0].thumbnail_url ? (
+                  <img 
+                    src={featuredWorkouts[0].thumbnail_url} 
+                    alt={featuredWorkouts[0].title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Dumbbell className="w-16 h-16 text-primary/30" />
+                  </div>
+                )}
+                <Badge className="absolute top-3 left-3 bg-primary">Featured</Badge>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-4">
+                  <h3 className="font-bold text-lg">{featuredWorkouts[0].title}</h3>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {featuredWorkouts[0].duration_minutes}min
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Flame className="w-3 h-3" /> {featuredWorkouts[0].calories_burned}kcal
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-primary text-primary" /> {featuredWorkouts[0].rating}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <CardContent className="p-4">
+                <Button className="w-full gap-2">
+                  Go to dashboard <ArrowRight className="w-4 h-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Search & Filter */}
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search for a workout..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 rounded-xl"
+              />
+            </div>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="rounded-xl relative"
+              onClick={() => setShowFilters(true)}
+            >
+              <Filter className="w-4 h-4" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          </div>
+
+          {/* Category Tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+            {CATEGORIES.map(cat => (
+              <Button
+                key={cat.id}
+                variant={selectedCategory === cat.id ? "default" : "outline"}
+                size="sm"
+                className="rounded-full flex-shrink-0 gap-1"
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                {cat.icon && <cat.icon className="w-3 h-3" />}
+                {cat.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* My Active Workouts */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold">My Active Workout</h2>
+              <Button variant="link" size="sm" className="text-primary">See all</Button>
+            </div>
+            <div className="space-y-3">
+              {activeWorkouts.map(workout => (
+                <Card 
+                  key={workout.id} 
+                  className="cursor-pointer hover:bg-secondary/30 transition-colors"
+                  onClick={() => navigate(`/workout/${workout.id}`)}
+                >
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {workout.thumbnail_url ? (
+                        <img src={workout.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Dumbbell className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{workout.title}</h3>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{workout.duration_minutes}min</span>
+                        <span>·</span>
+                        <span className="capitalize">{workout.difficulty}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Suggest Workout */}
+          <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Zap className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold">Get the best workout</p>
+                <p className="text-sm text-muted-foreground">Personalized with AI</p>
+              </div>
+              <Button size="sm" className="rounded-xl">
+                <Play className="w-4 h-4" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Browse By Body Area */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold">Browse By Body Area</h2>
+              <Button variant="link" size="sm" className="text-primary">See all</Button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4">
+              {BODY_AREAS.slice(0, 5).map(area => (
+                <button
+                  key={area.id}
+                  onClick={() => {
+                    toggleBodyArea(area.id);
+                    setShowFilters(true);
+                  }}
+                  className="flex flex-col items-center gap-2 flex-shrink-0"
+                >
+                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
+                    <Dumbbell className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <span className="text-xs">{area.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Short Workouts */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold">Short Workouts</h2>
+              <Button variant="link" size="sm" className="text-primary">See all</Button>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+              {filteredWorkouts.filter(w => w.duration_minutes <= 20).slice(0, 4).map(workout => (
+                <Card 
+                  key={workout.id} 
+                  className="w-40 flex-shrink-0 overflow-hidden cursor-pointer"
+                  onClick={() => navigate(`/workout/${workout.id}`)}
+                >
+                  <div className="h-24 bg-gradient-to-br from-primary/20 to-secondary relative">
+                    <Badge className="absolute top-2 left-2 text-[10px]" variant="secondary">
+                      {workout.duration_minutes}min
+                    </Badge>
+                  </div>
+                  <CardContent className="p-3">
+                    <h3 className="font-medium text-sm truncate">{workout.title}</h3>
+                    <p className="text-xs text-muted-foreground capitalize">{workout.difficulty}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Trending Workouts */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold">Trending Workouts</h2>
+              <Button variant="link" size="sm" className="text-primary">See all</Button>
+            </div>
+            <div className="space-y-3">
+              {filteredWorkouts.filter(w => w.rating >= 4.5).slice(0, 3).map(workout => (
+                <Card 
+                  key={workout.id} 
+                  className="overflow-hidden cursor-pointer"
+                  onClick={() => navigate(`/workout/${workout.id}`)}
+                >
+                  <div className="relative h-32 bg-gradient-to-br from-primary/30 to-secondary">
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background to-transparent p-4">
+                      <h3 className="font-bold">{workout.title}</h3>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" /> {workout.rating_count}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {workout.duration_minutes}min
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-primary text-primary" /> {workout.rating}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </ScrollArea>
+
+      {/* Filter Sheet */}
+      <Sheet open={showFilters} onOpenChange={setShowFilters}>
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl">
+          <SheetHeader>
+            <SheetTitle className="flex items-center justify-between">
+              Filter Workout Results
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-primary">
+                Clear All
+              </Button>
+            </SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="h-full py-4">
+            <div className="space-y-6">
+              {/* Category */}
+              <div>
+                <h3 className="font-semibold mb-3">Category</h3>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                    <Button
+                      key={cat.id}
+                      variant={selectedCategory === cat.id ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => setSelectedCategory(cat.id)}
+                    >
+                      {cat.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Difficulty */}
+              <div>
+                <h3 className="font-semibold mb-3">Level</h3>
+                <div className="flex flex-wrap gap-2">
+                  {['beginner', 'intermediate', 'advanced'].map(level => (
+                    <Button
+                      key={level}
+                      variant={selectedDifficulty === level ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full capitalize"
+                      onClick={() => setSelectedDifficulty(selectedDifficulty === level ? '' : level)}
+                    >
+                      {level}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Equipment */}
+              <div>
+                <h3 className="font-semibold mb-3">Equipment</h3>
+                <div className="flex flex-wrap gap-2">
+                  {EQUIPMENT_LIST.map(eq => (
+                    <Button
+                      key={eq.id}
+                      variant={selectedEquipment.includes(eq.id) ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => toggleEquipment(eq.id)}
+                    >
+                      {eq.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Body Area */}
+              <div>
+                <h3 className="font-semibold mb-3">Filter By Body Area</h3>
+                <div className="flex flex-wrap gap-2">
+                  {BODY_AREAS.map(area => (
+                    <Button
+                      key={area.id}
+                      variant={selectedBodyAreas.includes(area.id) ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => toggleBodyArea(area.id)}
+                    >
+                      {area.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+          <div className="pt-4 border-t">
+            <Button onClick={() => setShowFilters(false)} className="w-full h-12 rounded-2xl">
+              Show Results ({filteredWorkouts.length})
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <BottomNav onCenterClick={() => {}} />
+    </div>
+  );
+}
