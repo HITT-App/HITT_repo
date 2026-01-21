@@ -95,12 +95,24 @@ export function useAIChat(conversationId: string | null) {
     })));
   }, []);
 
+  // Convert blob URL to base64 data URL
+  const blobUrlToBase64 = async (blobUrl: string): Promise<string> => {
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
   const sendMessage = useCallback(async (content: string, convId: string, imageUrl?: string) => {
     if (!user || (!content.trim() && !imageUrl)) return;
 
     const userMessage: Message = { 
       role: 'user', 
-      content: content.trim(),
+      content: content.trim() || (imageUrl ? "What exercises can I do with this equipment?" : ""),
       imageUrl
     };
     setMessages(prev => [...prev, userMessage]);
@@ -111,18 +123,30 @@ export function useAIChat(conversationId: string | null) {
     await supabase.from('messages').insert({
       conversation_id: convId,
       role: 'user',
-      content: content.trim(),
+      content: userMessage.content,
     });
 
     let assistantContent = '';
+    let imageBase64: string | undefined;
 
     try {
-      // Prepare messages for API, including image context if present
+      // Convert blob URL to base64 if we have an image
+      if (imageUrl) {
+        try {
+          imageBase64 = await blobUrlToBase64(imageUrl);
+        } catch (err) {
+          console.error('Failed to convert image:', err);
+        }
+      }
+
+      // Prepare messages for API, including image data for multimodal
       const apiMessages = [...messages, userMessage].map(m => {
-        if (m.imageUrl) {
+        // For the current message with image, include base64 data
+        if (m === userMessage && imageBase64) {
           return { 
             role: m.role, 
-            content: `[User uploaded an image] ${m.content}` 
+            content: m.content || "What exercises can I do with this equipment?",
+            imageData: imageBase64
           };
         }
         return { role: m.role, content: m.content };
@@ -137,6 +161,7 @@ export function useAIChat(conversationId: string | null) {
         body: JSON.stringify({
           messages: apiMessages,
           hasImage: !!imageUrl,
+          imageData: imageBase64,
         }),
       });
 
