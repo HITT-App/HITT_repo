@@ -5,7 +5,7 @@ export { WorkoutCard } from './WorkoutCard';
 export { RecipeCard } from './RecipeCard';
 export { NutritionCard } from './NutritionCard';
 export { ActivitySuggestionCard } from './ActivitySuggestionCard';
-export { SandowScoreCard } from './SandowScoreCard';
+export { HIITScoreCard } from './SandowScoreCard';
 export { BloodPressureCard } from './BloodPressureCard';
 export { StepsCard } from './StepsCard';
 export { SleepCard } from './SleepCard';

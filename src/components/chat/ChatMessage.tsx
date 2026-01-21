@@ -8,7 +8,7 @@ import {
   RecipeCard,
   NutritionCard,
   ActivitySuggestionCard,
-  SandowScoreCard,
+  HIITScoreCard,
   BloodPressureCard,
   StepsCard,
   SleepCard,
@@ -20,7 +20,7 @@ import { ImageAnalysisPreview } from '@/components/coach/ImageAnalysisPreview';
 
 interface RichContent {
   type: 'goal_progress' | 'hydration' | 'heart_rate' | 'workout' | 'recipe' | 
-        'nutrition' | 'activity_suggestion' | 'sandow_score' | 'blood_pressure' | 
+        'nutrition' | 'activity_suggestion' | 'hiit_score' | 'blood_pressure' | 
         'steps' | 'sleep' | 'weight' | 'workout_list' | 'select_options' | 'image_analysis';
   data?: any;
 }
@@ -62,8 +62,8 @@ export function ChatMessage({
         return <NutritionCard {...richContent.data} />;
       case 'activity_suggestion':
         return <ActivitySuggestionCard {...richContent.data} />;
-      case 'sandow_score':
-        return <SandowScoreCard {...richContent.data} />;
+      case 'hiit_score':
+        return <HIITScoreCard {...richContent.data} />;
       case 'blood_pressure':
         return <BloodPressureCard {...richContent.data} />;
       case 'steps':

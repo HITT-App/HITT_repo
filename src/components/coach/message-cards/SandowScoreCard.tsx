@@ -1,17 +1,17 @@
 import { Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-interface SandowScoreCardProps {
+interface HIITScoreCardProps {
   score?: number;
   status?: string;
   weeklyData?: number[];
 }
 
-export function SandowScoreCard({ 
+export function HIITScoreCard({ 
   score = 87.2, 
   status = 'Very Fit & Healthy Muscle',
   weeklyData = [75, 82, 78, 85, 88, 84, 87]
-}: SandowScoreCardProps) {
+}: HIITScoreCardProps) {
   const navigate = useNavigate();
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const maxScore = Math.max(...weeklyData);
@@ -20,7 +20,7 @@ export function SandowScoreCard({
     <div className="bg-card rounded-2xl border border-border p-4 animate-fade-up">
       <div className="flex items-center gap-2 mb-3">
         <Trophy className="w-4 h-4 text-yellow-500" />
-        <span className="text-sm font-semibold text-foreground">Sandow Score</span>
+        <span className="text-sm font-semibold text-foreground">HIIT Score</span>
       </div>
 
       <div className="mb-4">
@@ -55,7 +55,7 @@ export function SandowScoreCard({
         onClick={() => navigate('/health-metrics')}
         className="w-full text-center text-sm text-primary font-medium mt-4 hover:underline"
       >
-        See Sandow Score
+        See HIIT Score
       </button>
     </div>
   );

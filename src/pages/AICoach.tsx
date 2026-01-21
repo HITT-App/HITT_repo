@@ -8,7 +8,7 @@ import { CoachOnboarding } from '@/components/coach/CoachOnboarding';
 import { VoiceMode } from '@/components/coach/VoiceMode';
 import { ClearDataDialog } from '@/components/coach/ClearDataDialog';
 import { OutOfTokensDialog } from '@/components/coach/OutOfTokensDialog';
-import { SandowPlusSheet } from '@/components/coach/SandowPlusSheet';
+import { HIITPlusSheet } from '@/components/coach/SandowPlusSheet';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, MessageSquare, Trash2, Settings, Mic, List } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -244,7 +244,7 @@ export default function AICoach() {
         onOpenChange={setShowOutOfTokens}
         onUpgrade={handleUpgradeToPro}
       />
-      <SandowPlusSheet
+      <HIITPlusSheet
         open={showPlusSheet}
         onOpenChange={setShowPlusSheet}
         onSubscribe={handleSubscribe}
