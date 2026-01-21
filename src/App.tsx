@@ -29,6 +29,8 @@ import Hydration from "./pages/Hydration";
 import BloodPressure from "./pages/BloodPressure";
 import Mood from "./pages/Mood";
 import HealthRecommendations from "./pages/HealthRecommendations";
+import ChatSettings from "./pages/ChatSettings";
+import MyConversations from "./pages/MyConversations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +88,8 @@ const App = () => (
             <Route path="/blood-pressure" element={<ProtectedRoute><BloodPressure /></ProtectedRoute>} />
             <Route path="/mood" element={<ProtectedRoute><Mood /></ProtectedRoute>} />
             <Route path="/health-recommendations" element={<ProtectedRoute><HealthRecommendations /></ProtectedRoute>} />
+            <Route path="/chat-settings" element={<ProtectedRoute><ChatSettings /></ProtectedRoute>} />
+            <Route path="/my-conversations" element={<ProtectedRoute><MyConversations /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

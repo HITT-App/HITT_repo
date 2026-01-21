@@ -6,8 +6,11 @@ import { useAIChat } from '@/hooks/useAIChat';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { CoachOnboarding } from '@/components/coach/CoachOnboarding';
 import { VoiceMode } from '@/components/coach/VoiceMode';
+import { ClearDataDialog } from '@/components/coach/ClearDataDialog';
+import { OutOfTokensDialog } from '@/components/coach/OutOfTokensDialog';
+import { SandowPlusSheet } from '@/components/coach/SandowPlusSheet';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, MessageSquare, Trash2, Settings, Mic } from 'lucide-react';
+import { ArrowLeft, Plus, MessageSquare, Trash2, Settings, Mic, List } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,6 +35,9 @@ export default function AICoach() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showVoiceMode, setShowVoiceMode] = useState(false);
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const [showOutOfTokens, setShowOutOfTokens] = useState(false);
+  const [showPlusSheet, setShowPlusSheet] = useState(false);
   const [interactionMode, setInteractionMode] = useState<'chatbot' | 'immersive'>('chatbot');
 
   const { messages, isLoading, error, sendMessage, loadMessages, setMessages } = useAIChat(currentConversation);
@@ -139,6 +145,26 @@ export default function AICoach() {
     toast({ title: 'Conversation deleted' });
   };
 
+  const handleClearAllData = async () => {
+    // Delete all conversations for the user
+    if (!user) return;
+    await supabase.from('conversations').delete().eq('user_id', user.id);
+    setConversations([]);
+    setCurrentConversation(null);
+    toast({ title: 'All data cleared', description: 'Your chat history and AI memory have been reset.' });
+  };
+
+  const handleUpgradeToPro = () => {
+    setShowPlusSheet(true);
+  };
+
+  const handleSubscribe = (plan: 'free' | 'plus') => {
+    toast({ 
+      title: plan === 'plus' ? 'Welcome to Plus!' : 'Free plan selected',
+      description: plan === 'plus' ? 'You now have access to all AI features.' : 'You can upgrade anytime.'
+    });
+  };
+
   // Show onboarding
   if (showOnboarding) {
     return (
@@ -190,8 +216,11 @@ export default function AICoach() {
           >
             <MessageSquare className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/chat-settings')}>
             <Settings className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/my-conversations')}>
+            <List className="w-5 h-5" />
           </Button>
           <Button
             variant="ghost"
@@ -202,6 +231,24 @@ export default function AICoach() {
           </Button>
         </div>
       </header>
+
+      {/* Dialogs */}
+      <ClearDataDialog
+        open={showClearDialog}
+        onOpenChange={setShowClearDialog}
+        onConfirm={handleClearAllData}
+        totalChats={conversations.length}
+      />
+      <OutOfTokensDialog
+        open={showOutOfTokens}
+        onOpenChange={setShowOutOfTokens}
+        onUpgrade={handleUpgradeToPro}
+      />
+      <SandowPlusSheet
+        open={showPlusSheet}
+        onOpenChange={setShowPlusSheet}
+        onSubscribe={handleSubscribe}
+      />
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar - Conversation History */}
