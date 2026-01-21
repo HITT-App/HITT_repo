@@ -4,8 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAIChat } from '@/hooks/useAIChat';
 import { ChatContainer } from '@/components/chat/ChatContainer';
+import { CoachOnboarding } from '@/components/coach/CoachOnboarding';
+import { VoiceMode } from '@/components/coach/VoiceMode';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, MessageSquare, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, MessageSquare, Trash2, Settings, Mic } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,6 +16,8 @@ type Conversation = {
   title: string;
   updated_at: string;
 };
+
+const ONBOARDING_KEY = 'coach_onboarding_complete';
 
 export default function AICoach() {
   const navigate = useNavigate();
@@ -26,8 +30,19 @@ export default function AICoach() {
     searchParams.get('conversation')
   );
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showVoiceMode, setShowVoiceMode] = useState(false);
+  const [interactionMode, setInteractionMode] = useState<'chatbot' | 'immersive'>('chatbot');
 
   const { messages, isLoading, error, sendMessage, loadMessages, setMessages } = useAIChat(currentConversation);
+
+  // Check if onboarding is complete
+  useEffect(() => {
+    const onboardingComplete = localStorage.getItem(ONBOARDING_KEY);
+    if (!onboardingComplete) {
+      setShowOnboarding(true);
+    }
+  }, []);
 
   // Load conversations
   useEffect(() => {
@@ -57,6 +72,12 @@ export default function AICoach() {
     }
   }, [currentConversation, loadMessages, setMessages, setSearchParams]);
 
+  const handleOnboardingComplete = (mode: 'chatbot' | 'immersive') => {
+    setInteractionMode(mode);
+    setShowOnboarding(false);
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+  };
+
   const createNewConversation = useCallback(async () => {
     if (!user) return null;
 
@@ -77,7 +98,7 @@ export default function AICoach() {
     return data.id;
   }, [user, toast]);
 
-  const handleSendMessage = useCallback(async (content: string) => {
+  const handleSendMessage = useCallback(async (content: string, imageUrl?: string) => {
     let convId = currentConversation;
 
     // Create new conversation if none exists
@@ -86,7 +107,7 @@ export default function AICoach() {
       if (!convId) return;
     }
 
-    sendMessage(content, convId);
+    sendMessage(content, convId, imageUrl);
 
     // Update conversation title with first message
     if (messages.length === 0) {
@@ -102,6 +123,13 @@ export default function AICoach() {
     }
   }, [currentConversation, createNewConversation, sendMessage, messages.length]);
 
+  const handleVoiceTranscript = (text: string) => {
+    setShowVoiceMode(false);
+    if (text.trim()) {
+      handleSendMessage(text);
+    }
+  };
+
   const deleteConversation = async (convId: string) => {
     await supabase.from('conversations').delete().eq('id', convId);
     setConversations(prev => prev.filter(c => c.id !== convId));
@@ -111,6 +139,25 @@ export default function AICoach() {
     toast({ title: 'Conversation deleted' });
   };
 
+  // Show onboarding
+  if (showOnboarding) {
+    return (
+      <div className="h-screen bg-background">
+        <CoachOnboarding onComplete={handleOnboardingComplete} />
+      </div>
+    );
+  }
+
+  // Show voice mode
+  if (showVoiceMode) {
+    return (
+      <VoiceMode 
+        onTranscript={handleVoiceTranscript}
+        onClose={() => setShowVoiceMode(false)}
+      />
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
@@ -119,9 +166,22 @@ export default function AICoach() {
           <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="font-semibold">AI Coach</h1>
+          <div>
+            <h1 className="font-semibold text-foreground">Coach HIIT AI</h1>
+            <p className="text-xs text-muted-foreground">241 chats left</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          {interactionMode === 'immersive' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full border-primary text-primary text-xs"
+              onClick={() => setShowVoiceMode(true)}
+            >
+              Voice Mode
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -129,6 +189,9 @@ export default function AICoach() {
             className="md:hidden"
           >
             <MessageSquare className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon">
+            <Settings className="w-5 h-5" />
           </Button>
           <Button
             variant="ghost"
@@ -207,6 +270,7 @@ export default function AICoach() {
             isLoading={isLoading}
             onSend={handleSendMessage}
             error={error}
+            onVoiceClick={interactionMode === 'immersive' ? () => setShowVoiceMode(true) : undefined}
           />
         </main>
       </div>
