@@ -1,4 +1,4 @@
-import heroImage from "@/assets/hero-runner.jpg";
+import heroVideo from "@/assets/hiit-hero.mp4";
 import { HIITLogo } from "./HIITLogo";
 
 interface HomeHeroProps {
@@ -11,11 +11,16 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
       className="relative h-[60vh] min-h-[400px] sm:h-[70vh] sm:min-h-[500px] w-full overflow-hidden"
       style={{ paddingTop: "var(--safe-area-inset-top, 0px)" }}
     >
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${heroImage})` }}
-      />
+      {/* Background Video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      >
+        <source src={heroVideo} type="video/mp4" />
+      </video>
       
       {/* Gradient Overlay */}
       <div 
