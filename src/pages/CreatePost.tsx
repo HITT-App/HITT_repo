@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Settings, Image, Mic, Paperclip, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Settings, Image, Mic, Paperclip, X, Loader2, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useCommunityActions } from "@/hooks/useCommunity";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { useAuth } from "@/hooks/useAuth";
 
 const postCategories = [
@@ -27,6 +28,7 @@ const CreatePost = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { createPost } = useCommunityActions();
+  const { uploadImage, uploading } = useImageUpload();
   
   const [content, setContent] = useState("");
   const [postType, setPostType] = useState<"text" | "poll" | "before-after">("text");
@@ -38,10 +40,70 @@ const CreatePost = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [pollOptions, setPollOptions] = useState(["", "", "", ""]);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Image states
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [beforeImageUrl, setBeforeImageUrl] = useState<string | null>(null);
+  const [beforeImagePreview, setBeforeImagePreview] = useState<string | null>(null);
+  const [afterImageUrl, setAfterImageUrl] = useState<string | null>(null);
+  const [afterImagePreview, setAfterImagePreview] = useState<string | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const beforeFileInputRef = useRef<HTMLInputElement>(null);
+  const afterFileInputRef = useRef<HTMLInputElement>(null);
 
   const getInitials = (email: string | undefined) => {
     if (!email) return "U";
     return email.substring(0, 2).toUpperCase();
+  };
+
+  const handleImageSelect = async (file: File, type: 'main' | 'before' | 'after' = 'main') => {
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const preview = reader.result as string;
+      if (type === 'main') {
+        setImagePreview(preview);
+      } else if (type === 'before') {
+        setBeforeImagePreview(preview);
+      } else {
+        setAfterImagePreview(preview);
+      }
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to storage
+    const url = await uploadImage(file);
+    if (url) {
+      if (type === 'main') {
+        setImageUrl(url);
+      } else if (type === 'before') {
+        setBeforeImageUrl(url);
+      } else {
+        setAfterImageUrl(url);
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'main' | 'before' | 'after' = 'main') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageSelect(file, type);
+    }
+  };
+
+  const removeImage = (type: 'main' | 'before' | 'after' = 'main') => {
+    if (type === 'main') {
+      setImageUrl(null);
+      setImagePreview(null);
+    } else if (type === 'before') {
+      setBeforeImageUrl(null);
+      setBeforeImagePreview(null);
+    } else {
+      setAfterImageUrl(null);
+      setAfterImagePreview(null);
+    }
   };
 
   const handleSubmit = async () => {
@@ -59,6 +121,9 @@ const CreatePost = () => {
       post_type: postType,
       category,
       tags,
+      image_url: imageUrl || undefined,
+      before_image_url: beforeImageUrl || undefined,
+      after_image_url: afterImageUrl || undefined,
     };
 
     if (postType === "poll") {
@@ -97,6 +162,29 @@ const CreatePost = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Hidden file inputs */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        onChange={(e) => handleFileChange(e, 'main')}
+      />
+      <input
+        type="file"
+        ref={beforeFileInputRef}
+        className="hidden"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        onChange={(e) => handleFileChange(e, 'before')}
+      />
+      <input
+        type="file"
+        ref={afterFileInputRef}
+        className="hidden"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        onChange={(e) => handleFileChange(e, 'after')}
+      />
+
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -126,6 +214,88 @@ const CreatePost = () => {
             />
           </div>
         </div>
+
+        {/* Image Preview for regular posts */}
+        {postType !== "before-after" && imagePreview && (
+          <div className="relative mb-4">
+            <img 
+              src={imagePreview} 
+              alt="Preview" 
+              className="w-full max-h-64 object-cover rounded-xl"
+            />
+            <button
+              onClick={() => removeImage('main')}
+              className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full hover:bg-black/80"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            {uploading && (
+              <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-white" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Before/After Images */}
+        {postType === "before-after" && (
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div 
+              className="aspect-[3/4] rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 relative overflow-hidden cursor-pointer"
+              onClick={() => beforeFileInputRef.current?.click()}
+            >
+              {beforeImagePreview ? (
+                <>
+                  <img src={beforeImagePreview} alt="Before" className="w-full h-full object-cover" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeImage('before'); }}
+                    className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full hover:bg-black/80"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">Before</span>
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Camera className="w-8 h-8" />
+                  <span className="text-sm">Before</span>
+                </div>
+              )}
+              {uploading && beforeImagePreview && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-white" />
+                </div>
+              )}
+            </div>
+            <div 
+              className="aspect-[3/4] rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 relative overflow-hidden cursor-pointer"
+              onClick={() => afterFileInputRef.current?.click()}
+            >
+              {afterImagePreview ? (
+                <>
+                  <img src={afterImagePreview} alt="After" className="w-full h-full object-cover" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeImage('after'); }}
+                    className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full hover:bg-black/80"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">After</span>
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Camera className="w-8 h-8" />
+                  <span className="text-sm">After</span>
+                </div>
+              )}
+              {uploading && afterImagePreview && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-white" />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Poll Options */}
         {postType === "poll" && (
@@ -182,8 +352,14 @@ const CreatePost = () => {
             </SheetContent>
           </Sheet>
 
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowMediaSheet(true)}>
-            <Image className="w-4 h-4" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8" 
+            onClick={() => postType === "before-after" ? setShowMediaSheet(true) : fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <Mic className="w-4 h-4" />
@@ -263,7 +439,7 @@ const CreatePost = () => {
         <Button 
           className="w-full bg-primary hover:bg-primary/90"
           onClick={handleSubmit}
-          disabled={!content.trim() || submitting}
+          disabled={!content.trim() || submitting || uploading}
         >
           {submitting ? (
             <>
@@ -284,7 +460,7 @@ const CreatePost = () => {
           </SheetHeader>
           <div className="grid grid-cols-4 gap-4 mt-6">
             {[
-              { icon: "📷", label: "Image" },
+              { icon: "📷", label: "Image", action: () => { fileInputRef.current?.click(); setShowMediaSheet(false); } },
               { icon: "📹", label: "Video" },
               { icon: "🎙️", label: "Recording" },
               { icon: "🎵", label: "Audio" },
@@ -296,6 +472,7 @@ const CreatePost = () => {
               <button 
                 key={item.label}
                 className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 hover:bg-muted"
+                onClick={item.action}
               >
                 <span className="text-2xl">{item.icon}</span>
                 <span className="text-xs text-muted-foreground">{item.label}</span>
