@@ -2,7 +2,7 @@ import { useState } from "react";
 import { HomeHero } from "@/components/HomeHero";
 import { StatsGrid } from "@/components/StatsGrid";
 import { BottomNav } from "@/components/BottomNav";
-import { QuickActionsSheet } from "@/components/QuickActionsSheet";
+import { FullNavMenu } from "@/components/FullNavMenu";
 import { RecommendationsSection } from "@/components/dashboard/RecommendationsSection";
 import { WorkoutPlanCard } from "@/components/dashboard/WorkoutPlanCard";
 import { MealPlanCard } from "@/components/dashboard/MealPlanCard";
@@ -84,8 +84,8 @@ const Index = () => {
         {/* Bottom Navigation */}
         <BottomNav onCenterClick={() => setQuickActionsOpen(true)} />
         
-        {/* Quick Actions Sheet */}
-        <QuickActionsSheet 
+        {/* Full Navigation Menu */}
+        <FullNavMenu 
           open={quickActionsOpen} 
           onOpenChange={setQuickActionsOpen} 
         />

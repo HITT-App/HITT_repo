@@ -13,7 +13,7 @@ const navItems = [
   { id: "home", icon: Home, label: "Home", path: "/" },
   { id: "hiit-ai", icon: Bot, label: "HIIT AI", path: "/ai-coach" },
   { id: "center", icon: null, label: "Menu", path: null },
-  { id: "resources", icon: FileText, label: "Resources", path: null },
+  { id: "resources", icon: FileText, label: "Resources", path: "/resources" },
   { id: "profile", icon: User, label: "Profile", path: "/profile" },
 ];
 
