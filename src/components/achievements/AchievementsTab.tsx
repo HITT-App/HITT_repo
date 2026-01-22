@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, HelpCircle } from "lucide-react";
+import { ChevronRight, HelpCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
+import { 
+  useBadges, 
+  useUserBadges, 
+  useAchievementProgress,
+  useAchievementStats 
+} from "@/hooks/useAchievements";
 import { 
   Heart, Target, Flame, Apple, Dumbbell, Footprints, 
   Bike, Moon, Trophy, Award, Star, Zap
@@ -27,48 +32,64 @@ const achievementIcons: Record<string, React.ReactNode> = {
   zap: <Zap className="w-6 h-6" />,
 };
 
-// Active achievements with progress
-const activeAchievements = [
-  { id: 1, name: "First Steps", description: "Take your first 100 steps", icon: "footprints", level: 1, current: 90, total: 100, color: "bg-purple-500" },
-  { id: 2, name: "Hydration Homie", description: "Drink a total of 5,000ml of water", icon: "target", level: 1, current: 250, total: 5000, color: "bg-blue-500" },
-  { id: 3, name: "Sleepyhead 2.0", description: "Achieve Wake Up Average at 8AM", icon: "zap", level: 2, current: 20, total: 100, color: "bg-orange-500" },
-  { id: 4, name: "Weight Warrior", description: "Lose 10kg of total weight", icon: "flame", level: 1, current: 65, total: 100, color: "bg-red-500" },
-];
+const iconEmojis: Record<string, string> = {
+  heart: "❤️",
+  target: "🎯",
+  flame: "🔥",
+  apple: "🍎",
+  dumbbell: "💪",
+  footprints: "👣",
+  bike: "🚴",
+  moon: "🌙",
+  trophy: "🏆",
+  award: "🏅",
+  star: "⭐",
+  zap: "⚡",
+};
 
-// All achievements grid
-const allAchievements = [
-  { id: 1, name: "Heart Champ", icon: "heart", unlocked: true, color: "bg-orange-500" },
-  { id: 2, name: "Goal Oriented", icon: "target", unlocked: true, color: "bg-orange-500" },
-  { id: 3, name: "Fitness God", icon: "flame", unlocked: true, color: "bg-orange-500" },
-  { id: 4, name: "Nutrition Pal", icon: "apple", unlocked: true, color: "bg-purple-500" },
-  { id: 5, name: "Carb Addict", icon: "dumbbell", unlocked: true, color: "bg-orange-500" },
-  { id: 6, name: "HIIT Explorer", icon: "zap", unlocked: false, color: "bg-gray-400" },
-  { id: 7, name: "Cycle Master", icon: "bike", unlocked: false, color: "bg-gray-400" },
-  { id: 8, name: "Jog Addict", icon: "footprints", unlocked: true, color: "bg-orange-500" },
-  { id: 9, name: "I, Fitness", icon: "trophy", unlocked: true, color: "bg-orange-500" },
-  { id: 10, name: "Sandow", icon: "award", unlocked: false, color: "bg-gray-400" },
-  { id: 11, name: "Coach Hunter", icon: "star", unlocked: true, color: "bg-orange-500" },
-  { id: 12, name: "Improve", icon: "zap", unlocked: false, color: "bg-gray-400" },
-];
-
-// Latest/new achievements
-const latestAchievements = [
-  { id: 1, name: "Fit Hero", icon: "💪", color: "bg-purple-500", isNew: true },
-  { id: 2, name: "Powerful Legs", icon: "🦵", color: "bg-blue-500", isNew: true },
-  { id: 3, name: "Cardio King", icon: "❤️", color: "bg-red-500", isNew: false },
-];
+const categoryColors: Record<string, string> = {
+  fitness: "bg-primary",
+  nutrition: "bg-purple-500",
+  sleep: "bg-blue-500",
+  activity: "bg-green-500",
+  streak: "bg-orange-500",
+  default: "bg-primary",
+};
 
 const AchievementsTab = () => {
   const navigate = useNavigate();
-  const { earnedBadges, allBadges } = useStreaksAndBadges();
+  const { data: badges, isLoading: badgesLoading } = useBadges();
+  const { data: userBadges, isLoading: userBadgesLoading } = useUserBadges();
+  const { data: progress, isLoading: progressLoading } = useAchievementProgress();
+  const { data: stats } = useAchievementStats();
+
+  const isLoading = badgesLoading || userBadgesLoading || progressLoading;
   
-  const unlockedCount = earnedBadges?.length || 12;
+  // Get earned badge IDs for quick lookup
+  const earnedBadgeIds = new Set(userBadges?.map(ub => ub.badge_id) || []);
+  
+  // Get latest earned badges (most recent 3)
+  const latestBadges = userBadges?.slice(0, 3) || [];
+  
+  // Get active progress (not completed)
+  const activeProgress = progress?.filter(p => !p.is_completed).slice(0, 4) || [];
+  
+  // Get locked badges count
+  const lockedCount = (badges?.length || 0) - (userBadges?.length || 0);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 pt-6 flex items-center justify-center min-h-[300px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-6 space-y-6">
       {/* Unlocked Count */}
       <div className="text-center">
-        <p className="text-5xl font-bold text-foreground">{unlockedCount}</p>
+        <p className="text-5xl font-bold text-foreground">{stats?.badgesEarned || 0}</p>
         <p className="text-muted-foreground">Achievements Unlocked</p>
       </div>
 
@@ -99,23 +120,30 @@ const AchievementsTab = () => {
         </div>
         <ScrollArea className="w-full">
           <div className="flex gap-3 pb-2">
-            {latestAchievements.map((achievement) => (
-              <Card 
-                key={achievement.id}
-                className="min-w-[120px] p-4 flex flex-col items-center gap-2 relative cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate(`/achievements/${achievement.id}`)}
-              >
-                {achievement.isNew && (
-                  <span className="absolute top-2 left-2 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full">
+            {latestBadges.length > 0 ? (
+              latestBadges.map((userBadge) => (
+                <Card 
+                  key={userBadge.id}
+                  className="min-w-[120px] p-4 flex flex-col items-center gap-2 relative cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => navigate(`/achievements/${userBadge.badge_id}`)}
+                >
+                  <span className="absolute top-2 left-2 bg-primary text-primary-foreground text-[10px] px-2 py-0.5 rounded-full">
                     New
                   </span>
-                )}
-                <div className={`w-16 h-16 rounded-2xl ${achievement.color} flex items-center justify-center text-3xl`}>
-                  {achievement.icon}
-                </div>
-                <span className="text-sm font-medium text-center">{achievement.name}</span>
+                  <div className={`w-16 h-16 rounded-2xl ${categoryColors[userBadge.badge?.category || 'default']} flex items-center justify-center text-3xl`}>
+                    {iconEmojis[userBadge.badge?.icon || 'trophy'] || '🏆'}
+                  </div>
+                  <span className="text-sm font-medium text-center">{userBadge.badge?.name}</span>
+                </Card>
+              ))
+            ) : (
+              <Card className="min-w-[200px] p-6 flex flex-col items-center gap-2 border-dashed">
+                <Trophy className="w-10 h-10 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground text-center">
+                  Complete activities to earn badges!
+                </p>
               </Card>
-            ))}
+            )}
           </div>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
@@ -125,41 +153,84 @@ const AchievementsTab = () => {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-foreground">Active Achievements</h3>
-          <Button variant="link" className="text-primary p-0 h-auto text-sm">
+          <Button 
+            variant="link" 
+            className="text-primary p-0 h-auto text-sm"
+            onClick={() => navigate("/achievements/all")}
+          >
             See All
           </Button>
         </div>
         <div className="space-y-3">
-          {activeAchievements.map((achievement) => (
-            <Card 
-              key={achievement.id}
-              className="p-4 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate(`/achievements/${achievement.id}`)}
-            >
-              <div className={`w-12 h-12 rounded-xl ${achievement.color} flex items-center justify-center text-white`}>
-                {achievementIcons[achievement.icon] || <Trophy className="w-6 h-6" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-foreground text-sm">{achievement.name}</h4>
-                <p className="text-xs text-muted-foreground mb-2">{achievement.description}</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded">
-                    Level {achievement.level}
+          {activeProgress.length > 0 ? (
+            activeProgress.map((achievement) => {
+              const percentComplete = Math.round((achievement.current_value / achievement.target_value) * 100);
+              const badge = achievement.badge;
+              
+              return (
+                <Card 
+                  key={achievement.id}
+                  className="p-4 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => navigate(`/achievements/${achievement.badge_id}`)}
+                >
+                  <div className={`w-12 h-12 rounded-xl ${categoryColors[badge?.category || 'default']} flex items-center justify-center text-white`}>
+                    {achievementIcons[badge?.icon || 'trophy'] || <Trophy className="w-6 h-6" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-foreground text-sm">{badge?.name || 'Achievement'}</h4>
+                    <p className="text-xs text-muted-foreground mb-2">{badge?.description}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded">
+                        Level 1
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {achievement.current_value}/{achievement.target_value}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={percentComplete} 
+                      className="h-1.5 mt-2"
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {percentComplete}%
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {achievement.current}/{achievement.total}
-                  </span>
+                </Card>
+              );
+            })
+          ) : (
+            // Show badges to work toward
+            badges?.slice(0, 4).filter(b => !earnedBadgeIds.has(b.id)).map((badge) => (
+              <Card 
+                key={badge.id}
+                className="p-4 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate(`/achievements/${badge.id}`)}
+              >
+                <div className={`w-12 h-12 rounded-xl ${categoryColors[badge.category || 'default']} flex items-center justify-center text-white`}>
+                  {achievementIcons[badge.icon] || <Trophy className="w-6 h-6" />}
                 </div>
-                <Progress 
-                  value={(achievement.current / achievement.total) * 100} 
-                  className="h-1.5 mt-2"
-                />
-              </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                {Math.round((achievement.current / achievement.total) * 100)}%
-              </span>
-            </Card>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-foreground text-sm">{badge.name}</h4>
+                  <p className="text-xs text-muted-foreground mb-2">{badge.description}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded">
+                      Level 1
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      0/{badge.requirement_value}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={0} 
+                    className="h-1.5 mt-2"
+                  />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
+                  0%
+                </span>
+              </Card>
+            ))
+          )}
         </div>
       </section>
     </div>
