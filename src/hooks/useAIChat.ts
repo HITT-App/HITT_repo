@@ -152,11 +152,19 @@ export function useAIChat(conversationId: string | null) {
         return { role: m.role, content: m.content };
       });
 
+      // Get the current user's session token for authenticated requests
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      
+      if (!accessToken) {
+        throw new Error('You must be logged in to use the AI coach');
+      }
+
       const response = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           messages: apiMessages,
