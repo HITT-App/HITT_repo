@@ -77,6 +77,13 @@ import NoInternet from "./pages/NoInternet";
 import Maintenance from "./pages/Maintenance";
 import FeatureLocked from "./pages/FeatureLocked";
 import UpdateRequired from "./pages/UpdateRequired";
+import AchievementsIntro from "./pages/AchievementsIntro";
+import Achievements from "./pages/Achievements";
+import AllAchievements from "./pages/AllAchievements";
+import AchievementDetail from "./pages/AchievementDetail";
+import Challenges from "./pages/Challenges";
+import ChallengeDetail from "./pages/ChallengeDetail";
+import ChallengeLeaderboard from "./pages/ChallengeLeaderboard";
 
 const queryClient = new QueryClient();
 
@@ -182,6 +189,13 @@ const App = () => (
             <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/feature-locked" element={<FeatureLocked />} />
             <Route path="/update-required" element={<UpdateRequired />} />
+            <Route path="/achievements-intro" element={<ProtectedRoute><AchievementsIntro /></ProtectedRoute>} />
+            <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+            <Route path="/achievements/all" element={<ProtectedRoute><AllAchievements /></ProtectedRoute>} />
+            <Route path="/achievements/:id" element={<ProtectedRoute><AchievementDetail /></ProtectedRoute>} />
+            <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
+            <Route path="/challenge/:id" element={<ProtectedRoute><ChallengeDetail /></ProtectedRoute>} />
+            <Route path="/leaderboard" element={<ProtectedRoute><ChallengeLeaderboard /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
