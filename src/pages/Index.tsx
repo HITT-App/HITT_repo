@@ -9,13 +9,15 @@ import { MealPlanCard } from "@/components/dashboard/MealPlanCard";
 import { CoachingCard } from "@/components/dashboard/CoachingCard";
 import { WorkoutRecommendations } from "@/components/workout/WorkoutRecommendations";
 import { useAuth } from "@/hooks/useAuth";
-import { ChevronRight, Dumbbell } from "lucide-react";
+import { useAdminRole } from "@/hooks/useAdminRole";
+import { ChevronRight, Dumbbell, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const { user } = useAuth();
+  const { isAdmin } = useAdminRole();
   const navigate = useNavigate();
   
   const displayName = user?.user_metadata?.display_name || 
@@ -27,6 +29,23 @@ const Index = () => {
       <div className="w-full max-w-md min-h-screen relative overflow-hidden pb-24">
         {/* Hero Section */}
         <HomeHero userName={displayName} />
+
+        {isAdmin && (
+          <div className="px-4 -mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-between"
+              onClick={() => navigate("/admin")}
+            >
+              <span className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Admin Panel
+              </span>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
         
         {/* Stats Grid */}
         <StatsGrid />
