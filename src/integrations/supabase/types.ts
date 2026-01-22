@@ -304,6 +304,13 @@ export type Database = {
             referencedRelation: "coaches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "coach_availability_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       coach_reviews: {
@@ -346,6 +353,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_reviews_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches_public"
             referencedColumns: ["id"]
           },
           {
@@ -571,6 +585,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_sessions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2009,7 +2030,87 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      coaches_public: {
+        Row: {
+          available_days: string[] | null
+          available_hours_end: string | null
+          available_hours_start: string | null
+          avatar_url: string | null
+          bio: string | null
+          certifications: string[] | null
+          coaching_types: string[] | null
+          created_at: string | null
+          experience_years: number | null
+          gallery_urls: string[] | null
+          gender: string | null
+          id: string | null
+          is_available: boolean | null
+          is_featured: boolean | null
+          languages: string[] | null
+          name: string | null
+          price_per_session_max: number | null
+          price_per_session_min: number | null
+          rating: number | null
+          review_count: number | null
+          session_count: number | null
+          specialties: string[] | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          available_days?: string[] | null
+          available_hours_end?: string | null
+          available_hours_start?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          certifications?: string[] | null
+          coaching_types?: string[] | null
+          created_at?: string | null
+          experience_years?: number | null
+          gallery_urls?: string[] | null
+          gender?: string | null
+          id?: string | null
+          is_available?: boolean | null
+          is_featured?: boolean | null
+          languages?: string[] | null
+          name?: string | null
+          price_per_session_max?: number | null
+          price_per_session_min?: number | null
+          rating?: number | null
+          review_count?: number | null
+          session_count?: number | null
+          specialties?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          available_days?: string[] | null
+          available_hours_end?: string | null
+          available_hours_start?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          certifications?: string[] | null
+          coaching_types?: string[] | null
+          created_at?: string | null
+          experience_years?: number | null
+          gallery_urls?: string[] | null
+          gender?: string | null
+          id?: string | null
+          is_available?: boolean | null
+          is_featured?: boolean | null
+          languages?: string[] | null
+          name?: string | null
+          price_per_session_max?: number | null
+          price_per_session_min?: number | null
+          rating?: number | null
+          review_count?: number | null
+          session_count?: number | null
+          specialties?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       award_points: {
