@@ -1203,6 +1203,42 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          coaching_updates: boolean | null
+          community_notifications: boolean | null
+          created_at: string | null
+          id: string
+          nutrition_tips: boolean | null
+          push_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+          workout_reminders: boolean | null
+        }
+        Insert: {
+          coaching_updates?: boolean | null
+          community_notifications?: boolean | null
+          created_at?: string | null
+          id?: string
+          nutrition_tips?: boolean | null
+          push_enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+          workout_reminders?: boolean | null
+        }
+        Update: {
+          coaching_updates?: boolean | null
+          community_notifications?: boolean | null
+          created_at?: string | null
+          id?: string
+          nutrition_tips?: boolean | null
+          push_enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+          workout_reminders?: boolean | null
+        }
+        Relationships: []
+      }
       nutrition_goals: {
         Row: {
           created_at: string
@@ -1304,6 +1340,84 @@ export type Database = {
           fitness_goal?: string | null
           id?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_notifications: {
+        Row: {
+          body: string
+          failure_count: number | null
+          icon: string | null
+          id: string
+          sent_at: string | null
+          sent_by: string | null
+          success_count: number | null
+          target_type: string | null
+          target_value: string | null
+          title: string
+          topic: string | null
+          url: string | null
+        }
+        Insert: {
+          body: string
+          failure_count?: number | null
+          icon?: string | null
+          id?: string
+          sent_at?: string | null
+          sent_by?: string | null
+          success_count?: number | null
+          target_type?: string | null
+          target_value?: string | null
+          title: string
+          topic?: string | null
+          url?: string | null
+        }
+        Update: {
+          body?: string
+          failure_count?: number | null
+          icon?: string | null
+          id?: string
+          sent_at?: string | null
+          sent_by?: string | null
+          success_count?: number | null
+          target_type?: string | null
+          target_value?: string | null
+          title?: string
+          topic?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string | null
+          endpoint: string
+          id: string
+          p256dh: string
+          topics: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          p256dh: string
+          topics?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          topics?: string[] | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -1579,6 +1693,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_streaks: {
         Row: {
           created_at: string
@@ -1825,9 +1960,16 @@ export type Database = {
         Args: { p_badge_id: string; p_current_value: number; p_user_id: string }
         Returns: boolean
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1954,6 +2096,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
