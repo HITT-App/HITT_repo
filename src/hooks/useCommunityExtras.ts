@@ -1,0 +1,348 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { CommunityProfile } from './useCommunity';
+
+// =============== SEARCH USERS ===============
+export const useSearchUsers = (query: string) => {
+  const [users, setUsers] = useState<CommunityProfile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setUsers([]);
+      return;
+    }
+
+    const searchUsers = async () => {
+      setLoading(true);
+      try {
+        const searchTerm = `%${query}%`;
+        const { data, error } = await supabase
+          .from('community_profiles')
+          .select('*')
+          .or(`username.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
+          .limit(20);
+
+        if (error) throw error;
+
+        // Get follow status for each user
+        if (user && data && data.length > 0) {
+          const userIds = data.map(u => u.user_id);
+          const { data: follows } = await supabase
+            .from('community_follows')
+            .select('following_id')
+            .eq('follower_id', user.id)
+            .in('following_id', userIds);
+
+          const followingSet = new Set(follows?.map(f => f.following_id) || []);
+
+          setUsers(data.map(profile => ({
+            ...profile,
+            is_following: followingSet.has(profile.user_id),
+          })));
+        } else {
+          setUsers(data || []);
+        }
+      } catch (error) {
+        console.error('Error searching users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const debounce = setTimeout(searchUsers, 300);
+    return () => clearTimeout(debounce);
+  }, [query, user]);
+
+  return { users, loading };
+};
+
+// =============== BLOCKED USERS ===============
+export interface BlockedUser {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  created_at: string;
+  blocked_user?: {
+    display_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+  };
+}
+
+export const useBlockedUsers = () => {
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const fetchBlockedUsers = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('community_blocks')
+        .select('*')
+        .eq('blocker_id', user.id);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        setBlockedUsers([]);
+        return;
+      }
+
+      // Get blocked user profiles
+      const blockedIds = data.map(b => b.blocked_id);
+      const { data: profiles } = await supabase
+        .from('community_profiles')
+        .select('user_id, display_name, username, avatar_url')
+        .in('user_id', blockedIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      setBlockedUsers(data.map(block => ({
+        ...block,
+        blocked_user: profileMap.get(block.blocked_id),
+      })));
+    } catch (error) {
+      console.error('Error fetching blocked users:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchBlockedUsers();
+  }, [fetchBlockedUsers]);
+
+  const blockUser = async (blockedId: string) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('community_blocks')
+        .insert({
+          blocker_id: user.id,
+          blocked_id: blockedId,
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: 'User blocked',
+        description: 'You will no longer see content from this user',
+      });
+      
+      fetchBlockedUsers();
+      return true;
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to block user',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const unblockUser = async (blockedId: string) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('community_blocks')
+        .delete()
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', blockedId);
+
+      if (error) throw error;
+      
+      toast({
+        title: 'User unblocked',
+        description: 'You can now see content from this user',
+      });
+      
+      setBlockedUsers(prev => prev.filter(b => b.blocked_id !== blockedId));
+      return true;
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to unblock user',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  return { blockedUsers, loading, blockUser, unblockUser, refetch: fetchBlockedUsers };
+};
+
+// =============== SAVED POSTS ===============
+export interface SavedPost {
+  id: string;
+  user_id: string;
+  post_id: string;
+  created_at: string;
+}
+
+export const useSavedPosts = () => {
+  const [savedPostIds, setSavedPostIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const fetchSavedPosts = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('community_saved_posts')
+        .select('post_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setSavedPostIds(new Set(data?.map(s => s.post_id) || []));
+    } catch (error) {
+      console.error('Error fetching saved posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchSavedPosts();
+  }, [fetchSavedPosts]);
+
+  const savePost = async (postId: string) => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to save posts',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('community_saved_posts')
+        .insert({
+          user_id: user.id,
+          post_id: postId,
+        });
+
+      if (error) throw error;
+      
+      setSavedPostIds(prev => new Set([...prev, postId]));
+      toast({
+        title: 'Post saved',
+        description: 'Added to your saved posts',
+      });
+      return true;
+    } catch (error) {
+      console.error('Error saving post:', error);
+      return false;
+    }
+  };
+
+  const unsavePost = async (postId: string) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('community_saved_posts')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('post_id', postId);
+
+      if (error) throw error;
+      
+      setSavedPostIds(prev => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+      toast({
+        title: 'Post removed',
+        description: 'Removed from your saved posts',
+      });
+      return true;
+    } catch (error) {
+      console.error('Error unsaving post:', error);
+      return false;
+    }
+  };
+
+  const isPostSaved = (postId: string) => savedPostIds.has(postId);
+
+  return { savedPostIds, loading, savePost, unsavePost, isPostSaved, refetch: fetchSavedPosts };
+};
+
+// =============== BROWSE USERS (for discovery) ===============
+export const useBrowseUsers = () => {
+  const [users, setUsers] = useState<CommunityProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        
+        // Get users the current user is NOT following
+        let query = supabase
+          .from('community_profiles')
+          .select('*')
+          .order('followers_count', { ascending: false })
+          .limit(20);
+
+        if (user) {
+          query = query.neq('user_id', user.id);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        if (user && data && data.length > 0) {
+          const userIds = data.map(u => u.user_id);
+          const { data: follows } = await supabase
+            .from('community_follows')
+            .select('following_id')
+            .eq('follower_id', user.id)
+            .in('following_id', userIds);
+
+          const followingSet = new Set(follows?.map(f => f.following_id) || []);
+
+          setUsers(data.map(profile => ({
+            ...profile,
+            is_following: followingSet.has(profile.user_id),
+          })));
+        } else {
+          setUsers(data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [user]);
+
+  return { users, loading };
+};
