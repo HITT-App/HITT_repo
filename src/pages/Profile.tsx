@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { useStreaksAndBadges } from '@/hooks/useStreaksAndBadges';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StreakCard } from '@/components/gamification/StreakCard';
 import { BadgesDisplay } from '@/components/gamification/BadgesDisplay';
-import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy } from 'lucide-react';
+import { PasswordChangeSection } from '@/components/profile/PasswordChangeSection';
+import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy, Shield, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const FITNESS_GOALS = [
@@ -28,6 +30,7 @@ export default function Profile() {
   const { user, signOut } = useAuth();
   const { profile, loading, updating, updateProfile, uploadAvatar } = useProfile();
   const { streak, allBadges, earnedBadges, loading: streaksLoading } = useStreaksAndBadges();
+  const { isAdmin, loading: adminLoading } = useAdminRole();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState('');
@@ -101,7 +104,7 @@ export default function Profile() {
     return user?.email?.slice(0, 2).toUpperCase() || 'U';
   };
 
-  if (loading || streaksLoading) {
+  if (loading || streaksLoading || adminLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -112,7 +115,7 @@ export default function Profile() {
   const earnedBadgeIds = earnedBadges.map(eb => eb.badge_id);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-8">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -121,10 +124,23 @@ export default function Profile() {
           </Button>
           <h1 className="font-semibold">Profile</h1>
         </div>
-        <Button onClick={handleSave} disabled={updating} size="sm" className="gap-2">
-          {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Save
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/admin')}
+              className="gap-2 border-primary/50 text-primary hover:bg-primary/10"
+            >
+              <Shield className="w-4 h-4" />
+              Admin
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={updating} size="sm" className="gap-2">
+            {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save
+          </Button>
+        </div>
       </header>
 
       <div className="p-4 max-w-md mx-auto space-y-6">
@@ -234,6 +250,9 @@ export default function Profile() {
             />
           </div>
         </div>
+
+        {/* Password Change Section */}
+        <PasswordChangeSection />
 
         {/* Sign Out */}
         <div className="pt-6">
