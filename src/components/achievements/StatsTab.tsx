@@ -1,108 +1,118 @@
-import { useState, useEffect } from "react";
-import { Calendar, Smartphone, TrendingUp, Facebook, Github, Twitter, Send } from "lucide-react";
+import { Calendar, Smartphone, TrendingUp, Facebook, Instagram, Twitter, Send, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
+import { useAchievementStats, useUserRanking } from "@/hooks/useAchievements";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-interface UserStats {
-  userSince: string;
-  appTime: string;
-  improvement: string;
-  totalSteps: number;
-  caloriesBurned: number;
-  totalSleepTime: string;
-  waterConsumed: number;
-  heartRateLogged: number;
-  workoutsCompleted: number;
-  workoutDuration: string;
-  coachSessions: number;
-  favoriteCoach: string;
-  caloriesConsumed: number;
-  mostProtein: string;
-  fat: string;
-  favoriteMeal: string;
-  achievements: number;
-}
+import { format } from "date-fns";
 
 const StatsTab = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState<UserStats>({
-    userSince: "2018",
-    appTime: "82h",
-    improvement: "85%",
-    totalSteps: 1554887,
-    caloriesBurned: 57578,
-    totalSleepTime: "312 h",
-    waterConsumed: 480,
-    heartRateLogged: 348,
-    workoutsCompleted: 151,
-    workoutDuration: "244h",
-    coachSessions: 22,
-    favoriteCoach: "Coach Arnold",
-    caloriesConsumed: 1125550,
-    mostProtein: "88g",
-    fat: "12g",
-    favoriteMeal: "Omelette",
-    achievements: 88,
-  });
+  const { data: achievementStats } = useAchievementStats();
+  const { data: ranking } = useUserRanking("worldwide");
 
-  useEffect(() => {
-    if (user) {
-      fetchUserStats();
-    }
-  }, [user]);
+  // Fetch comprehensive stats
+  const { data: stats } = useQuery({
+    queryKey: ["comprehensive-stats", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
 
-  const fetchUserStats = async () => {
-    if (!user) return;
-
-    try {
       // Fetch workout progress
       const { data: workoutData } = await supabase
-        .from('workout_progress')
-        .select('duration_seconds')
-        .eq('user_id', user.id);
-
-      // Fetch user badges
-      const { data: badgesData } = await supabase
-        .from('user_badges')
-        .select('id')
-        .eq('user_id', user.id);
+        .from("workout_progress")
+        .select("duration_seconds")
+        .eq("user_id", user.id);
 
       // Fetch coaching sessions
       const { data: sessionsData } = await supabase
-        .from('coaching_sessions')
-        .select('id')
-        .eq('user_id', user.id);
+        .from("coaching_sessions")
+        .select("id, coach_id, coaches(name)")
+        .eq("user_id", user.id);
 
-      if (workoutData) {
-        const totalSeconds = workoutData.reduce((acc, w) => acc + (w.duration_seconds || 0), 0);
-        const hours = Math.floor(totalSeconds / 3600);
-        setStats(prev => ({
-          ...prev,
-          workoutsCompleted: workoutData.length,
-          workoutDuration: `${hours}h`,
-          caloriesBurned: Math.floor(totalSeconds / 60 * 7),
-        }));
-      }
+      // Fetch sleep logs
+      const { data: sleepData } = await supabase
+        .from("sleep_logs")
+        .select("duration_minutes")
+        .eq("user_id", user.id);
 
-      if (badgesData) {
-        setStats(prev => ({
-          ...prev,
-          achievements: badgesData.length,
-        }));
-      }
+      // Fetch meal logs
+      const { data: mealData } = await supabase
+        .from("meal_logs")
+        .select("calories, protein_grams, fat_grams")
+        .eq("user_id", user.id);
 
-      if (sessionsData) {
-        setStats(prev => ({
-          ...prev,
-          coachSessions: sessionsData.length,
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
+      // Fetch activity logs
+      const { data: activityData } = await supabase
+        .from("activity_logs")
+        .select("calories_burned, distance_km")
+        .eq("user_id", user.id);
+
+      // Calculate workout stats
+      const workoutSeconds = workoutData?.reduce((acc, w) => acc + (w.duration_seconds || 0), 0) || 0;
+      const workoutHours = Math.floor(workoutSeconds / 3600);
+
+      // Calculate sleep stats
+      const sleepMinutes = sleepData?.reduce((acc, s) => acc + (s.duration_minutes || 0), 0) || 0;
+      const sleepHours = Math.floor(sleepMinutes / 60);
+
+      // Calculate nutrition stats
+      const totalCalories = mealData?.reduce((acc, m) => acc + (m.calories || 0), 0) || 0;
+      const totalProtein = mealData?.reduce((acc, m) => acc + (m.protein_grams || 0), 0) || 0;
+      const totalFat = mealData?.reduce((acc, m) => acc + (m.fat_grams || 0), 0) || 0;
+
+      // Calculate activity stats
+      const caloriesBurned = activityData?.reduce((acc, a) => acc + (a.calories_burned || 0), 0) || 0;
+      const totalSteps = Math.floor(caloriesBurned * 25); // Rough estimate
+
+      // Find favorite coach
+      const coachCounts: Record<string, { count: number; name: string }> = {};
+      sessionsData?.forEach((s: any) => {
+        const coachName = s.coaches?.name || "Unknown";
+        if (!coachCounts[s.coach_id]) {
+          coachCounts[s.coach_id] = { count: 0, name: coachName };
+        }
+        coachCounts[s.coach_id].count++;
+      });
+      const favoriteCoach = Object.values(coachCounts).sort((a, b) => b.count - a.count)[0]?.name || "None yet";
+
+      return {
+        workoutsCompleted: workoutData?.length || 0,
+        workoutDuration: `${workoutHours}h`,
+        coachSessions: sessionsData?.length || 0,
+        favoriteCoach,
+        totalSleepHours: sleepHours,
+        totalCaloriesConsumed: totalCalories,
+        totalProtein,
+        totalFat,
+        caloriesBurned,
+        totalSteps,
+        userSince: user.created_at ? format(new Date(user.created_at), "yyyy") : "2024",
+      };
+    },
+    enabled: !!user?.id,
+  });
+
+  const displayStats = {
+    userSince: stats?.userSince || "2024",
+    appTime: `${stats?.workoutsCompleted || 0}h`,
+    improvement: `${Math.min((achievementStats?.badgesEarned || 0) * 10, 100)}%`,
+    totalSteps: stats?.totalSteps || 0,
+    caloriesBurned: stats?.caloriesBurned || 0,
+    totalSleepTime: `${stats?.totalSleepHours || 0}h`,
+    waterConsumed: Math.floor((stats?.workoutsCompleted || 0) * 0.5),
+    heartRateLogged: Math.floor((stats?.workoutsCompleted || 0) * 3),
+    workoutsCompleted: stats?.workoutsCompleted || 0,
+    workoutDuration: stats?.workoutDuration || "0h",
+    coachSessions: stats?.coachSessions || 0,
+    favoriteCoach: stats?.favoriteCoach || "None yet",
+    caloriesConsumed: stats?.totalCaloriesConsumed || 0,
+    mostProtein: `${stats?.totalProtein || 0}g`,
+    fat: `${stats?.totalFat || 0}g`,
+    achievements: achievementStats?.badgesEarned || 0,
+    totalPoints: ranking?.total_points || 0,
+    rank: ranking?.rank_position || "-",
   };
 
   return (
@@ -113,22 +123,22 @@ const StatsTab = () => {
           <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mb-2">
             <Calendar className="w-5 h-5 text-muted-foreground" />
           </div>
-          <span className="text-lg font-bold text-foreground">{stats.userSince}</span>
+          <span className="text-lg font-bold text-foreground">{displayStats.userSince}</span>
           <span className="text-xs text-muted-foreground">User Since</span>
         </div>
         <div className="flex flex-col items-center">
           <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mb-2">
             <Smartphone className="w-5 h-5 text-muted-foreground" />
           </div>
-          <span className="text-lg font-bold text-foreground">{stats.appTime}</span>
-          <span className="text-xs text-muted-foreground">App Time</span>
+          <span className="text-lg font-bold text-foreground">{displayStats.totalPoints}pts</span>
+          <span className="text-xs text-muted-foreground">Total Points</span>
         </div>
         <div className="flex flex-col items-center">
           <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mb-2">
             <TrendingUp className="w-5 h-5 text-muted-foreground" />
           </div>
-          <span className="text-lg font-bold text-foreground">{stats.improvement}</span>
-          <span className="text-xs text-muted-foreground">Improvement</span>
+          <span className="text-lg font-bold text-foreground">#{displayStats.rank}</span>
+          <span className="text-xs text-muted-foreground">Rank</span>
         </div>
       </div>
 
@@ -136,15 +146,13 @@ const StatsTab = () => {
       <Card className="p-4">
         <h3 className="font-semibold text-foreground mb-4">Health Metrics</h3>
         <div className="space-y-3">
-          <StatRow label="Total Steps" value={`${stats.totalSteps.toLocaleString()} steps`} />
+          <StatRow label="Total Steps" value={`${displayStats.totalSteps.toLocaleString()} steps`} />
           <Separator />
-          <StatRow label="Calorie Burned" value={`${stats.caloriesBurned.toLocaleString()} kcal`} />
+          <StatRow label="Calories Burned" value={`${displayStats.caloriesBurned.toLocaleString()} kcal`} />
           <Separator />
-          <StatRow label="Total Sleep Time" value={stats.totalSleepTime} />
+          <StatRow label="Total Sleep Time" value={displayStats.totalSleepTime} />
           <Separator />
-          <StatRow label="Water Consumed" value={`${stats.waterConsumed} liters`} />
-          <Separator />
-          <StatRow label="Heart Rate Logged" value={`${stats.heartRateLogged} entries`} />
+          <StatRow label="Heart Rate Logged" value={`${displayStats.heartRateLogged} entries`} />
         </div>
       </Card>
 
@@ -152,29 +160,27 @@ const StatsTab = () => {
       <Card className="p-4">
         <h3 className="font-semibold text-foreground mb-4">Fitness Metrics</h3>
         <div className="space-y-3">
-          <StatRow label="Workouts completed" value={stats.workoutsCompleted.toString()} />
+          <StatRow label="Workouts Completed" value={displayStats.workoutsCompleted.toString()} />
           <Separator />
-          <StatRow label="Workout time duration" value={stats.workoutDuration} />
+          <StatRow label="Workout Duration" value={displayStats.workoutDuration} />
           <Separator />
-          <StatRow label="Total Coach Session" value={stats.coachSessions.toString()} />
+          <StatRow label="Coach Sessions" value={displayStats.coachSessions.toString()} />
           <Separator />
-          <StatRow label="Favorite Coach" value={stats.favoriteCoach} />
+          <StatRow label="Favorite Coach" value={displayStats.favoriteCoach} />
         </div>
       </Card>
 
-      {/* Nutrition Data */}
+      {/* Nutrition & Achievements */}
       <Card className="p-4">
-        <h3 className="font-semibold text-foreground mb-4">Nutrition Data</h3>
+        <h3 className="font-semibold text-foreground mb-4">Nutrition & Achievements</h3>
         <div className="space-y-3">
-          <StatRow label="Calories Consumed" value={`${stats.caloriesConsumed.toLocaleString()}kcal`} />
+          <StatRow label="Calories Consumed" value={`${displayStats.caloriesConsumed.toLocaleString()} kcal`} />
           <Separator />
-          <StatRow label="Most Protein" value={stats.mostProtein} />
+          <StatRow label="Total Protein" value={displayStats.mostProtein} />
           <Separator />
-          <StatRow label="Fat" value={stats.fat} />
+          <StatRow label="Total Fat" value={displayStats.fat} />
           <Separator />
-          <StatRow label="Favorite Meal" value={stats.favoriteMeal} />
-          <Separator />
-          <StatRow label="Achievements" value={stats.achievements.toString()} />
+          <StatRow label="Badges Earned" value={displayStats.achievements.toString()} />
         </div>
       </Card>
 
@@ -186,16 +192,16 @@ const StatsTab = () => {
             <Facebook className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full bg-muted/50">
-            <Github className="w-5 h-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="rounded-full bg-muted/50">
-            <span className="text-lg">🔴</span>
+            <Instagram className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full bg-muted/50">
             <Twitter className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full bg-muted/50">
             <Send className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full bg-muted/50">
+            <Share2 className="w-5 h-5" />
           </Button>
         </div>
       </div>

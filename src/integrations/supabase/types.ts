@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievement_progress: {
+        Row: {
+          badge_id: string | null
+          completed_at: string | null
+          created_at: string
+          current_value: number
+          id: string
+          is_completed: boolean
+          target_value: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          badge_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          id?: string
+          is_completed?: boolean
+          target_value: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          id?: string
+          is_completed?: boolean
+          target_value?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievement_progress_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_goals: {
         Row: {
           created_at: string
@@ -800,6 +844,42 @@ export type Database = {
         }
         Relationships: []
       }
+      leaderboard_scores: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          monthly_points: number
+          rank_position: number | null
+          total_points: number
+          updated_at: string
+          user_id: string
+          weekly_points: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          monthly_points?: number
+          rank_position?: number | null
+          total_points?: number
+          updated_at?: string
+          user_id: string
+          weekly_points?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          monthly_points?: number
+          rank_position?: number | null
+          total_points?: number
+          updated_at?: string
+          user_id?: string
+          weekly_points?: number
+        }
+        Relationships: []
+      }
       meal_logs: {
         Row: {
           calories: number | null
@@ -1318,6 +1398,30 @@ export type Database = {
           },
         ]
       }
+      user_friends: {
+        Row: {
+          created_at: string
+          friend_id: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_id: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_id?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_streaks: {
         Row: {
           created_at: string
@@ -1556,7 +1660,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      award_points: {
+        Args: { p_category?: string; p_points: number; p_user_id: string }
+        Returns: undefined
+      }
+      check_and_award_badge: {
+        Args: { p_badge_id: string; p_current_value: number; p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
