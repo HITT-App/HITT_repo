@@ -1,47 +1,95 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Settings, Send, Paperclip } from "lucide-react";
+import { ArrowLeft, Settings, Send, Paperclip, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface Message {
-  id: string;
-  content: string;
-  sender: "user" | "other";
-  timestamp: string;
-}
+import { useMessages, useDirectMessageActions, useConversations } from "@/hooks/useDirectMessages";
+import { useCommunityProfile } from "@/hooks/useCommunity";
+import { useAuth } from "@/hooks/useAuth";
+import { format, isToday, isYesterday } from "date-fns";
 
 const CommunityChat = () => {
   const navigate = useNavigate();
-  const { userId } = useParams();
+  const { conversationId, userId } = useParams();
+  const { user } = useAuth();
   const [newMessage, setNewMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    { id: "1", content: "Hey Julia! Nice profile! Let's get fit and healthy together.", sender: "other", timestamp: "11:25" },
-    { id: "2", content: "Thanks a lot Makise! 😊 11:35 ✓✓", sender: "user", timestamp: "11:35" },
-  ]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationId || null);
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const { messages, loading: messagesLoading } = useMessages(activeConversationId);
+  const { getOrCreateConversation, sendMessage } = useDirectMessageActions();
+  const { conversations } = useConversations();
+  
+  // Get the other user's profile
+  const otherUserId = userId || (() => {
+    if (!activeConversationId || !user) return undefined;
+    const conv = conversations.find(c => c.id === activeConversationId);
+    if (!conv) return undefined;
+    return conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+  })();
+  
+  const { profile: otherUserProfile, loading: profileLoading } = useCommunityProfile(otherUserId);
 
-  const otherUser = {
-    name: "Julia F. Smith",
-    title: "Community User",
-    avatar: ""
-  };
-
-  const handleSend = () => {
-    if (!newMessage.trim()) return;
-    
-    setMessages([
-      ...messages,
-      {
-        id: Date.now().toString(),
-        content: newMessage,
-        sender: "user",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  // If we have a userId but no conversationId, get or create the conversation
+  useEffect(() => {
+    const initConversation = async () => {
+      if (userId && !conversationId && user) {
+        const convId = await getOrCreateConversation(userId);
+        if (convId) {
+          setActiveConversationId(convId);
+        }
       }
-    ]);
+    };
+    initConversation();
+  }, [userId, conversationId, user, getOrCreateConversation]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!newMessage.trim() || !activeConversationId || sending) return;
+    
+    setSending(true);
+    await sendMessage(activeConversationId, newMessage.trim());
     setNewMessage("");
+    setSending(false);
   };
+
+  const formatMessageTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return format(date, "HH:mm");
+  };
+
+  const formatMessageDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, "MMM d, yyyy");
+  };
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "U";
+    return name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+  };
+
+  // Group messages by date
+  const groupedMessages = messages.reduce((groups, message) => {
+    const date = formatMessageDate(message.created_at);
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(message);
+    return groups;
+  }, {} as Record<string, typeof messages>);
+
+  const isLoading = messagesLoading || profileLoading;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -50,15 +98,22 @@ const CommunityChat = () => {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <Avatar className="w-10 h-10">
-          <AvatarImage src={otherUser.avatar} />
+        <Avatar 
+          className="w-10 h-10 cursor-pointer" 
+          onClick={() => otherUserId && navigate(`/community/user/${otherUserId}`)}
+        >
+          <AvatarImage src={otherUserProfile?.avatar_url || ""} />
           <AvatarFallback className="bg-primary/10 text-primary">
-            {otherUser.name.split(" ").map(n => n[0]).join("")}
+            {getInitials(otherUserProfile?.display_name || otherUserProfile?.username)}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1">
-          <p className="font-semibold text-sm">{otherUser.name}</p>
-          <p className="text-xs text-muted-foreground">{otherUser.title}</p>
+          <p className="font-semibold text-sm">
+            {otherUserProfile?.display_name || otherUserProfile?.username || "Loading..."}
+          </p>
+          {otherUserProfile?.username && (
+            <p className="text-xs text-muted-foreground">@{otherUserProfile.username}</p>
+          )}
         </div>
         <Button variant="ghost" size="icon">
           <Settings className="w-5 h-5" />
@@ -66,30 +121,66 @@ const CommunityChat = () => {
       </header>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div 
-              key={message.id}
-              className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div 
-                className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                  message.sender === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-muted rounded-bl-sm"
-                }`}
-              >
-                <p className="text-sm">{message.content}</p>
-                <p className={`text-[10px] mt-1 ${
-                  message.sender === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
-                }`}>
-                  {message.timestamp} {message.sender === "user" && "✓✓"}
-                </p>
+      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-12">
+            <Avatar className="w-20 h-20 mb-4">
+              <AvatarImage src={otherUserProfile?.avatar_url || ""} />
+              <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                {getInitials(otherUserProfile?.display_name || otherUserProfile?.username)}
+              </AvatarFallback>
+            </Avatar>
+            <h3 className="font-semibold">
+              {otherUserProfile?.display_name || otherUserProfile?.username}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Start the conversation by sending a message
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(groupedMessages).map(([date, dateMessages]) => (
+              <div key={date}>
+                <div className="flex justify-center mb-4">
+                  <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                    {date}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {dateMessages.map((message) => {
+                    const isOwn = message.sender_id === user?.id;
+                    return (
+                      <div 
+                        key={message.id}
+                        className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                      >
+                        <div 
+                          className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                            isOwn
+                              ? "bg-primary text-primary-foreground rounded-br-sm"
+                              : "bg-muted rounded-bl-sm"
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <p className={`text-[10px] mt-1 ${
+                            isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                          }`}>
+                            {formatMessageTime(message.created_at)} 
+                            {isOwn && (message.is_read ? " ✓✓" : " ✓")}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </ScrollArea>
 
       {/* Input */}
@@ -97,10 +188,10 @@ const CommunityChat = () => {
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
             <Input
-              placeholder="Type to start chatting..."
+              placeholder="Type a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
               className="pr-10"
             />
             <Button variant="ghost" size="icon" className="absolute right-0 top-0 h-full">
@@ -111,8 +202,13 @@ const CommunityChat = () => {
             size="icon" 
             className="bg-primary hover:bg-primary/90 rounded-full"
             onClick={handleSend}
+            disabled={!newMessage.trim() || sending}
           >
-            <Send className="w-4 h-4" />
+            {sending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
           </Button>
         </div>
       </div>
