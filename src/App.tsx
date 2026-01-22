@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/admin/AdminRoute";
+import { PushPermissionBanner } from "@/components/notifications/PushPermissionBanner";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
@@ -88,6 +90,9 @@ import ChallengeLeaderboard from "./pages/ChallengeLeaderboard";
 import HIITTrialWelcome from "./pages/HIITTrialWelcome";
 import MealDetail from "./pages/MealDetail";
 import NotificationDemo from "./pages/NotificationDemo";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminNotifications from "./pages/admin/AdminNotifications";
+import AdminUsers from "./pages/admin/AdminUsers";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +102,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PushPermissionBanner />
         <BrowserRouter>
           <Routes>
             <Route path="/welcome" element={<Welcome />} />
@@ -203,6 +209,11 @@ const App = () => (
             <Route path="/hiit-trial" element={<HIITTrialWelcome />} />
             <Route path="/meal/:id" element={<ProtectedRoute><MealDetail /></ProtectedRoute>} />
             <Route path="/notification-demo" element={<ProtectedRoute><NotificationDemo /></ProtectedRoute>} />
+            <Route path="/community/messages/:recipientId" element={<ProtectedRoute><CommunityMessages /></ProtectedRoute>} />
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
