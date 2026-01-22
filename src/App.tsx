@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/admin/AdminRoute";
 import { PushPermissionBanner } from "@/components/notifications/PushPermissionBanner";
+import { VerificationBanner } from "@/components/auth/VerificationBanner";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
@@ -90,6 +91,8 @@ import ChallengeLeaderboard from "./pages/ChallengeLeaderboard";
 import HIITTrialWelcome from "./pages/HIITTrialWelcome";
 import MealDetail from "./pages/MealDetail";
 import NotificationDemo from "./pages/NotificationDemo";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -111,9 +114,12 @@ const App = () => (
         <Sonner />
         <PushPermissionBanner />
         <BrowserRouter>
+          <VerificationBanner />
           <Routes>
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/assessment" element={<ProtectedRoute><Assessment /></ProtectedRoute>} />
             <Route
               path="/"
