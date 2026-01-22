@@ -17,10 +17,13 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
         loop
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover blur-[2px] scale-105"
       >
         <source src={heroVideo} type="video/mp4" />
       </video>
+      
+      {/* Dark Overlay */}
+      <div className="absolute inset-0 bg-black/40" />
       
       {/* Gradient Overlay */}
       <div 
