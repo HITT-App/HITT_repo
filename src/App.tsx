@@ -93,6 +93,13 @@ import NotificationDemo from "./pages/NotificationDemo";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminWorkouts from "./pages/admin/AdminWorkouts";
+import AdminMeals from "./pages/admin/AdminMeals";
+import AdminCoaches from "./pages/admin/AdminCoaches";
+import AdminBadges from "./pages/admin/AdminBadges";
+import AdminCommunity from "./pages/admin/AdminCommunity";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -214,6 +221,13 @@ const App = () => (
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+            <Route path="/admin/workouts" element={<AdminRoute><AdminWorkouts /></AdminRoute>} />
+            <Route path="/admin/meals" element={<AdminRoute><AdminMeals /></AdminRoute>} />
+            <Route path="/admin/coaches" element={<AdminRoute><AdminCoaches /></AdminRoute>} />
+            <Route path="/admin/badges" element={<AdminRoute><AdminBadges /></AdminRoute>} />
+            <Route path="/admin/community" element={<AdminRoute><AdminCommunity /></AdminRoute>} />
+            <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+            <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
