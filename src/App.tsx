@@ -84,6 +84,9 @@ import AchievementDetail from "./pages/AchievementDetail";
 import Challenges from "./pages/Challenges";
 import ChallengeDetail from "./pages/ChallengeDetail";
 import ChallengeLeaderboard from "./pages/ChallengeLeaderboard";
+import HIITTrialWelcome from "./pages/HIITTrialWelcome";
+import MealDetail from "./pages/MealDetail";
+import NotificationDemo from "./pages/NotificationDemo";
 
 const queryClient = new QueryClient();
 
@@ -196,6 +199,9 @@ const App = () => (
             <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
             <Route path="/challenge/:id" element={<ProtectedRoute><ChallengeDetail /></ProtectedRoute>} />
             <Route path="/leaderboard" element={<ProtectedRoute><ChallengeLeaderboard /></ProtectedRoute>} />
+            <Route path="/hiit-trial" element={<HIITTrialWelcome />} />
+            <Route path="/meal/:id" element={<ProtectedRoute><MealDetail /></ProtectedRoute>} />
+            <Route path="/notification-demo" element={<ProtectedRoute><NotificationDemo /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
