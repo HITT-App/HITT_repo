@@ -86,12 +86,23 @@ export default function MealScanner() {
     }
 
     try {
-      // Call AI to analyze the food
+      // Get user's auth token for authenticated API call
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      
+      if (!accessToken) {
+        toast({ variant: 'destructive', title: 'Authentication Error', description: 'Please sign in to use food scanner' });
+        setScanState('error');
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // Call AI to analyze the food with authenticated request
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-food`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ imageData }),
       });

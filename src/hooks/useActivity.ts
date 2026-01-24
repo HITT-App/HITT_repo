@@ -178,6 +178,29 @@ export const useActivity = () => {
     },
   });
 
+  // Calculate score impact based on activity metrics
+  const calculateScoreImpact = (data: {
+    duration_seconds: number;
+    intensity_level?: number;
+    calories_burned?: number;
+  }): number => {
+    // Base score on duration (longer = more impact)
+    let score = 1;
+    const durationMinutes = data.duration_seconds / 60;
+    
+    if (durationMinutes >= 60) score = 5;
+    else if (durationMinutes >= 45) score = 4;
+    else if (durationMinutes >= 30) score = 3;
+    else if (durationMinutes >= 15) score = 2;
+    
+    // Boost by intensity if provided
+    if (data.intensity_level && data.intensity_level >= 4) {
+      score = Math.min(5, score + 1);
+    }
+    
+    return score;
+  };
+
   // Log activity
   const logActivity = useMutation({
     mutationFn: async (data: {
@@ -192,7 +215,7 @@ export const useActivity = () => {
         user_id: user?.id,
         ...data,
         ended_at: new Date().toISOString(),
-        score_impact: Math.floor(Math.random() * 5) + 1,
+        score_impact: calculateScoreImpact(data),
       });
 
       if (error) throw error;

@@ -55,48 +55,57 @@ export const useConversations = () => {
         return;
       }
 
+      const conversationIds = convData.map(c => c.id);
+      
       // Get other user profiles
       const otherUserIds = convData.map(c => 
         c.participant_1 === user.id ? c.participant_2 : c.participant_1
       );
 
-      const { data: profiles } = await supabase
-        .from('community_profiles')
-        .select('user_id, display_name, username, avatar_url')
-        .in('user_id', otherUserIds);
+      // Batch queries to avoid N+1 problem
+      const [profilesResult, allMessagesResult] = await Promise.all([
+        supabase
+          .from('community_profiles')
+          .select('user_id, display_name, username, avatar_url')
+          .in('user_id', otherUserIds),
+        supabase
+          .from('community_messages')
+          .select('*')
+          .in('conversation_id', conversationIds)
+          .order('created_at', { ascending: false })
+      ]);
 
+      const profiles = profilesResult.data;
+      const allMessages = allMessagesResult.data || [];
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      // Get last message and unread count for each conversation
-      const enrichedConversations = await Promise.all(
-        convData.map(async (conv) => {
-          const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
-          
-          // Get last message
-          const { data: lastMsg } = await supabase
-            .from('community_messages')
-            .select('*')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+      // Group messages by conversation for efficient lookup
+      const messagesByConv = new Map<string, typeof allMessages>();
+      allMessages.forEach(msg => {
+        const convMsgs = messagesByConv.get(msg.conversation_id) || [];
+        convMsgs.push(msg);
+        messagesByConv.set(msg.conversation_id, convMsgs);
+      });
 
-          // Get unread count
-          const { count } = await supabase
-            .from('community_messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversation_id', conv.id)
-            .eq('is_read', false)
-            .neq('sender_id', user.id);
+      const enrichedConversations = convData.map((conv) => {
+        const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+        const convMessages = messagesByConv.get(conv.id) || [];
+        
+        // Get last message (already sorted by created_at desc)
+        const lastMsg = convMessages[0];
+        
+        // Count unread messages from the other user
+        const unreadCount = convMessages.filter(
+          msg => !msg.is_read && msg.sender_id !== user.id
+        ).length;
 
-          return {
-            ...conv,
-            other_user: profileMap.get(otherUserId),
-            last_message: lastMsg || undefined,
-            unread_count: count || 0,
-          };
-        })
-      );
+        return {
+          ...conv,
+          other_user: profileMap.get(otherUserId),
+          last_message: lastMsg || undefined,
+          unread_count: unreadCount,
+        };
+      });
 
       setConversations(enrichedConversations);
     } catch (error) {
