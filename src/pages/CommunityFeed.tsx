@@ -73,46 +73,46 @@ const CommunityFeed = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
       {/* Header */}
-      <header className="sticky top-0 bg-background z-10 p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
-          <Avatar className="w-10 h-10 cursor-pointer" onClick={() => navigate("/community/profile")}>
+      <header className="sticky top-0 bg-background z-10 px-3 sm:p-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between mb-3 sm:mb-4 gap-3">
+          <Avatar className="w-10 h-10 flex-shrink-0 cursor-pointer touch-manipulation" onClick={() => navigate("/community/profile")}>
             <AvatarImage src="" />
             <AvatarFallback className="bg-primary/10 text-primary">
               {user ? getInitials(user.email) : "U"}
             </AvatarFallback>
           </Avatar>
-          <h1 className="text-lg font-semibold">Feed</h1>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/community/create")}>
+          <h1 className="text-base sm:text-lg font-semibold flex-1 text-center">Feed</h1>
+          <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation" onClick={() => navigate("/community/create")}>
             <Plus className="w-5 h-5" />
           </Button>
         </div>
         
-        <div className="flex items-center gap-2 mb-4">
-          <div className="relative flex-1">
+        <div className="flex items-center gap-2 mb-3 sm:mb-4">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
               placeholder="Search for a feed..." 
-              className="pl-9 bg-muted/50"
+              className="pl-9 bg-muted/50 min-h-[44px]"
               onClick={() => navigate("/community/search")}
               readOnly
             />
           </div>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation flex-shrink-0">
             <Filter className="w-4 h-4" />
           </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-3 bg-muted/30">
-            <TabsTrigger value="popular" className="gap-1 text-xs">
+          <TabsList className="w-full grid grid-cols-3 bg-muted/30 min-h-[44px]">
+            <TabsTrigger value="popular" className="gap-1 text-[11px] sm:text-xs min-h-[40px] touch-manipulation">
               <Flame className="w-3 h-3" /> Popular
             </TabsTrigger>
-            <TabsTrigger value="trending" className="gap-1 text-xs">
+            <TabsTrigger value="trending" className="gap-1 text-[11px] sm:text-xs min-h-[40px] touch-manipulation">
               <TrendingUp className="w-3 h-3" /> Trending
             </TabsTrigger>
-            <TabsTrigger value="following" className="gap-1 text-xs">
+            <TabsTrigger value="following" className="gap-1 text-[11px] sm:text-xs min-h-[40px] touch-manipulation">
               <Users className="w-3 h-3" /> Following
             </TabsTrigger>
           </TabsList>
@@ -136,24 +136,24 @@ const CommunityFeed = () => {
       {/* Posts */}
       <div className="divide-y divide-border">
         {posts.map((post) => (
-          <article key={post.id} className="p-4">
+          <article key={post.id} className="px-3 sm:p-4 py-4">
             {/* Author */}
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar className="w-10 h-10 cursor-pointer" onClick={() => navigate(`/community/user/${post.user_id}`)}>
+            <div className="flex items-center gap-2 sm:gap-3 mb-3">
+              <Avatar className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 cursor-pointer touch-manipulation" onClick={() => navigate(`/community/user/${post.user_id}`)}>
                 <AvatarImage src={post.profile?.avatar_url || ""} />
-                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm">
                   {getInitials(post.profile?.display_name || post.profile?.username)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
-                  <span className="font-medium text-sm">
+                  <span className="font-medium text-sm truncate">
                     {post.profile?.display_name || post.profile?.username || "Anonymous"}
                   </span>
                 </div>
-                <span className="text-xs text-muted-foreground">Posted {formatTimestamp(post.created_at)}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground">Posted {formatTimestamp(post.created_at)}</span>
               </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] touch-manipulation flex-shrink-0">
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
             </div>
@@ -238,27 +238,27 @@ const CommunityFeed = () => {
 
             {/* Engagement */}
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <button 
-                  className={`flex items-center gap-1 hover:text-primary transition-colors ${post.is_liked ? "text-red-500" : ""}`}
+                  className={`flex items-center gap-1 hover:text-primary transition-colors min-h-[44px] min-w-[44px] touch-manipulation ${post.is_liked ? "text-red-500" : ""}`}
                   onClick={() => handleLike(post)}
                   disabled={likingPosts.includes(post.id)}
                 >
-                  <Heart className={`w-4 h-4 ${post.is_liked ? "fill-current" : ""}`} /> 
-                  {formatNumber(post.likes_count)}
+                  <Heart className={`w-5 h-5 sm:w-4 sm:h-4 ${post.is_liked ? "fill-current" : ""}`} /> 
+                  <span className="text-xs">{formatNumber(post.likes_count)}</span>
                 </button>
                 <button 
-                  className="flex items-center gap-1 hover:text-primary"
+                  className="flex items-center gap-1 hover:text-primary min-h-[44px] min-w-[44px] touch-manipulation"
                   onClick={() => navigate(`/community/post/${post.id}/comments`)}
                 >
-                  <MessageCircle className="w-4 h-4" /> {post.comments_count}
+                  <MessageCircle className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-xs">{post.comments_count}</span>
                 </button>
               </div>
               <button 
-                className={`hover:text-primary ${savedPosts.includes(post.id) ? "text-primary" : ""}`}
+                className={`flex items-center min-h-[44px] touch-manipulation hover:text-primary ${savedPosts.includes(post.id) ? "text-primary" : ""}`}
                 onClick={() => toggleSave(post.id)}
               >
-                <Bookmark className={`w-4 h-4 ${savedPosts.includes(post.id) ? "fill-current" : ""}`} />
+                <Bookmark className={`w-5 h-5 sm:w-4 sm:h-4 ${savedPosts.includes(post.id) ? "fill-current" : ""}`} />
                 <span className="ml-1 text-xs">Save</span>
               </button>
             </div>

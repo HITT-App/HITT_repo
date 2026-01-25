@@ -197,26 +197,25 @@ export default function AICoach() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+      <header className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-border bg-background/80 backdrop-blur-sm">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation" onClick={() => navigate('/')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
-            <h1 className="font-semibold text-foreground">Coach HIIT AI</h1>
-            <p className="text-xs text-muted-foreground">241 chats left</p>
+          <div className="min-w-0">
+            <h1 className="font-semibold text-foreground text-sm sm:text-base truncate">Coach HIIT AI</h1>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">241 chats left</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {interactionMode === 'immersive' && (
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full border-primary text-primary text-xs"
+              className="rounded-full border-primary text-primary text-[10px] sm:text-xs px-2 sm:px-3 min-h-[36px] touch-manipulation"
               onClick={async () => {
-                // Ensure we have a conversation before entering Jarvis mode
                 let convId = currentConversation;
                 if (!convId) {
                   convId = await createNewConversation();
@@ -227,26 +226,27 @@ export default function AICoach() {
               }}
             >
               <Mic className="w-3 h-3 mr-1" />
-              Jarvis Mode
+              <span className="hidden xs:inline">Jarvis</span>
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setShowSidebar(!showSidebar)}
-            className="md:hidden"
+            className="md:hidden min-h-[44px] min-w-[44px] touch-manipulation"
           >
             <MessageSquare className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate('/chat-settings')}>
+          <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation" onClick={() => navigate('/chat-settings')}>
             <Settings className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate('/my-conversations')}>
+          <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation hidden xs:flex" onClick={() => navigate('/my-conversations')}>
             <List className="w-5 h-5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
+            className="min-h-[44px] min-w-[44px] touch-manipulation"
             onClick={createNewConversation}
           >
             <Plus className="w-5 h-5" />
