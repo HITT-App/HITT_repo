@@ -4,15 +4,17 @@ import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { useStreaksAndBadges } from '@/hooks/useStreaksAndBadges';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { useVoiceController } from '@/components/coach/VoiceController';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StreakCard } from '@/components/gamification/StreakCard';
 import { BadgesDisplay } from '@/components/gamification/BadgesDisplay';
 import { PasswordChangeSection } from '@/components/profile/PasswordChangeSection';
-import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy, Shield, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy, Shield, Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const FITNESS_GOALS = [
@@ -31,6 +33,7 @@ export default function Profile() {
   const { profile, loading, updating, updateProfile, uploadAvatar } = useProfile();
   const { streak, allBadges, earnedBadges, loading: streaksLoading } = useStreaksAndBadges();
   const { isAdmin, loading: adminLoading } = useAdminRole();
+  const { enabled: wakeWordEnabled, toggle: toggleWakeWord } = useVoiceController();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState('');
@@ -247,6 +250,26 @@ export default function Profile() {
               maxLength={200}
               className="mt-1 bg-secondary border-border resize-none"
               rows={2}
+            />
+          </div>
+        </div>
+
+        {/* Voice Activation */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-2">
+            <Mic className="w-4 h-4 text-muted-foreground" />
+            Voice Activation
+          </Label>
+          <div className="flex items-center justify-between p-4 bg-secondary rounded-xl">
+            <div className="space-y-1">
+              <p className="font-medium text-sm">"Ok HIIT" Wake Word</p>
+              <p className="text-xs text-muted-foreground">
+                Say "Ok HIIT" anywhere in the app to start voice mode
+              </p>
+            </div>
+            <Switch 
+              checked={wakeWordEnabled} 
+              onCheckedChange={toggleWakeWord}
             />
           </div>
         </div>
