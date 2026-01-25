@@ -6,6 +6,7 @@ import { useAIChat } from '@/hooks/useAIChat';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { CoachOnboarding } from '@/components/coach/CoachOnboarding';
 import { VoiceMode } from '@/components/coach/VoiceMode';
+import { JarvisMode } from '@/components/coach/JarvisMode';
 import { ClearDataDialog } from '@/components/coach/ClearDataDialog';
 import { OutOfTokensDialog } from '@/components/coach/OutOfTokensDialog';
 import { HIITPlusSheet } from '@/components/coach/SandowPlusSheet';
@@ -35,6 +36,7 @@ export default function AICoach() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showVoiceMode, setShowVoiceMode] = useState(false);
+  const [showJarvisMode, setShowJarvisMode] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showOutOfTokens, setShowOutOfTokens] = useState(false);
   const [showPlusSheet, setShowPlusSheet] = useState(false);
@@ -174,12 +176,22 @@ export default function AICoach() {
     );
   }
 
-  // Show voice mode
+  // Show voice mode (legacy)
   if (showVoiceMode) {
     return (
       <VoiceMode 
         onTranscript={handleVoiceTranscript}
         onClose={() => setShowVoiceMode(false)}
+      />
+    );
+  }
+
+  // Show Jarvis mode (new real-time voice chat)
+  if (showJarvisMode && currentConversation) {
+    return (
+      <JarvisMode 
+        conversationId={currentConversation}
+        onClose={() => setShowJarvisMode(false)}
       />
     );
   }
@@ -203,9 +215,19 @@ export default function AICoach() {
               variant="outline"
               size="sm"
               className="rounded-full border-primary text-primary text-xs"
-              onClick={() => setShowVoiceMode(true)}
+              onClick={async () => {
+                // Ensure we have a conversation before entering Jarvis mode
+                let convId = currentConversation;
+                if (!convId) {
+                  convId = await createNewConversation();
+                }
+                if (convId) {
+                  setShowJarvisMode(true);
+                }
+              }}
             >
-              Voice Mode
+              <Mic className="w-3 h-3 mr-1" />
+              Jarvis Mode
             </Button>
           )}
           <Button
