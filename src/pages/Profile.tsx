@@ -4,7 +4,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { useStreaksAndBadges } from '@/hooks/useStreaksAndBadges';
 import { useAdminRole } from '@/hooks/useAdminRole';
-import { useVoiceController } from '@/components/coach/VoiceController';
+import { useWakeWordPreference } from '@/hooks/useWakeWordPreference';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,7 +33,7 @@ export default function Profile() {
   const { profile, loading, updating, updateProfile, uploadAvatar } = useProfile();
   const { streak, allBadges, earnedBadges, loading: streaksLoading } = useStreaksAndBadges();
   const { isAdmin, loading: adminLoading } = useAdminRole();
-  const { enabled: wakeWordEnabled, toggle: toggleWakeWord } = useVoiceController();
+  const { enabled: wakeWordEnabled, setEnabled: setWakeWordEnabled } = useWakeWordPreference();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState('');
@@ -269,7 +269,7 @@ export default function Profile() {
             </div>
             <Switch 
               checked={wakeWordEnabled} 
-              onCheckedChange={toggleWakeWord}
+              onCheckedChange={setWakeWordEnabled}
             />
           </div>
         </div>

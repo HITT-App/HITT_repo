@@ -1,60 +1,18 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { WakeWordListener } from './WakeWordListener';
 import { JarvisMode } from './JarvisMode';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useWakeWordPreference } from '@/hooks/useWakeWordPreference';
 
 export function VoiceController() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
-  const [wakeWordEnabled, setWakeWordEnabled] = useState(false);
+  const { enabled: wakeWordEnabled } = useWakeWordPreference();
   const [showJarvisMode, setShowJarvisMode] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-
-  // Check if user has granted microphone permission
-  useEffect(() => {
-    const checkPermission = async () => {
-      try {
-        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-        setHasPermission(result.state === 'granted');
-        
-        result.onchange = () => {
-          setHasPermission(result.state === 'granted');
-        };
-      } catch {
-        // Fallback for browsers that don't support permissions API
-        setHasPermission(null);
-      }
-    };
-    
-    checkPermission();
-  }, []);
-
-  // Load wake word preference from localStorage - only once on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('hiit-wake-word-enabled');
-    // Enable if previously saved as true and either we have permission or haven't checked yet
-    if (saved === 'true' && (hasPermission === true || hasPermission === null)) {
-      setWakeWordEnabled(true);
-    }
-  }, []);
-
-  // Re-check when permission changes
-  useEffect(() => {
-    if (hasPermission === false) {
-      // Disable if permission was denied
-      setWakeWordEnabled(false);
-    }
-  }, [hasPermission]);
-
-  // Save preference to localStorage
-  useEffect(() => {
-    localStorage.setItem('hiit-wake-word-enabled', wakeWordEnabled.toString());
-  }, [wakeWordEnabled]);
 
   // Create or get conversation for Jarvis Mode
   const getOrCreateConversation = useCallback(async () => {
@@ -93,14 +51,10 @@ export function VoiceController() {
   const handleWakeWordDetected = useCallback(async () => {
     console.log('[VoiceController] Wake word detected!');
     
-    // Disable wake word listening while in Jarvis Mode
-    setWakeWordEnabled(false);
-    
     // Get or create conversation
     const convoId = await getOrCreateConversation();
     if (!convoId) {
       toast.error('Failed to start voice mode');
-      setWakeWordEnabled(true);
       return;
     }
 
@@ -117,31 +71,6 @@ export function VoiceController() {
   const handleJarvisModeClose = useCallback(() => {
     setShowJarvisMode(false);
     setConversationId(null);
-    
-    // Re-enable wake word listening after a short delay
-    setTimeout(() => {
-      setWakeWordEnabled(true);
-    }, 1000);
-  }, []);
-
-  // Enable wake word listening (called from settings)
-  const enableWakeWord = useCallback(async () => {
-    try {
-      // Request microphone permission
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      setHasPermission(true);
-      setWakeWordEnabled(true);
-      toast.success('"Ok HIIT" voice activation enabled');
-    } catch (error) {
-      console.error('Microphone permission denied:', error);
-      toast.error('Microphone permission is required for voice activation');
-    }
-  }, []);
-
-  // Disable wake word listening
-  const disableWakeWord = useCallback(() => {
-    setWakeWordEnabled(false);
-    toast.info('"Ok HIIT" voice activation disabled');
   }, []);
 
   // Don't render anything if user is not logged in
@@ -172,28 +101,3 @@ export function VoiceController() {
   );
 }
 
-// Export a hook for other components to control wake word
-export function useVoiceController() {
-  const [enabled, setEnabled] = useState(() => {
-    return localStorage.getItem('hiit-wake-word-enabled') === 'true';
-  });
-
-  const toggle = useCallback(async () => {
-    if (!enabled) {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        localStorage.setItem('hiit-wake-word-enabled', 'true');
-        setEnabled(true);
-        toast.success('"Ok HIIT" voice activation enabled');
-      } catch {
-        toast.error('Microphone permission is required');
-      }
-    } else {
-      localStorage.setItem('hiit-wake-word-enabled', 'false');
-      setEnabled(false);
-      toast.info('"Ok HIIT" voice activation disabled');
-    }
-  }, [enabled]);
-
-  return { enabled, toggle };
-}
