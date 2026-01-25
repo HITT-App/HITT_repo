@@ -12,21 +12,11 @@ const WAKE_PHRASES = ['ok hiit', 'okay hiit', 'ok hit', 'okay hit', 'hey hiit', 
 
 export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListenerProps) {
   const { user } = useAuth();
-  const [isListening, setIsListening] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const lastDetectedRef = useRef<number>(0);
+  const isConnectingRef = useRef(false);
   
-  const scribe = useScribe({
-    modelId: 'scribe_v2_realtime',
-    commitStrategy: CommitStrategy.VAD,
-    onPartialTranscript: (data) => {
-      checkForWakeWord(data.text);
-    },
-    onCommittedTranscript: (data) => {
-      checkForWakeWord(data.text);
-    },
-  });
-
   const checkForWakeWord = useCallback((text: string) => {
     const normalizedText = text.toLowerCase().trim();
     
@@ -44,8 +34,21 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
     }
   }, [onWakeWordDetected]);
 
+  const scribe = useScribe({
+    modelId: 'scribe_v2_realtime',
+    commitStrategy: CommitStrategy.VAD,
+    onPartialTranscript: (data) => {
+      checkForWakeWord(data.text);
+    },
+    onCommittedTranscript: (data) => {
+      checkForWakeWord(data.text);
+    },
+  });
+
   const startListening = useCallback(async () => {
-    if (!user || isListening) return;
+    if (!user || isConnected || isConnectingRef.current) return;
+    
+    isConnectingRef.current = true;
     
     try {
       // Request microphone permission first
@@ -57,7 +60,10 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
       if (error || !data?.token) {
         console.error('[WakeWord] Failed to get token:', error);
         // Retry after 30 seconds
-        reconnectTimeoutRef.current = setTimeout(startListening, 30000);
+        reconnectTimeoutRef.current = setTimeout(() => {
+          isConnectingRef.current = false;
+          startListening();
+        }, 30000);
         return;
       }
 
@@ -69,18 +75,21 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
         },
       });
 
-      setIsListening(true);
+      setIsConnected(true);
+      isConnectingRef.current = false;
       console.log('[WakeWord] Listening for "Ok HIIT"...');
     } catch (error) {
       console.error('[WakeWord] Failed to start:', error);
+      isConnectingRef.current = false;
       // Retry after 30 seconds
       reconnectTimeoutRef.current = setTimeout(startListening, 30000);
     }
-  }, [user, isListening, scribe]);
+  }, [user, isConnected, scribe]);
 
   const stopListening = useCallback(() => {
     scribe.disconnect();
-    setIsListening(false);
+    setIsConnected(false);
+    isConnectingRef.current = false;
     console.log('[WakeWord] Stopped listening');
     
     if (reconnectTimeoutRef.current) {
@@ -90,9 +99,9 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
 
   // Handle enable/disable
   useEffect(() => {
-    if (enabled && user && !isListening) {
+    if (enabled && user && !isConnected && !isConnectingRef.current) {
       startListening();
-    } else if (!enabled && isListening) {
+    } else if (!enabled && isConnected) {
       stopListening();
     }
     
@@ -101,14 +110,14 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [enabled, user]);
+  }, [enabled, user, isConnected, startListening, stopListening]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopListening();
     };
-  }, []);
+  }, [stopListening]);
 
   // No visual UI - this is a background listener
   return null;

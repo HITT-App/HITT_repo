@@ -34,11 +34,20 @@ export function VoiceController() {
     checkPermission();
   }, []);
 
-  // Load wake word preference from localStorage
+  // Load wake word preference from localStorage - only once on mount
   useEffect(() => {
     const saved = localStorage.getItem('hiit-wake-word-enabled');
-    if (saved === 'true' && hasPermission) {
+    // Enable if previously saved as true and either we have permission or haven't checked yet
+    if (saved === 'true' && (hasPermission === true || hasPermission === null)) {
       setWakeWordEnabled(true);
+    }
+  }, []);
+
+  // Re-check when permission changes
+  useEffect(() => {
+    if (hasPermission === false) {
+      // Disable if permission was denied
+      setWakeWordEnabled(false);
     }
   }, [hasPermission]);
 

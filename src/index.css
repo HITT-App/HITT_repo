@@ -292,3 +292,13 @@
 .animate-cursor-blink {
   animation: cursor-blink 1s step-end infinite;
 }
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
