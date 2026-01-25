@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/admin/AdminRoute";
 import { PushPermissionBanner } from "@/components/notifications/PushPermissionBanner";
 import { VerificationBanner } from "@/components/auth/VerificationBanner";
+import { VoiceController } from "@/components/coach/VoiceController";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
@@ -115,6 +116,7 @@ const App = () => (
         <PushPermissionBanner />
         <BrowserRouter>
           <VerificationBanner />
+          <VoiceController />
           <Routes>
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/auth" element={<Auth />} />
