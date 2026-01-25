@@ -10,6 +10,7 @@ import { CoachingCard } from "@/components/dashboard/CoachingCard";
 import { WorkoutRecommendations } from "@/components/workout/WorkoutRecommendations";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import { useProfile } from "@/hooks/useProfile";
 import { ChevronRight, Dumbbell, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -18,9 +19,11 @@ const Index = () => {
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const { user } = useAuth();
   const { isAdmin } = useAdminRole();
+  const { profile } = useProfile();
   const navigate = useNavigate();
   
-  const displayName = user?.user_metadata?.display_name || 
+  const displayName = profile?.display_name || 
+                      user?.user_metadata?.display_name || 
                       user?.email?.split("@")[0] || 
                       "Athlete";
 
