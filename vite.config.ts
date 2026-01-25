@@ -47,6 +47,8 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,jpg,jpeg,mp4}"],
         // Import custom push notification handler
         importScripts: ["/sw-push.js"],
+        // Increase limit for large JS bundles
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
