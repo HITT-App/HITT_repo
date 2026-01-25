@@ -29,16 +29,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-md min-h-screen relative overflow-hidden pb-24">
+      <div className="w-full max-w-md min-h-screen relative overflow-x-hidden pb-28 sm:pb-24">
         {/* Hero Section */}
         <HomeHero userName={displayName} />
 
         {isAdmin && (
-          <div className="px-4 -mt-2">
+          <div className="px-3 sm:px-4 -mt-2">
             <Button
               variant="outline"
               size="sm"
-              className="w-full justify-between"
+              className="w-full justify-between min-h-[44px] touch-manipulation"
               onClick={() => navigate("/admin")}
             >
               <span className="flex items-center gap-2">
@@ -57,16 +57,16 @@ const Index = () => {
         <WorkoutPlanCard />
         
         {/* AI Workout Recommendations */}
-        <div className="px-4 py-2">
+        <div className="px-3 sm:px-4 py-2">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold flex items-center gap-2">
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2">
               <Dumbbell className="w-4 h-4 text-primary" />
               Recommended For You
             </h2>
             <Button 
               variant="link" 
               size="sm" 
-              className="text-primary p-0"
+              className="text-primary p-0 min-h-[44px] touch-manipulation"
               onClick={() => navigate('/workout-library')}
             >
               See all <ChevronRight className="w-4 h-4" />

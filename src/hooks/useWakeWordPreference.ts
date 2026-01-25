@@ -36,48 +36,28 @@ function subscribe(callback: () => void) {
   };
 }
 
-async function requestMicrophonePermission() {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  // Immediately stop tracks so we don't keep the mic active.
-  for (const track of stream.getTracks()) track.stop();
-}
-
 /**
  * Single source of truth for the app-wide wake-word setting.
  *
- * IMPORTANT: `storage` events do not fire in the same tab, so we also emit a
- * custom event to keep `VoiceController` and Profile in sync instantly.
+ * We enable the preference immediately; the actual microphone permission
+ * request happens in WakeWordListener when it tries to connect to Scribe.
+ * This prevents blocking the toggle action if permission is pending.
  */
 export function useWakeWordPreference() {
-  const enabled = useSyncExternalStore(
-    subscribe,
-    readStoredValue,
-    () => false
-  );
+  const enabled = useSyncExternalStore(subscribe, readStoredValue, () => false);
 
-  const setEnabled = useCallback(
-    async (next: boolean) => {
-      const current = readStoredValue();
-      if (next === current) return;
+  const setEnabled = useCallback(async (next: boolean) => {
+    const current = readStoredValue();
+    if (next === current) return;
 
-      if (next) {
-        try {
-          await requestMicrophonePermission();
-          writeStoredValue(true);
-          toast.success('"Ok HIIT" voice activation enabled');
-        } catch (error) {
-          console.error("[WakeWord] Microphone permission denied:", error);
-          writeStoredValue(false);
-          toast.error("Microphone permission is required for voice activation");
-        }
-        return;
-      }
+    writeStoredValue(next);
 
-      writeStoredValue(false);
+    if (next) {
+      toast.success('"Ok HIIT" voice activation enabled');
+    } else {
       toast.info('"Ok HIIT" voice activation disabled');
-    },
-    []
-  );
+    }
+  }, []);
 
   const toggle = useCallback(async () => {
     await setEnabled(!readStoredValue());
