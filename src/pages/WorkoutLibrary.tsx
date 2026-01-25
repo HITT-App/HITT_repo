@@ -132,22 +132,22 @@ export default function WorkoutLibrary() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <ScrollArea className="h-[calc(100vh-96px)]">
-        <div className="p-4 space-y-6">
+        <div className="p-3 sm:p-4 space-y-4 sm:space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <HIITLogo size="sm" />
-            <p className="text-sm text-muted-foreground">Workouts</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Workouts</p>
           </div>
 
           {/* AI Greeting */}
           <Card className="bg-card border-border/50">
-            <CardContent className="p-4">
-              <div className="flex gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <HIITLogo size="sm" />
                 </div>
-                <div>
-                  <p className="text-sm">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm">
                     Ok Makise, Here is a good workout exercise for you to get started with! 💪
                   </p>
                 </div>
@@ -158,10 +158,10 @@ export default function WorkoutLibrary() {
           {/* Featured Workout */}
           {featuredWorkouts[0] && (
             <Card 
-              className="overflow-hidden cursor-pointer"
+              className="overflow-hidden cursor-pointer touch-manipulation active:scale-[0.99] transition-transform"
               onClick={() => navigate(`/workout/${featuredWorkouts[0].id}`)}
             >
-              <div className="relative h-40 bg-gradient-to-br from-primary/20 to-primary/5">
+              <div className="relative h-36 sm:h-40 bg-gradient-to-br from-primary/20 to-primary/5">
                 {featuredWorkouts[0].thumbnail_url ? (
                   <img 
                     src={featuredWorkouts[0].thumbnail_url} 
@@ -170,13 +170,13 @@ export default function WorkoutLibrary() {
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <Dumbbell className="w-16 h-16 text-primary/30" />
+                    <Dumbbell className="w-12 h-12 sm:w-16 sm:h-16 text-primary/30" />
                   </div>
                 )}
-                <Badge className="absolute top-3 left-3 bg-primary">Featured</Badge>
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-4">
-                  <h3 className="font-bold text-lg">{featuredWorkouts[0].title}</h3>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                <Badge className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-primary text-xs">Featured</Badge>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3 sm:p-4">
+                  <h3 className="font-bold text-base sm:text-lg">{featuredWorkouts[0].title}</h3>
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground mt-1">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {featuredWorkouts[0].duration_minutes}min
                     </span>
@@ -189,8 +189,8 @@ export default function WorkoutLibrary() {
                   </div>
                 </div>
               </div>
-              <CardContent className="p-4">
-                <Button className="w-full gap-2">
+              <CardContent className="p-3 sm:p-4">
+                <Button className="w-full gap-2 h-10 sm:h-11 touch-manipulation">
                   Go to dashboard <ArrowRight className="w-4 h-4" />
                 </Button>
               </CardContent>
@@ -205,13 +205,13 @@ export default function WorkoutLibrary() {
                 placeholder="Search for a workout..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 rounded-xl"
+                className="pl-10 rounded-xl h-10 sm:h-11 text-sm"
               />
             </div>
             <Button 
               variant="outline" 
               size="icon" 
-              className="rounded-xl relative"
+              className="rounded-xl relative h-10 w-10 sm:h-11 sm:w-11 touch-manipulation"
               onClick={() => setShowFilters(true)}
             >
               <Filter className="w-4 h-4" />
@@ -224,13 +224,13 @@ export default function WorkoutLibrary() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 sm:-mx-4 px-3 sm:px-4 scrollbar-hide">
             {CATEGORIES.map(cat => (
               <Button
                 key={cat.id}
                 variant={selectedCategory === cat.id ? "default" : "outline"}
                 size="sm"
-                className="rounded-full flex-shrink-0 gap-1"
+                className="rounded-full flex-shrink-0 gap-1 h-9 touch-manipulation text-xs sm:text-sm"
                 onClick={() => setSelectedCategory(cat.id)}
               >
                 {cat.icon && <cat.icon className="w-3 h-3" />}
@@ -241,34 +241,34 @@ export default function WorkoutLibrary() {
 
           {/* My Active Workouts */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold">My Active Workout</h2>
-              <Button variant="link" size="sm" className="text-primary">See all</Button>
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h2 className="font-semibold text-sm sm:text-base">My Active Workout</h2>
+              <Button variant="link" size="sm" className="text-primary text-xs sm:text-sm h-auto p-0">See all</Button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {activeWorkouts.map(workout => (
                 <Card 
                   key={workout.id} 
-                  className="cursor-pointer hover:bg-secondary/30 transition-colors"
+                  className="cursor-pointer hover:bg-secondary/30 active:bg-secondary/50 transition-colors touch-manipulation"
                   onClick={() => navigate(`/workout/${workout.id}`)}
                 >
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <CardContent className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {workout.thumbnail_url ? (
                         <img src={workout.thumbnail_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <Dumbbell className="w-6 h-6 text-muted-foreground" />
+                        <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">{workout.title}</h3>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <h3 className="font-medium text-sm sm:text-base truncate">{workout.title}</h3>
+                      <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground">
                         <span>{workout.duration_minutes}min</span>
                         <span>·</span>
                         <span className="capitalize">{workout.difficulty}</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground flex-shrink-0" />
                   </CardContent>
                 </Card>
               ))}
@@ -277,15 +277,15 @@ export default function WorkoutLibrary() {
 
           {/* Suggest Workout */}
           <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-primary" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <div className="flex-1">
-                <p className="font-semibold">Get the best workout</p>
-                <p className="text-sm text-muted-foreground">Personalized with AI</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm sm:text-base">Get the best workout</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Personalized with AI</p>
               </div>
-              <Button size="sm" className="rounded-xl">
+              <Button size="sm" className="rounded-xl h-9 w-9 sm:h-10 sm:w-10 p-0 touch-manipulation">
                 <Play className="w-4 h-4" />
               </Button>
             </CardContent>
@@ -293,11 +293,11 @@ export default function WorkoutLibrary() {
 
           {/* Browse By Body Area */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold">Browse By Body Area</h2>
-              <Button variant="link" size="sm" className="text-primary">See all</Button>
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h2 className="font-semibold text-sm sm:text-base">Browse By Body Area</h2>
+              <Button variant="link" size="sm" className="text-primary text-xs sm:text-sm h-auto p-0">See all</Button>
             </div>
-            <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4">
+            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-3 sm:-mx-4 px-3 sm:px-4 scrollbar-hide">
               {BODY_AREAS.slice(0, 5).map(area => (
                 <button
                   key={area.id}
@@ -305,12 +305,12 @@ export default function WorkoutLibrary() {
                     toggleBodyArea(area.id);
                     setShowFilters(true);
                   }}
-                  className="flex flex-col items-center gap-2 flex-shrink-0"
+                  className="flex flex-col items-center gap-1.5 sm:gap-2 flex-shrink-0 touch-manipulation"
                 >
-                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
-                    <Dumbbell className="w-6 h-6 text-muted-foreground" />
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-secondary flex items-center justify-center active:bg-secondary/80 transition-colors">
+                    <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                   </div>
-                  <span className="text-xs">{area.label}</span>
+                  <span className="text-[10px] sm:text-xs">{area.label}</span>
                 </button>
               ))}
             </div>
@@ -318,25 +318,25 @@ export default function WorkoutLibrary() {
 
           {/* Short Workouts */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold">Short Workouts</h2>
-              <Button variant="link" size="sm" className="text-primary">See all</Button>
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h2 className="font-semibold text-sm sm:text-base">Short Workouts</h2>
+              <Button variant="link" size="sm" className="text-primary text-xs sm:text-sm h-auto p-0">See all</Button>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 -mx-3 sm:-mx-4 px-3 sm:px-4 scrollbar-hide">
               {filteredWorkouts.filter(w => w.duration_minutes <= 20).slice(0, 4).map(workout => (
                 <Card 
                   key={workout.id} 
-                  className="w-40 flex-shrink-0 overflow-hidden cursor-pointer"
+                  className="w-36 sm:w-40 flex-shrink-0 overflow-hidden cursor-pointer touch-manipulation active:scale-[0.98] transition-transform"
                   onClick={() => navigate(`/workout/${workout.id}`)}
                 >
-                  <div className="h-24 bg-gradient-to-br from-primary/20 to-secondary relative">
-                    <Badge className="absolute top-2 left-2 text-[10px]" variant="secondary">
+                  <div className="h-20 sm:h-24 bg-gradient-to-br from-primary/20 to-secondary relative">
+                    <Badge className="absolute top-2 left-2 text-[9px] sm:text-[10px]" variant="secondary">
                       {workout.duration_minutes}min
                     </Badge>
                   </div>
-                  <CardContent className="p-3">
-                    <h3 className="font-medium text-sm truncate">{workout.title}</h3>
-                    <p className="text-xs text-muted-foreground capitalize">{workout.difficulty}</p>
+                  <CardContent className="p-2.5 sm:p-3">
+                    <h3 className="font-medium text-xs sm:text-sm truncate">{workout.title}</h3>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground capitalize">{workout.difficulty}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -345,21 +345,21 @@ export default function WorkoutLibrary() {
 
           {/* Trending Workouts */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold">Trending Workouts</h2>
-              <Button variant="link" size="sm" className="text-primary">See all</Button>
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h2 className="font-semibold text-sm sm:text-base">Trending Workouts</h2>
+              <Button variant="link" size="sm" className="text-primary text-xs sm:text-sm h-auto p-0">See all</Button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {filteredWorkouts.filter(w => w.rating >= 4.5).slice(0, 3).map(workout => (
                 <Card 
                   key={workout.id} 
-                  className="overflow-hidden cursor-pointer"
+                  className="overflow-hidden cursor-pointer touch-manipulation active:scale-[0.99] transition-transform"
                   onClick={() => navigate(`/workout/${workout.id}`)}
                 >
-                  <div className="relative h-32 bg-gradient-to-br from-primary/30 to-secondary">
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background to-transparent p-4">
-                      <h3 className="font-bold">{workout.title}</h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="relative h-28 sm:h-32 bg-gradient-to-br from-primary/30 to-secondary">
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background to-transparent p-3 sm:p-4">
+                      <h3 className="font-bold text-sm sm:text-base">{workout.title}</h3>
+                      <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Users className="w-3 h-3" /> {workout.rating_count}
                         </span>
