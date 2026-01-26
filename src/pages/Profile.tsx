@@ -120,7 +120,7 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-background pb-8">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-background sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
             <ArrowLeft className="w-5 h-5" />
@@ -133,7 +133,7 @@ export default function Profile() {
               variant="outline" 
               size="sm" 
               onClick={() => navigate('/admin')}
-              className="gap-2 border-primary/50 text-primary hover:bg-primary/10"
+              className="gap-2"
             >
               <Shield className="w-4 h-4" />
               Admin
@@ -146,20 +146,20 @@ export default function Profile() {
         </div>
       </header>
 
-      <div className="p-4 max-w-md mx-auto space-y-6">
+      <div className="p-5 max-w-md mx-auto space-y-6">
         {/* Avatar Section */}
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
-            <Avatar className="w-24 h-24 border-2 border-border">
+            <Avatar className="w-24 h-24 border border-border">
               <AvatarImage src={avatarPreview || undefined} alt="Profile" />
-              <AvatarFallback className="bg-secondary text-lg font-semibold">
+              <AvatarFallback className="bg-secondary text-lg font-medium">
                 {getInitials()}
               </AvatarFallback>
             </Avatar>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingAvatar}
-              className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center active:opacity-80 transition-opacity disabled:opacity-50"
             >
               {uploadingAvatar ? (
                 <Loader2 className="w-4 h-4 text-primary-foreground animate-spin" />
@@ -228,17 +228,17 @@ export default function Profile() {
               <button
                 key={goal}
                 onClick={() => setFitnessGoal(goal)}
-                className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                className={`p-3.5 rounded-xl text-sm font-medium transition-all touch-manipulation ${
                   fitnessGoal === goal
                     ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                    : 'bg-secondary text-secondary-foreground active:bg-secondary/70'
                 }`}
               >
                 {goal}
               </button>
             ))}
           </div>
-          <div className="pt-2">
+          <div className="pt-3">
             <Label htmlFor="customGoal" className="text-xs text-muted-foreground">
               Or enter a custom goal
             </Label>

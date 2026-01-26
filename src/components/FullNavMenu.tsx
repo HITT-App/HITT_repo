@@ -29,8 +29,6 @@ import {
   Clock,
   GraduationCap,
   Video,
-  Sparkles,
-  ChevronRight,
   X,
   Crown,
   Shield
@@ -58,72 +56,72 @@ const menuSections = [
   {
     title: "Main",
     items: [
-      { icon: Home, label: "Home", path: "/", color: "text-primary" },
-      { icon: Bot, label: "HIIT AI Coach", path: "/ai-coach", color: "text-yellow-500" },
-      { icon: Search, label: "Search", path: "/search", color: "text-muted-foreground" },
-      { icon: Bell, label: "Notifications", path: "/notifications", color: "text-blue-500" },
+      { icon: Home, label: "Home", path: "/" },
+      { icon: Bot, label: "HIIT AI Coach", path: "/ai-coach" },
+      { icon: Search, label: "Search", path: "/search" },
+      { icon: Bell, label: "Notifications", path: "/notifications" },
     ]
   },
   {
     title: "Fitness",
     items: [
-      { icon: Dumbbell, label: "Workouts", path: "/workouts", color: "text-purple-500" },
-      { icon: PlayCircle, label: "Workout Library", path: "/workout-library", color: "text-purple-400" },
-      { icon: Calendar, label: "Workout Schedule", path: "/workout-schedule", color: "text-purple-300" },
-      { icon: Activity, label: "Activity Tracker", path: "/activity", color: "text-green-500" },
-      { icon: Target, label: "Activity Goals", path: "/activity-goals", color: "text-green-400" },
-      { icon: Clock, label: "Activity History", path: "/activity-history", color: "text-green-300" },
+      { icon: Dumbbell, label: "Workouts", path: "/workouts" },
+      { icon: PlayCircle, label: "Workout Library", path: "/workout-library" },
+      { icon: Calendar, label: "Schedule", path: "/workout-schedule" },
+      { icon: Activity, label: "Activity", path: "/activity" },
+      { icon: Target, label: "Goals", path: "/activity-goals" },
+      { icon: Clock, label: "History", path: "/activity-history" },
     ]
   },
   {
     title: "Nutrition",
     items: [
-      { icon: Apple, label: "Nutrition", path: "/nutrition", color: "text-orange-500" },
-      { icon: UtensilsCrossed, label: "Browse Meals", path: "/browse-meals", color: "text-orange-400" },
-      { icon: Camera, label: "Meal Scanner", path: "/meal-scanner", color: "text-orange-300" },
+      { icon: Apple, label: "Nutrition", path: "/nutrition" },
+      { icon: UtensilsCrossed, label: "Meals", path: "/browse-meals" },
+      { icon: Camera, label: "Scanner", path: "/meal-scanner" },
     ]
   },
   {
-    title: "Health & Wellness",
+    title: "Health",
     items: [
-      { icon: Heart, label: "Health Metrics", path: "/health-metrics", color: "text-red-500" },
-      { icon: Gauge, label: "Heart Rate", path: "/heart-rate", color: "text-red-400" },
-      { icon: Footprints, label: "Steps", path: "/steps", color: "text-emerald-500" },
-      { icon: Scale, label: "Weight", path: "/weight", color: "text-blue-500" },
-      { icon: Droplets, label: "Hydration", path: "/hydration", color: "text-cyan-500" },
-      { icon: Moon, label: "Sleep Tracker", path: "/sleep", color: "text-indigo-500" },
-      { icon: Smile, label: "Mood", path: "/mood", color: "text-amber-500" },
+      { icon: Heart, label: "Metrics", path: "/health-metrics" },
+      { icon: Gauge, label: "Heart Rate", path: "/heart-rate" },
+      { icon: Footprints, label: "Steps", path: "/steps" },
+      { icon: Scale, label: "Weight", path: "/weight" },
+      { icon: Droplets, label: "Hydration", path: "/hydration" },
+      { icon: Moon, label: "Sleep", path: "/sleep" },
+      { icon: Smile, label: "Mood", path: "/mood" },
     ]
   },
   {
     title: "Coaching",
     items: [
-      { icon: Users, label: "Find a Coach", path: "/browse-coaches", color: "text-pink-500" },
-      { icon: Calendar, label: "My Sessions", path: "/coach-appointments", color: "text-pink-400" },
+      { icon: Users, label: "Find a Coach", path: "/browse-coaches" },
+      { icon: Calendar, label: "Sessions", path: "/coach-appointments" },
     ]
   },
   {
     title: "Community",
     items: [
-      { icon: MessageCircle, label: "Community", path: "/community", color: "text-violet-500" },
-      { icon: Trophy, label: "Achievements", path: "/achievements", color: "text-amber-500" },
-      { icon: Target, label: "Challenges", path: "/challenges", color: "text-rose-500" },
+      { icon: MessageCircle, label: "Community", path: "/community" },
+      { icon: Trophy, label: "Achievements", path: "/achievements" },
+      { icon: Target, label: "Challenges", path: "/challenges" },
     ]
   },
   {
     title: "Resources",
     items: [
-      { icon: BookOpen, label: "Resources Hub", path: "/resources", color: "text-emerald-500" },
-      { icon: GraduationCap, label: "Courses", path: "/resources", color: "text-emerald-400" },
-      { icon: Video, label: "Shorts", path: "/resources", color: "text-emerald-300" },
+      { icon: BookOpen, label: "Resources", path: "/resources" },
+      { icon: GraduationCap, label: "Courses", path: "/resources" },
+      { icon: Video, label: "Shorts", path: "/resources" },
     ]
   },
   {
     title: "Account",
     items: [
-      { icon: User, label: "Profile", path: "/profile", color: "text-muted-foreground" },
-      { icon: Crown, label: "Subscription", path: "/subscription", color: "text-amber-500" },
-      { icon: Settings, label: "Settings", path: "/profile", color: "text-muted-foreground" },
+      { icon: User, label: "Profile", path: "/profile" },
+      { icon: Crown, label: "Subscription", path: "/subscription" },
+      { icon: Settings, label: "Settings", path: "/profile" },
     ]
   },
 ];
@@ -152,20 +150,20 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent 
-        className="bg-background h-[90vh] max-h-[90vh]"
+        className="bg-background h-[85vh] max-h-[85vh]"
         style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}
       >
-        <DrawerHeader className="border-b border-border/50 pb-4">
+        <DrawerHeader className="border-b border-border/40 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="w-12 h-12 border-2 border-primary">
+              <Avatar className="w-11 h-11 border border-border">
                 <AvatarImage src={profile?.avatar_url || undefined} alt="Profile" />
-                <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                <AvatarFallback className="bg-secondary text-secondary-foreground font-medium">
                   {profile?.display_name?.slice(0, 2).toUpperCase() || user?.email?.slice(0, 2).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="text-left">
-                <DrawerTitle className="text-foreground font-semibold">
+                <DrawerTitle className="text-foreground font-semibold text-base">
                   {profile?.display_name || 'Welcome'}
                 </DrawerTitle>
                 <p className="text-xs text-muted-foreground">{user?.email}</p>
@@ -173,7 +171,7 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
             </div>
             <button
               onClick={() => onOpenChange(false)}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
+              className="p-2 rounded-full hover:bg-secondary transition-colors"
               aria-label="Close menu"
             >
               <X size={20} className="text-muted-foreground" />
@@ -182,39 +180,34 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
         </DrawerHeader>
         
         <ScrollArea className="flex-1 h-full">
-          <div className="px-4 py-4 space-y-6">
-            {/* Admin Section - Only for admins */}
+          <div className="px-4 py-5 space-y-6">
+            {/* Admin Section */}
             {isAdmin && (
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider px-1">
                   Admin
                 </h3>
                 <button
                   onClick={() => handleNavClick('/admin')}
                   className={cn(
-                    "w-full flex items-center justify-between p-3 rounded-xl",
-                    "bg-primary/10 hover:bg-primary/20 transition-all duration-200",
-                    "active:scale-[0.98] touch-manipulation"
+                    "w-full flex items-center gap-3 p-3.5 rounded-xl",
+                    "bg-primary/5 active:bg-primary/10 transition-colors",
+                    "touch-manipulation"
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
-                      <Shield size={18} className="text-primary" />
-                    </div>
-                    <span className="font-medium text-foreground">Admin Dashboard</span>
-                  </div>
-                  <ChevronRight size={18} className="text-muted-foreground" />
+                  <Shield size={20} className="text-primary" />
+                  <span className="font-medium text-foreground">Admin Dashboard</span>
                 </button>
               </div>
             )}
 
             {/* Menu Sections */}
             {menuSections.map((section) => (
-              <div key={section.title} className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
+              <div key={section.title} className="space-y-1.5">
+                <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider px-1 mb-2">
                   {section.title}
                 </h3>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {section.items.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -222,20 +215,13 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
                         key={item.label}
                         onClick={() => handleNavClick(item.path)}
                         className={cn(
-                          "w-full flex items-center justify-between p-3 rounded-xl",
-                          "hover:bg-muted/50 transition-all duration-200",
-                          "active:scale-[0.98] touch-manipulation"
+                          "w-full flex items-center gap-3 py-3 px-3 rounded-xl",
+                          "active:bg-secondary transition-colors",
+                          "touch-manipulation"
                         )}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center"
-                          )}>
-                            <Icon size={18} className={item.color} />
-                          </div>
-                          <span className="font-medium text-foreground">{item.label}</span>
-                        </div>
-                        <ChevronRight size={18} className="text-muted-foreground" />
+                        <Icon size={20} className="text-muted-foreground" strokeWidth={1.5} />
+                        <span className="font-medium text-foreground text-[15px]">{item.label}</span>
                       </button>
                     );
                   })}
@@ -244,13 +230,13 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
             ))}
 
             {/* Sign Out */}
-            <div className="pt-4 border-t border-border/50">
+            <div className="pt-4 border-t border-border/40">
               <button
                 onClick={handleSignOut}
                 className={cn(
-                  "w-full flex items-center justify-center gap-2 p-3 rounded-xl",
-                  "bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all duration-300",
-                  "active:scale-[0.98] touch-manipulation"
+                  "w-full flex items-center justify-center gap-2 py-3.5 rounded-xl",
+                  "text-destructive active:bg-destructive/10 transition-colors",
+                  "touch-manipulation"
                 )}
               >
                 <LogOut size={18} />
@@ -258,7 +244,6 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
               </button>
             </div>
 
-            {/* Bottom spacing for safe area */}
             <div className="h-8" />
           </div>
         </ScrollArea>

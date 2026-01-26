@@ -75,26 +75,26 @@ const CommunityFeed = () => {
   return (
     <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
       {/* Header */}
-      <header className="sticky top-0 bg-background z-10 px-3 sm:p-4 py-3 border-b border-border">
-        <div className="flex items-center justify-between mb-3 sm:mb-4 gap-3">
+      <header className="sticky top-0 bg-background z-10 px-4 py-3 border-b border-border/60">
+        <div className="flex items-center justify-between mb-4 gap-3">
           <Avatar className="w-10 h-10 flex-shrink-0 cursor-pointer touch-manipulation" onClick={() => navigate("/community/profile")}>
             <AvatarImage src="" />
-            <AvatarFallback className="bg-primary/10 text-primary">
+            <AvatarFallback className="bg-secondary text-secondary-foreground font-medium">
               {user ? getInitials(user.email) : "U"}
             </AvatarFallback>
           </Avatar>
-          <h1 className="text-base sm:text-lg font-semibold flex-1 text-center">Feed</h1>
+          <h1 className="text-base font-semibold flex-1 text-center">Feed</h1>
           <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation" onClick={() => navigate("/community/create")}>
             <Plus className="w-5 h-5" />
           </Button>
         </div>
         
-        <div className="flex items-center gap-2 mb-3 sm:mb-4">
+        <div className="flex items-center gap-2 mb-4">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
-              placeholder="Search for a feed..." 
-              className="pl-9 bg-muted/50 min-h-[44px]"
+              placeholder="Search..." 
+              className="pl-9 bg-secondary/50 border-border/60 min-h-[44px]"
               onClick={() => navigate("/community/search")}
               readOnly
             />
@@ -105,15 +105,15 @@ const CommunityFeed = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-3 bg-muted/30 min-h-[44px]">
-            <TabsTrigger value="popular" className="gap-1 text-[11px] sm:text-xs min-h-[40px] touch-manipulation">
-              <Flame className="w-3 h-3" /> Popular
+          <TabsList className="w-full grid grid-cols-3 bg-secondary/50 min-h-[44px] rounded-xl">
+            <TabsTrigger value="popular" className="gap-1.5 text-xs min-h-[40px] touch-manipulation rounded-lg">
+              <Flame className="w-3.5 h-3.5" /> Popular
             </TabsTrigger>
-            <TabsTrigger value="trending" className="gap-1 text-[11px] sm:text-xs min-h-[40px] touch-manipulation">
-              <TrendingUp className="w-3 h-3" /> Trending
+            <TabsTrigger value="trending" className="gap-1.5 text-xs min-h-[40px] touch-manipulation rounded-lg">
+              <TrendingUp className="w-3.5 h-3.5" /> Trending
             </TabsTrigger>
-            <TabsTrigger value="following" className="gap-1 text-[11px] sm:text-xs min-h-[40px] touch-manipulation">
-              <Users className="w-3 h-3" /> Following
+            <TabsTrigger value="following" className="gap-1.5 text-xs min-h-[40px] touch-manipulation rounded-lg">
+              <Users className="w-3.5 h-3.5" /> Following
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -134,14 +134,14 @@ const CommunityFeed = () => {
       )}
 
       {/* Posts */}
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border/60">
         {posts.map((post) => (
-          <article key={post.id} className="px-3 sm:p-4 py-4">
+          <article key={post.id} className="px-4 py-4">
             {/* Author */}
-            <div className="flex items-center gap-2 sm:gap-3 mb-3">
-              <Avatar className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 cursor-pointer touch-manipulation" onClick={() => navigate(`/community/user/${post.user_id}`)}>
+            <div className="flex items-center gap-3 mb-3">
+              <Avatar className="w-10 h-10 flex-shrink-0 cursor-pointer touch-manipulation" onClick={() => navigate(`/community/user/${post.user_id}`)}>
                 <AvatarImage src={post.profile?.avatar_url || ""} />
-                <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm">
+                <AvatarFallback className="bg-secondary text-secondary-foreground text-sm font-medium">
                   {getInitials(post.profile?.display_name || post.profile?.username)}
                 </AvatarFallback>
               </Avatar>
@@ -151,7 +151,7 @@ const CommunityFeed = () => {
                     {post.profile?.display_name || post.profile?.username || "Anonymous"}
                   </span>
                 </div>
-                <span className="text-[10px] sm:text-xs text-muted-foreground">Posted {formatTimestamp(post.created_at)}</span>
+                <span className="text-xs text-muted-foreground">{formatTimestamp(post.created_at)}</span>
               </div>
               <Button variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] touch-manipulation flex-shrink-0">
                 <MoreHorizontal className="w-4 h-4" />

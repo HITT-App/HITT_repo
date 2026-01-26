@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import heroVideo from "@/assets/hiit-hero.mp4";
-import { HIITLogo } from "./HIITLogo";
 import { Volume2, VolumeX } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -78,7 +77,6 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
     }
   };
 
-  // Auto-play on first interaction with the page
   useEffect(() => {
     const handleInteraction = () => {
       if (!hasPlayed) {
@@ -99,7 +97,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
 
   return (
     <div 
-      className="relative h-[60vh] min-h-[400px] sm:h-[70vh] sm:min-h-[500px] w-full overflow-hidden"
+      className="relative h-[55vh] min-h-[380px] sm:h-[60vh] sm:min-h-[450px] w-full overflow-hidden"
       style={{ paddingTop: "var(--safe-area-inset-top, 0px)" }}
     >
       {/* Background Video */}
@@ -108,47 +106,42 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
         loop
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover blur-[2px] scale-105"
+        className="absolute inset-0 w-full h-full object-cover scale-105"
       >
         <source src={heroVideo} type="video/mp4" />
       </video>
       
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-black/40" />
-      
-      {/* Gradient Overlay */}
-      <div 
-        className="absolute inset-0"
-        style={{ background: "var(--gradient-hero)" }}
-      />
+      {/* Gradient Overlay - cleaner */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/70" />
 
       {/* Content */}
-      <div className="relative h-full flex flex-col justify-between p-4 sm:p-6 pt-8 sm:pt-12">
+      <div className="relative h-full flex flex-col justify-between p-5 pt-10">
         {/* Top Section - Logo */}
-        <div className="flex justify-center opacity-0 animate-fade-up" style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}>
-          <HIITLogo size="xl" className="shadow-glow" />
+        <div className="flex justify-center opacity-0 animate-fade-up" style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}>
+          <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
+            <span className="text-white font-bold text-xl">H</span>
+          </div>
         </div>
 
-        {/* Bottom Section - Jarvis-Style Greeting */}
-        <div className="mb-16 sm:mb-20 opacity-0 animate-fade-up" style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}>
-          <div className="flex items-start justify-between">
+        {/* Bottom Section - Greeting */}
+        <div className="mb-20 opacity-0 animate-fade-up" style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}>
+          <div className="flex items-end justify-between">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                {greeting}, <span className="text-primary drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">{userName}.</span>
+              <h1 className="text-3xl font-semibold text-white tracking-tight">
+                {greeting},
               </h1>
-              <p 
-                className="mt-2 text-lg sm:text-xl text-white/80 italic opacity-0 animate-typewriter"
-                style={{ animationDelay: "0.8s", animationFillMode: "forwards" }}
-              >
+              <h1 className="text-3xl font-semibold text-primary tracking-tight">
+                {userName}.
+              </h1>
+              <p className="mt-2 text-base text-white/70 font-light">
                 Need a plan for today?
-                <span className="inline-block w-0.5 h-5 bg-primary ml-1 animate-cursor-blink align-middle" />
               </p>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleMute}
-              className="text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+              className="text-white/70 hover:text-white hover:bg-white/10 transition-colors rounded-full"
               aria-label={isMuted ? "Unmute voice" : "Mute voice"}
             >
               {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
