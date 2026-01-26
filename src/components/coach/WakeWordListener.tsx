@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface WakeWordListenerProps {
   enabled: boolean;
@@ -14,9 +15,19 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
   const { user } = useAuth();
   const lastDetectedRef = useRef<number>(0);
   const [connectionState, setConnectionState] = useState<'idle' | 'connecting' | 'connected'>('idle');
+  const [needsUserGesture, setNeedsUserGesture] = useState(false);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const attemptIdRef = useRef(0);
 
-  console.log('[WakeWordListener] Render - enabled:', enabled, 'user:', !!user, 'state:', connectionState);
+  const lastToastAtRef = useRef<number>(0);
+  const toastOnce = useCallback((type: 'info' | 'error' | 'success', message: string) => {
+    const now = Date.now();
+    if (now - lastToastAtRef.current < 6000) return;
+    lastToastAtRef.current = now;
+    if (type === 'info') toast.info(message);
+    if (type === 'success') toast.success(message);
+    if (type === 'error') toast.error(message);
+  }, []);
 
   const handleTranscript = useCallback(
     (text: string) => {
@@ -38,107 +49,133 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
     modelId: 'scribe_v2_realtime',
     commitStrategy: CommitStrategy.VAD,
     onPartialTranscript: (data) => {
-      console.log('[WakeWord] Partial:', data.text);
+      // Keep logs minimal in production; wake-word detection works off partial + committed.
       handleTranscript(data.text);
     },
     onCommittedTranscript: (data) => {
-      console.log('[WakeWord] Committed:', data.text);
       handleTranscript(data.text);
     },
   });
 
   // Disconnect when disabled or unmounted
   useEffect(() => {
-    if (!enabled && connectionState === 'connected') {
-      console.log('[WakeWord] Disabling - disconnecting...');
+    if (!enabled && connectionState !== 'idle') {
+      attemptIdRef.current += 1;
       scribe.disconnect();
       setConnectionState('idle');
+      setNeedsUserGesture(false);
     }
   }, [enabled, connectionState, scribe]);
 
-  // Connect when enabled
-  useEffect(() => {
-    if (!enabled || !user) {
-      console.log('[WakeWord] Not starting - enabled:', enabled, 'user:', !!user);
-      return;
-    }
-
-    if (connectionState !== 'idle') {
-      console.log('[WakeWord] Already', connectionState);
-      return;
-    }
-
-    let cancelled = false;
-
-    const connect = async () => {
+  const connect = useCallback(
+    async (fromUserGesture: boolean) => {
+      const attemptId = (attemptIdRef.current += 1);
       setConnectionState('connecting');
-      console.log('[WakeWord] Requesting microphone & token...');
 
       try {
-        // Request mic permission
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((t) => t.stop());
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = undefined;
+        }
 
-        console.log('[WakeWord] Mic permission granted, fetching token...');
         const { data, error } = await supabase.functions.invoke('elevenlabs-scribe-token');
+        if (attemptId !== attemptIdRef.current || !enabled) return;
 
-        if (cancelled) {
-          console.log('[WakeWord] Cancelled during token fetch');
+        if (error || !data?.token) {
+          toastOnce('error', 'Voice activation failed to start (token error).');
           setConnectionState('idle');
           return;
         }
-
-        if (error || !data?.token) {
-          console.error('[WakeWord] Token error:', error || 'No token');
-          reconnectTimeoutRef.current = setTimeout(() => {
-            setConnectionState('idle');
-          }, 30000);
-          return;
-        }
-
-        console.log('[WakeWord] Token received, connecting to Scribe...');
 
         await scribe.connect({
           token: data.token,
           microphone: {
             echoCancellation: true,
             noiseSuppression: true,
+            autoGainControl: true,
           },
         });
 
-        if (cancelled) {
-          console.log('[WakeWord] Cancelled after connect');
+        if (attemptId !== attemptIdRef.current || !enabled) {
           scribe.disconnect();
-          setConnectionState('idle');
           return;
         }
 
-        console.log('[WakeWord] Connected! Listening for "Ok HIIT"...');
         setConnectionState('connected');
+        setNeedsUserGesture(false);
       } catch (err) {
-        console.error('[WakeWord] Connect error:', err);
-        if (!cancelled) {
-          reconnectTimeoutRef.current = setTimeout(() => {
-            setConnectionState('idle');
-          }, 30000);
-        }
-      }
-    };
+        // Some mobile browsers require a user gesture to start microphone capture.
+        const name = err instanceof DOMException ? err.name : undefined;
+        const isGestureRelated = name === 'NotAllowedError' || name === 'SecurityError';
 
-    connect();
+        if (isGestureRelated && !fromUserGesture) {
+          setConnectionState('idle');
+          setNeedsUserGesture(true);
+          toastOnce('info', 'Tap anywhere once to enable voice activation, then say “Ok HIIT”.');
+          return;
+        }
+
+        toastOnce('error', 'Voice activation failed to start. Please check microphone access.');
+
+        setConnectionState('idle');
+        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = setTimeout(() => {
+          // Allow another attempt after a short cooldown.
+          reconnectTimeoutRef.current = undefined;
+          setConnectionState('idle');
+        }, 8000);
+      }
+    },
+    [enabled, scribe, toastOnce]
+  );
+
+  // Connect when enabled
+  useEffect(() => {
+    if (!enabled || !user) {
+      return;
+    }
+
+    if (connectionState !== 'idle') {
+      return;
+    }
+
+    if (needsUserGesture) {
+      // Wait for user gesture effect below.
+      return;
+    }
+
+    // Attempt to connect immediately (works on most browsers).
+    connect(false);
 
     return () => {
-      cancelled = true;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [enabled, user, connectionState, scribe]);
+  }, [enabled, user, connectionState, needsUserGesture, connect]);
+
+  // If a user gesture is required, retry connection on the next tap/keypress.
+  useEffect(() => {
+    if (!enabled || !user || !needsUserGesture) return;
+
+    const handler = () => {
+      // Run the connection attempt directly inside the user gesture event.
+      connect(true);
+    };
+
+    window.addEventListener('pointerdown', handler, { once: true, passive: true });
+    window.addEventListener('keydown', handler, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', handler);
+      window.removeEventListener('keydown', handler);
+    };
+  }, [enabled, user, needsUserGesture, connect]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      console.log('[WakeWord] Unmounting - disconnecting...');
+      attemptIdRef.current += 1;
       scribe.disconnect();
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
