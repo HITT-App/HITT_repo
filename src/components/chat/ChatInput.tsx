@@ -1,8 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Loader2, Mic, Paperclip, Image } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Send, Loader2, Mic, Paperclip } from 'lucide-react';
 
 interface ChatInputProps {
   onSend: (message: string, imageUrl?: string) => void;
@@ -50,12 +49,12 @@ export function ChatInput({
   return (
     <form onSubmit={handleSubmit} className="flex items-end gap-2">
       <div className="flex-1 relative">
-        <div className="flex items-center gap-2 bg-secondary rounded-2xl border border-border px-3">
+        <div className="flex items-center gap-1 bg-secondary/50 rounded-2xl border border-border/60 px-2">
           {/* Attachment button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="p-2.5 text-muted-foreground active:text-foreground transition-colors touch-manipulation"
           >
             <Paperclip className="w-5 h-5" />
           </button>
@@ -72,9 +71,9 @@ export function ChatInput({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type to start chatting..."
+            placeholder="Message..."
             disabled={isLoading || disabled}
-            className="flex-1 min-h-[48px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 px-0"
+            className="flex-1 min-h-[48px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 px-1 text-[15px]"
             rows={1}
           />
           
@@ -83,7 +82,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={onVoiceClick}
-              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="p-2.5 text-muted-foreground active:text-foreground transition-colors touch-manipulation"
             >
               <Mic className="w-5 h-5" />
             </button>
@@ -95,7 +94,7 @@ export function ChatInput({
         type="submit"
         size="icon"
         disabled={(!input.trim() && !selectedImage) || isLoading || disabled}
-        className="h-12 w-12 rounded-xl bg-primary hover:bg-primary/90 flex-shrink-0"
+        className="h-12 w-12 rounded-xl flex-shrink-0"
       >
         {isLoading ? (
           <Loader2 className="w-5 h-5 animate-spin" />

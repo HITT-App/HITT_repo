@@ -1,78 +1,73 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* HIIT Fitness App Design System
-   Light theme with vibrant orange accents
-   Clean, modern, athletic aesthetic
+/* Apple-Inspired Clean Design System
+   Minimal, spacious, content-first aesthetic
+   Subtle depth through refined shadows
 */
 
 @layer base {
   :root {
-    /* Core palette - Light theme matching Figma */
-    --background: 30 30% 98%;
-    --foreground: 220 20% 15%;
+    /* Core palette - Clean neutrals */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 20% 15%;
+    --card: 0 0% 99%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 15%;
+    --popover-foreground: 0 0% 9%;
 
-    /* Primary - Vibrant Orange */
-    --primary: 24 95% 53%;
+    /* Primary - Refined Orange */
+    --primary: 24 95% 50%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Light cream/beige */
-    --secondary: 30 20% 94%;
-    --secondary-foreground: 220 20% 15%;
+    /* Secondary - Soft gray */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 0 0% 9%;
 
-    /* Muted - Subtle warm grays */
-    --muted: 30 15% 92%;
-    --muted-foreground: 220 10% 45%;
+    /* Muted - Cool neutral */
+    --muted: 220 14% 95%;
+    --muted-foreground: 220 9% 46%;
 
-    /* Accent - Orange glow */
+    /* Accent */
     --accent: 24 100% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 15% 88%;
-    --input: 30 15% 92%;
-    --ring: 24 95% 53%;
+    --border: 220 13% 91%;
+    --input: 220 14% 95%;
+    --ring: 24 95% 50%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
 
-    /* Custom tokens */
-    --gradient-hero: linear-gradient(180deg, transparent 0%, transparent 40%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.85) 100%);
-    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(30 20% 98%) 100%);
-    --gradient-orange: linear-gradient(135deg, hsl(24 95% 53%) 0%, hsl(16 95% 45%) 100%);
-    --gradient-cream: linear-gradient(180deg, hsl(30 30% 98%) 0%, hsl(30 25% 95%) 100%);
-    
-    --shadow-glow: 0 0 30px hsl(24 95% 53% / 0.2);
-    --shadow-card: 0 4px 20px hsl(220 20% 15% / 0.08);
-    --shadow-elevated: 0 8px 40px hsl(220 20% 15% / 0.12);
+    /* Refined shadows - subtle and diffused */
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.04);
+    --shadow-card: 0 2px 8px hsl(0 0% 0% / 0.04);
+    --shadow-elevated: 0 4px 16px hsl(0 0% 0% / 0.08);
 
     /* Sidebar tokens */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 20% 15%;
-    --sidebar-primary: 24 95% 53%;
+    --sidebar-foreground: 0 0% 9%;
+    --sidebar-primary: 24 95% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 20% 94%;
-    --sidebar-accent-foreground: 220 20% 15%;
-    --sidebar-border: 30 15% 88%;
-    --sidebar-ring: 24 95% 53%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 0 0% 9%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 24 95% 50%;
   }
 
   .dark {
     --background: 0 0% 4%;
     --foreground: 0 0% 98%;
-    --card: 0 0% 8%;
+    --card: 0 0% 7%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 8%;
+    --popover: 0 0% 7%;
     --popover-foreground: 0 0% 98%;
     --primary: 24 95% 53%;
     --primary-foreground: 0 0% 100%;
@@ -84,15 +79,13 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 18%;
+    --border: 0 0% 16%;
     --input: 0 0% 15%;
     --ring: 24 95% 53%;
 
-    --gradient-hero: linear-gradient(180deg, transparent 0%, transparent 40%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.95) 100%);
-    --gradient-card: linear-gradient(135deg, hsl(0 0% 10%) 0%, hsl(0 0% 6%) 100%);
-    --shadow-glow: 0 0 30px hsl(24 95% 53% / 0.3);
-    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.4);
-    --shadow-elevated: 0 8px 40px hsl(0 0% 0% / 0.5);
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.2);
+    --shadow-card: 0 2px 8px hsl(0 0% 0% / 0.3);
+    --shadow-elevated: 0 4px 16px hsl(0 0% 0% / 0.4);
 
     --sidebar-background: 0 0% 6%;
     --sidebar-foreground: 0 0% 98%;
@@ -108,9 +101,11 @@
   }
 
   html {
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
@@ -127,12 +122,13 @@
 }
 
 @layer components {
-  .glass-card {
-    @apply bg-card/90 backdrop-blur-xl border border-border/50 rounded-2xl shadow-card;
+  /* Clean card style - no glass effect */
+  .clean-card {
+    @apply bg-card border border-border/60 rounded-xl shadow-card;
   }
   
   .nav-item {
-    @apply flex flex-col items-center gap-1 text-muted-foreground transition-all duration-300;
+    @apply flex flex-col items-center gap-0.5 text-muted-foreground transition-colors duration-200;
   }
   
   .nav-item.active {
@@ -140,32 +136,31 @@
   }
 
   .quick-action-tile {
-    @apply flex flex-col items-center justify-center gap-2 p-4 rounded-xl 
-           bg-secondary hover:bg-secondary/80 transition-all duration-300
-           hover:scale-105 active:scale-95 cursor-pointer;
+    @apply flex flex-col items-center justify-center gap-2 p-5 rounded-xl 
+           bg-secondary transition-all duration-200
+           active:opacity-70 cursor-pointer;
   }
 
   .auth-input {
-    @apply bg-white border border-border rounded-xl px-4 py-3 text-foreground 
-           placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent
+    @apply bg-background border border-border rounded-xl px-4 py-3 text-foreground 
+           placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary
            transition-all duration-200;
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground font-semibold rounded-xl py-3 px-6
-           hover:bg-primary/90 active:scale-[0.98] transition-all duration-200
-           shadow-md hover:shadow-lg;
+    @apply bg-primary text-primary-foreground font-medium rounded-xl py-3 px-6
+           active:opacity-80 transition-opacity duration-150;
   }
 
   .btn-secondary {
     @apply bg-secondary text-secondary-foreground font-medium rounded-xl py-3 px-6
-           hover:bg-secondary/80 active:scale-[0.98] transition-all duration-200
-           border border-border;
+           active:opacity-70 transition-opacity duration-150
+           border border-border/60;
   }
 
   .btn-google {
-    @apply bg-white text-foreground font-medium rounded-xl py-3 px-6
-           hover:bg-gray-50 active:scale-[0.98] transition-all duration-200
+    @apply bg-background text-foreground font-medium rounded-xl py-3 px-6
+           active:opacity-70 transition-opacity duration-150
            border border-border flex items-center justify-center gap-3;
   }
 }
@@ -176,32 +171,28 @@
   }
 
   .animate-fade-up {
-    animation: fadeUp 0.6s ease-out forwards;
+    animation: fadeUp 0.5s ease-out forwards;
   }
 
   .animate-scale-in {
-    animation: scaleIn 0.4s ease-out forwards;
+    animation: scaleIn 0.3s ease-out forwards;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
-  .animate-pulse-slow {
-    animation: pulseSlow 2s ease-in-out infinite;
-  }
-
-  .stagger-1 { animation-delay: 0.1s; }
-  .stagger-2 { animation-delay: 0.2s; }
-  .stagger-3 { animation-delay: 0.3s; }
-  .stagger-4 { animation-delay: 0.4s; }
-  .stagger-5 { animation-delay: 0.5s; }
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
 }
 
 @keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -212,7 +203,7 @@
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
@@ -229,28 +220,6 @@
   }
 }
 
-@keyframes pulseSlow {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px hsl(24 95% 53% / 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px hsl(24 95% 53% / 0.5);
-  }
-}
-
-.pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
 @keyframes loading-bar {
   0% {
     width: 0%;
@@ -262,35 +231,6 @@
 
 .animate-loading-bar {
   animation: loading-bar 2s ease-in-out;
-}
-
-/* Jarvis-style typewriter animation */
-@keyframes typewriter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes cursor-blink {
-  0%, 50% {
-    opacity: 1;
-  }
-  51%, 100% {
-    opacity: 0;
-  }
-}
-
-.animate-typewriter {
-  animation: typewriter 0.5s ease-out forwards;
-}
-
-.animate-cursor-blink {
-  animation: cursor-blink 1s step-end infinite;
 }
 
 /* Hide scrollbar utility */

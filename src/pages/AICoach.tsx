@@ -199,22 +199,22 @@ export default function AICoach() {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-border bg-background/80 backdrop-blur-sm">
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-background">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation" onClick={() => navigate('/')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="min-w-0">
-            <h1 className="font-semibold text-foreground text-sm sm:text-base truncate">Coach HIIT AI</h1>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">241 chats left</p>
+            <h1 className="font-semibold text-foreground truncate">HIIT AI</h1>
+            <p className="text-xs text-muted-foreground">241 chats left</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {interactionMode === 'immersive' && (
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full border-primary text-primary text-[10px] sm:text-xs px-2 sm:px-3 min-h-[36px] touch-manipulation"
+              className="rounded-full text-xs px-3 min-h-[36px] touch-manipulation"
               onClick={async () => {
                 let convId = currentConversation;
                 if (!convId) {
@@ -226,7 +226,7 @@ export default function AICoach() {
               }}
             >
               <Mic className="w-3 h-3 mr-1" />
-              <span className="hidden xs:inline">Jarvis</span>
+              <span className="hidden xs:inline">Voice</span>
             </Button>
           )}
           <Button
@@ -276,12 +276,12 @@ export default function AICoach() {
         {/* Sidebar - Conversation History */}
         <aside
           className={`
-            absolute md:relative z-10 h-full w-64 bg-card border-r border-border
+            absolute md:relative z-10 h-full w-64 bg-background border-r border-border/60
             transform transition-transform duration-300
             ${showSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >
-          <div className="p-3 border-b border-border">
+          <div className="p-3 border-b border-border/60">
             <Button
               onClick={createNewConversation}
               className="w-full justify-start gap-2"
@@ -292,13 +292,13 @@ export default function AICoach() {
             </Button>
           </div>
           <ScrollArea className="h-[calc(100%-57px)]">
-            <div className="p-2 space-y-1">
+            <div className="p-2 space-y-0.5">
               {conversations.map((conv) => (
                 <div
                   key={conv.id}
                   className={`
-                    group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors
-                    ${currentConversation === conv.id ? 'bg-secondary' : 'hover:bg-secondary/50'}
+                    group flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-colors
+                    ${currentConversation === conv.id ? 'bg-secondary' : 'active:bg-secondary/50'}
                   `}
                   onClick={() => {
                     setCurrentConversation(conv.id);
