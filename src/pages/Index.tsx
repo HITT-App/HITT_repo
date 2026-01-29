@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HomeHero } from "@/components/HomeHero";
 import { StatsGrid } from "@/components/StatsGrid";
 import { BottomNav } from "@/components/BottomNav";
@@ -8,9 +8,14 @@ import { WorkoutPlanCard } from "@/components/dashboard/WorkoutPlanCard";
 import { MealPlanCard } from "@/components/dashboard/MealPlanCard";
 import { CoachingCard } from "@/components/dashboard/CoachingCard";
 import { WorkoutRecommendations } from "@/components/workout/WorkoutRecommendations";
+import { StreakUrgencyBanner } from "@/components/gamification/StreakUrgencyBanner";
+import { QuickStartFAB } from "@/components/QuickStartFAB";
+import { DailyMotivationQuote } from "@/components/DailyMotivationQuote";
+import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useProfile } from "@/hooks/useProfile";
+import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { ChevronRight, Dumbbell, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +25,7 @@ const Index = () => {
   const { user } = useAuth();
   const { isAdmin } = useAdminRole();
   const { profile } = useProfile();
+  const { streak } = useStreaksAndBadges();
   const navigate = useNavigate();
   
   const displayName = profile?.display_name || 
@@ -30,8 +36,14 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex justify-center">
       <div className="w-full max-w-md min-h-screen relative overflow-x-hidden pb-28">
+        {/* Daily Check-in Modal */}
+        <DailyCheckIn />
+
         {/* Hero Section */}
         <HomeHero userName={displayName} />
+
+        {/* Streak Urgency Banner - Shows when streak is at risk */}
+        <StreakUrgencyBanner />
 
         {isAdmin && (
           <div className="px-4 -mt-2 mb-4">
@@ -52,6 +64,9 @@ const Index = () => {
         
         {/* Stats Grid */}
         <StatsGrid />
+
+        {/* Daily Motivation Quote */}
+        <DailyMotivationQuote streak={streak?.current_streak || 0} />
         
         {/* Workout Plan */}
         <WorkoutPlanCard />
@@ -83,6 +98,9 @@ const Index = () => {
         
         {/* Meal Plan */}
         <MealPlanCard />
+
+        {/* Quick Start FAB */}
+        <QuickStartFAB lastWorkoutType="HIIT Blast" />
         
         {/* Bottom Navigation */}
         <BottomNav onCenterClick={() => setQuickActionsOpen(true)} />
