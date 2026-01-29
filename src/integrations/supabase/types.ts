@@ -268,6 +268,86 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_enrollments: {
+        Row: {
+          challenge_id: string
+          completed_at: string | null
+          current_progress: number
+          enrolled_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          completed_at?: string | null
+          current_progress?: number
+          enrolled_at?: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          completed_at?: string | null
+          current_progress?: number
+          enrolled_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_enrollments_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenges: {
+        Row: {
+          challenge_type: string
+          created_at: string
+          description: string | null
+          ends_at: string
+          id: string
+          is_featured: boolean | null
+          reward_xp: number | null
+          starts_at: string
+          status: string
+          target_value: number
+          title: string
+        }
+        Insert: {
+          challenge_type?: string
+          created_at?: string
+          description?: string | null
+          ends_at?: string
+          id?: string
+          is_featured?: boolean | null
+          reward_xp?: number | null
+          starts_at?: string
+          status?: string
+          target_value?: number
+          title: string
+        }
+        Update: {
+          challenge_type?: string
+          created_at?: string
+          description?: string | null
+          ends_at?: string
+          id?: string
+          is_featured?: boolean | null
+          reward_xp?: number | null
+          starts_at?: string
+          status?: string
+          target_value?: number
+          title?: string
+        }
+        Relationships: []
+      }
       coach_availability: {
         Row: {
           coach_id: string
@@ -1982,7 +2062,9 @@ export type Database = {
       }
       workout_progress: {
         Row: {
+          calories_burned: number | null
           completed_at: string
+          created_at: string | null
           duration_seconds: number | null
           exercise_id: string | null
           id: string
@@ -1991,7 +2073,9 @@ export type Database = {
           workout_id: string
         }
         Insert: {
+          calories_burned?: number | null
           completed_at?: string
+          created_at?: string | null
           duration_seconds?: number | null
           exercise_id?: string | null
           id?: string
@@ -2000,7 +2084,9 @@ export type Database = {
           workout_id: string
         }
         Update: {
+          calories_burned?: number | null
           completed_at?: string
+          created_at?: string | null
           duration_seconds?: number | null
           exercise_id?: string | null
           id?: string

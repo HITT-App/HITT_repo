@@ -253,10 +253,11 @@ Updates:
 - ✅ Level-up celebration modal - `src/components/gamification/LevelUpModal.tsx`
 - ✅ XP rewards integration on daily check-in
 
-### 🔲 Week 3 - Social Features (TODO)
-- Friend Activity Feed
-- Weekly Challenge Widget
-- Weekly Summary Card
+### ✅ Week 3 - Social Features (COMPLETED)
+- ✅ Friend Activity Feed - `src/components/community/FriendActivityFeed.tsx`
+- ✅ Weekly Challenge Widget - `src/components/challenges/WeeklyChallengeCard.tsx`
+- ✅ Weekly Summary Card - `src/components/dashboard/WeeklySummaryCard.tsx`
+- ✅ Database: challenges, challenge_enrollments tables with RLS
 
 ### 🔲 Week 4 - Advanced (TODO)
 - Accountability Partners

@@ -13,6 +13,9 @@ import { QuickStartFAB } from "@/components/QuickStartFAB";
 import { DailyMotivationQuote } from "@/components/DailyMotivationQuote";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { LevelUpModal } from "@/components/gamification/LevelUpModal";
+import { FriendActivityFeed } from "@/components/community/FriendActivityFeed";
+import { WeeklyChallengeCard } from "@/components/challenges/WeeklyChallengeCard";
+import { WeeklySummaryCard } from "@/components/dashboard/WeeklySummaryCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useProfile } from "@/hooks/useProfile";
@@ -97,8 +100,17 @@ const Index = () => {
         {/* Today Focus Card with Activity Rings */}
         <TodayFocusCard userName={displayName} />
 
+        {/* Weekly Summary - Shows on Mondays */}
+        <WeeklySummaryCard />
+
         {/* Daily Motivation Quote */}
         <DailyMotivationQuote streak={streak?.current_streak || 0} />
+
+        {/* Weekly Challenge Widget */}
+        <WeeklyChallengeCard />
+
+        {/* Friend Activity Feed */}
+        <FriendActivityFeed />
         
         {/* Workout Plan */}
         <WorkoutPlanCard />
