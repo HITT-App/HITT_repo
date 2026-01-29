@@ -259,10 +259,12 @@ Updates:
 - ✅ Weekly Summary Card - `src/components/dashboard/WeeklySummaryCard.tsx`
 - ✅ Database: challenges, challenge_enrollments tables with RLS
 
-### 🔲 Week 4 - Advanced (TODO)
-- Accountability Partners
-- Smart Defaults
-- Resume Workout Banner
+### ✅ Week 4 - Advanced (COMPLETED)
+- ✅ Resume Workout Banner - `src/components/workout/ResumeWorkoutBanner.tsx`
+- ✅ Accountability Partners - `src/hooks/useAccountabilityPartner.ts` + `src/components/gamification/AccountabilityPartnerCard.tsx`
+- ✅ Smart Defaults - `src/hooks/useSmartDefaults.ts` (infers preferences from workout history)
+- ✅ Database: `accountability_pairs`, `user_workout_preferences` tables with RLS
+- ✅ Updated QuickStartFAB to use smart defaults
 
 ---
 

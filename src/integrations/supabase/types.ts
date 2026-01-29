@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      accountability_pairs: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          id: string
+          partner_id: string
+          shared_streak: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          partner_id: string
+          shared_streak?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          partner_id?: string
+          shared_streak?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       achievement_progress: {
         Row: {
           badge_id: string | null
@@ -1965,6 +1995,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_workout_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          last_workout_id: string | null
+          last_workout_type: string | null
+          preferred_duration_minutes: number | null
+          preferred_equipment: string[] | null
+          preferred_time: string | null
+          preferred_workout_types: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_workout_id?: string | null
+          last_workout_type?: string | null
+          preferred_duration_minutes?: number | null
+          preferred_equipment?: string[] | null
+          preferred_time?: string | null
+          preferred_workout_types?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_workout_id?: string | null
+          last_workout_type?: string | null
+          preferred_duration_minutes?: number | null
+          preferred_equipment?: string[] | null
+          preferred_time?: string | null
+          preferred_workout_types?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_exercises: {
         Row: {
           body_area: string | null
@@ -2065,10 +2134,14 @@ export type Database = {
           calories_burned: number | null
           completed_at: string
           created_at: string | null
+          current_exercise_index: number | null
           duration_seconds: number | null
+          elapsed_seconds: number | null
           exercise_id: string | null
           id: string
           notes: string | null
+          paused_at: string | null
+          status: string | null
           user_id: string
           workout_id: string
         }
@@ -2076,10 +2149,14 @@ export type Database = {
           calories_burned?: number | null
           completed_at?: string
           created_at?: string | null
+          current_exercise_index?: number | null
           duration_seconds?: number | null
+          elapsed_seconds?: number | null
           exercise_id?: string | null
           id?: string
           notes?: string | null
+          paused_at?: string | null
+          status?: string | null
           user_id: string
           workout_id: string
         }
@@ -2087,10 +2164,14 @@ export type Database = {
           calories_burned?: number | null
           completed_at?: string
           created_at?: string | null
+          current_exercise_index?: number | null
           duration_seconds?: number | null
+          elapsed_seconds?: number | null
           exercise_id?: string | null
           id?: string
           notes?: string | null
+          paused_at?: string | null
+          status?: string | null
           user_id?: string
           workout_id?: string
         }
