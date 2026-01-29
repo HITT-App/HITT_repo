@@ -1022,6 +1022,33 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_checkins: {
+        Row: {
+          created_at: string
+          date: string
+          energy: number | null
+          id: string
+          mood: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          energy?: number | null
+          id?: string
+          mood: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          energy?: number | null
+          id?: string
+          mood?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -1774,6 +1801,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_levels: {
+        Row: {
+          created_at: string
+          id: string
+          level: number
+          title: string | null
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: number
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: number
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -2117,10 +2174,12 @@ export type Database = {
         Args: { p_category?: string; p_points: number; p_user_id: string }
         Returns: undefined
       }
+      calculate_level: { Args: { xp_amount: number }; Returns: number }
       check_and_award_badge: {
         Args: { p_badge_id: string; p_current_value: number; p_user_id: string }
         Returns: boolean
       }
+      get_level_title: { Args: { level_num: number }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
