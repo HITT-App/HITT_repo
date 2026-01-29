@@ -2,10 +2,11 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { 
   Footprints, Rocket, Target, Medal, Crown, 
-  Flame, Zap, Trophy, Shield, Star 
+  Flame, Zap, Trophy, Shield, Star, Share2 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import confetti from "canvas-confetti";
 
 interface Badge {
   id: string;
@@ -33,6 +34,13 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   star: Star,
 };
 
+const categoryColors: Record<string, string[]> = {
+  streak: ["#f97316", "#ef4444", "#fb923c"],
+  workout: ["#3b82f6", "#8b5cf6", "#6366f1"],
+  nutrition: ["#22c55e", "#10b981", "#14b8a6"],
+  default: ["#f59e0b", "#fbbf24", "#d97706"],
+};
+
 export function NewBadgeModal({ badges, onClose }: NewBadgeModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(true);
@@ -41,11 +49,43 @@ export function NewBadgeModal({ badges, onClose }: NewBadgeModalProps) {
   const Icon = currentBadge ? iconMap[currentBadge.icon] || Star : Star;
 
   useEffect(() => {
+    if (!currentBadge) return;
+    
     // Trigger animation
     setIsAnimating(true);
     const timer = setTimeout(() => setIsAnimating(false), 500);
+    
+    // Fire confetti celebration
+    const colors = categoryColors[currentBadge.category] || categoryColors.default;
+    
+    confetti({
+      particleCount: 80,
+      spread: 100,
+      origin: { y: 0.6 },
+      colors,
+      zIndex: 9999,
+    });
+    
+    // Second burst for extra celebration
+    setTimeout(() => {
+      confetti({
+        particleCount: 40,
+        spread: 60,
+        origin: { y: 0.7, x: 0.3 },
+        colors,
+        zIndex: 9999,
+      });
+      confetti({
+        particleCount: 40,
+        spread: 60,
+        origin: { y: 0.7, x: 0.7 },
+        colors,
+        zIndex: 9999,
+      });
+    }, 200);
+    
     return () => clearTimeout(timer);
-  }, [currentIndex]);
+  }, [currentIndex, currentBadge]);
 
   const handleNext = () => {
     if (currentIndex < badges.length - 1) {
@@ -61,16 +101,11 @@ export function NewBadgeModal({ badges, onClose }: NewBadgeModalProps) {
 
   return (
     <Dialog open={badges.length > 0} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-sm text-center">
+      <DialogContent className="sm:max-w-sm text-center border-0 bg-card">
         <DialogTitle className="sr-only">New Badge Earned</DialogTitle>
         
-        {/* Confetti/Celebration Effect */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-4 left-4 w-2 h-2 bg-yellow-400 rounded-full animate-ping" />
-          <div className="absolute top-8 right-8 w-3 h-3 bg-primary rounded-full animate-ping delay-100" />
-          <div className="absolute bottom-12 left-8 w-2 h-2 bg-green-400 rounded-full animate-ping delay-200" />
-          <div className="absolute bottom-8 right-4 w-2 h-2 bg-blue-400 rounded-full animate-ping delay-300" />
-        </div>
+        {/* Shimmer background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 opacity-50 rounded-lg" />
 
         <div className="py-6 space-y-6">
           {/* Badge Icon */}
@@ -114,10 +149,34 @@ export function NewBadgeModal({ badges, onClose }: NewBadgeModalProps) {
             </div>
           )}
 
-          {/* Action Button */}
-          <Button onClick={handleNext} className="w-full">
-            {currentIndex < badges.length - 1 ? "Next Badge" : "Awesome!"}
-          </Button>
+          {/* Action Buttons */}
+          <div className="space-y-2">
+            <Button onClick={handleNext} className="w-full">
+              {currentIndex < badges.length - 1 ? "Next Badge" : "Awesome!"}
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full text-primary gap-2"
+              onClick={() => {
+                const shareData = {
+                  title: `Badge Unlocked: ${currentBadge.name}`,
+                  text: currentBadge.description,
+                  url: window.location.origin,
+                };
+                
+                if (navigator.share && navigator.canShare(shareData)) {
+                  navigator.share(shareData).catch(() => {});
+                } else {
+                  navigator.clipboard.writeText(
+                    `🏅 Badge Unlocked: ${currentBadge.name}\n${currentBadge.description}`
+                  );
+                }
+              }}
+            >
+              <Share2 className="w-4 h-4" />
+              Share Badge
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

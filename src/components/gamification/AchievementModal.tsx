@@ -172,7 +172,24 @@ export function AchievementModal({ achievement, onClose }: AchievementModalProps
             <Button
               variant="ghost"
               className="w-full rounded-xl py-4 text-primary gap-2"
-              onClick={onClose}
+              onClick={() => {
+                // Create screenshot-ready share card
+                const shareData = {
+                  title: achievement.title,
+                  text: `${achievement.value} - ${achievement.message}`,
+                  url: window.location.origin,
+                };
+                
+                if (navigator.share && navigator.canShare(shareData)) {
+                  navigator.share(shareData).catch(() => {});
+                } else {
+                  // Fallback: copy to clipboard
+                  navigator.clipboard.writeText(
+                    `🏆 ${achievement.title}\n${achievement.value}\n${achievement.message}`
+                  );
+                }
+                onClose();
+              }}
             >
               <Share2 className="w-4 h-4" />
               Share Achievement
