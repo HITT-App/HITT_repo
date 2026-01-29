@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { HomeHero } from "@/components/HomeHero";
-import { StatsGrid } from "@/components/StatsGrid";
+import { TodayFocusCard } from "@/components/dashboard/TodayFocusCard";
 import { BottomNav } from "@/components/BottomNav";
 import { FullNavMenu } from "@/components/FullNavMenu";
 import { RecommendationsSection } from "@/components/dashboard/RecommendationsSection";
@@ -12,20 +12,30 @@ import { StreakUrgencyBanner } from "@/components/gamification/StreakUrgencyBann
 import { QuickStartFAB } from "@/components/QuickStartFAB";
 import { DailyMotivationQuote } from "@/components/DailyMotivationQuote";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
+import { LevelUpModal } from "@/components/gamification/LevelUpModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useProfile } from "@/hooks/useProfile";
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
+import { useUserLevel, XP_REWARDS } from "@/hooks/useUserLevel";
 import { ChevronRight, Dumbbell, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const [levelUpData, setLevelUpData] = useState<{
+    isOpen: boolean;
+    newLevel: number;
+    newTitle: string;
+    previousLevel: number;
+  }>({ isOpen: false, newLevel: 1, newTitle: "Rookie", previousLevel: 1 });
+
   const { user } = useAuth();
   const { isAdmin } = useAdminRole();
   const { profile } = useProfile();
   const { streak } = useStreaksAndBadges();
+  const { userLevel, addXP, previousLevel } = useUserLevel();
   const navigate = useNavigate();
   
   const displayName = profile?.display_name || 
@@ -33,11 +43,33 @@ const Index = () => {
                       user?.email?.split("@")[0] || 
                       "Athlete";
 
+  // Handler for daily check-in completion
+  const handleCheckInComplete = async (mood: string, energy: number) => {
+    const result = await addXP(XP_REWARDS.DAILY_CHECKIN);
+    if (result?.leveledUp) {
+      setLevelUpData({
+        isOpen: true,
+        newLevel: result.newLevel,
+        newTitle: result.newTitle,
+        previousLevel: previousLevel || 1,
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex justify-center">
       <div className="w-full max-w-md min-h-screen relative overflow-x-hidden pb-28">
         {/* Daily Check-in Modal */}
-        <DailyCheckIn />
+        <DailyCheckIn onComplete={handleCheckInComplete} />
+
+        {/* Level Up Celebration Modal */}
+        <LevelUpModal
+          isOpen={levelUpData.isOpen}
+          onClose={() => setLevelUpData(prev => ({ ...prev, isOpen: false }))}
+          newLevel={levelUpData.newLevel}
+          newTitle={levelUpData.newTitle}
+          previousLevel={levelUpData.previousLevel}
+        />
 
         {/* Hero Section */}
         <HomeHero userName={displayName} />
@@ -62,8 +94,8 @@ const Index = () => {
           </div>
         )}
         
-        {/* Stats Grid */}
-        <StatsGrid />
+        {/* Today Focus Card with Activity Rings */}
+        <TodayFocusCard userName={displayName} />
 
         {/* Daily Motivation Quote */}
         <DailyMotivationQuote streak={streak?.current_streak || 0} />

@@ -248,9 +248,10 @@ Updates:
 7. ✅ Enhanced Celebrations with confetti - `src/components/gamification/AchievementModal.tsx`
 8. ✅ Database tables: `user_levels`, `daily_checkins`
 
-### 🔲 Week 2 - Core Engagement (TODO)
-- Today Focus Card with Activity Rings integration
-- Level-up celebration modal
+### ✅ Week 2 - Core Engagement (COMPLETED)
+- ✅ Today Focus Card with Activity Rings - `src/components/dashboard/TodayFocusCard.tsx`
+- ✅ Level-up celebration modal - `src/components/gamification/LevelUpModal.tsx`
+- ✅ XP rewards integration on daily check-in
 
 ### 🔲 Week 3 - Social Features (TODO)
 - Friend Activity Feed
