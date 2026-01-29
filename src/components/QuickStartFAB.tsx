@@ -3,15 +3,15 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useSmartDefaults } from "@/hooks/useSmartDefaults";
 
-interface QuickStartFABProps {
-  lastWorkoutType?: string;
-  lastWorkoutId?: string;
-}
-
-export function QuickStartFAB({ lastWorkoutType, lastWorkoutId }: QuickStartFABProps) {
+export function QuickStartFAB() {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
+  const { data: smartDefaults } = useSmartDefaults();
+
+  const lastWorkoutType = smartDefaults?.lastWorkoutType;
+  const lastWorkoutId = smartDefaults?.lastWorkoutId;
 
   const handleQuickStart = () => {
     if (lastWorkoutId) {
@@ -22,7 +22,6 @@ export function QuickStartFAB({ lastWorkoutType, lastWorkoutId }: QuickStartFABP
   };
 
   const handleSmartStart = () => {
-    // Navigate to AI-recommended workout
     navigate("/workouts?smart=true");
   };
 

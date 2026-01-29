@@ -16,6 +16,8 @@ import { LevelUpModal } from "@/components/gamification/LevelUpModal";
 import { FriendActivityFeed } from "@/components/community/FriendActivityFeed";
 import { WeeklyChallengeCard } from "@/components/challenges/WeeklyChallengeCard";
 import { WeeklySummaryCard } from "@/components/dashboard/WeeklySummaryCard";
+import { ResumeWorkoutBanner } from "@/components/workout/ResumeWorkoutBanner";
+import { AccountabilityPartnerCard } from "@/components/gamification/AccountabilityPartnerCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useProfile } from "@/hooks/useProfile";
@@ -80,6 +82,9 @@ const Index = () => {
         {/* Streak Urgency Banner - Shows when streak is at risk */}
         <StreakUrgencyBanner />
 
+        {/* Resume Workout Banner - Shows interrupted workouts */}
+        <ResumeWorkoutBanner />
+
         {isAdmin && (
           <div className="px-4 -mt-2 mb-4">
             <Button
@@ -111,6 +116,9 @@ const Index = () => {
 
         {/* Friend Activity Feed */}
         <FriendActivityFeed />
+
+        {/* Accountability Partner Card */}
+        <AccountabilityPartnerCard />
         
         {/* Workout Plan */}
         <WorkoutPlanCard />
@@ -144,7 +152,7 @@ const Index = () => {
         <MealPlanCard />
 
         {/* Quick Start FAB */}
-        <QuickStartFAB lastWorkoutType="HIIT Blast" />
+        <QuickStartFAB />
         
         {/* Bottom Navigation */}
         <BottomNav onCenterClick={() => setQuickActionsOpen(true)} />
