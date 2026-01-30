@@ -74,9 +74,15 @@ export const StatsGrid = () => {
             <div
               key={stat.id}
               className={cn(
-                "bg-background border border-border/60 rounded-xl p-4 shadow-card",
+                // Glassmorphism effect
+                "bg-white/70 dark:bg-white/10",
+                "backdrop-blur-xl backdrop-saturate-150",
+                "border border-white/40 dark:border-white/20",
+                "rounded-2xl p-4",
+                "shadow-[0_8px_32px_rgba(0,0,0,0.08)]",
+                // Animation
                 "opacity-0 animate-fade-up",
-                "active:opacity-80 transition-opacity duration-150 touch-manipulation"
+                "active:scale-[0.98] transition-all duration-200 touch-manipulation"
               )}
               style={{ 
                 animationDelay: `${0.3 + index * 0.05}s`, 
@@ -85,10 +91,12 @@ export const StatsGrid = () => {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-2xl font-semibold text-foreground tracking-tight">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                  <p className="text-3xl font-bold text-foreground tracking-tight">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground mt-1 font-medium">{stat.label}</p>
                 </div>
-                <Icon size={20} className="text-muted-foreground" strokeWidth={1.5} />
+                <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center">
+                  <Icon size={20} className="text-muted-foreground" strokeWidth={1.5} />
+                </div>
               </div>
             </div>
           );
