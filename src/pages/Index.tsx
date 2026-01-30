@@ -4,6 +4,7 @@ import { FullNavMenu } from "@/components/FullNavMenu";
 import { QuickStartFAB } from "@/components/QuickStartFAB";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { LevelUpModal } from "@/components/gamification/LevelUpModal";
+import { HomeHero } from "@/components/HomeHero";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserLevel, XP_REWARDS } from "@/hooks/useUserLevel";
@@ -67,7 +68,10 @@ const Index = () => {
           previousLevel={levelUpData.previousLevel}
         />
 
-        {/* New Header with HIIT Score + Search */}
+        {/* Video Hero Section */}
+        <HomeHero userName={displayName} />
+
+        {/* Header with HIIT Score + Search */}
         <HomeHeader userName={displayName} score={61} />
 
         {/* Fitness Metrics Card */}
