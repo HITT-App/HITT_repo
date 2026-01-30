@@ -1,0 +1,10 @@
+export { HomeHeader } from "./HomeHeader";
+export { HIITScoreBadge } from "./HIITScoreBadge";
+export { FitnessMetricsCard } from "./FitnessMetricsCard";
+export { ActivitySection } from "./ActivitySection";
+export { WorkoutsSection } from "./WorkoutsSection";
+export { NutritionSection } from "./NutritionSection";
+export { SleepSection } from "./SleepSection";
+export { AICoachSection } from "./AICoachSection";
+export { CoachSessionSection } from "./CoachSessionSection";
+export { ResourcesSection } from "./ResourcesSection";
