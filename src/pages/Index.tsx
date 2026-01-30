@@ -4,6 +4,7 @@ import { FullNavMenu } from "@/components/FullNavMenu";
 import { QuickStartFAB } from "@/components/QuickStartFAB";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { LevelUpModal } from "@/components/gamification/LevelUpModal";
+import { StatsGrid } from "@/components/StatsGrid";
 import { HomeHero } from "@/components/HomeHero";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -73,6 +74,9 @@ const Index = () => {
 
         {/* Header with HIIT Score + Search */}
         <HomeHeader userName={displayName} score={61} />
+
+        {/* Stats Grid with Glass Effect */}
+        <StatsGrid />
 
         {/* Fitness Metrics Card */}
         <FitnessMetricsCard hasData={true} />
