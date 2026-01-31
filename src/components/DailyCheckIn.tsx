@@ -29,6 +29,10 @@ export function DailyCheckIn({ onComplete }: DailyCheckInProps) {
   useEffect(() => {
     if (!user) return;
     
+    // Check if user skipped check-in this session
+    const skippedThisSession = sessionStorage.getItem("dailyCheckinSkipped") === "true";
+    if (skippedThisSession) return;
+    
     // Check if user has checked in today
     const checkTodaysCheckin = async () => {
       const today = new Date().toISOString().split("T")[0];
@@ -75,6 +79,7 @@ export function DailyCheckIn({ onComplete }: DailyCheckInProps) {
   };
 
   const handleSkip = () => {
+    sessionStorage.setItem("dailyCheckinSkipped", "true");
     setOpen(false);
   };
 
