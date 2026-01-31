@@ -34,7 +34,7 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
 
   return (
     <nav 
-      className="absolute bottom-0 left-0 right-0 z-50"
+      className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto"
       style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}
     >
       <div className="w-full px-4">
