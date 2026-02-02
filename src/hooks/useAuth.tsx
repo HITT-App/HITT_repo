@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { log, logSecurityEvent, SecurityEventTypes, generateCorrelationId } from "@/lib/security-logger";
 
 interface AuthContextType {
   user: User | null;
@@ -23,12 +24,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const correlationId = generateCorrelationId();
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Log security events for auth state changes
+        if (event === "SIGNED_IN" && session?.user) {
+          logSecurityEvent(SecurityEventTypes.AUTH_SUCCESS, {
+            correlationId,
+            userId: session.user.id,
+            eventType: "sign_in",
+          });
+        } else if (event === "SIGNED_OUT") {
+          logSecurityEvent(SecurityEventTypes.AUTH_LOGOUT, {
+            correlationId,
+            eventType: "sign_out",
+          });
+        } else if (event === "TOKEN_REFRESHED") {
+          log("debug", "Session token refreshed", { correlationId });
+        }
       }
     );
 
@@ -60,10 +79,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    const correlationId = generateCorrelationId();
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    if (error) {
+      logSecurityEvent(SecurityEventTypes.AUTH_FAILURE, {
+        correlationId,
+        endpoint: "/auth/sign-in",
+        eventType: "password_auth_failure",
+        // Never log the actual email, just note that there was a failure
+      });
+    }
     
     return { error: error as Error | null };
   };

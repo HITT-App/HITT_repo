@@ -265,6 +265,45 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          correlation_id: string
+          created_at: string
+          id: string
+          ip_address_hash: string | null
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string | null
+          table_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          ip_address_hash?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          ip_address_hash?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           category: string
@@ -1159,6 +1198,39 @@ export type Database = {
         }
         Relationships: []
       }
+      data_access_logs: {
+        Row: {
+          access_type: string
+          accessed_record_id: string | null
+          accessed_table: string
+          accessor_id: string | null
+          correlation_id: string
+          created_at: string
+          id: string
+          record_count: number | null
+        }
+        Insert: {
+          access_type: string
+          accessed_record_id?: string | null
+          accessed_table: string
+          accessor_id?: string | null
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          record_count?: number | null
+        }
+        Update: {
+          access_type?: string
+          accessed_record_id?: string | null
+          accessed_table?: string
+          accessor_id?: string | null
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          record_count?: number | null
+        }
+        Relationships: []
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -1640,6 +1712,36 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_events: {
+        Row: {
+          blocked_at: string | null
+          created_at: string
+          endpoint: string
+          id: string
+          identifier_hash: string
+          request_count: number | null
+          window_start: string
+        }
+        Insert: {
+          blocked_at?: string | null
+          created_at?: string
+          endpoint: string
+          id?: string
+          identifier_hash: string
+          request_count?: number | null
+          window_start?: string
+        }
+        Update: {
+          blocked_at?: string | null
+          created_at?: string
+          endpoint?: string
+          id?: string
+          identifier_hash?: string
+          request_count?: number | null
+          window_start?: string
+        }
+        Relationships: []
+      }
       scheduled_workouts: {
         Row: {
           calories_burned: number | null
@@ -1689,6 +1791,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      security_events: {
+        Row: {
+          correlation_id: string
+          created_at: string
+          endpoint: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address_hash: string | null
+          severity: string
+          user_agent_hash: string | null
+          user_id: string | null
+        }
+        Insert: {
+          correlation_id?: string
+          created_at?: string
+          endpoint?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address_hash?: string | null
+          severity: string
+          user_agent_hash?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          correlation_id?: string
+          created_at?: string
+          endpoint?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address_hash?: string | null
+          severity?: string
+          user_agent_hash?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       sleep_logs: {
         Row: {
@@ -2337,6 +2478,7 @@ export type Database = {
       }
     }
     Functions: {
+      apply_security_log_retention: { Args: never; Returns: number }
       award_points: {
         Args: { p_category?: string; p_points: number; p_user_id: string }
         Returns: undefined
@@ -2346,6 +2488,16 @@ export type Database = {
         Args: { p_badge_id: string; p_current_value: number; p_user_id: string }
         Returns: boolean
       }
+      check_rate_limit: {
+        Args: {
+          p_endpoint: string
+          p_identifier_hash: string
+          p_max_requests?: number
+          p_window_seconds?: number
+        }
+        Returns: boolean
+      }
+      cleanup_rate_limit_entries: { Args: never; Returns: number }
       get_level_title: { Args: { level_num: number }; Returns: string }
       has_role: {
         Args: {
@@ -2353,6 +2505,17 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_security_event: {
+        Args: {
+          p_endpoint?: string
+          p_event_data?: Json
+          p_event_type: string
+          p_ip_address_hash?: string
+          p_severity: string
+          p_user_id?: string
+        }
+        Returns: string
       }
     }
     Enums: {

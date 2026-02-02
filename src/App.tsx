@@ -10,6 +10,7 @@ import { AdminRoute } from "@/components/admin/AdminRoute";
 import { PushPermissionBanner } from "@/components/notifications/PushPermissionBanner";
 import { VerificationBanner } from "@/components/auth/VerificationBanner";
 import { VoiceController } from "@/components/coach/VoiceController";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
@@ -108,8 +109,9 @@ import AdminSettings from "./pages/admin/AdminSettings";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -243,6 +245,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
