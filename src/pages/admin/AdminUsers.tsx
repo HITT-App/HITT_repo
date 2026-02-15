@@ -127,9 +127,14 @@ export default function AdminUsers() {
     return matchesSearch && matchesFilter;
   });
 
-  const getInitials = (name: string | null) => {
-    if (!name) return "U";
-    return name.slice(0, 2).toUpperCase();
+  const getDisplayName = (user: UserWithRole) => {
+    if (user.display_name) return user.display_name;
+    return `User-${user.user_id.slice(0, 6)}`;
+  };
+
+  const getInitials = (user: UserWithRole) => {
+    if (user.display_name) return user.display_name.slice(0, 2).toUpperCase();
+    return user.user_id.slice(0, 2).toUpperCase();
   };
 
   const dialogTitle = dialogAction?.startsWith("add")
@@ -183,11 +188,11 @@ export default function AdminUsers() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={user.avatar_url || undefined} />
-                          <AvatarFallback>{getInitials(user.display_name)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(user)}</AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{user.display_name || "Unnamed User"}</p>
+                            <p className="font-medium">{getDisplayName(user)}</p>
                             {isCurrentUser && <Badge variant="outline" className="text-xs">You</Badge>}
                           </div>
                           <p className="text-xs text-muted-foreground">
