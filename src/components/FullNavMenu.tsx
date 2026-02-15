@@ -44,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -52,86 +53,90 @@ interface FullNavMenuProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const menuSections = [
-  {
-    title: "Main",
-    items: [
-      { icon: Home, label: "Home", path: "/" },
-      { icon: Bot, label: "HIIT AI Coach", path: "/ai-coach" },
-      { icon: Search, label: "Search", path: "/search" },
-      { icon: Bell, label: "Notifications", path: "/notifications" },
-    ]
-  },
-  {
-    title: "Fitness",
-    items: [
-      { icon: Dumbbell, label: "Workouts", path: "/workouts" },
-      { icon: PlayCircle, label: "Workout Library", path: "/workout-library" },
-      { icon: Calendar, label: "Schedule", path: "/workout-schedule" },
-      { icon: Activity, label: "Activity", path: "/activity" },
-      { icon: Target, label: "Goals", path: "/activity-goals" },
-      { icon: Clock, label: "History", path: "/activity-history" },
-    ]
-  },
-  {
-    title: "Nutrition",
-    items: [
-      { icon: Apple, label: "Nutrition", path: "/nutrition" },
-      { icon: UtensilsCrossed, label: "Meals", path: "/browse-meals" },
-      { icon: Camera, label: "Scanner", path: "/meal-scanner" },
-    ]
-  },
-  {
-    title: "Health",
-    items: [
-      { icon: Heart, label: "Metrics", path: "/health-metrics" },
-      { icon: Gauge, label: "Heart Rate", path: "/heart-rate" },
-      { icon: Footprints, label: "Steps", path: "/steps" },
-      { icon: Scale, label: "Weight", path: "/weight" },
-      { icon: Droplets, label: "Hydration", path: "/hydration" },
-      { icon: Moon, label: "Sleep", path: "/sleep" },
-      { icon: Smile, label: "Mood", path: "/mood" },
-    ]
-  },
-  {
-    title: "Coaching",
-    items: [
-      { icon: Users, label: "Find a Coach", path: "/browse-coaches" },
-      { icon: Calendar, label: "Sessions", path: "/coach-appointments" },
-    ]
-  },
-  {
-    title: "Community",
-    items: [
-      { icon: MessageCircle, label: "Community", path: "/community" },
-      { icon: Trophy, label: "Achievements", path: "/achievements" },
-      { icon: Target, label: "Challenges", path: "/challenges" },
-    ]
-  },
-  {
-    title: "Resources",
-    items: [
-      { icon: BookOpen, label: "Resources", path: "/resources" },
-      { icon: GraduationCap, label: "Courses", path: "/resources" },
-      { icon: Video, label: "Shorts", path: "/resources" },
-    ]
-  },
-  {
-    title: "Account",
-    items: [
-      { icon: User, label: "Profile", path: "/profile" },
-      { icon: Crown, label: "Subscription", path: "/subscription" },
-      { icon: Settings, label: "Settings", path: "/profile" },
-    ]
-  },
-];
-
 export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const { profile } = useProfile();
   const { isAdmin } = useAdminRole();
+  const { flags } = useFeatureFlags();
   const { toast } = useToast();
+
+  const menuSections = [
+    {
+      title: "Main",
+      items: [
+        { icon: Home, label: "Home", path: "/" },
+        ...(flags.ai_coach_enabled ? [{ icon: Bot, label: "HIIT AI Coach", path: "/ai-coach" }] : []),
+        { icon: Search, label: "Search", path: "/search" },
+        { icon: Bell, label: "Notifications", path: "/notifications" },
+      ]
+    },
+    ...(flags.workouts_enabled ? [{
+      title: "Fitness",
+      items: [
+        { icon: Dumbbell, label: "Workouts", path: "/workouts" },
+        { icon: PlayCircle, label: "Workout Library", path: "/workout-library" },
+        { icon: Calendar, label: "Schedule", path: "/workout-schedule" },
+        ...(flags.activity_enabled ? [
+          { icon: Activity, label: "Activity", path: "/activity" },
+          { icon: Target, label: "Goals", path: "/activity-goals" },
+          { icon: Clock, label: "History", path: "/activity-history" },
+        ] : []),
+      ]
+    }] : []),
+    ...(flags.nutrition_enabled ? [{
+      title: "Nutrition",
+      items: [
+        { icon: Apple, label: "Nutrition", path: "/nutrition" },
+        { icon: UtensilsCrossed, label: "Meals", path: "/browse-meals" },
+        ...(flags.food_scanner_enabled ? [{ icon: Camera, label: "Scanner", path: "/meal-scanner" }] : []),
+      ]
+    }] : []),
+    ...(flags.health_metrics_enabled ? [{
+      title: "Health",
+      items: [
+        { icon: Heart, label: "Metrics", path: "/health-metrics" },
+        { icon: Gauge, label: "Heart Rate", path: "/heart-rate" },
+        { icon: Footprints, label: "Steps", path: "/steps" },
+        { icon: Scale, label: "Weight", path: "/weight" },
+        { icon: Droplets, label: "Hydration", path: "/hydration" },
+        ...(flags.sleep_enabled ? [{ icon: Moon, label: "Sleep", path: "/sleep" }] : []),
+        { icon: Smile, label: "Mood", path: "/mood" },
+      ]
+    }] : []),
+    ...(flags.coaching_enabled ? [{
+      title: "Coaching",
+      items: [
+        { icon: Users, label: "Find a Coach", path: "/browse-coaches" },
+        { icon: Calendar, label: "Sessions", path: "/coach-appointments" },
+      ]
+    }] : []),
+    ...(flags.community_enabled ? [{
+      title: "Community",
+      items: [
+        { icon: MessageCircle, label: "Community", path: "/community" },
+        ...(flags.achievements_enabled ? [{ icon: Trophy, label: "Achievements", path: "/achievements" }] : []),
+        ...(flags.challenges_enabled ? [{ icon: Target, label: "Challenges", path: "/challenges" }] : []),
+        ...(flags.leaderboard_enabled ? [{ icon: Trophy, label: "Leaderboard", path: "/achievements" }] : []),
+      ]
+    }] : []),
+    ...(flags.resources_enabled ? [{
+      title: "Resources",
+      items: [
+        { icon: BookOpen, label: "Resources", path: "/resources" },
+        { icon: GraduationCap, label: "Courses", path: "/resources" },
+        { icon: Video, label: "Shorts", path: "/resources" },
+      ]
+    }] : []),
+    {
+      title: "Account",
+      items: [
+        { icon: User, label: "Profile", path: "/profile" },
+        { icon: Crown, label: "Subscription", path: "/subscription" },
+        { icon: Settings, label: "Settings", path: "/profile" },
+      ]
+    },
+  ];
 
   const handleSignOut = async () => {
     await signOut();

@@ -1,25 +1,27 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Bot, FileText, User } from "lucide-react";
+import { Home, Bot, MessageCircle, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 interface BottomNavProps {
   onCenterClick: () => void;
 }
 
-const navItems = [
-  { id: "home", icon: Home, label: "Home", path: "/" },
-  { id: "hiit-ai", icon: Bot, label: "AI", path: "/ai-coach" },
-  { id: "center", icon: null, label: "Menu", path: null },
-  { id: "resources", icon: FileText, label: "Learn", path: "/resources" },
-  { id: "profile", icon: User, label: "You", path: "/profile" },
-];
-
 export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useProfile();
+  const { flags } = useFeatureFlags();
+
+  const navItems = [
+    { id: "home", icon: Home, label: "Home", path: "/" },
+    ...(flags.ai_coach_enabled ? [{ id: "hiit-ai", icon: Bot, label: "AI", path: "/ai-coach" }] : []),
+    { id: "center", icon: null as any, label: "Menu", path: null as string | null },
+    ...(flags.community_enabled ? [{ id: "community", icon: MessageCircle, label: "Social", path: "/community" }] : []),
+    { id: "profile", icon: User, label: "You", path: "/profile" },
+  ];
 
   const getActiveTab = () => {
     const current = navItems.find(item => item.path === location.pathname);

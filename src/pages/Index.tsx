@@ -11,6 +11,7 @@ import { AppTutorial } from "@/components/AppTutorial";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserLevel, XP_REWARDS } from "@/hooks/useUserLevel";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 // New home components
 import {
@@ -39,6 +40,7 @@ const Index = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { addXP, previousLevel } = useUserLevel();
+  const { flags } = useFeatureFlags();
   
   const displayName = profile?.display_name || 
                       user?.user_metadata?.display_name || 
@@ -55,7 +57,6 @@ const Index = () => {
   const handleWelcomeDismiss = () => {
     setShowWelcome(false);
     sessionStorage.setItem("hiit_welcomed", "true");
-    // Check if tutorial has been seen before
     const tutorialSeen = localStorage.getItem("hiit_tutorial_complete");
     if (!tutorialSeen) {
       setShowTutorial(true);
@@ -67,7 +68,6 @@ const Index = () => {
     localStorage.setItem("hiit_tutorial_complete", "true");
   };
 
-  // Handler for daily check-in completion
   const handleCheckInComplete = async (mood: string, energy: number) => {
     const result = await addXP(XP_REWARDS.DAILY_CHECKIN);
     if (result?.leveledUp) {
@@ -82,28 +82,30 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex justify-center">
-      {/* Post-Login Welcome Screen */}
       {showWelcome && (
         <PostLoginWelcome userName={displayName} onDismiss={handleWelcomeDismiss} />
       )}
 
-      {/* App Tutorial Overlay */}
       {showTutorial && (
         <AppTutorial onComplete={handleTutorialComplete} />
       )}
 
       <div className="w-full max-w-md min-h-screen relative overflow-x-hidden pb-28">
-        {/* Daily Check-in Modal */}
-        <DailyCheckIn onComplete={handleCheckInComplete} />
+        {/* Daily Check-in - only if gamification enabled */}
+        {flags.gamification_enabled && (
+          <DailyCheckIn onComplete={handleCheckInComplete} />
+        )}
 
         {/* Level Up Celebration Modal */}
-        <LevelUpModal
-          isOpen={levelUpData.isOpen}
-          onClose={() => setLevelUpData(prev => ({ ...prev, isOpen: false }))}
-          newLevel={levelUpData.newLevel}
-          newTitle={levelUpData.newTitle}
-          previousLevel={levelUpData.previousLevel}
-        />
+        {flags.gamification_enabled && (
+          <LevelUpModal
+            isOpen={levelUpData.isOpen}
+            onClose={() => setLevelUpData(prev => ({ ...prev, isOpen: false }))}
+            newLevel={levelUpData.newLevel}
+            newTitle={levelUpData.newTitle}
+            previousLevel={levelUpData.previousLevel}
+          />
+        )}
 
         {/* Video Hero Section */}
         <HomeHero userName={displayName} />
@@ -111,32 +113,34 @@ const Index = () => {
         {/* Header with HIIT Score + Search */}
         <HomeHeader userName={displayName} score={61} />
 
-        {/* Stats Grid with Glass Effect */}
+        {/* Stats Grid */}
         <StatsGrid />
 
         {/* Fitness Metrics Card */}
-        <FitnessMetricsCard hasData={true} />
+        {flags.health_metrics_enabled && (
+          <FitnessMetricsCard hasData={true} />
+        )}
 
         {/* Activity Section */}
-        <ActivitySection />
+        {flags.activity_enabled && <ActivitySection />}
 
         {/* Workouts Carousel */}
-        <WorkoutsSection />
+        {flags.workouts_enabled && <WorkoutsSection />}
 
         {/* Coach Session */}
-        <CoachSessionSection />
+        {flags.coaching_enabled && <CoachSessionSection />}
 
         {/* Nutrition */}
-        <NutritionSection hasData={true} />
+        {flags.nutrition_enabled && <NutritionSection hasData={true} />}
 
         {/* Sleep */}
-        <SleepSection hasData={true} />
+        {flags.sleep_enabled && <SleepSection hasData={true} />}
 
         {/* AI Coach */}
-        <AICoachSection />
+        {flags.ai_coach_enabled && <AICoachSection />}
 
         {/* Resources */}
-        <ResourcesSection />
+        {flags.resources_enabled && <ResourcesSection />}
 
         {/* Quick Start FAB */}
         <QuickStartFAB />
