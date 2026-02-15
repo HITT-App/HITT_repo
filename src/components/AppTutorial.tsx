@@ -45,13 +45,13 @@ export const AppTutorial = ({ onComplete }: AppTutorialProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[55]">
+    <div className="fixed inset-0 z-[55]" onClick={handleContinue}>
       {/* Dimmed overlay */}
       <div className="absolute inset-0 bg-black/60" />
 
       {/* Tooltip card */}
       <div className="absolute bottom-28 left-4 right-4 max-w-md mx-auto animate-fade-up">
-        <div className="bg-white rounded-2xl p-5 shadow-xl relative">
+        <div className="bg-white rounded-2xl p-5 shadow-xl relative" onClick={(e) => e.stopPropagation()}>
           {/* Arrow pointing down to nav */}
           {step.highlight !== "none" && (
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rotate-45" />
