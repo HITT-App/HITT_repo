@@ -26,6 +26,7 @@ interface UserWithRole {
   display_name: string | null;
   avatar_url: string | null;
   created_at: string;
+  email: string | null;
   roles: string[];
 }
 
@@ -48,23 +49,24 @@ export default function AdminUsers() {
 
   const loadUsers = async () => {
     try {
-      const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, user_id, display_name, avatar_url, created_at")
-        .order("created_at", { ascending: false })
-        .limit(500);
+      const [profilesRes, rolesRes, emailsRes] = await Promise.all([
+        supabase.from("profiles").select("id, user_id, display_name, avatar_url, created_at").order("created_at", { ascending: false }).limit(500),
+        supabase.from("user_roles").select("user_id, role"),
+        supabase.rpc("admin_get_user_emails"),
+      ]);
 
-      if (profileError) throw profileError;
+      if (profilesRes.error) throw profilesRes.error;
+      if (rolesRes.error) throw rolesRes.error;
 
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
+      const emailMap = new Map<string, string>();
+      if (emailsRes.data) {
+        (emailsRes.data as { user_id: string; email: string }[]).forEach((e) => emailMap.set(e.user_id, e.email));
+      }
 
-      if (rolesError) throw rolesError;
-
-      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => ({
+      const usersWithRoles: UserWithRole[] = (profilesRes.data || []).map((profile) => ({
         ...profile,
-        roles: (roles || [])
+        email: emailMap.get(profile.user_id) || null,
+        roles: (rolesRes.data || [])
           .filter((r) => r.user_id === profile.user_id)
           .map((r) => r.role),
       }));
@@ -119,7 +121,8 @@ export default function AdminUsers() {
   };
 
   const filteredUsers = users.filter((user) => {
-    const matchesSearch = (user.display_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || (user.display_name || "").toLowerCase().includes(searchLower) || (user.email || "").toLowerCase().includes(searchLower);
     const matchesFilter =
       roleFilter === "all" ||
       (roleFilter === "admin" && user.roles.includes("admin")) ||
@@ -129,11 +132,13 @@ export default function AdminUsers() {
 
   const getDisplayName = (user: UserWithRole) => {
     if (user.display_name) return user.display_name;
+    if (user.email) return user.email;
     return `User-${user.user_id.slice(0, 6)}`;
   };
 
   const getInitials = (user: UserWithRole) => {
     if (user.display_name) return user.display_name.slice(0, 2).toUpperCase();
+    if (user.email) return user.email.slice(0, 2).toUpperCase();
     return user.user_id.slice(0, 2).toUpperCase();
   };
 

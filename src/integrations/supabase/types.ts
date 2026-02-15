@@ -2478,6 +2478,13 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_user_emails: {
+        Args: never
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
       apply_security_log_retention: { Args: never; Returns: number }
       award_points: {
         Args: { p_category?: string; p_points: number; p_user_id: string }
