@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import heroVideo from "@/assets/hiit-hero.mp4";
 import { Volume2, VolumeX } from "lucide-react";
 import { Button } from "./ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 interface HomeHeroProps {
   userName?: string;
@@ -29,6 +30,9 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
     try {
       const text = `${greeting}, ${userName}. Need a plan for today?`;
       
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
         {
@@ -36,7 +40,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
           headers: {
             "Content-Type": "application/json",
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ text }),
         }
