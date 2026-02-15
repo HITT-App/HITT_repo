@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronUp } from "lucide-react";
 import { HIITLogo } from "./HIITLogo";
+import welcomeBg from "@/assets/welcome-bg.jpg";
 
 interface PostLoginWelcomeProps {
   userName: string;
@@ -59,7 +60,8 @@ export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps)
       onClick={() => dismiss()}
     >
       {/* Dark overlay with video-like background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/60 to-black/90" />
+      <img src={welcomeBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/80" />
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center gap-4 animate-fade-up">
