@@ -142,7 +142,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
       <div className="relative h-full flex flex-col justify-between p-5 pt-10">
         {/* Top Section - Logo */}
         <div className="flex justify-center opacity-0 animate-fade-up" style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}>
-          <img src={hiitLogo} alt="HIIT Logo" className="w-12 h-12 rounded-2xl object-cover border border-white/20" />
+          <img src={hiitLogo} alt="HIIT Logo" className="w-16 h-16 rounded-2xl object-cover border border-white/20" />
         </div>
 
         {/* Bottom Section - Greeting */}
