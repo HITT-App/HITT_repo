@@ -47,8 +47,7 @@ const Index = () => {
 
   // Show welcome screen on first sign-in per session
   useEffect(() => {
-    const welcomed = sessionStorage.getItem("hiit_welcomed");
-    if (!welcomed && user) {
+    if (user) {
       setShowWelcome(true);
     }
   }, [user]);
