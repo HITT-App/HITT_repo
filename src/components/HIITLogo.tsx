@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import hiitLogo from "@/assets/hiit-logo.jpg";
+import hiitLogo from "@/assets/hiit-logo.webp";
 
 interface HIITLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "2xl";

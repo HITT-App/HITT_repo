@@ -3,7 +3,7 @@ import heroVideo from "@/assets/hiit-hero.mp4";
 import { Volume2, VolumeX } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import hiitLogo from "@/assets/hiit-logo.jpg";
+import hiitLogo from "@/assets/hiit-logo.webp";
 
 interface HomeHeroProps {
   userName?: string;
