@@ -17,12 +17,11 @@ const sizeClasses = {
 };
 
 export const HIITLogo = ({ size = "md", className, showGlow = false, variant = "default" }: HIITLogoProps) => {
-  // For white variant, we'll use CSS filter to make it white
   const filterClass = variant === "white" ? "brightness-0 invert" : "";
 
   return (
     <img
-
+      src={hiitLogo}
       alt="HIIT Logo"
       className={cn(
         "rounded-lg object-contain",
@@ -30,7 +29,7 @@ export const HIITLogo = ({ size = "md", className, showGlow = false, variant = "
         showGlow && "pulse-glow",
         filterClass,
         className
-      )} src="/lovable-uploads/44369306-9e20-4d2e-b794-aa1696609859.jpg" />);
-
-
+      )}
+    />
+  );
 };
