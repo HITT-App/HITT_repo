@@ -3,6 +3,7 @@ import heroVideo from "@/assets/hiit-hero.mp4";
 import { Volume2, VolumeX } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import hiitLogo from "@/assets/hiit-logo.jpg";
 
 interface HomeHeroProps {
   userName?: string;
@@ -141,9 +142,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
       <div className="relative h-full flex flex-col justify-between p-5 pt-10">
         {/* Top Section - Logo */}
         <div className="flex justify-center opacity-0 animate-fade-up" style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}>
-          <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
-            <span className="text-white font-bold text-xl">H</span>
-          </div>
+          <img src={hiitLogo} alt="HIIT Logo" className="w-12 h-12 rounded-2xl object-cover border border-white/20" />
         </div>
 
         {/* Bottom Section - Greeting */}
