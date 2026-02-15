@@ -29,29 +29,49 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
     setIsPlaying(true);
     try {
       const text = `${greeting}, ${userName}. Need a plan for today?`;
+      const cacheKey = `tts_cache_${text}`;
       
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      let audioUrl: string;
+      const cached = sessionStorage.getItem(cacheKey);
       
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ text }),
+      if (cached) {
+        // Use cached audio — no API call
+        audioUrl = cached;
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ text }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`TTS request failed: ${response.status}`);
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(`TTS request failed: ${response.status}`);
+        const audioBlob = await response.blob();
+        // Convert to base64 data URL for caching
+        const reader = new FileReader();
+        audioUrl = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(audioBlob);
+        });
+        
+        try {
+          sessionStorage.setItem(cacheKey, audioUrl);
+        } catch {
+          // sessionStorage full — still play, just don't cache
+        }
       }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
       
       if (audioRef.current) {
         audioRef.current.pause();
@@ -63,7 +83,6 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
       
       audio.onended = () => {
         setIsPlaying(false);
-        URL.revokeObjectURL(audioUrl);
       };
       
       await audio.play();
