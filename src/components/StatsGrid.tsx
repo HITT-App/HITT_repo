@@ -44,36 +44,32 @@ export const StatsGrid = () => {
       icon: Flame, 
       value: totalCalories > 0 ? totalCalories.toLocaleString() : "0", 
       label: "Calories",
-      accent: "from-orange-500 to-amber-400",
-      iconBg: "bg-orange-500/10",
-      iconColor: "text-orange-500",
+      gradient: "from-orange-500 to-amber-500",
+      glow: "shadow-orange-500/25",
     },
     { 
       id: "workouts", 
       icon: Target, 
       value: workoutCount.toString(), 
       label: "Workouts",
-      accent: "from-primary to-primary/70",
-      iconBg: "bg-primary/10",
-      iconColor: "text-primary",
+      gradient: "from-violet-500 to-purple-600",
+      glow: "shadow-violet-500/25",
     },
     { 
       id: "minutes", 
       icon: Clock, 
       value: totalMinutes.toString(), 
       label: "Minutes",
-      accent: "from-blue-500 to-cyan-400",
-      iconBg: "bg-blue-500/10",
-      iconColor: "text-blue-500",
+      gradient: "from-sky-500 to-blue-600",
+      glow: "shadow-sky-500/25",
     },
     { 
       id: "streak", 
       icon: TrendingUp, 
       value: streak?.current_streak?.toString() || "0", 
       label: "Day Streak",
-      accent: "from-emerald-500 to-green-400",
-      iconBg: "bg-emerald-500/10",
-      iconColor: "text-emerald-500",
+      gradient: "from-emerald-500 to-teal-600",
+      glow: "shadow-emerald-500/25",
     },
   ];
 
@@ -87,29 +83,29 @@ export const StatsGrid = () => {
               key={stat.id}
               className={cn(
                 "relative overflow-hidden",
-                "bg-white/80 dark:bg-white/10",
-                "backdrop-blur-xl backdrop-saturate-150",
-                "border border-white/50 dark:border-white/15",
                 "rounded-2xl p-4",
-                "shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
+                "bg-gradient-to-br",
+                stat.gradient,
+                "shadow-lg",
+                stat.glow,
                 "opacity-0 animate-fade-up",
-                "active:scale-[0.97] transition-all duration-200 touch-manipulation"
+                "active:scale-[0.96] transition-all duration-200 touch-manipulation"
               )}
               style={{ 
                 animationDelay: `${0.3 + index * 0.05}s`, 
                 animationFillMode: "forwards" 
               }}
             >
-              {/* Accent bar */}
-              <div className={cn("absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r", stat.accent)} />
+              {/* Subtle pattern overlay */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.2)_0%,_transparent_60%)]" />
               
-              <div className="flex items-start justify-between">
+              <div className="relative flex items-start justify-between">
                 <div>
-                  <p className="text-3xl font-extrabold text-foreground tracking-tight tabular-nums">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium uppercase tracking-wider">{stat.label}</p>
+                  <p className="text-3xl font-extrabold text-white tracking-tight tabular-nums drop-shadow-sm">{stat.value}</p>
+                  <p className="text-[11px] text-white/80 mt-1 font-semibold uppercase tracking-widest">{stat.label}</p>
                 </div>
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", stat.iconBg)}>
-                  <Icon size={20} className={stat.iconColor} strokeWidth={1.8} />
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <Icon size={20} className="text-white" strokeWidth={2} />
                 </div>
               </div>
             </div>
