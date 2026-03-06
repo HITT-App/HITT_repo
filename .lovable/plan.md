@@ -1,80 +1,39 @@
 
-# Fix Admin Panel: User Visibility and Data Access
 
-## Problem
-The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
+## Plan: Replace Center Button Action with "Choose a Sport" Drawer
 
-There are 6 users in the database, but the admin sees 1.
+Currently, tapping the center HIIT logo opens the `FullNavMenu` (a general navigation drawer). We will replace this with a new **"Choose a Sport"** drawer inspired by the reference screenshot.
 
-## Root Cause
-The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
-- `profiles` -- affects user list and total user count
-- `activity_logs` -- affects "Active (7d)" stat
-- `meal_logs` -- affects "Meals Logged" stat
-- `workout_progress` -- affects "Completed" stat
-- `user_badges` -- affects "Badges Earned" stat
-- `coaching_sessions` -- affects "Sessions" stat
+### What gets built
 
-## Solution
+A new `ChooseSportSheet` component rendered as a bottom drawer with:
 
-### 1. Database Migration: Add Admin SELECT Policies
-Add new RLS policies to allow admins to read all rows in the affected tables:
+1. **Header**: "Choose a Sport" title with X close button
+2. **Banner card**: "New Sports available!" promo card (dark card with text)
+3. **"Your Top Sports" section**: Horizontal row of 4 circular icon buttons (Swim, Run, Workout, Weight Training) — uses Lucide icons mapped to sport types
+4. **Categorized sport lists** (e.g. "Foot Sports", "Water Sports", "Gym"): Vertical list items with circular icons and labels — scrollable via `ScrollArea`
+5. **On sport select**: Navigate to the relevant activity/workout page (e.g. `/log-activity`) and close the drawer
 
-```sql
--- Admins can view all profiles
-CREATE POLICY "Admins can view all profiles"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all activity logs
-CREATE POLICY "Admins can view all activity logs"
-  ON public.activity_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all meal logs
-CREATE POLICY "Admins can view all meal logs"
-  ON public.meal_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all workout progress
-CREATE POLICY "Admins can view all workout progress"
-  ON public.workout_progress FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all user badges
-CREATE POLICY "Admins can view all user badges"
-  ON public.user_badges FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all coaching sessions
-CREATE POLICY "Admins can view all coaching sessions"
-  ON public.coaching_sessions FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-```
-
-### 2. Improve AdminUsers Page
-Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
-
-- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
-- Add pagination (currently limited to 100 users)
-- Add role filter tabs (All / Admins / Moderators)
-- Show user join date
-- Add moderator role management (currently only admin toggle)
-
-### 3. Files Changed
+### Files changed
 
 | File | Change |
 |------|--------|
-| New migration SQL | Add 6 admin SELECT policies |
-| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
+| `src/components/ChooseSportSheet.tsx` | **New** — the full "Choose a Sport" drawer component |
+| `src/pages/Index.tsx` | Replace `FullNavMenu` with `ChooseSportSheet` for the center button |
 
-### 4. No Changes Needed
-- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
-- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
-- Admin dashboard, sidebar, routing -- all working correctly
+### Sport categories & icons
+
+- **Top Sports** (horizontal circles): Swim (`Waves`), Run (`Footprints`), Workout (`Activity`), Weight Training (`Dumbbell`)
+- **Foot Sports**: Run, Trail Run, Walk, Hike
+- **Water Sports**: Swim, Surf
+- **Gym**: Weight Training, HIIT, Yoga, Cycling
+
+Each sport click navigates to `/log-activity?sport=<name>` (or a relevant existing route) and closes the sheet.
+
+### Design
+
+- Dark themed drawer matching app style (`bg-background`, `text-foreground`)
+- Circular icon containers with `bg-muted` backgrounds
+- Section headers in bold
+- Banner card with subtle border and darker background
+
