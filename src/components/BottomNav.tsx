@@ -11,7 +11,6 @@ interface BottomNavProps {
 export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useProfile();
   const { flags } = useFeatureFlags();
 
   const navItems = [
