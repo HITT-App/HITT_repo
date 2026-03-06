@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Settings, MapPin, Timer, Flame, Footprints } from "lucide-react";
+import { ArrowLeft, Pause, Play, Settings, MapPin, Timer, Flame, Footprints, Signal, SignalZero, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import {
   Sheet,
   SheetContent,
@@ -15,29 +14,69 @@ import { useActivity } from "@/hooks/useActivity";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const activityIcons: Record<string, string> = {
-  jogging: "🏃",
-  swimming: "🏊",
-  yoga: "🧘",
-  "martial-arts": "🥋",
-  aerobics: "💪",
-  cycling: "🚴",
-  walking: "🚶",
-  other: "⚡",
+// --- Haversine ---
+function haversineDistance(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number
+): number {
+  const R = 6371000; // metres
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// --- MET values ---
+const MET_VALUES: Record<string, number> = {
+  jogging: 9.8, run: 9.8, "trail run": 9.0,
+  walking: 3.5, walk: 3.5, hike: 6.0,
+  cycling: 7.5, swimming: 8.0, swim: 8.0, surf: 6.0,
+  yoga: 2.5, "weight training": 5.0, hiit: 8.0, workout: 8.0,
+  "martial-arts": 7.0, aerobics: 6.5, other: 5.0,
 };
+
+function getMET(activityType: string): number {
+  return MET_VALUES[activityType.toLowerCase()] ?? 5.0;
+}
+
+interface GpsPoint {
+  lat: number;
+  lng: number;
+  ts: number;
+}
+
+type GpsStatus = "searching" | "active" | "unavailable" | "denied";
+
+const DEFAULT_WEIGHT_KG = 70;
+const GPS_ACCURACY_THRESHOLD = 30; // metres
+const GPS_MIN_MOVE = 3; // metres – noise filter
+const AUTO_PAUSE_IDLE_MS = 10_000;
 
 const ActivityLive = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const activityType = searchParams.get("type") || "jogging";
+  const activityType = searchParams.get("type") || searchParams.get("sport") || "jogging";
   const { logActivity } = useActivity();
 
+  // Core state
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isHolding, setIsHolding] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+
+  // GPS state
+  const [gpsStatus, setGpsStatus] = useState<GpsStatus>("searching");
+  const [totalDistance, setTotalDistance] = useState(0); // metres
+  const positionsRef = useRef<GpsPoint[]>([]);
+  const watchIdRef = useRef<number | null>(null);
+  const lastMoveTimeRef = useRef(Date.now());
+
+  // Settings
   const [settings, setSettings] = useState({
     gpsTracking: true,
     showMetrics: true,
@@ -45,26 +84,17 @@ const ActivityLive = () => {
     autoVibrate: true,
   });
 
+  // Refs
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const holdStartRef = useRef<number>(0);
+  const holdStartRef = useRef(0);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const autoPausedRef = useRef(false);
 
-  // Timer
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (!isPaused && !showCompleted) {
-      interval = setInterval(() => {
-        setElapsed((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPaused, showCompleted]);
-
-  // Calculated stats
-  const minutes = Math.floor(elapsed / 60);
-  const seconds = elapsed % 60;
-  const distance = (elapsed * 0.003).toFixed(1); // ~180m per minute jogging
-  const calories = Math.round(elapsed * 0.15);
-  const pace = elapsed > 0 ? (elapsed / 60 / Number(distance)).toFixed(1) : "0.0";
+  // --- Derived stats ---
+  const distanceKm = totalDistance / 1000;
+  const met = getMET(activityType);
+  const calories = Math.round(met * DEFAULT_WEIGHT_KG * (elapsed / 3600));
+  const pace = distanceKm > 0.01 ? (elapsed / 60 / distanceKm).toFixed(1) : "--";
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -72,16 +102,112 @@ const ActivityLive = () => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  // --- Timer ---
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (!isPaused && !showCompleted) {
+      interval = setInterval(() => setElapsed((p) => p + 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPaused, showCompleted]);
+
+  // --- Wake Lock ---
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLockRef.current = await navigator.wakeLock.request("screen");
+        }
+      } catch { /* silent */ }
+    };
+    requestWakeLock();
+    return () => { wakeLockRef.current?.release(); };
+  }, []);
+
+  // --- GPS ---
+  useEffect(() => {
+    if (!settings.gpsTracking) {
+      setGpsStatus("unavailable");
+      return;
+    }
+    if (!navigator.geolocation) {
+      setGpsStatus("unavailable");
+      toast.error("GPS not available on this device");
+      return;
+    }
+
+    setGpsStatus("searching");
+
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (pos.coords.accuracy > GPS_ACCURACY_THRESHOLD) return;
+
+        const point: GpsPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
+        const positions = positionsRef.current;
+
+        if (positions.length > 0) {
+          const last = positions[positions.length - 1];
+          const d = haversineDistance(last.lat, last.lng, point.lat, point.lng);
+          if (d < GPS_MIN_MOVE) return; // noise
+          setTotalDistance((prev) => prev + d);
+          lastMoveTimeRef.current = Date.now();
+
+          // Auto-resume if was auto-paused
+          if (autoPausedRef.current) {
+            autoPausedRef.current = false;
+            setIsPaused(false);
+            if (settings.autoVibrate) navigator.vibrate?.(100);
+          }
+        }
+
+        positions.push(point);
+        setGpsStatus("active");
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setGpsStatus("denied");
+          toast.error("GPS permission denied");
+        } else {
+          setGpsStatus("unavailable");
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+    );
+
+    watchIdRef.current = id;
+    return () => navigator.geolocation.clearWatch(id);
+  }, [settings.gpsTracking, settings.autoVibrate]);
+
+  // --- Auto-pause ---
+  useEffect(() => {
+    if (!settings.autoPause || isPaused || showCompleted || gpsStatus !== "active") return;
+    const interval = setInterval(() => {
+      if (Date.now() - lastMoveTimeRef.current > AUTO_PAUSE_IDLE_MS && !autoPausedRef.current) {
+        autoPausedRef.current = true;
+        setIsPaused(true);
+        if (settings.autoVibrate) navigator.vibrate?.([100, 50, 100]);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [settings.autoPause, settings.autoVibrate, isPaused, showCompleted, gpsStatus]);
+
+  // --- Vibrate on manual pause/resume ---
+  const togglePause = useCallback(() => {
+    setIsPaused((p) => {
+      if (settings.autoVibrate) navigator.vibrate?.(50);
+      autoPausedRef.current = false;
+      return !p;
+    });
+  }, [settings.autoVibrate]);
+
+  // --- Hold to finish ---
   const handleHoldStart = () => {
     setIsHolding(true);
     holdStartRef.current = Date.now();
-    
     holdTimerRef.current = setInterval(() => {
-      const elapsed = Date.now() - holdStartRef.current;
-      const progress = Math.min((elapsed / 2000) * 100, 100);
-      setHoldProgress(progress);
-      
-      if (progress >= 100) {
+      const prog = Math.min(((Date.now() - holdStartRef.current) / 2000) * 100, 100);
+      setHoldProgress(prog);
+      if (prog >= 100) {
         clearInterval(holdTimerRef.current!);
         handleFinish();
       }
@@ -89,28 +215,58 @@ const ActivityLive = () => {
   };
 
   const handleHoldEnd = () => {
-    if (holdTimerRef.current) {
-      clearInterval(holdTimerRef.current);
-    }
+    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
     setIsHolding(false);
     setHoldProgress(0);
   };
 
   const handleFinish = async () => {
+    if (settings.autoVibrate) navigator.vibrate?.([100, 100, 200]);
+    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    wakeLockRef.current?.release();
+
     try {
       await logActivity.mutateAsync({
         activity_type: activityType,
         duration_seconds: elapsed,
-        distance_km: Number(distance),
+        distance_km: Number(distanceKm.toFixed(2)),
         calories_burned: calories,
         intensity_level: 3,
       });
       setShowCompleted(true);
-    } catch (error) {
+    } catch {
       toast.error("Failed to save activity");
     }
   };
 
+  // --- Completion message ---
+  const getCompletionMessage = () => {
+    const mins = Math.floor(elapsed / 60);
+    if (mins >= 60) return `Amazing! You crushed a ${mins}-minute ${activityType} session!`;
+    if (mins >= 30) return `Great work! ${mins} minutes of solid ${activityType}.`;
+    if (mins >= 10) return `Nice effort! ${mins} minutes of ${activityType} logged.`;
+    return `Quick ${activityType} session completed. Every minute counts!`;
+  };
+
+  const GpsIndicator = () => {
+    if (gpsStatus === "active") return (
+      <div className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm">
+        <Signal className="w-4 h-4" /> GPS Active
+      </div>
+    );
+    if (gpsStatus === "searching") return (
+      <div className="flex items-center gap-2 bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">
+        <Loader2 className="w-4 h-4 animate-spin" /> Searching GPS…
+      </div>
+    );
+    return (
+      <div className="flex items-center gap-2 bg-destructive/20 text-destructive px-3 py-1 rounded-full text-sm">
+        <SignalZero className="w-4 h-4" /> GPS Off
+      </div>
+    );
+  };
+
+  // ========== COMPLETED SCREEN ==========
   if (showCompleted) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
@@ -118,29 +274,27 @@ const ActivityLive = () => {
           <span className="text-4xl">✓</span>
         </div>
         <h1 className="text-2xl font-bold mb-2">Activity Completed</h1>
-        <p className="text-muted-foreground mb-8">
-          You jogged for a short period of time and burned very little calorie.
-        </p>
+        <p className="text-muted-foreground mb-8">{getCompletionMessage()}</p>
 
         <Card className="w-full p-6 mb-6">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-primary">{minutes}m</div>
+              <div className="text-2xl font-bold text-primary">{Math.floor(elapsed / 60)}m</div>
               <div className="text-sm text-muted-foreground">Duration</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-primary">{calories}c</div>
-              <div className="text-sm text-muted-foreground">Calorie Burn</div>
+              <div className="text-2xl font-bold text-primary">{calories}</div>
+              <div className="text-sm text-muted-foreground">Calories</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-primary">{minutes}m</div>
-              <div className="text-sm text-muted-foreground">Duration</div>
+              <div className="text-2xl font-bold text-primary">{distanceKm.toFixed(1)}</div>
+              <div className="text-sm text-muted-foreground">km</div>
             </div>
           </div>
         </Card>
 
         <div className="w-full space-y-3">
-          <Button className="w-full" onClick={() => navigate(`/activity-summary?elapsed=${elapsed}&distance=${distance}&calories=${calories}`)}>
+          <Button className="w-full" onClick={() => navigate(`/activity-summary?elapsed=${elapsed}&distance=${distanceKm.toFixed(2)}&calories=${calories}`)}>
             See Full Summary
           </Button>
           <Button variant="outline" className="w-full" onClick={() => navigate("/activity")}>
@@ -151,6 +305,7 @@ const ActivityLive = () => {
     );
   }
 
+  // ========== LIVE SCREEN ==========
   return (
     <div className={cn(
       "min-h-screen flex flex-col transition-colors duration-500",
@@ -161,10 +316,7 @@ const ActivityLive = () => {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm">Map</Button>
-          <Button variant="ghost" size="sm">Stopwatch</Button>
-        </div>
+        <span className="text-sm font-medium capitalize text-foreground">{activityType}</span>
         <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
           <Settings className="w-5 h-5" />
         </Button>
@@ -175,26 +327,23 @@ const ActivityLive = () => {
         <div className="absolute inset-0 flex items-center justify-center">
           <MapPin className="w-12 h-12 text-primary" />
         </div>
-        {/* Route indicator */}
-        <div className="absolute top-4 left-4 flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm">
-          <MapPin className="w-4 h-4" />
-          <span>GPS Active</span>
-        </div>
+        <div className="absolute top-4 left-4"><GpsIndicator /></div>
+        {autoPausedRef.current && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-muted text-muted-foreground px-4 py-1.5 rounded-full text-sm font-medium">
+            Auto-paused (no movement)
+          </div>
+        )}
       </div>
 
       {/* Stats Panel */}
       <div className="p-4">
-        {/* Main Timer */}
         <div className="text-center mb-6">
-          <div className="text-6xl font-mono font-bold mb-1">
-            {formatTime(elapsed)}
-          </div>
+          <div className="text-6xl font-mono font-bold mb-1">{formatTime(elapsed)}</div>
           <p className="text-sm text-muted-foreground">
-            {isPaused ? "Activity Paused" : "Total Duration"}
+            {isPaused ? (autoPausedRef.current ? "Auto-Paused" : "Paused") : "Total Duration"}
           </p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <Card className="p-3 text-center">
             <Flame className="w-5 h-5 text-primary mx-auto mb-1" />
@@ -203,7 +352,7 @@ const ActivityLive = () => {
           </Card>
           <Card className="p-3 text-center">
             <Footprints className="w-5 h-5 text-primary mx-auto mb-1" />
-            <div className="font-semibold">{distance}</div>
+            <div className="font-semibold">{distanceKm.toFixed(2)}</div>
             <div className="text-xs text-muted-foreground">km</div>
           </Card>
           <Card className="p-3 text-center">
@@ -215,12 +364,7 @@ const ActivityLive = () => {
 
         {/* Controls */}
         <div className="flex items-center justify-center gap-6">
-          <Button
-            variant="outline"
-            size="icon"
-            className="w-16 h-16 rounded-full"
-            onClick={() => setIsPaused(!isPaused)}
-          >
+          <Button variant="outline" size="icon" className="w-16 h-16 rounded-full" onClick={togglePause}>
             {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
           </Button>
 
@@ -237,24 +381,12 @@ const ActivityLive = () => {
               onTouchEnd={handleHoldEnd}
             >
               <span className="text-destructive-foreground text-sm font-medium">
-                Hold to<br/>Finish
+                Hold to<br />Finish
               </span>
             </button>
             {isHolding && (
-              <svg 
-                className="absolute inset-0 w-20 h-20 -rotate-90"
-                viewBox="0 0 100 100"
-              >
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="4"
-                  strokeDasharray={`${holdProgress * 2.83} 283`}
-                  className="transition-all"
-                />
+              <svg className="absolute inset-0 w-20 h-20 -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeWidth="4" strokeDasharray={`${holdProgress * 2.83} 283`} className="transition-all" />
               </svg>
             )}
           </div>
@@ -264,30 +396,24 @@ const ActivityLive = () => {
       {/* Settings Sheet */}
       <Sheet open={showSettings} onOpenChange={setShowSettings}>
         <SheetContent side="bottom">
-          <SheetHeader>
-            <SheetTitle>Activity Controls</SheetTitle>
-          </SheetHeader>
+          <SheetHeader><SheetTitle>Activity Controls</SheetTitle></SheetHeader>
           <div className="py-4 space-y-4">
-            {[
+            {([
               { key: "gpsTracking", label: "GPS Tracking" },
               { key: "showMetrics", label: "Show Metrics" },
               { key: "autoPause", label: "Auto Pause" },
-              { key: "autoVibrate", label: "Auto Vibrate" },
-            ].map(({ key, label }) => (
+              { key: "autoVibrate", label: "Vibration Feedback" },
+            ] as const).map(({ key, label }) => (
               <div key={key} className="flex items-center justify-between">
                 <span>{label}</span>
                 <Switch
-                  checked={settings[key as keyof typeof settings]}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => ({ ...prev, [key]: checked }))
-                  }
+                  checked={settings[key]}
+                  onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, [key]: checked }))}
                 />
               </div>
             ))}
           </div>
-          <Button className="w-full" onClick={() => setShowSettings(false)}>
-            Save Settings
-          </Button>
+          <Button className="w-full" onClick={() => setShowSettings(false)}>Save Settings</Button>
         </SheetContent>
       </Sheet>
     </div>
