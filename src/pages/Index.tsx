@@ -147,8 +147,8 @@ const Index = () => {
         {/* Bottom Navigation */}
         <BottomNav onCenterClick={() => setQuickActionsOpen(true)} />
         
-        {/* Full Navigation Menu */}
-        <FullNavMenu 
+        {/* Choose a Sport Drawer */}
+        <ChooseSportSheet 
           open={quickActionsOpen} 
           onOpenChange={setQuickActionsOpen} 
         />
