@@ -1,9 +1,8 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Bot, MessageCircle, User } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { useProfile } from "@/hooks/useProfile";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import hiitLogo from "@/assets/hiit-logo.webp";
 
 interface BottomNavProps {
   onCenterClick: () => void;
