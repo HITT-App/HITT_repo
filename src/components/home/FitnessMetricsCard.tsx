@@ -137,7 +137,6 @@ export function FitnessMetricsCard({ hasData = false }: FitnessMetricsCardProps)
           <p className="text-sm font-medium text-foreground">AI Recommendations</p>
           <p className="text-xs text-muted-foreground">3 personalized suggestions</p>
         </div>
-        <ChevronRight className="w-4 h-4 text-primary" />
       </button>
     </div>
   );
