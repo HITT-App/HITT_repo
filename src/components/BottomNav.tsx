@@ -1,9 +1,8 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Bot, MessageCircle, User } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { useProfile } from "@/hooks/useProfile";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import hiitLogo from "@/assets/hiit-logo.webp";
 
 interface BottomNavProps {
   onCenterClick: () => void;
@@ -12,7 +11,6 @@ interface BottomNavProps {
 export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useProfile();
   const { flags } = useFeatureFlags();
 
   const navItems = [
@@ -51,18 +49,9 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
                     className="relative -mt-5 transition-transform duration-200 active:scale-95 touch-manipulation"
                     aria-label="Open quick actions menu"
                   >
-                    {profile?.avatar_url ? (
-                      <Avatar className="w-14 h-14 border-2 border-primary shadow-card">
-                        <AvatarImage src={profile.avatar_url} alt="Profile" />
-                        <AvatarFallback className="bg-primary text-primary-foreground font-medium">
-                          {profile.display_name?.slice(0, 2).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-card">
-                        <span className="text-primary-foreground font-semibold text-lg">H</span>
-                      </div>
-                    )}
+                    <div className="w-14 h-14 rounded-full border-2 border-primary shadow-card overflow-hidden bg-white">
+                      <img src={hiitLogo} alt="HIIT" className="w-full h-full object-cover" />
+                    </div>
                   </button>
                 );
               }
