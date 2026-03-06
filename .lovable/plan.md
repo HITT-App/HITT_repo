@@ -1,80 +1,64 @@
 
-# Fix Admin Panel: User Visibility and Data Access
 
-## Problem
-The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
+## Plan: Make Activity Live Tracking Fully Functional
 
-There are 6 users in the database, but the admin sees 1.
+The current `ActivityLive` page uses fake calculated stats (distance from elapsed time, etc.) and has no real GPS. Here's what we'll build:
 
-## Root Cause
-The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
-- `profiles` -- affects user list and total user count
-- `activity_logs` -- affects "Active (7d)" stat
-- `meal_logs` -- affects "Meals Logged" stat
-- `workout_progress` -- affects "Completed" stat
-- `user_badges` -- affects "Badges Earned" stat
-- `coaching_sessions` -- affects "Sessions" stat
+### 1. Real GPS Tracking via Geolocation API
+- Use `navigator.geolocation.watchPosition()` to get real-time lat/lng coordinates
+- Store position history as an array of `{lat, lng, timestamp}`
+- Calculate **real distance** using the Haversine formula between consecutive GPS points
+- Calculate **real pace** from actual distance and elapsed time
+- Show GPS status (searching, active, unavailable) instead of always showing "GPS Active"
+- Handle permission denied / unavailable gracefully with toast messages
 
-## Solution
+### 2. Real Calorie Estimation
+- Use MET (Metabolic Equivalent) values per activity type instead of flat `elapsed * 0.15`
+- e.g. Running ~9.8 MET, Walking ~3.5 MET, Cycling ~7.5 MET, Swimming ~8.0 MET
+- Formula: `calories = MET * weight_kg * duration_hours` (default 70kg if unknown)
 
-### 1. Database Migration: Add Admin SELECT Policies
-Add new RLS policies to allow admins to read all rows in the affected tables:
+### 3. Fix the "Infinity" Pace Bug
+- Currently divides by distance which is 0 initially, producing `Infinity`
+- Guard against zero distance: show `"--"` when distance is 0
 
-```sql
--- Admins can view all profiles
-CREATE POLICY "Admins can view all profiles"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### 4. Fix Completed Screen
+- Third stat column duplicates "Duration" -- replace with "Distance"
+- Dynamic completion message based on actual performance instead of hardcoded "burned very little calorie"
 
--- Admins can view all activity logs
-CREATE POLICY "Admins can view all activity logs"
-  ON public.activity_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### 5. Auto-Pause When Stationary (optional setting)
+- If GPS shows no movement for 10+ seconds, auto-pause the timer
+- Resume when movement resumes
+- Only active when the "Auto Pause" setting is enabled
 
--- Admins can view all meal logs
-CREATE POLICY "Admins can view all meal logs"
-  ON public.meal_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### 6. Vibration Feedback
+- Vibrate on pause/resume and activity completion when "Auto Vibrate" is enabled
+- Uses `navigator.vibrate()` API
 
--- Admins can view all workout progress
-CREATE POLICY "Admins can view all workout progress"
-  ON public.workout_progress FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### 7. Wake Lock (keep screen on)
+- Use `navigator.wakeLock.request('screen')` to prevent screen from turning off during tracking
+- Release on finish/navigate away
 
--- Admins can view all user badges
-CREATE POLICY "Admins can view all user badges"
-  ON public.user_badges FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all coaching sessions
-CREATE POLICY "Admins can view all coaching sessions"
-  ON public.coaching_sessions FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-```
-
-### 2. Improve AdminUsers Page
-Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
-
-- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
-- Add pagination (currently limited to 100 users)
-- Add role filter tabs (All / Admins / Moderators)
-- Show user join date
-- Add moderator role management (currently only admin toggle)
-
-### 3. Files Changed
+### Files Changed
 
 | File | Change |
 |------|--------|
-| New migration SQL | Add 6 admin SELECT policies |
-| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
+| `src/pages/ActivityLive.tsx` | Major rewrite: real GPS, Haversine distance, MET calories, wake lock, auto-pause, vibration, fix pace/completed screen |
 
-### 4. No Changes Needed
-- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
-- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
-- Admin dashboard, sidebar, routing -- all working correctly
+No database or backend changes needed -- the existing `logActivity` mutation already accepts `distance_km`, `calories_burned`, etc.
+
+### Technical Details
+
+**Haversine formula** (distance between two GPS coordinates):
+```
+a = sin²(Δlat/2) + cos(lat1) * cos(lat2) * sin²(Δlng/2)
+distance = 2 * R * atan2(√a, √(1−a))
+```
+
+**MET values map**:
+- jogging/run: 9.8, walking: 3.5, cycling: 7.5, swimming: 8.0, yoga: 2.5, hiit/workout: 8.0, default: 5.0
+
+**GPS position tracking**:
+- `watchPosition` with `enableHighAccuracy: true`
+- Filter out inaccurate readings (accuracy > 30m)
+- Only add to path if moved > 3m from last point (noise filter)
+
