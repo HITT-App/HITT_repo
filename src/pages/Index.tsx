@@ -142,8 +142,7 @@ const Index = () => {
         {/* Resources */}
         {flags.resources_enabled && <ResourcesSection />}
 
-        {/* Quick Start FAB */}
-        <QuickStartFAB />
+        {/* Quick Start FAB removed */}
         
         {/* Bottom Navigation */}
         <BottomNav onCenterClick={() => setQuickActionsOpen(true)} />
