@@ -31,11 +31,12 @@ export function HomeHeader({ userName = "Makise", score = 61, avatarUrl }: HomeH
       {/* Top Row: Logo + Greeting + Notifications */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img 
-            src={hiitLogo} 
-            alt="HIIT Logo" 
-            className="w-10 h-10 rounded-xl object-cover"
-          />
+          <Avatar className="w-10 h-10 rounded-xl">
+            <AvatarImage src={avatarUrl || undefined} alt={userName} className="rounded-xl" />
+            <AvatarFallback className="rounded-xl">
+              <img src={hiitLogo} alt="HIIT Logo" className="w-full h-full object-cover" />
+            </AvatarFallback>
+          </Avatar>
           <div>
             <p className="text-base font-semibold text-foreground">
               Hello, {userName}!
