@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BottomNav } from "@/components/BottomNav";
 import {
+  ChevronUp,
   ChevronDown,
   Search,
   ScanBarcode,
@@ -25,7 +28,7 @@ import {
   Apple,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, startOfDay, endOfDay, getDay } from "date-fns";
+import { format, startOfDay, endOfDay, getDay, isToday } from "date-fns";
 
 type MealLog = {
   id: string;
