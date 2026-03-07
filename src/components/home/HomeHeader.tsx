@@ -3,14 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { HIITScoreBadge } from "./HIITScoreBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import hiitLogo from "@/assets/hiit-logo.jpg";
 
 interface HomeHeaderProps {
   userName?: string;
   score?: number;
+  avatarUrl?: string | null;
 }
 
-export function HomeHeader({ userName = "Makise", score = 61 }: HomeHeaderProps) {
+export function HomeHeader({ userName = "Makise", score = 61, avatarUrl }: HomeHeaderProps) {
   const navigate = useNavigate();
 
   const getTimeGreeting = (): string => {
@@ -29,11 +31,12 @@ export function HomeHeader({ userName = "Makise", score = 61 }: HomeHeaderProps)
       {/* Top Row: Logo + Greeting + Notifications */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img 
-            src={hiitLogo} 
-            alt="HIIT Logo" 
-            className="w-10 h-10 rounded-xl object-cover"
-          />
+          <Avatar className="w-10 h-10 rounded-xl">
+            <AvatarImage src={avatarUrl || undefined} alt={userName} className="rounded-xl" />
+            <AvatarFallback className="rounded-xl">
+              <img src={hiitLogo} alt="HIIT Logo" className="w-full h-full object-cover" />
+            </AvatarFallback>
+          </Avatar>
           <div>
             <p className="text-base font-semibold text-foreground">
               Hello, {userName}!
