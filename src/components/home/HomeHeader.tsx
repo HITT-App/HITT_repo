@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { HIITScoreBadge } from "./HIITScoreBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import hiitLogo from "@/assets/hiit-logo.jpg";
 
 interface HomeHeaderProps {
   userName?: string;
   score?: number;
+  avatarUrl?: string | null;
 }
 
 export function HomeHeader({ userName = "Makise", score = 61 }: HomeHeaderProps) {
