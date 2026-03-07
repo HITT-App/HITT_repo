@@ -9,35 +9,12 @@ interface PostLoginWelcomeProps {
 }
 
 export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps) => {
-  const [translateY, setTranslateY] = useState(0);
   const [isDismissing, setIsDismissing] = useState(false);
-  const touchStartY = useRef(0);
-  const isDragging = useRef(false);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-    isDragging.current = true;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    const diff = touchStartY.current - e.touches[0].clientY;
-    if (diff > 0) {
-      setTranslateY(-diff);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    isDragging.current = false;
-    if (translateY < -40) {
-      dismiss();
-    } else {
-      setTranslateY(0);
-    }
-  };
 
   const dismiss = () => {
+    if (isDismissing) return;
     setIsDismissing(true);
+    sessionStorage.setItem("hiit_welcomed", "true");
     setTimeout(onDismiss, 400);
   };
 
@@ -48,16 +25,19 @@ export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps)
     return () => clearTimeout(timer);
   }, []);
 
+  // Auto-dismiss after 5 seconds
+  useEffect(() => {
+    const timer = setTimeout(dismiss, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div
       className={`fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center transition-transform duration-400 ease-out ${
         isDismissing ? "-translate-y-full" : ""
       }`}
-      style={{ transform: isDismissing ? undefined : `translateY(${translateY}px)` }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onClick={() => dismiss()}
+      onClick={dismiss}
+      onTouchEnd={dismiss}
     >
       {/* Dark overlay with video-like background */}
       <img src={welcomeBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -74,7 +54,7 @@ export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps)
       {/* Swipe up indicator */}
       <div className={`absolute bottom-16 left-0 right-0 flex flex-col items-center gap-2 transition-opacity duration-500 ${showHint ? "opacity-100" : "opacity-0"}`}>
         <ChevronUp className="w-6 h-6 text-white/60 animate-bounce" />
-        <p className="text-white/50 text-sm">Swipe up to continue</p>
+        <p className="text-white/50 text-sm">Tap to continue</p>
         {/* Home indicator bar */}
         <div className="w-32 h-1 bg-white/30 rounded-full mt-4" />
       </div>
