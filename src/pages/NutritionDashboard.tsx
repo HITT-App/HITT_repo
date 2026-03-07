@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BottomNav } from "@/components/BottomNav";
 import {
+  ChevronUp,
   ChevronDown,
   Search,
   ScanBarcode,
@@ -25,7 +28,7 @@ import {
   Apple,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, startOfDay, endOfDay, getDay } from "date-fns";
+import { format, startOfDay, endOfDay, getDay, isToday } from "date-fns";
 
 type MealLog = {
   id: string;
@@ -72,6 +75,8 @@ export default function NutritionDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [mealLogs, setMealLogs] = useState<MealLog[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [goals, setGoals] = useState<NutritionGoals>({
     daily_calories: 3320,
     daily_protein_grams: 166,
@@ -79,13 +84,12 @@ export default function NutritionDashboard() {
     daily_carbs_grams: 415,
   });
 
-  const today = new Date();
-  const currentDayIndex = getDay(today);
+  const currentDayIndex = getDay(selectedDate);
 
   useEffect(() => {
     if (!user) return;
     fetchData();
-  }, [user]);
+  }, [user, selectedDate]);
 
   const fetchData = async () => {
     if (!user) return;
@@ -102,8 +106,8 @@ export default function NutritionDashboard() {
       .from("meal_logs")
       .select("*, meals(name, image_url)")
       .eq("user_id", user.id)
-      .gte("logged_at", startOfDay(today).toISOString())
-      .lte("logged_at", endOfDay(today).toISOString())
+      .gte("logged_at", startOfDay(selectedDate).toISOString())
+      .lte("logged_at", endOfDay(selectedDate).toISOString())
       .order("logged_at", { ascending: false });
 
     if (logsData) setMealLogs(logsData as MealLog[]);
@@ -139,10 +143,35 @@ export default function NutritionDashboard() {
         <div className="px-5 pt-6 pb-8 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <button className="flex items-center gap-1.5">
-              <h1 className="text-2xl font-bold text-foreground">Today</h1>
-              <ChevronDown className="w-5 h-5 text-muted-foreground" />
-            </button>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-1.5">
+                  <h1 className="text-2xl font-bold text-foreground">
+                    {isToday(selectedDate) ? "Today" : format(selectedDate, "MMM d")}
+                  </h1>
+                  {calendarOpen ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setCalendarOpen(false);
+                    }
+                  }}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
             <div className="flex items-center gap-3">
               <Button
                 size="sm"
