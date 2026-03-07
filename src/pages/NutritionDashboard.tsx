@@ -143,10 +143,35 @@ export default function NutritionDashboard() {
         <div className="px-5 pt-6 pb-8 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <button className="flex items-center gap-1.5">
-              <h1 className="text-2xl font-bold text-foreground">Today</h1>
-              <ChevronDown className="w-5 h-5 text-muted-foreground" />
-            </button>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-1.5">
+                  <h1 className="text-2xl font-bold text-foreground">
+                    {isToday(selectedDate) ? "Today" : format(selectedDate, "MMM d")}
+                  </h1>
+                  {calendarOpen ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setCalendarOpen(false);
+                    }
+                  }}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
             <div className="flex items-center gap-3">
               <Button
                 size="sm"
