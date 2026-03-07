@@ -111,7 +111,7 @@ const Index = () => {
         <HomeHero userName={displayName} />
 
         {/* Header with HIIT Score + Search */}
-        <HomeHeader userName={displayName} score={61} />
+        <HomeHeader userName={displayName} score={61} avatarUrl={profile?.avatar_url} />
 
         {/* Stats Grid */}
         <StatsGrid />
