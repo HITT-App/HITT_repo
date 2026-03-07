@@ -75,6 +75,8 @@ export default function NutritionDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [mealLogs, setMealLogs] = useState<MealLog[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [goals, setGoals] = useState<NutritionGoals>({
     daily_calories: 3320,
     daily_protein_grams: 166,
@@ -82,13 +84,12 @@ export default function NutritionDashboard() {
     daily_carbs_grams: 415,
   });
 
-  const today = new Date();
-  const currentDayIndex = getDay(today);
+  const currentDayIndex = getDay(selectedDate);
 
   useEffect(() => {
     if (!user) return;
     fetchData();
-  }, [user]);
+  }, [user, selectedDate]);
 
   const fetchData = async () => {
     if (!user) return;
