@@ -1,16 +1,31 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BottomNav } from '@/components/BottomNav';
-import { ArrowLeft, Bell, Plus, ChevronRight, Flame, Droplets, Wheat, Apple, Calendar, TrendingUp, Target } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { BottomNav } from "@/components/BottomNav";
+import {
+  ChevronDown,
+  Search,
+  ScanBarcode,
+  Mic,
+  Camera,
+  Droplets,
+  Scale,
+  Flame,
+  MoreHorizontal,
+  Zap,
+  ArrowLeftRight,
+  Coffee,
+  UtensilsCrossed,
+  CookingPot,
+  Apple,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format, startOfDay, endOfDay, getDay } from "date-fns";
 
 type MealLog = {
   id: string;
@@ -31,18 +46,41 @@ type NutritionGoals = {
   daily_carbs_grams: number;
 };
 
+const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
+const quickActions = [
+  { label: "Log Food", icon: Search, color: "text-blue-400" },
+  { label: "Barcode Scan", icon: ScanBarcode, color: "text-pink-400" },
+  { label: "Voice Log", icon: Mic, color: "text-purple-400" },
+  { label: "Meal Scan", icon: Camera, color: "text-teal-400" },
+];
+
+const quickLinks = [
+  { label: "Water", icon: Droplets, color: "text-blue-400", route: "/hydration" },
+  { label: "Weight", icon: Scale, color: "text-green-400", route: "/weight" },
+  { label: "Exercise", icon: Flame, color: "text-orange-400", route: "/activity" },
+];
+
+const diaryMeals = [
+  { label: "Breakfast", icon: Coffee, route: "/log-meal?category=breakfast" },
+  { label: "Lunch", icon: UtensilsCrossed, route: "/log-meal?category=lunch" },
+  { label: "Dinner", icon: CookingPot, route: "/log-meal?category=dinner" },
+  { label: "Snack", icon: Apple, route: "/log-meal?category=snack" },
+];
+
 export default function NutritionDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
   const [mealLogs, setMealLogs] = useState<MealLog[]>([]);
   const [goals, setGoals] = useState<NutritionGoals>({
-    daily_calories: 2000,
-    daily_protein_grams: 50,
-    daily_fat_grams: 65,
-    daily_carbs_grams: 250,
+    daily_calories: 3320,
+    daily_protein_grams: 166,
+    daily_fat_grams: 111,
+    daily_carbs_grams: 415,
   });
-  const [nutritionScore, setNutritionScore] = useState(0);
+
+  const today = new Date();
+  const currentDayIndex = getDay(today);
 
   useEffect(() => {
     if (!user) return;
@@ -52,321 +90,289 @@ export default function NutritionDashboard() {
   const fetchData = async () => {
     if (!user) return;
 
-    // Fetch goals
     const { data: goalsData } = await supabase
-      .from('nutrition_goals')
-      .select('*')
-      .eq('user_id', user.id)
+      .from("nutrition_goals")
+      .select("*")
+      .eq("user_id", user.id)
       .single();
 
-    if (goalsData) {
-      setGoals(goalsData);
-    }
+    if (goalsData) setGoals(goalsData);
 
-    // Fetch today's meal logs
-    const today = new Date();
     const { data: logsData } = await supabase
-      .from('meal_logs')
-      .select('*, meals(name, image_url)')
-      .eq('user_id', user.id)
-      .gte('logged_at', startOfDay(today).toISOString())
-      .lte('logged_at', endOfDay(today).toISOString())
-      .order('logged_at', { ascending: false });
+      .from("meal_logs")
+      .select("*, meals(name, image_url)")
+      .eq("user_id", user.id)
+      .gte("logged_at", startOfDay(today).toISOString())
+      .lte("logged_at", endOfDay(today).toISOString())
+      .order("logged_at", { ascending: false });
 
-    if (logsData) {
-      setMealLogs(logsData as MealLog[]);
-      
-      // Calculate nutrition score based on how close to goals
-      const totals = logsData.reduce((acc, log) => ({
-        calories: acc.calories + (log.calories || 0),
-        protein: acc.protein + (log.protein_grams || 0),
-        fat: acc.fat + (log.fat_grams || 0),
-        carbs: acc.carbs + (log.carbs_grams || 0),
-      }), { calories: 0, protein: 0, fat: 0, carbs: 0 });
-
-      const calorieScore = Math.min(100, (totals.calories / goals.daily_calories) * 100);
-      const proteinScore = Math.min(100, (totals.protein / goals.daily_protein_grams) * 100);
-      setNutritionScore(Math.round((calorieScore + proteinScore) / 2));
-    }
+    if (logsData) setMealLogs(logsData as MealLog[]);
   };
 
-  const todayTotals = mealLogs.reduce((acc, log) => ({
-    calories: acc.calories + (log.calories || 0),
-    protein: acc.protein + (log.protein_grams || 0),
-    fat: acc.fat + (log.fat_grams || 0),
-    carbs: acc.carbs + (log.carbs_grams || 0),
-  }), { calories: 0, protein: 0, fat: 0, carbs: 0 });
+  const todayTotals = mealLogs.reduce(
+    (acc, log) => ({
+      calories: acc.calories + (log.calories || 0),
+      protein: acc.protein + (log.protein_grams || 0),
+      fat: acc.fat + (log.fat_grams || 0),
+      carbs: acc.carbs + (log.carbs_grams || 0),
+    }),
+    { calories: 0, protein: 0, fat: 0, carbs: 0 }
+  );
 
-  const caloriePercentage = Math.min(100, (todayTotals.calories / goals.daily_calories) * 100);
+  const caloriesLeft = Math.max(0, goals.daily_calories - todayTotals.calories);
+  const calPct = Math.min(100, (todayTotals.calories / goals.daily_calories) * 100);
+  const carbsPct = Math.min(100, (todayTotals.carbs / goals.daily_carbs_grams) * 100);
+  const fatPct = Math.min(100, (todayTotals.fat / goals.daily_fat_grams) * 100);
+  const proteinPct = Math.min(100, (todayTotals.protein / goals.daily_protein_grams) * 100);
+
+  // Group logs by category for diary
+  const logsByCategory = mealLogs.reduce<Record<string, MealLog[]>>((acc, log) => {
+    const cat = log.category.toLowerCase();
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(log);
+    return acc;
+  }, {});
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">Nutrition</h1>
-        </div>
-        <Button variant="ghost" size="icon">
-          <Bell className="w-5 h-5" />
-        </Button>
-      </header>
-
-      <ScrollArea className="h-[calc(100vh-140px)]">
-        <div className="p-4 space-y-6">
-          {/* Nutrition Score Card */}
-          <Card className="border-border/50">
-            <CardContent className="p-6 text-center">
-              <div className="relative w-32 h-32 mx-auto mb-4">
-                <svg className="w-full h-full -rotate-90">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="12"
-                    className="text-secondary"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="12"
-                    strokeDasharray={`${nutritionScore * 3.52} 352`}
-                    strokeLinecap="round"
-                    className="text-primary"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold">{nutritionScore}</span>
-                  <span className="text-xs text-muted-foreground">Score</span>
-                </div>
-              </div>
-              <h2 className="text-lg font-semibold mb-1">Nutrition Score</h2>
-              <p className="text-sm text-muted-foreground">
-                {nutritionScore === 0 
-                  ? "Let's start logging your first meal!" 
-                  : nutritionScore < 50 
-                    ? "You need more protein intake this week." 
-                    : "Great progress! Keep it up!"
-                }
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button 
-              className="h-12 rounded-2xl gap-2"
-              onClick={() => navigate('/log-meal')}
-            >
-              <Plus className="w-4 h-4" />
-              Log New Meal
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-12 rounded-2xl gap-2"
-              onClick={() => navigate('/browse-meals')}
-            >
-              Browse Meals
-            </Button>
-          </div>
-
-          {/* Browse Meals Card */}
-          <Card className="border-border/50 overflow-hidden">
-            <CardContent className="p-0">
-              <div className="p-4 flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold">Browse Meals</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Explore a myriad of meals exclusively curated from our team.
-                  </p>
-                </div>
-              </div>
-              <Button 
-                variant="link" 
-                className="px-4 pb-4 text-primary"
-                onClick={() => navigate('/browse-meals')}
+      <ScrollArea className="h-[calc(100vh-80px)]">
+        <div className="px-5 pt-6 pb-8 space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <button className="flex items-center gap-1.5">
+              <h1 className="text-2xl font-bold text-foreground">Today</h1>
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            </button>
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                className="rounded-full bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 border-0 font-semibold text-xs px-4 h-8"
+                onClick={() => navigate("/subscription")}
               >
-                Browse Meals
+                Go Premium
               </Button>
+              <div className="flex items-center gap-1 text-foreground">
+                <span className="font-semibold text-sm">0</span>
+                <Zap className="w-4 h-4 text-primary" />
+              </div>
+            </div>
+          </div>
+
+          {/* Week Day Selector */}
+          <div className="flex justify-between px-1">
+            {DAYS.map((day, i) => (
+              <div key={i} className="flex flex-col items-center gap-1.5">
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    i === currentDayIndex ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {day}
+                </span>
+                <div
+                  className={cn(
+                    "w-8 h-8 rounded-full border-2 flex items-center justify-center",
+                    i === currentDayIndex
+                      ? "border-primary border-dashed"
+                      : "border-muted-foreground/30"
+                  )}
+                >
+                  {i === currentDayIndex && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Calories Card */}
+          <Card className="border-0 bg-card">
+            <CardContent className="p-5 space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Calories</p>
+                <div className="flex items-baseline justify-between">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-bold text-foreground">
+                      {todayTotals.calories.toLocaleString()}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      cal
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      / {goals.daily_calories.toLocaleString()}
+                    </span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {caloriesLeft.toLocaleString()} left
+                  </span>
+                </div>
+                <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-500"
+                    style={{ width: `${calPct}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Macros Sub-card */}
+              <div className="bg-muted/50 rounded-xl p-4">
+                <div className="flex items-start justify-between">
+                  <div className="grid grid-cols-3 gap-6 flex-1">
+                    {/* Carbs */}
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Carbs</p>
+                      <p className="text-foreground font-bold text-base">
+                        {todayTotals.carbs} g{" "}
+                        <span className="font-normal text-xs text-muted-foreground">
+                          / {goals.daily_carbs_grams}
+                        </span>
+                      </p>
+                      <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${carbsPct}%` }}
+                        />
+                      </div>
+                    </div>
+                    {/* Fat */}
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Fat</p>
+                      <p className="text-foreground font-bold text-base">
+                        {todayTotals.fat} g{" "}
+                        <span className="font-normal text-xs text-muted-foreground">
+                          / {goals.daily_fat_grams}
+                        </span>
+                      </p>
+                      <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${fatPct}%` }}
+                        />
+                      </div>
+                    </div>
+                    {/* Protein */}
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Protein</p>
+                      <p className="text-foreground font-bold text-base">
+                        {todayTotals.protein} g{" "}
+                        <span className="font-normal text-xs text-muted-foreground">
+                          / {goals.daily_protein_grams}
+                        </span>
+                      </p>
+                      <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${proteinPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <button className="ml-3 mt-1 text-muted-foreground">
+                    <ArrowLeftRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Nutrition Insight */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Nutrition Insight</h3>
-              <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-            </div>
-            
-            {mealLogs.length === 0 ? (
-              <Card className="border-border/50">
-                <CardContent className="p-6 text-center">
-                  <Apple className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Not enough data to show nutrition insight
-                  </p>
-                  <Button 
-                    variant="link" 
-                    className="text-primary mt-2"
-                    onClick={() => navigate('/log-meal')}
-                  >
-                    Log Nutrition +
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4 mb-4">
-                    {/* Calorie Ring */}
-                    <div className="relative w-24 h-24 flex-shrink-0">
-                      <svg className="w-full h-full -rotate-90">
-                        <circle cx="48" cy="48" r="40" fill="none" stroke="currentColor" strokeWidth="8" className="text-secondary" />
-                        <circle cx="48" cy="48" r="40" fill="none" stroke="currentColor" strokeWidth="8" strokeDasharray={`${caloriePercentage * 2.51} 251`} strokeLinecap="round" className="text-primary" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-lg font-bold">{todayTotals.calories.toLocaleString()}</span>
-                        <span className="text-xs text-muted-foreground">kcal total</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex-1 text-sm">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-muted-foreground">{goals.daily_calories - todayTotals.calories}</span>
-                        <span className="text-muted-foreground">{goals.daily_calories.toLocaleString()}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground flex justify-between">
-                        <span>remaining</span>
-                        <span>target</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Macros */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-1">
-                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, (todayTotals.protein / goals.daily_protein_grams) * 100)}%` }} />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Protein</p>
-                      <p className="text-sm font-medium">{todayTotals.protein}/{goals.daily_protein_grams}g</p>
-                    </div>
-                    <div>
-                      <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-1">
-                        <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${Math.min(100, (todayTotals.fat / goals.daily_fat_grams) * 100)}%` }} />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Fat</p>
-                      <p className="text-sm font-medium">{todayTotals.fat}/{goals.daily_fat_grams}g</p>
-                    </div>
-                    <div>
-                      <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-1">
-                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min(100, (todayTotals.carbs / goals.daily_carbs_grams) * 100)}%` }} />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Carbs</p>
-                      <p className="text-sm font-medium">{todayTotals.carbs}/{goals.daily_carbs_grams}g</p>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-muted-foreground mt-4 text-center">
-                    You're on track for your calorie goal today! Keep it up, okay!
-                  </p>
-                  <Button variant="link" className="w-full text-primary mt-2">
-                    See Nutrition Dashboard →
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+          {/* Quick Actions 2x2 Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {quickActions.map((action) => (
+              <button
+                key={action.label}
+                onClick={() => {
+                  if (action.label === "Log Food") navigate("/log-meal");
+                  else if (action.label === "Meal Scan") navigate("/meal-scanner");
+                  else if (action.label === "Barcode Scan") navigate("/meal-scanner");
+                }}
+                className="flex flex-col items-center justify-center gap-2.5 bg-card rounded-2xl p-6 active:scale-[0.97] transition-transform touch-manipulation"
+              >
+                <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center">
+                  <action.icon className={cn("w-5 h-5", action.color)} />
+                </div>
+                <span className="text-sm font-medium text-foreground">{action.label}</span>
+              </button>
+            ))}
           </div>
 
-          {/* Nutrition History */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Nutrition History</h3>
-              <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
+          {/* Quick Links */}
+          <Card className="border-0 bg-card">
+            <CardContent className="p-0 divide-y divide-border">
+              {quickLinks.map((link) => (
+                <button
+                  key={link.label}
+                  onClick={() => navigate(link.route)}
+                  className="w-full flex items-center gap-3 px-5 py-4 active:bg-muted/50 transition-colors touch-manipulation"
+                >
+                  <link.icon className={cn("w-5 h-5", link.color)} />
+                  <span className="text-sm font-medium text-foreground">{link.label}</span>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Diary Section */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-foreground">Diary</h2>
+              <button
+                className="text-sm text-primary font-medium"
+                onClick={() => navigate("/nutrition")}
+              >
+                View all
+              </button>
             </div>
-            
-            {mealLogs.length === 0 ? (
-              <Card className="border-border/50">
-                <CardContent className="p-6 text-center">
-                  <Calendar className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Log your first meal to see your history
-                  </p>
-                  <Button 
-                    variant="link" 
-                    className="text-primary mt-2"
-                    onClick={() => navigate('/log-meal')}
-                  >
-                    Log Nutrition +
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {mealLogs.slice(0, 3).map((log) => (
-                  <Card key={log.id} className="border-border/50">
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                        <Apple className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{log.custom_name || log.meals?.name || 'Meal'}</p>
-                        <div className="flex gap-2 text-xs text-muted-foreground">
-                          <span>{log.calories}kcal</span>
-                          <span>🥩 {log.protein_grams}g</span>
-                          <span>🧈 {log.fat_grams}g</span>
+            <div className="space-y-2.5">
+              {diaryMeals.map((meal) => {
+                const logs = logsByCategory[meal.label.toLowerCase()] || [];
+                const mealCalories = logs.reduce((s, l) => s + (l.calories || 0), 0);
+
+                return (
+                  <Card key={meal.label} className="border-0 bg-card">
+                    <CardContent className="p-0">
+                      <div className="flex items-center px-5 py-4">
+                        <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center mr-3">
+                          <meal.icon className="w-4.5 h-4.5 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-foreground">{meal.label}</p>
+                          {logs.length > 0 && (
+                            <p className="text-xs text-muted-foreground">{mealCalories} kcal</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {logs.length > 0 && (
+                            <button className="text-muted-foreground">
+                              <MoreHorizontal className="w-5 h-5" />
+                            </button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full text-primary border-primary/30 hover:bg-primary/10 h-8 px-4 text-xs font-semibold"
+                            onClick={() => navigate(meal.route)}
+                          >
+                            Log
+                          </Button>
                         </div>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(log.logged_at), 'MMM dd')}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      {/* Show logged items */}
+                      {logs.length > 0 && (
+                        <div className="px-5 pb-3 space-y-1">
+                          {logs.map((log) => (
+                            <div key={log.id} className="flex items-center justify-between py-1.5 text-xs text-muted-foreground">
+                              <span>{log.custom_name || log.meals?.name || "Meal"}</span>
+                              <span>{log.calories} kcal</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Nutrition Goal */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Nutrition Goal</h3>
-              <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
+                );
+              })}
             </div>
-            
-            <Card className="border-border/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative w-16 h-16">
-                    <svg className="w-full h-full -rotate-90">
-                      <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="6" className="text-secondary" />
-                      <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="6" strokeDasharray={`${caloriePercentage * 1.76} 176`} strokeLinecap="round" className="text-primary" />
-                    </svg>
-                    <Target className="absolute inset-0 m-auto w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">
-                      Let's set up your nutrition goal to get a better overall metabolism.
-                    </p>
-                    <Button 
-                      variant="link" 
-                      className="text-primary p-0 h-auto mt-1"
-                      onClick={() => navigate('/nutrition-onboarding')}
-                    >
-                      Set Up Goal →
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </ScrollArea>
