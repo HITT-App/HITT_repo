@@ -106,8 +106,8 @@ export default function NutritionDashboard() {
       .from("meal_logs")
       .select("*, meals(name, image_url)")
       .eq("user_id", user.id)
-      .gte("logged_at", startOfDay(today).toISOString())
-      .lte("logged_at", endOfDay(today).toISOString())
+      .gte("logged_at", startOfDay(selectedDate).toISOString())
+      .lte("logged_at", endOfDay(selectedDate).toISOString())
       .order("logged_at", { ascending: false });
 
     if (logsData) setMealLogs(logsData as MealLog[]);
