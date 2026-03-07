@@ -11,6 +11,7 @@ import {
   BarChart3,
   Settings,
   ArrowLeft,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
