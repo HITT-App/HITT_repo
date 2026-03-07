@@ -105,6 +105,7 @@ import AdminBadges from "./pages/admin/AdminBadges";
 import AdminCommunity from "./pages/admin/AdminCommunity";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 
 const queryClient = new QueryClient();
 
