@@ -1999,6 +1999,51 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          features: string[]
+          icon: string
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          limitations: string[]
+          name: string
+          period: string
+          price_amount: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          features?: string[]
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          limitations?: string[]
+          name: string
+          period?: string
+          price_amount?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          features?: string[]
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          limitations?: string[]
+          name?: string
+          period?: string
+          price_amount?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_badges: {
         Row: {
           badge_id: string

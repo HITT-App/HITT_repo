@@ -11,6 +11,7 @@ import {
   BarChart3,
   Settings,
   ArrowLeft,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { title: "Coaches", href: "/admin/coaches", icon: UserCheck },
   { title: "Badges", href: "/admin/badges", icon: Trophy },
   { title: "Community", href: "/admin/community", icon: MessageSquare },
+  { title: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { title: "Settings", href: "/admin/settings", icon: Settings },
 ];
