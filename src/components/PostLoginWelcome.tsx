@@ -29,7 +29,7 @@ export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps)
 
   const handleTouchEnd = () => {
     isDragging.current = false;
-    if (translateY < -80) {
+    if (translateY < -40) {
       dismiss();
     } else {
       setTranslateY(0);
