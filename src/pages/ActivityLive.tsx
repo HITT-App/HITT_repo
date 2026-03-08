@@ -90,6 +90,9 @@ const ActivityLive = () => {
   const holdStartRef = useRef(0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const autoPausedRef = useRef(false);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const hasInitialLockRef = useRef(false);
 
   // --- Derived stats ---
   const distanceKm = totalDistance / 1000;
