@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Settings, MapPin, Timer, Flame, Footprints, Signal, SignalZero, Loader2 } from "lucide-react";
+import { ArrowLeft, Pause, Play, Settings, Timer, Flame, Footprints, Signal, SignalZero, Loader2 } from "lucide-react";
+import LiveActivityMap from "@/components/activity/LiveActivityMap";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -73,6 +74,7 @@ const ActivityLive = () => {
   // GPS state
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("searching");
   const [totalDistance, setTotalDistance] = useState(0); // metres
+  const [positions, setPositions] = useState<GpsPoint[]>([]);
   const positionsRef = useRef<GpsPoint[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const lastMoveTimeRef = useRef(Date.now());
@@ -169,6 +171,7 @@ const ActivityLive = () => {
         }
 
         positions.push(point);
+        setPositions([...positions]);
         hasInitialLockRef.current = true;
         setGpsStatus("active");
       },
@@ -332,14 +335,12 @@ const ActivityLive = () => {
         </Button>
       </header>
 
-      {/* Map Placeholder */}
-      <div className="flex-1 relative bg-muted/30 mx-4 rounded-xl overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <MapPin className="w-12 h-12 text-primary" />
-        </div>
-        <div className="absolute top-4 left-4"><GpsIndicator /></div>
+      {/* Map */}
+      <div className="flex-1 relative mx-4 rounded-xl overflow-hidden">
+        <LiveActivityMap positions={positions} gpsStatus={gpsStatus} />
+        <div className="absolute top-4 left-4 z-[1001]"><GpsIndicator /></div>
         {autoPausedRef.current && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-muted text-muted-foreground px-4 py-1.5 rounded-full text-sm font-medium">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1001] bg-muted text-muted-foreground px-4 py-1.5 rounded-full text-sm font-medium">
             Auto-paused (no movement)
           </div>
         )}
