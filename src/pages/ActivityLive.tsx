@@ -171,6 +171,7 @@ const ActivityLive = () => {
         }
 
         positions.push(point);
+        setPositions([...positions]);
         hasInitialLockRef.current = true;
         setGpsStatus("active");
       },
