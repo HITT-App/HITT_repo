@@ -74,6 +74,7 @@ const ActivityLive = () => {
   // GPS state
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("searching");
   const [totalDistance, setTotalDistance] = useState(0); // metres
+  const [positions, setPositions] = useState<GpsPoint[]>([]);
   const positionsRef = useRef<GpsPoint[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const lastMoveTimeRef = useRef(Date.now());
