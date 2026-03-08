@@ -51,8 +51,9 @@ interface GpsPoint {
 type GpsStatus = "searching" | "active" | "unavailable" | "denied";
 
 const DEFAULT_WEIGHT_KG = 70;
-const GPS_ACCURACY_THRESHOLD = 30; // metres
-const GPS_MIN_MOVE = 3; // metres – noise filter
+const GPS_ACCURACY_THRESHOLD = 50; // metres
+const GPS_INITIAL_ACCURACY = 100; // metres – relaxed for first fix
+const GPS_MIN_MOVE = 2; // metres – noise filter
 const AUTO_PAUSE_IDLE_MS = 10_000;
 
 const ActivityLive = () => {
@@ -89,6 +90,9 @@ const ActivityLive = () => {
   const holdStartRef = useRef(0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const autoPausedRef = useRef(false);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const hasInitialLockRef = useRef(false);
 
   // --- Derived stats ---
   const distanceKm = totalDistance / 1000;
@@ -137,10 +141,13 @@ const ActivityLive = () => {
     }
 
     setGpsStatus("searching");
+    hasInitialLockRef.current = false;
 
     const id = navigator.geolocation.watchPosition(
       (pos) => {
-        if (pos.coords.accuracy > GPS_ACCURACY_THRESHOLD) return;
+        const acc = pos.coords.accuracy;
+        const threshold = hasInitialLockRef.current ? GPS_ACCURACY_THRESHOLD : GPS_INITIAL_ACCURACY;
+        if (acc > threshold) return;
 
         const point: GpsPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
         const positions = positionsRef.current;
@@ -149,6 +156,7 @@ const ActivityLive = () => {
           const last = positions[positions.length - 1];
           const d = haversineDistance(last.lat, last.lng, point.lat, point.lng);
           if (d < GPS_MIN_MOVE) return; // noise
+          if (d > 500) return; // GPS jump protection
           setTotalDistance((prev) => prev + d);
           lastMoveTimeRef.current = Date.now();
 
@@ -156,14 +164,16 @@ const ActivityLive = () => {
           if (autoPausedRef.current) {
             autoPausedRef.current = false;
             setIsPaused(false);
-            if (settings.autoVibrate) navigator.vibrate?.(100);
+            if (settingsRef.current.autoVibrate) navigator.vibrate?.(100);
           }
         }
 
         positions.push(point);
+        hasInitialLockRef.current = true;
         setGpsStatus("active");
       },
       (err) => {
+        console.error("GPS error:", err.code, err.message);
         if (err.code === err.PERMISSION_DENIED) {
           setGpsStatus("denied");
           toast.error("GPS permission denied");
@@ -171,12 +181,12 @@ const ActivityLive = () => {
           setGpsStatus("unavailable");
         }
       },
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
     );
 
     watchIdRef.current = id;
     return () => navigator.geolocation.clearWatch(id);
-  }, [settings.gpsTracking, settings.autoVibrate]);
+  }, [settings.gpsTracking]);
 
   // --- Auto-pause ---
   useEffect(() => {
@@ -185,20 +195,20 @@ const ActivityLive = () => {
       if (Date.now() - lastMoveTimeRef.current > AUTO_PAUSE_IDLE_MS && !autoPausedRef.current) {
         autoPausedRef.current = true;
         setIsPaused(true);
-        if (settings.autoVibrate) navigator.vibrate?.([100, 50, 100]);
+        if (settingsRef.current.autoVibrate) navigator.vibrate?.([100, 50, 100]);
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [settings.autoPause, settings.autoVibrate, isPaused, showCompleted, gpsStatus]);
+  }, [settings.autoPause, isPaused, showCompleted, gpsStatus]);
 
   // --- Vibrate on manual pause/resume ---
   const togglePause = useCallback(() => {
     setIsPaused((p) => {
-      if (settings.autoVibrate) navigator.vibrate?.(50);
+      if (settingsRef.current.autoVibrate) navigator.vibrate?.(50);
       autoPausedRef.current = false;
       return !p;
     });
-  }, [settings.autoVibrate]);
+  }, []);
 
   // --- Hold to finish ---
   const handleHoldStart = () => {
