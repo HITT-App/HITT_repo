@@ -195,20 +195,20 @@ const ActivityLive = () => {
       if (Date.now() - lastMoveTimeRef.current > AUTO_PAUSE_IDLE_MS && !autoPausedRef.current) {
         autoPausedRef.current = true;
         setIsPaused(true);
-        if (settings.autoVibrate) navigator.vibrate?.([100, 50, 100]);
+        if (settingsRef.current.autoVibrate) navigator.vibrate?.([100, 50, 100]);
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [settings.autoPause, settings.autoVibrate, isPaused, showCompleted, gpsStatus]);
+  }, [settings.autoPause, isPaused, showCompleted, gpsStatus]);
 
   // --- Vibrate on manual pause/resume ---
   const togglePause = useCallback(() => {
     setIsPaused((p) => {
-      if (settings.autoVibrate) navigator.vibrate?.(50);
+      if (settingsRef.current.autoVibrate) navigator.vibrate?.(50);
       autoPausedRef.current = false;
       return !p;
     });
-  }, [settings.autoVibrate]);
+  }, []);
 
   // --- Hold to finish ---
   const handleHoldStart = () => {
