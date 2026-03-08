@@ -336,7 +336,7 @@ const ActivityLive = () => {
       </header>
 
       {/* Map */}
-      <div className="flex-1 relative mx-4 rounded-xl overflow-hidden">
+      <div className="flex-1 relative mx-4 rounded-xl overflow-hidden min-h-[200px]">
         <LiveActivityMap positions={positions} gpsStatus={gpsStatus} />
         <div className="absolute top-4 left-4 z-[1001]"><GpsIndicator /></div>
         {autoPausedRef.current && (
