@@ -97,8 +97,8 @@ const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
   }, [positions]);
 
   return (
-    <div className="w-full h-full relative rounded-xl overflow-hidden">
-      <div ref={containerRef} className="w-full h-full" />
+    <div className="w-full h-full relative rounded-xl overflow-hidden" style={{ minHeight: 200 }}>
+      <div ref={containerRef} className="w-full h-full" style={{ minHeight: 200 }} />
 
       {/* Overlay when no GPS */}
       {gpsStatus !== "active" && (
