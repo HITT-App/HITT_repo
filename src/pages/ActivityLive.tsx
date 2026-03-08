@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Settings, MapPin, Timer, Flame, Footprints, Signal, SignalZero, Loader2 } from "lucide-react";
+import { ArrowLeft, Pause, Play, Settings, Timer, Flame, Footprints, Signal, SignalZero, Loader2 } from "lucide-react";
+import LiveActivityMap from "@/components/activity/LiveActivityMap";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
