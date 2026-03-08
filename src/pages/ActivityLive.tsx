@@ -324,57 +324,59 @@ const ActivityLive = () => {
       "min-h-screen flex flex-col transition-colors duration-500",
       isHolding ? "bg-destructive/20" : "bg-background"
     )}>
-      {/* Header */}
-      <header className="flex items-center justify-between p-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+      {/* Header - floating over map */}
+      <header className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-[1002]">
+        <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-sm rounded-full shadow" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <span className="text-sm font-medium capitalize text-foreground">{activityType}</span>
-        <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
+        <span className="text-sm font-semibold capitalize text-foreground bg-background/80 backdrop-blur-sm px-4 py-1.5 rounded-full shadow">{activityType}</span>
+        <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-sm rounded-full shadow" onClick={() => setShowSettings(true)}>
           <Settings className="w-5 h-5" />
         </Button>
       </header>
 
-      {/* Map */}
-      <div className="flex-1 relative mx-4 rounded-xl overflow-hidden min-h-[200px]">
+      {/* Full-width Map */}
+      <div className="relative w-full" style={{ height: "45vh", minHeight: 220 }}>
         <LiveActivityMap positions={positions} gpsStatus={gpsStatus} />
-        <div className="absolute top-4 left-4 z-[1001]"><GpsIndicator /></div>
+        <div className="absolute top-16 left-4 z-[1001]"><GpsIndicator /></div>
         {autoPausedRef.current && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1001] bg-muted text-muted-foreground px-4 py-1.5 rounded-full text-sm font-medium">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1001] bg-background/90 backdrop-blur-sm text-muted-foreground px-4 py-1.5 rounded-full text-sm font-medium shadow">
             Auto-paused (no movement)
           </div>
         )}
       </div>
 
       {/* Stats Panel */}
-      <div className="p-4">
-        <div className="text-center mb-6">
-          <div className="text-6xl font-mono font-bold mb-1">{formatTime(elapsed)}</div>
-          <p className="text-sm text-muted-foreground">
-            {isPaused ? (autoPausedRef.current ? "Auto-Paused" : "Paused") : "Total Duration"}
-          </p>
-        </div>
+      <div className="flex-1 flex flex-col justify-between p-4 -mt-4 bg-background rounded-t-3xl relative z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div>
+          <div className="text-center mb-4 pt-2">
+            <div className="text-5xl font-mono font-bold mb-1 tracking-tight">{formatTime(elapsed)}</div>
+            <p className="text-sm text-muted-foreground">
+              {isPaused ? (autoPausedRef.current ? "Auto-Paused" : "Paused") : "Total Duration"}
+            </p>
+          </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card className="p-3 text-center">
-            <Flame className="w-5 h-5 text-primary mx-auto mb-1" />
-            <div className="font-semibold">{calories}</div>
-            <div className="text-xs text-muted-foreground">kcal</div>
-          </Card>
-          <Card className="p-3 text-center">
-            <Footprints className="w-5 h-5 text-primary mx-auto mb-1" />
-            <div className="font-semibold">{distanceKm.toFixed(2)}</div>
-            <div className="text-xs text-muted-foreground">km</div>
-          </Card>
-          <Card className="p-3 text-center">
-            <Timer className="w-5 h-5 text-primary mx-auto mb-1" />
-            <div className="font-semibold">{pace}</div>
-            <div className="text-xs text-muted-foreground">min/km</div>
-          </Card>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <Card className="p-3 text-center border-border/50">
+              <Flame className="w-5 h-5 text-primary mx-auto mb-1" />
+              <div className="font-semibold text-lg">{calories}</div>
+              <div className="text-xs text-muted-foreground">kcal</div>
+            </Card>
+            <Card className="p-3 text-center border-border/50">
+              <Footprints className="w-5 h-5 text-primary mx-auto mb-1" />
+              <div className="font-semibold text-lg">{distanceKm.toFixed(2)}</div>
+              <div className="text-xs text-muted-foreground">km</div>
+            </Card>
+            <Card className="p-3 text-center border-border/50">
+              <Timer className="w-5 h-5 text-primary mx-auto mb-1" />
+              <div className="font-semibold text-lg">{pace}</div>
+              <div className="text-xs text-muted-foreground">min/km</div>
+            </Card>
+          </div>
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-center gap-6">
+        <div className="flex items-center justify-center gap-6 pb-4">
           <Button variant="outline" size="icon" className="w-16 h-16 rounded-full" onClick={togglePause}>
             {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
           </Button>
@@ -382,7 +384,7 @@ const ActivityLive = () => {
           <div className="relative">
             <button
               className={cn(
-                "w-20 h-20 rounded-full flex items-center justify-center transition-all",
+                "w-20 h-20 rounded-full flex items-center justify-center transition-all touch-manipulation",
                 isHolding ? "bg-destructive scale-110" : "bg-destructive/80"
               )}
               onMouseDown={handleHoldStart}
