@@ -141,10 +141,13 @@ const ActivityLive = () => {
     }
 
     setGpsStatus("searching");
+    hasInitialLockRef.current = false;
 
     const id = navigator.geolocation.watchPosition(
       (pos) => {
-        if (pos.coords.accuracy > GPS_ACCURACY_THRESHOLD) return;
+        const acc = pos.coords.accuracy;
+        const threshold = hasInitialLockRef.current ? GPS_ACCURACY_THRESHOLD : GPS_INITIAL_ACCURACY;
+        if (acc > threshold) return;
 
         const point: GpsPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
         const positions = positionsRef.current;
@@ -153,6 +156,7 @@ const ActivityLive = () => {
           const last = positions[positions.length - 1];
           const d = haversineDistance(last.lat, last.lng, point.lat, point.lng);
           if (d < GPS_MIN_MOVE) return; // noise
+          if (d > 500) return; // GPS jump protection
           setTotalDistance((prev) => prev + d);
           lastMoveTimeRef.current = Date.now();
 
@@ -160,14 +164,16 @@ const ActivityLive = () => {
           if (autoPausedRef.current) {
             autoPausedRef.current = false;
             setIsPaused(false);
-            if (settings.autoVibrate) navigator.vibrate?.(100);
+            if (settingsRef.current.autoVibrate) navigator.vibrate?.(100);
           }
         }
 
         positions.push(point);
+        hasInitialLockRef.current = true;
         setGpsStatus("active");
       },
       (err) => {
+        console.error("GPS error:", err.code, err.message);
         if (err.code === err.PERMISSION_DENIED) {
           setGpsStatus("denied");
           toast.error("GPS permission denied");
@@ -175,12 +181,12 @@ const ActivityLive = () => {
           setGpsStatus("unavailable");
         }
       },
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
     );
 
     watchIdRef.current = id;
     return () => navigator.geolocation.clearWatch(id);
-  }, [settings.gpsTracking, settings.autoVibrate]);
+  }, [settings.gpsTracking]);
 
   // --- Auto-pause ---
   useEffect(() => {
