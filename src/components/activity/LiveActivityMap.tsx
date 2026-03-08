@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Polyline, Circle, useMap } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 interface GpsPoint {
@@ -13,76 +13,92 @@ interface LiveActivityMapProps {
   gpsStatus: "searching" | "active" | "unavailable" | "denied";
 }
 
-/** Keeps map centred on latest position */
-function RecenterMap({ position }: { position: [number, number] | null }) {
-  const map = useMap();
-  useEffect(() => {
-    if (position) {
-      map.setView(position, map.getZoom(), { animate: true });
-    }
-  }, [position, map]);
-  return null;
-}
-
 const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
-  const mapRef = useRef<any>(null);
-  const lastPos = positions.length > 0 ? positions[positions.length - 1] : null;
-  const center: [number, number] = lastPos
-    ? [lastPos.lat, lastPos.lng]
-    : [25.2048, 55.2708]; // Default: Dubai
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const polylineRef = useRef<L.Polyline | null>(null);
+  const dotRef = useRef<L.CircleMarker | null>(null);
+  const pulseRef = useRef<L.CircleMarker | null>(null);
 
-  const trail: [number, number][] = positions.map((p) => [p.lat, p.lng]);
+  // Initialize map
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      center: [25.2048, 55.2708], // Default: Dubai
+      zoom: 16,
+      scrollWheelZoom: false,
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      doubleClickZoom: false,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Update trail & position
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const trail: [number, number][] = positions.map((p) => [p.lat, p.lng]);
+    const lastPos = positions.length > 0 ? positions[positions.length - 1] : null;
+
+    // Update polyline
+    if (trail.length >= 2) {
+      if (polylineRef.current) {
+        polylineRef.current.setLatLngs(trail);
+      } else {
+        polylineRef.current = L.polyline(trail, {
+          color: "hsl(24, 75%, 50%)",
+          weight: 4,
+          opacity: 0.85,
+        }).addTo(map);
+      }
+    }
+
+    // Update position dot
+    if (lastPos) {
+      const latlng: [number, number] = [lastPos.lat, lastPos.lng];
+      if (dotRef.current) {
+        dotRef.current.setLatLng(latlng);
+      } else {
+        dotRef.current = L.circleMarker(latlng, {
+          radius: 8,
+          color: "hsl(24, 75%, 50%)",
+          fillColor: "hsl(24, 75%, 50%)",
+          fillOpacity: 1,
+          weight: 3,
+        }).addTo(map);
+      }
+
+      if (pulseRef.current) {
+        pulseRef.current.setLatLng(latlng);
+      } else {
+        pulseRef.current = L.circleMarker(latlng, {
+          radius: 20,
+          color: "hsl(24, 75%, 50%)",
+          fillColor: "hsl(24, 75%, 50%)",
+          fillOpacity: 0.2,
+          weight: 0,
+        }).addTo(map);
+      }
+
+      map.setView(latlng, map.getZoom(), { animate: true });
+    }
+  }, [positions]);
 
   return (
     <div className="w-full h-full relative rounded-xl overflow-hidden">
-      <MapContainer
-        center={center}
-        zoom={16}
-        scrollWheelZoom={false}
-        zoomControl={false}
-        attributionControl={false}
-        dragging={false}
-        doubleClickZoom={false}
-        className="w-full h-full"
-        ref={mapRef}
-      >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <RecenterMap position={lastPos ? [lastPos.lat, lastPos.lng] : null} />
-
-        {/* Route trail */}
-        {trail.length >= 2 && (
-          <Polyline
-            positions={trail}
-            pathOptions={{ color: "hsl(24, 75%, 50%)", weight: 4, opacity: 0.85 }}
-          />
-        )}
-
-        {/* Current position dot */}
-        {lastPos && (
-          <>
-            <Circle
-              center={[lastPos.lat, lastPos.lng]}
-              radius={8}
-              pathOptions={{
-                color: "hsl(24, 75%, 50%)",
-                fillColor: "hsl(24, 75%, 50%)",
-                fillOpacity: 1,
-                weight: 3,
-              }}
-            />
-            <Circle
-              center={[lastPos.lat, lastPos.lng]}
-              radius={20}
-              pathOptions={{
-                color: "hsl(24, 75%, 50%)",
-                fillColor: "hsl(24, 75%, 50%)",
-                fillOpacity: 0.2,
-                weight: 0,
-              }}
-            />
-          </>
-        )}
-      </MapContainer>
+      <div ref={containerRef} className="w-full h-full" />
 
       {/* Overlay when no GPS */}
       {gpsStatus !== "active" && (
