@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { BottomNav } from "@/components/BottomNav";
+
 import {
   ChevronUp,
   ChevronDown,
@@ -406,7 +406,7 @@ export default function NutritionDashboard() {
         </div>
       </ScrollArea>
 
-      <BottomNav onCenterClick={() => {}} />
+      
     </div>
   );
 }

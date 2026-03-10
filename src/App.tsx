@@ -11,6 +11,7 @@ import { PushPermissionBanner } from "@/components/notifications/PushPermissionB
 import { VerificationBanner } from "@/components/auth/VerificationBanner";
 import { VoiceController } from "@/components/coach/VoiceController";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AppLayout } from "@/components/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
@@ -120,6 +121,7 @@ const App = () => (
         <BrowserRouter>
           <VerificationBanner />
           <VoiceController />
+          <AppLayout>
           <Routes>
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/auth" element={<Auth />} />
@@ -243,6 +245,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </AppLayout>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

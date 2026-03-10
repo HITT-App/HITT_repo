@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { BottomNav } from "@/components/BottomNav";
-import { ChooseSportSheet } from "@/components/ChooseSportSheet";
+
 import { QuickStartFAB } from "@/components/QuickStartFAB";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { LevelUpModal } from "@/components/gamification/LevelUpModal";
@@ -27,7 +26,6 @@ import {
 } from "@/components/home";
 
 const Index = () => {
-  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [levelUpData, setLevelUpData] = useState<{
@@ -143,15 +141,6 @@ const Index = () => {
         {flags.resources_enabled && <ResourcesSection />}
 
         {/* Quick Start FAB removed */}
-        
-        {/* Bottom Navigation */}
-        <BottomNav onCenterClick={() => setQuickActionsOpen(true)} />
-        
-        {/* Choose a Sport Drawer */}
-        <ChooseSportSheet 
-          open={quickActionsOpen} 
-          onOpenChange={setQuickActionsOpen} 
-        />
       </div>
     </div>
   );
