@@ -12,6 +12,8 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useCommunityPosts, useCommunityActions, CommunityPost } from "@/hooks/useCommunity";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useCommunityProfile } from "@/hooks/useCommunity";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
