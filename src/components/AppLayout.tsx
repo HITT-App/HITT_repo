@@ -27,7 +27,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {children}
+      {shouldHideNav ? (
+        children
+      ) : (
+        <div className="pb-24">
+          {children}
+        </div>
+      )}
       {!shouldHideNav && (
         <>
           <BottomNav onCenterClick={() => setSportSheetOpen(true)} />
