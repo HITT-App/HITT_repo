@@ -134,8 +134,24 @@ const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
   }, []);
 
   return (
-    <div className="w-full h-full relative rounded-2xl overflow-hidden shadow-lg">
+    <div className="w-full h-full relative overflow-hidden">
       <div ref={containerRef} className="w-full h-full absolute inset-0" />
+
+      {/* Zoom controls */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-2">
+        <button
+          onClick={handleZoomIn}
+          className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md border border-border/30 flex items-center justify-center text-foreground text-lg font-bold active:scale-90 transition-transform"
+        >
+          +
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md border border-border/30 flex items-center justify-center text-foreground text-lg font-bold active:scale-90 transition-transform"
+        >
+          −
+        </button>
+      </div>
 
       {/* GPS status overlays */}
       {gpsStatus !== "active" && (
