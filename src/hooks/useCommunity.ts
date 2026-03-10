@@ -81,9 +81,15 @@ export const useCommunityPosts = () => {
 
       // Get profiles for posts
       const userIds = [...new Set(postsData?.map(p => p.user_id) || [])];
-      const { data: profiles } = await supabase
+      const { data: communityProfiles } = await supabase
         .from('community_profiles')
         .select('user_id, display_name, username, avatar_url')
+        .in('user_id', userIds);
+
+      // Fallback to main profiles table for users without community profiles
+      const { data: mainProfiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 
       // Get user's likes
@@ -97,7 +103,20 @@ export const useCommunityPosts = () => {
         userLikes = likes?.map(l => l.post_id as string) || [];
       }
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const communityProfileMap = new Map(communityProfiles?.map(p => [p.user_id, p]) || []);
+      const mainProfileMap = new Map(mainProfiles?.map(p => [p.user_id, p]) || []);
+
+      // Merge: prefer community profile, fall back to main profile
+      const profileMap = new Map<string, { display_name: string | null; username: string | null; avatar_url: string | null }>();
+      for (const uid of userIds) {
+        const cp = communityProfileMap.get(uid);
+        const mp = mainProfileMap.get(uid);
+        profileMap.set(uid, {
+          display_name: cp?.display_name || mp?.display_name || null,
+          username: cp?.username || null,
+          avatar_url: cp?.avatar_url || mp?.avatar_url || null,
+        });
+      }
 
       const enrichedPosts: CommunityPost[] = (postsData || []).map(post => ({
         ...post,
