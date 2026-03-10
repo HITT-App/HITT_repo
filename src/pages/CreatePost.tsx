@@ -256,7 +256,7 @@ const CreatePost = () => {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold">Add New Post</h1>
+        <h1 className="text-lg font-semibold">{editPostId ? "Edit Post" : "Add New Post"}</h1>
         <Button variant="ghost" size="icon">
           <Settings className="w-5 h-5" />
         </Button>
