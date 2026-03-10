@@ -12,6 +12,8 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useCommunityPosts, useCommunityActions, CommunityPost } from "@/hooks/useCommunity";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useCommunityProfile } from "@/hooks/useCommunity";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -21,10 +23,15 @@ const CommunityFeed = () => {
   const { posts, loading } = useCommunityPosts();
   const { likePost, unlikePost } = useCommunityActions();
   const { user } = useAuth();
+  const { profile } = useProfile();
+  const { profile: communityProfile } = useCommunityProfile();
   const [savedPosts, setSavedPosts] = useState<string[]>([]);
   const [likingPosts, setLikingPosts] = useState<string[]>([]);
   const [likeAnimations, setLikeAnimations] = useState<string[]>([]);
   const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
+
+  const myAvatarUrl = communityProfile?.avatar_url || profile?.avatar_url || "";
+  const myDisplayName = communityProfile?.display_name || profile?.display_name || user?.email || "";
 
   const tabs = [
     { key: "popular", label: "For You", icon: Sparkles },
@@ -113,9 +120,9 @@ const CommunityFeed = () => {
               className="w-9 h-9 ring-2 ring-primary/20 cursor-pointer touch-manipulation"
               onClick={() => navigate("/community/profile")}
             >
-              <AvatarImage src="" />
+              <AvatarImage src={myAvatarUrl} />
               <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
-                {user ? getInitials(user.email) : "U"}
+                {getInitials(myDisplayName)}
               </AvatarFallback>
             </Avatar>
             <h1 className="text-lg font-bold tracking-tight">Feed</h1>
@@ -197,7 +204,26 @@ const CommunityFeed = () => {
         ))}
       </div>
 
-      {/* Empty state */}
+      {/* Composer prompt */}
+      <div
+        className="mx-3 mb-3 flex items-center gap-3 bg-card rounded-2xl border border-border/40 px-3.5 py-3 cursor-pointer touch-manipulation active:scale-[0.99] transition-transform"
+        onClick={() => navigate("/community/create")}
+      >
+        <Avatar className="w-9 h-9 shrink-0">
+          <AvatarImage src={myAvatarUrl} />
+          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+            {getInitials(myDisplayName)}
+          </AvatarFallback>
+        </Avatar>
+        <span className="text-sm text-muted-foreground flex-1">What's on your mind?</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+            <Send className="w-3.5 h-3.5 text-primary" />
+          </div>
+        </div>
+      </div>
+
+
       {posts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
           <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-5">
