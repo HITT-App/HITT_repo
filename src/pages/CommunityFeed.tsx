@@ -259,7 +259,7 @@ const CommunityFeed = () => {
 
       {/* Posts */}
       <div className="space-y-2 px-3">
-        {posts.map((post) => {
+        {posts.filter((p) => !hiddenPosts.includes(p.id)).map((post) => {
           const isExpanded = expandedPosts.includes(post.id);
           const truncate = shouldTruncate(post.content);
           const isSaved = savedPosts.includes(post.id);
