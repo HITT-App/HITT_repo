@@ -182,26 +182,34 @@ const CommunityFeed = () => {
           </div>
           <span className="text-[10px] font-medium text-muted-foreground">Your Story</span>
         </button>
-        {/* Placeholder story bubbles from recent posters */}
-        {posts.slice(0, 5).map((post) => (
-          <button
-            key={`story-${post.id}`}
-            onClick={() => navigate(`/community/user/${post.user_id}`)}
-            className="flex flex-col items-center gap-1 shrink-0 touch-manipulation"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary p-[2px]">
-              <Avatar className="w-full h-full rounded-[14px]">
-                <AvatarImage src={post.profile?.avatar_url || ""} className="rounded-[14px]" />
-                <AvatarFallback className="rounded-[14px] bg-secondary text-xs font-medium">
-                  {getInitials(post.profile?.display_name || post.profile?.username)}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-            <span className="text-[10px] font-medium text-muted-foreground truncate w-16 text-center">
-              {post.profile?.display_name?.split(" ")[0] || "User"}
-            </span>
-          </button>
-        ))}
+        {/* Unique recent posters */}
+        {(() => {
+          const seen = new Set<string>();
+          if (user) seen.add(user.id); // exclude self
+          return posts.filter((post) => {
+            if (seen.has(post.user_id)) return false;
+            seen.add(post.user_id);
+            return true;
+          }).slice(0, 5).map((post) => (
+            <button
+              key={`story-${post.user_id}`}
+              onClick={() => navigate(`/community/user/${post.user_id}`)}
+              className="flex flex-col items-center gap-1 shrink-0 touch-manipulation"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary p-[2px]">
+                <Avatar className="w-full h-full rounded-[14px]">
+                  <AvatarImage src={post.profile?.avatar_url || ""} className="rounded-[14px]" />
+                  <AvatarFallback className="rounded-[14px] bg-secondary text-xs font-medium">
+                    {getInitials(post.profile?.display_name || post.profile?.username)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <span className="text-[10px] font-medium text-muted-foreground truncate w-16 text-center">
+                {post.profile?.display_name?.split(" ")[0] || "User"}
+              </span>
+            </button>
+          ));
+        })()}
       </div>
 
       {/* Composer prompt */}
