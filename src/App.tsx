@@ -108,6 +108,7 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminHomeLayout from "./pages/admin/AdminHomeLayout";
+import CommunityChatroom from "./pages/CommunityChatroom";
 
 const queryClient = new QueryClient();
 
@@ -231,6 +232,7 @@ const App = () => (
             <Route path="/meal/:id" element={<ProtectedRoute><MealDetail /></ProtectedRoute>} />
             <Route path="/notification-demo" element={<ProtectedRoute><NotificationDemo /></ProtectedRoute>} />
             <Route path="/community/messages/:recipientId" element={<ProtectedRoute><CommunityMessages /></ProtectedRoute>} />
+            <Route path="/community/chatroom" element={<ProtectedRoute><CommunityChatroom /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />

@@ -417,6 +417,30 @@ export type Database = {
         }
         Relationships: []
       }
+      chatroom_messages: {
+        Row: {
+          content: string
+          created_at: string
+          display_name: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       coach_availability: {
         Row: {
           coach_id: string
