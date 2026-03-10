@@ -13,12 +13,23 @@ interface LiveActivityMapProps {
   gpsStatus: "searching" | "active" | "unavailable" | "denied";
 }
 
+interface LiveActivityMapProps {
+  positions: GpsPoint[];
+  gpsStatus: "searching" | "active" | "unavailable" | "denied";
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+}
+
 const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const polylineRef = useRef<L.Polyline | null>(null);
   const dotRef = useRef<L.CircleMarker | null>(null);
   const pulseRef = useRef<L.CircleMarker | null>(null);
+
+  // Expose zoom methods
+  const handleZoomIn = () => mapRef.current?.zoomIn();
+  const handleZoomOut = () => mapRef.current?.zoomOut();
 
   // Initialize map
   useEffect(() => {
@@ -34,15 +45,12 @@ const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
       doubleClickZoom: false,
     });
 
-    // Dark sporty map style via CartoDB Dark Matter
     L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
       { maxZoom: 19 }
     ).addTo(map);
 
     mapRef.current = map;
-
-    // Fix Leaflet sizing after mount
     setTimeout(() => map.invalidateSize(), 100);
 
     return () => {
@@ -50,7 +58,6 @@ const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
       mapRef.current = null;
     };
   }, []);
-
   // Update trail & position
   useEffect(() => {
     const map = mapRef.current;
