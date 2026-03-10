@@ -107,6 +107,7 @@ import AdminCommunity from "./pages/admin/AdminCommunity";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
+import AdminHomeLayout from "./pages/admin/AdminHomeLayout";
 
 const queryClient = new QueryClient();
 
