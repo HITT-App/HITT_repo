@@ -23,10 +23,15 @@ const CommunityFeed = () => {
   const { posts, loading } = useCommunityPosts();
   const { likePost, unlikePost } = useCommunityActions();
   const { user } = useAuth();
+  const { profile } = useProfile();
+  const { profile: communityProfile } = useCommunityProfile();
   const [savedPosts, setSavedPosts] = useState<string[]>([]);
   const [likingPosts, setLikingPosts] = useState<string[]>([]);
   const [likeAnimations, setLikeAnimations] = useState<string[]>([]);
   const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
+
+  const myAvatarUrl = communityProfile?.avatar_url || profile?.avatar_url || "";
+  const myDisplayName = communityProfile?.display_name || profile?.display_name || user?.email || "";
 
   const tabs = [
     { key: "popular", label: "For You", icon: Sparkles },
