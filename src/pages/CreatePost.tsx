@@ -27,6 +27,8 @@ const suggestedTags = ["fitnessrock", "hiitAI", "healthylifestyle", "workout"];
 
 const CreatePost = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editPostId = searchParams.get("edit");
   const { user } = useAuth();
   const { createPost } = useCommunityActions();
   const { uploadImage, uploading } = useImageUpload();
@@ -41,6 +43,44 @@ const CreatePost = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [pollOptions, setPollOptions] = useState(["", "", "", ""]);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingPost, setLoadingPost] = useState(!!editPostId);
+
+  // Load existing post data when editing
+  useEffect(() => {
+    if (!editPostId) return;
+    const loadPost = async () => {
+      setLoadingPost(true);
+      const { data, error } = await supabase
+        .from("community_posts")
+        .select("*")
+        .eq("id", editPostId)
+        .single();
+      if (data && !error) {
+        setContent(data.content || "");
+        setPostType((data.post_type as "text" | "poll" | "before-after") || "text");
+        setCategory(data.category || "workout");
+        setTags(data.tags || []);
+        if (data.image_url) {
+          setImageUrl(data.image_url);
+          setImagePreview(data.image_url);
+        }
+        if (data.before_image_url) {
+          setBeforeImageUrl(data.before_image_url);
+          setBeforeImagePreview(data.before_image_url);
+        }
+        if (data.after_image_url) {
+          setAfterImageUrl(data.after_image_url);
+          setAfterImagePreview(data.after_image_url);
+        }
+        if (data.poll_options) {
+          const po = data.poll_options as { options?: string[] };
+          if (po.options) setPollOptions([...po.options, ...Array(4 - po.options.length).fill("")].slice(0, 4));
+        }
+      }
+      setLoadingPost(false);
+    };
+    loadPost();
+  }, [editPostId]);
   
   // Image states
   const [imageUrl, setImageUrl] = useState<string | null>(null);
