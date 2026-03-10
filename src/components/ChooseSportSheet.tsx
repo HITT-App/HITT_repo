@@ -48,7 +48,7 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
 
   const handleSelect = (sport: string) => {
     onOpenChange(false);
-    navigate(`/log-activity?sport=${encodeURIComponent(sport)}`);
+    navigate(`/activity-live?sport=${encodeURIComponent(sport)}`);
   };
 
   return (

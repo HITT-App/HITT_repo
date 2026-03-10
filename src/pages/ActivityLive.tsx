@@ -88,7 +88,7 @@ const ActivityLive = () => {
   });
 
   // Refs
-  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdStartRef = useRef(0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const autoPausedRef = useRef(false);
@@ -110,7 +110,7 @@ const ActivityLive = () => {
 
   // --- Timer ---
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (!isPaused && !showCompleted) {
       interval = setInterval(() => setElapsed((p) => p + 1), 1000);
     }
