@@ -485,9 +485,14 @@ export const useCommunityComments = (postId: string) => {
 
       // Get profiles for comments
       const userIds = [...new Set(commentsData?.map(c => c.user_id) || [])];
-      const { data: profiles } = await supabase
+      const { data: communityProfiles } = await supabase
         .from('community_profiles')
         .select('user_id, display_name, username, avatar_url')
+        .in('user_id', userIds);
+
+      const { data: mainProfiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 
       // Get user's likes
@@ -501,7 +506,19 @@ export const useCommunityComments = (postId: string) => {
         userLikes = likes?.map(l => l.comment_id as string) || [];
       }
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const communityProfileMap = new Map(communityProfiles?.map(p => [p.user_id, p]) || []);
+      const mainProfileMap = new Map(mainProfiles?.map(p => [p.user_id, p]) || []);
+
+      const profileMap = new Map<string, { display_name: string | null; username: string | null; avatar_url: string | null }>();
+      for (const uid of userIds) {
+        const cp = communityProfileMap.get(uid);
+        const mp = mainProfileMap.get(uid);
+        profileMap.set(uid, {
+          display_name: cp?.display_name || mp?.display_name || null,
+          username: cp?.username || null,
+          avatar_url: cp?.avatar_url || mp?.avatar_url || null,
+        });
+      }
 
       // Organize comments with replies
       const topLevelComments: CommunityComment[] = [];
