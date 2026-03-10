@@ -2,14 +2,14 @@ import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
-  Flame, Users, TrendingUp, Loader2, Share2, Repeat2, Sparkles,
-  ArrowLeft, Send,
+  Flame, Users, TrendingUp, Loader2, Share2, Sparkles,
+  Send, Pencil, Trash2, EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useCommunityPosts, useCommunityActions, CommunityPost } from "@/hooks/useCommunity";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -20,15 +20,25 @@ import { cn } from "@/lib/utils";
 const CommunityFeed = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("popular");
-  const { posts, loading } = useCommunityPosts();
-  const { likePost, unlikePost } = useCommunityActions();
+  const { posts, loading, refetch } = useCommunityPosts();
+  const { likePost, unlikePost, deletePost } = useCommunityActions();
   const { user } = useAuth();
   const { profile } = useProfile();
   const { profile: communityProfile } = useCommunityProfile();
   const [savedPosts, setSavedPosts] = useState<string[]>([]);
+  const [hiddenPosts, setHiddenPosts] = useState<string[]>([]);
   const [likingPosts, setLikingPosts] = useState<string[]>([]);
   const [likeAnimations, setLikeAnimations] = useState<string[]>([]);
   const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
+
+  const handleDeletePost = async (postId: string) => {
+    const success = await deletePost(postId);
+    if (success) refetch();
+  };
+
+  const handleHidePost = (postId: string) => {
+    setHiddenPosts((prev) => [...prev, postId]);
+  };
 
   const myAvatarUrl = communityProfile?.avatar_url || profile?.avatar_url || "";
   const myDisplayName = communityProfile?.display_name || profile?.display_name || user?.email || "";
@@ -249,7 +259,7 @@ const CommunityFeed = () => {
 
       {/* Posts */}
       <div className="space-y-2 px-3">
-        {posts.map((post) => {
+        {posts.filter((p) => !hiddenPosts.includes(p.id)).map((post) => {
           const isExpanded = expandedPosts.includes(post.id);
           const truncate = shouldTruncate(post.content);
           const isSaved = savedPosts.includes(post.id);
@@ -295,13 +305,36 @@ const CommunityFeed = () => {
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full text-muted-foreground touch-manipulation shrink-0"
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full text-muted-foreground touch-manipulation shrink-0"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    {user && post.user_id === user.id ? (
+                      <>
+                        <DropdownMenuItem onClick={() => navigate(`/community/create?edit=${post.id}`)}>
+                          <Pencil className="w-4 h-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => handleDeletePost(post.id)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <DropdownMenuItem onClick={() => handleHidePost(post.id)}>
+                        <EyeOff className="w-4 h-4 mr-2" /> Hide
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Content */}
