@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Filter, Heart, MessageCircle, Bookmark, MoreHorizontal, Play, ChevronUp, Flame, Users, TrendingUp, Loader2 } from "lucide-react";
+import {
+  Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
+  Flame, Users, TrendingUp, Loader2, Share2, Repeat2, Sparkles,
+  ArrowLeft, Send,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useCommunityPosts, useCommunityActions, CommunityPost } from "@/hooks/useCommunity";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const CommunityFeed = () => {
   const navigate = useNavigate();
@@ -20,251 +23,437 @@ const CommunityFeed = () => {
   const { user } = useAuth();
   const [savedPosts, setSavedPosts] = useState<string[]>([]);
   const [likingPosts, setLikingPosts] = useState<string[]>([]);
+  const [likeAnimations, setLikeAnimations] = useState<string[]>([]);
+  const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000) return (num / 1000).toFixed(1) + "k";
-    return num.toString();
-  };
+  const tabs = [
+    { key: "popular", label: "For You", icon: Sparkles },
+    { key: "trending", label: "Trending", icon: Flame },
+    { key: "following", label: "Following", icon: Users },
+  ];
 
   const toggleSave = (postId: string) => {
-    setSavedPosts(prev => 
-      prev.includes(postId) ? prev.filter(id => id !== postId) : [...prev, postId]
+    setSavedPosts((prev) =>
+      prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]
     );
   };
 
   const handleLike = async (post: CommunityPost) => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-    
+    if (!user) { navigate("/auth"); return; }
     if (likingPosts.includes(post.id)) return;
-    
-    setLikingPosts(prev => [...prev, post.id]);
-    
+
+    setLikingPosts((prev) => [...prev, post.id]);
+
+    if (!post.is_liked) {
+      setLikeAnimations((prev) => [...prev, post.id]);
+      setTimeout(() => setLikeAnimations((prev) => prev.filter((id) => id !== post.id)), 600);
+    }
+
     if (post.is_liked) {
       await unlikePost(post.id);
     } else {
       await likePost(post.id);
     }
-    
-    setLikingPosts(prev => prev.filter(id => id !== post.id));
+
+    setLikingPosts((prev) => prev.filter((id) => id !== post.id));
+  };
+
+  const handleDoubleTapLike = (post: CommunityPost) => {
+    if (!post.is_liked) handleLike(post);
   };
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
-    return name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+    return name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
   };
 
   const formatTimestamp = (dateStr: string) => {
     try {
-      return formatDistanceToNow(new Date(dateStr), { addSuffix: false }) + " ago";
+      const d = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - d.getTime();
+      const diffMin = Math.floor(diffMs / 60000);
+      if (diffMin < 1) return "now";
+      if (diffMin < 60) return `${diffMin}m`;
+      const diffH = Math.floor(diffMin / 60);
+      if (diffH < 24) return `${diffH}h`;
+      const diffD = Math.floor(diffH / 24);
+      if (diffD < 7) return `${diffD}d`;
+      return formatDistanceToNow(d, { addSuffix: false });
     } catch {
-      return "recently";
+      return "now";
     }
   };
 
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+    return num.toString();
+  };
+
+  const shouldTruncate = (content: string) => content.length > 180;
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading your feed...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
-      {/* Header */}
-      <header className="sticky top-0 bg-background z-10 px-4 py-3 border-b border-border/60">
-        <div className="flex items-center justify-between mb-4 gap-3">
-          <Avatar className="w-10 h-10 flex-shrink-0 cursor-pointer touch-manipulation" onClick={() => navigate("/community/profile")}>
-            <AvatarImage src="" />
-            <AvatarFallback className="bg-secondary text-secondary-foreground font-medium">
-              {user ? getInitials(user.email) : "U"}
-            </AvatarFallback>
-          </Avatar>
-          <h1 className="text-base font-semibold flex-1 text-center">Feed</h1>
-          <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation" onClick={() => navigate("/community/create")}>
-            <Plus className="w-5 h-5" />
-          </Button>
-        </div>
-        
-        <div className="flex items-center gap-2 mb-4">
-          <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search..." 
-              className="pl-9 bg-secondary/50 border-border/60 min-h-[44px]"
-              onClick={() => navigate("/community/search")}
-              readOnly
-            />
+    <div className="min-h-screen bg-background pb-4 overflow-x-hidden">
+      {/* Sticky header */}
+      <header className="sticky top-0 bg-background/80 backdrop-blur-xl z-20 border-b border-border/40">
+        {/* Top row */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <div className="flex items-center gap-2.5">
+            <Avatar
+              className="w-9 h-9 ring-2 ring-primary/20 cursor-pointer touch-manipulation"
+              onClick={() => navigate("/community/profile")}
+            >
+              <AvatarImage src="" />
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                {user ? getInitials(user.email) : "U"}
+              </AvatarFallback>
+            </Avatar>
+            <h1 className="text-lg font-bold tracking-tight">Feed</h1>
           </div>
-          <Button variant="outline" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation flex-shrink-0">
-            <Filter className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full touch-manipulation"
+              onClick={() => navigate("/community/search")}
+            >
+              <Search className="w-[18px] h-[18px]" />
+            </Button>
+            <Button
+              variant="default"
+              size="icon"
+              className="h-9 w-9 rounded-full touch-manipulation"
+              onClick={() => navigate("/community/create")}
+            >
+              <Plus className="w-[18px] h-[18px]" />
+            </Button>
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-3 bg-secondary/50 min-h-[44px] rounded-xl">
-            <TabsTrigger value="popular" className="gap-1.5 text-xs min-h-[40px] touch-manipulation rounded-lg">
-              <Flame className="w-3.5 h-3.5" /> Popular
-            </TabsTrigger>
-            <TabsTrigger value="trending" className="gap-1.5 text-xs min-h-[40px] touch-manipulation rounded-lg">
-              <TrendingUp className="w-3.5 h-3.5" /> Trending
-            </TabsTrigger>
-            <TabsTrigger value="following" className="gap-1.5 text-xs min-h-[40px] touch-manipulation rounded-lg">
-              <Users className="w-3.5 h-3.5" /> Following
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Tab pills */}
+        <div className="flex gap-1.5 px-4 pb-2.5 overflow-x-auto scrollbar-hide">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap touch-manipulation",
+                  isActive
+                    ? "bg-foreground text-background shadow-sm"
+                    : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </header>
 
-      {/* Empty State */}
-      {posts.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-            <MessageCircle className="w-10 h-10 text-muted-foreground" />
+      {/* Stories / Quick actions row */}
+      <div className="flex gap-3 px-4 py-3 overflow-x-auto scrollbar-hide">
+        <button
+          onClick={() => navigate("/community/create")}
+          className="flex flex-col items-center gap-1 shrink-0 touch-manipulation"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-dashed border-primary/30 flex items-center justify-center">
+            <Plus className="w-6 h-6 text-primary" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
-          <p className="text-muted-foreground text-sm mb-4">Be the first to share something with the community!</p>
-          <Button onClick={() => navigate("/community/create")}>
-            <Plus className="w-4 h-4 mr-2" /> Create Post
+          <span className="text-[10px] font-medium text-muted-foreground">Your Story</span>
+        </button>
+        {/* Placeholder story bubbles from recent posters */}
+        {posts.slice(0, 5).map((post) => (
+          <button
+            key={`story-${post.id}`}
+            onClick={() => navigate(`/community/user/${post.user_id}`)}
+            className="flex flex-col items-center gap-1 shrink-0 touch-manipulation"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary p-[2px]">
+              <Avatar className="w-full h-full rounded-[14px]">
+                <AvatarImage src={post.profile?.avatar_url || ""} className="rounded-[14px]" />
+                <AvatarFallback className="rounded-[14px] bg-secondary text-xs font-medium">
+                  {getInitials(post.profile?.display_name || post.profile?.username)}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            <span className="text-[10px] font-medium text-muted-foreground truncate w-16 text-center">
+              {post.profile?.display_name?.split(" ")[0] || "User"}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Empty state */}
+      {posts.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-5">
+            <Sparkles className="w-10 h-10 text-primary" />
+          </div>
+          <h3 className="text-lg font-bold mb-2">Your feed is empty</h3>
+          <p className="text-sm text-muted-foreground mb-5 max-w-[260px]">
+            Follow people or create your first post to get started!
+          </p>
+          <Button onClick={() => navigate("/community/create")} className="rounded-full px-6">
+            <Plus className="w-4 h-4 mr-1.5" /> Create Post
           </Button>
         </div>
       )}
 
       {/* Posts */}
-      <div className="divide-y divide-border/60">
-        {posts.map((post) => (
-          <article key={post.id} className="px-4 py-4">
-            {/* Author */}
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar className="w-10 h-10 flex-shrink-0 cursor-pointer touch-manipulation" onClick={() => navigate(`/community/user/${post.user_id}`)}>
-                <AvatarImage src={post.profile?.avatar_url || ""} />
-                <AvatarFallback className="bg-secondary text-secondary-foreground text-sm font-medium">
-                  {getInitials(post.profile?.display_name || post.profile?.username)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <span className="font-medium text-sm truncate">
-                    {post.profile?.display_name || post.profile?.username || "Anonymous"}
-                  </span>
+      <div className="space-y-2 px-3">
+        {posts.map((post) => {
+          const isExpanded = expandedPosts.includes(post.id);
+          const truncate = shouldTruncate(post.content);
+          const isSaved = savedPosts.includes(post.id);
+          const isLikeAnimating = likeAnimations.includes(post.id);
+
+          return (
+            <article
+              key={post.id}
+              className="bg-card rounded-2xl border border-border/40 overflow-hidden"
+            >
+              {/* Author row */}
+              <div className="flex items-center gap-2.5 px-3.5 pt-3.5 pb-2">
+                <Avatar
+                  className="w-10 h-10 cursor-pointer touch-manipulation ring-1 ring-border/40"
+                  onClick={() => navigate(`/community/user/${post.user_id}`)}
+                >
+                  <AvatarImage src={post.profile?.avatar_url || ""} />
+                  <AvatarFallback className="bg-secondary text-secondary-foreground text-xs font-semibold">
+                    {getInitials(post.profile?.display_name || post.profile?.username)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="font-semibold text-sm truncate cursor-pointer"
+                      onClick={() => navigate(`/community/user/${post.user_id}`)}
+                    >
+                      {post.profile?.display_name || post.profile?.username || "Anonymous"}
+                    </span>
+                    {post.profile?.username && (
+                      <span className="text-xs text-muted-foreground hidden">@{post.profile.username}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-muted-foreground">
+                      {formatTimestamp(post.created_at)}
+                    </span>
+                    {post.category && post.category !== "general" && (
+                      <>
+                        <span className="text-muted-foreground/40 text-[10px]">·</span>
+                        <span className="text-[10px] text-primary/70 font-medium capitalize">{post.category}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <span className="text-xs text-muted-foreground">{formatTimestamp(post.created_at)}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-muted-foreground touch-manipulation shrink-0"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
               </div>
-              <Button variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] touch-manipulation flex-shrink-0">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </div>
 
-            {/* Content */}
-            <p className="text-sm text-foreground mb-2">{post.content}</p>
-            
-            {/* Hashtags */}
-            {post.tags && post.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-3">
-                {post.tags.map((tag) => (
-                  <span key={tag} className="text-xs text-primary">#{tag}</span>
-                ))}
+              {/* Content */}
+              <div
+                className="px-3.5 pb-2"
+                onDoubleClick={() => handleDoubleTapLike(post)}
+              >
+                <p className="text-[14px] leading-relaxed text-foreground whitespace-pre-wrap">
+                  {truncate && !isExpanded ? post.content.slice(0, 180) + "..." : post.content}
+                </p>
+                {truncate && !isExpanded && (
+                  <button
+                    className="text-xs text-primary font-medium mt-0.5 touch-manipulation"
+                    onClick={() => setExpandedPosts((prev) => [...prev, post.id])}
+                  >
+                    Read more
+                  </button>
+                )}
               </div>
-            )}
 
-            {/* Media */}
-            {post.post_type === "workout" && post.workout_data && (
-              <Card className="p-4 mb-3 bg-muted/30">
-                <div className="flex items-center gap-4">
-                  {post.workout_data.duration && (
-                    <div className="flex items-center gap-1">
-                      <span className="bg-primary/80 text-white px-2 py-0.5 rounded text-xs">{post.workout_data.duration}</span>
-                      <span className="text-xs text-muted-foreground">Minutes</span>
+              {/* Tags */}
+              {post.tags && post.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 px-3.5 pb-2.5">
+                  {post.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[11px] text-primary/80 font-medium bg-primary/5 px-2 py-0.5 rounded-full"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Media - Image */}
+              {post.image_url && (
+                <div
+                  className="relative mx-3.5 mb-2.5 rounded-xl overflow-hidden"
+                  onDoubleClick={() => handleDoubleTapLike(post)}
+                >
+                  <img
+                    src={post.image_url}
+                    alt=""
+                    className="w-full aspect-[4/3] object-cover"
+                    loading="lazy"
+                  />
+                  {/* Double-tap heart animation */}
+                  {isLikeAnimating && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <Heart className="w-20 h-20 text-white fill-white drop-shadow-lg animate-ping" />
                     </div>
                   )}
-                  {post.workout_data.calories && (
-                    <div className="flex items-center gap-1">
-                      <span className="bg-primary/80 text-white px-2 py-0.5 rounded text-xs">🔥 {post.workout_data.calories}</span>
-                      <span className="text-xs text-muted-foreground">kcal</span>
-                    </div>
-                  )}
                 </div>
-              </Card>
-            )}
+              )}
 
-            {post.image_url && (
-              <div className="relative rounded-xl overflow-hidden mb-3">
-                <img src={post.image_url} alt="" className="w-full h-48 object-cover" />
-              </div>
-            )}
+              {/* Workout card */}
+              {post.post_type === "workout" && post.workout_data && (
+                <div className="mx-3.5 mb-2.5 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 p-3.5 border border-primary/10">
+                  <div className="flex items-center gap-4">
+                    {post.workout_data.type && (
+                      <span className="text-xs font-semibold text-primary capitalize">{post.workout_data.type}</span>
+                    )}
+                    {post.workout_data.duration && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <span className="font-bold text-foreground">{post.workout_data.duration}</span> min
+                      </div>
+                    )}
+                    {post.workout_data.calories && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        🔥 <span className="font-bold text-foreground">{post.workout_data.calories}</span> kcal
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
-            {post.post_type === "poll" && post.poll_options && (
-              <Card className="p-4 mb-3 bg-muted/30">
-                <div className="space-y-2">
+              {/* Poll */}
+              {post.post_type === "poll" && post.poll_options && (
+                <div className="mx-3.5 mb-2.5 space-y-2">
                   {post.poll_options.options.map((option, idx) => {
                     const totalVotes = post.poll_options!.votes.reduce((a, b) => a + b, 0);
-                    const percentage = totalVotes > 0 ? Math.round((post.poll_options!.votes[idx] / totalVotes) * 100) : 0;
+                    const pct = totalVotes > 0 ? Math.round((post.poll_options!.votes[idx] / totalVotes) * 100) : 0;
                     return (
-                      <div key={idx} className="relative">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm">{option}</span>
-                          <span className="text-xs text-muted-foreground">{percentage}%</span>
+                      <button
+                        key={idx}
+                        className="w-full relative rounded-xl border border-border/60 overflow-hidden text-left p-3 touch-manipulation transition-colors hover:border-primary/30"
+                      >
+                        <div
+                          className="absolute inset-y-0 left-0 bg-primary/8 rounded-xl transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                        <div className="relative flex justify-between items-center">
+                          <span className="text-sm font-medium">{option}</span>
+                          <span className="text-xs font-semibold text-muted-foreground">{pct}%</span>
                         </div>
-                        <Progress value={percentage} className="h-2" />
-                      </div>
+                      </button>
                     );
                   })}
+                  <p className="text-[11px] text-muted-foreground px-1">
+                    {post.poll_options.votes.reduce((a, b) => a + b, 0)} votes
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  {post.poll_options.votes.reduce((a, b) => a + b, 0)} votes
-                </p>
-              </Card>
-            )}
+              )}
 
-            {post.post_type === "before-after" && (post.before_image_url || post.after_image_url) && (
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                {post.before_image_url && (
-                  <div className="relative rounded-xl overflow-hidden">
-                    <img src={post.before_image_url} alt="Before" className="w-full aspect-[3/4] object-cover" />
-                    <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">Before</span>
-                  </div>
-                )}
-                {post.after_image_url && (
-                  <div className="relative rounded-xl overflow-hidden">
-                    <img src={post.after_image_url} alt="After" className="w-full aspect-[3/4] object-cover" />
-                    <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">After</span>
-                  </div>
-                )}
-              </div>
-            )}
+              {/* Before/After */}
+              {post.post_type === "before-after" && (post.before_image_url || post.after_image_url) && (
+                <div className="grid grid-cols-2 gap-1.5 mx-3.5 mb-2.5">
+                  {post.before_image_url && (
+                    <div className="relative rounded-xl overflow-hidden">
+                      <img src={post.before_image_url} alt="Before" className="w-full aspect-[3/4] object-cover" loading="lazy" />
+                      <span className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm text-[10px] font-semibold px-2 py-0.5 rounded-full">Before</span>
+                    </div>
+                  )}
+                  {post.after_image_url && (
+                    <div className="relative rounded-xl overflow-hidden">
+                      <img src={post.after_image_url} alt="After" className="w-full aspect-[3/4] object-cover" loading="lazy" />
+                      <span className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-full">After</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
-            {/* Engagement */}
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <button 
-                  className={`flex items-center gap-1 hover:text-primary transition-colors min-h-[44px] min-w-[44px] touch-manipulation ${post.is_liked ? "text-red-500" : ""}`}
-                  onClick={() => handleLike(post)}
-                  disabled={likingPosts.includes(post.id)}
+              {/* Engagement bar */}
+              <div className="flex items-center justify-between px-3.5 py-2.5 border-t border-border/30">
+                <div className="flex items-center gap-1">
+                  {/* Like */}
+                  <button
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all touch-manipulation",
+                      post.is_liked
+                        ? "text-red-500 bg-red-500/8"
+                        : "text-muted-foreground hover:bg-secondary/60"
+                    )}
+                    onClick={() => handleLike(post)}
+                    disabled={likingPosts.includes(post.id)}
+                  >
+                    <Heart
+                      className={cn(
+                        "w-[18px] h-[18px] transition-transform",
+                        post.is_liked && "fill-current scale-110",
+                        isLikeAnimating && "animate-bounce"
+                      )}
+                    />
+                    <span className="text-xs font-semibold">{formatNumber(post.likes_count)}</span>
+                  </button>
+
+                  {/* Comment */}
+                  <button
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full text-muted-foreground hover:bg-secondary/60 transition-all touch-manipulation"
+                    onClick={() => navigate(`/community/post/${post.id}/comments`)}
+                  >
+                    <MessageCircle className="w-[18px] h-[18px]" />
+                    <span className="text-xs font-semibold">{formatNumber(post.comments_count)}</span>
+                  </button>
+
+                  {/* Share */}
+                  <button className="flex items-center px-2.5 py-2 rounded-full text-muted-foreground hover:bg-secondary/60 transition-all touch-manipulation">
+                    <Share2 className="w-[18px] h-[18px]" />
+                  </button>
+                </div>
+
+                {/* Save */}
+                <button
+                  className={cn(
+                    "p-2 rounded-full transition-all touch-manipulation",
+                    isSaved
+                      ? "text-primary bg-primary/8"
+                      : "text-muted-foreground hover:bg-secondary/60"
+                  )}
+                  onClick={() => toggleSave(post.id)}
                 >
-                  <Heart className={`w-5 h-5 sm:w-4 sm:h-4 ${post.is_liked ? "fill-current" : ""}`} /> 
-                  <span className="text-xs">{formatNumber(post.likes_count)}</span>
-                </button>
-                <button 
-                  className="flex items-center gap-1 hover:text-primary min-h-[44px] min-w-[44px] touch-manipulation"
-                  onClick={() => navigate(`/community/post/${post.id}/comments`)}
-                >
-                  <MessageCircle className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-xs">{post.comments_count}</span>
+                  <Bookmark className={cn("w-[18px] h-[18px]", isSaved && "fill-current")} />
                 </button>
               </div>
-              <button 
-                className={`flex items-center min-h-[44px] touch-manipulation hover:text-primary ${savedPosts.includes(post.id) ? "text-primary" : ""}`}
-                onClick={() => toggleSave(post.id)}
-              >
-                <Bookmark className={`w-5 h-5 sm:w-4 sm:h-4 ${savedPosts.includes(post.id) ? "fill-current" : ""}`} />
-                <span className="ml-1 text-xs">Save</span>
-              </button>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
+
+      {/* Floating create button */}
+      <button
+        onClick={() => navigate("/community/create")}
+        className="fixed bottom-28 right-5 z-30 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 flex items-center justify-center touch-manipulation active:scale-95 transition-transform"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   );
 };
