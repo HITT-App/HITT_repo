@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { BottomNav } from "@/components/BottomNav";
 import { ChooseSportSheet } from "@/components/ChooseSportSheet";
+import { QuickStartFAB } from "@/components/QuickStartFAB";
 import { QuickStartFAB } from "@/components/QuickStartFAB";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { LevelUpModal } from "@/components/gamification/LevelUpModal";
