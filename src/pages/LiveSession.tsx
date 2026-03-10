@@ -109,7 +109,7 @@ const LiveSession = () => {
   });
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (sessionStarted) {
       interval = setInterval(() => {
         setElapsed((prev) => prev + 1);

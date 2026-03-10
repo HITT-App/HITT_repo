@@ -18,7 +18,7 @@ export function VoiceMode({ onTranscript, onClose }: VoiceModeProps) {
   const audioChunksRef = useRef<Blob[]>([]);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number>();
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const startRecording = useCallback(async () => {
     try {

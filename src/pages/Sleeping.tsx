@@ -50,7 +50,7 @@ const Sleeping = () => {
 
   // Handle hold to wake up
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isHolding) {
       interval = setInterval(() => {
         setHoldProgress((prev) => {

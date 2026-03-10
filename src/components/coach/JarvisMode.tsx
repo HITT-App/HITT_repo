@@ -29,7 +29,7 @@ export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number>();
-  const silenceTimeoutRef = useRef<NodeJS.Timeout>();
+  const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // ElevenLabs Scribe hook for real-time transcription
   const scribe = useScribe({
