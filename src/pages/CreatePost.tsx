@@ -177,6 +177,31 @@ const CreatePost = () => {
       }
     }
 
+    if (editPostId) {
+      // Update existing post
+      const { error } = await supabase
+        .from("community_posts")
+        .update({
+          content: postData.content,
+          post_type: postData.post_type,
+          category: postData.category,
+          tags: postData.tags,
+          image_url: postData.image_url || null,
+          before_image_url: postData.before_image_url || null,
+          after_image_url: postData.after_image_url || null,
+          poll_options: postData.poll_options || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editPostId)
+        .eq("user_id", user.id);
+
+      setSubmitting(false);
+      if (!error) {
+        setShowSuccessDialog(true);
+      }
+      return;
+    }
+
     const result = await createPost(postData);
     
     setSubmitting(false);
