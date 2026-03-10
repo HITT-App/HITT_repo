@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { HIITLogo } from '@/components/HIITLogo';
-import { BottomNav } from '@/components/BottomNav';
+
 import { 
   Search, Filter, Clock, Flame, Star, ChevronRight, 
   Dumbbell, Heart, Zap, Play, Users, ArrowRight

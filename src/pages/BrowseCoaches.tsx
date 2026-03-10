@@ -11,7 +11,7 @@ import {
   Dumbbell, Heart, Zap, Wind, X, SlidersHorizontal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BottomNav } from '@/components/BottomNav';
+
 
 const SPECIALTIES = [
   { id: 'hiit', label: 'HIIT', icon: Zap },
