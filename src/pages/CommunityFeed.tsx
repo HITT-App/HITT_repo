@@ -204,7 +204,26 @@ const CommunityFeed = () => {
         ))}
       </div>
 
-      {/* Empty state */}
+      {/* Composer prompt */}
+      <div
+        className="mx-3 mb-3 flex items-center gap-3 bg-card rounded-2xl border border-border/40 px-3.5 py-3 cursor-pointer touch-manipulation active:scale-[0.99] transition-transform"
+        onClick={() => navigate("/community/create")}
+      >
+        <Avatar className="w-9 h-9 shrink-0">
+          <AvatarImage src={myAvatarUrl} />
+          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+            {getInitials(myDisplayName)}
+          </AvatarFallback>
+        </Avatar>
+        <span className="text-sm text-muted-foreground flex-1">What's on your mind?</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+            <Send className="w-3.5 h-3.5 text-primary" />
+          </div>
+        </div>
+      </div>
+
+
       {posts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
           <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-5">
