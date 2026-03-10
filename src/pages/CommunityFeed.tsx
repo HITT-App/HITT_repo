@@ -2,14 +2,14 @@ import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
-  Flame, Users, TrendingUp, Loader2, Share2, Repeat2, Sparkles,
-  ArrowLeft, Send,
+  Flame, Users, TrendingUp, Loader2, Share2, Sparkles,
+  Send, Pencil, Trash2, EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useCommunityPosts, useCommunityActions, CommunityPost } from "@/hooks/useCommunity";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
