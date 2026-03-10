@@ -143,15 +143,6 @@ const Index = () => {
         {flags.resources_enabled && <ResourcesSection />}
 
         {/* Quick Start FAB removed */}
-        
-        {/* Bottom Navigation */}
-        <BottomNav onCenterClick={() => setQuickActionsOpen(true)} />
-        
-        {/* Choose a Sport Drawer */}
-        <ChooseSportSheet 
-          open={quickActionsOpen} 
-          onOpenChange={setQuickActionsOpen} 
-        />
       </div>
     </div>
   );
