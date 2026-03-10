@@ -120,9 +120,9 @@ const CommunityFeed = () => {
               className="w-9 h-9 ring-2 ring-primary/20 cursor-pointer touch-manipulation"
               onClick={() => navigate("/community/profile")}
             >
-              <AvatarImage src="" />
+              <AvatarImage src={myAvatarUrl} />
               <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
-                {user ? getInitials(user.email) : "U"}
+                {getInitials(myDisplayName)}
               </AvatarFallback>
             </Avatar>
             <h1 className="text-lg font-bold tracking-tight">Feed</h1>
