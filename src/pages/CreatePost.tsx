@@ -513,7 +513,7 @@ const CreatePost = () => {
               Submitting...
             </>
           ) : (
-            "Submit Post →"
+            editPostId ? "Update Post →" : "Submit Post →"
           )}
         </Button>
       </div>
