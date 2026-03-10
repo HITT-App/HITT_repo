@@ -110,7 +110,7 @@ const ActivityLive = () => {
 
   // --- Timer ---
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (!isPaused && !showCompleted) {
       interval = setInterval(() => setElapsed((p) => p + 1), 1000);
     }
