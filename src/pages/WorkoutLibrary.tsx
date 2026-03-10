@@ -473,7 +473,7 @@ export default function WorkoutLibrary() {
         </SheetContent>
       </Sheet>
 
-      <BottomNav onCenterClick={() => {}} />
+      
     </div>
   );
 }

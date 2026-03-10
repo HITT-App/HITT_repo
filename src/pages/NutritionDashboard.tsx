@@ -406,7 +406,7 @@ export default function NutritionDashboard() {
         </div>
       </ScrollArea>
 
-      <BottomNav onCenterClick={() => {}} />
+      
     </div>
   );
 }
