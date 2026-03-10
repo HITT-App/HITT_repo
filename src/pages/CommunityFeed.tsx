@@ -20,15 +20,25 @@ import { cn } from "@/lib/utils";
 const CommunityFeed = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("popular");
-  const { posts, loading } = useCommunityPosts();
-  const { likePost, unlikePost } = useCommunityActions();
+  const { posts, loading, refetch } = useCommunityPosts();
+  const { likePost, unlikePost, deletePost } = useCommunityActions();
   const { user } = useAuth();
   const { profile } = useProfile();
   const { profile: communityProfile } = useCommunityProfile();
   const [savedPosts, setSavedPosts] = useState<string[]>([]);
+  const [hiddenPosts, setHiddenPosts] = useState<string[]>([]);
   const [likingPosts, setLikingPosts] = useState<string[]>([]);
   const [likeAnimations, setLikeAnimations] = useState<string[]>([]);
   const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
+
+  const handleDeletePost = async (postId: string) => {
+    const success = await deletePost(postId);
+    if (success) refetch();
+  };
+
+  const handleHidePost = (postId: string) => {
+    setHiddenPosts((prev) => [...prev, postId]);
+  };
 
   const myAvatarUrl = communityProfile?.avatar_url || profile?.avatar_url || "";
   const myDisplayName = communityProfile?.display_name || profile?.display_name || user?.email || "";
