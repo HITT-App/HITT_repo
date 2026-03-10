@@ -26,7 +26,6 @@ import {
 } from "@/components/home";
 
 const Index = () => {
-  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [levelUpData, setLevelUpData] = useState<{
