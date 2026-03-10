@@ -505,7 +505,7 @@ const CreatePost = () => {
         <Button 
           className="w-full bg-primary hover:bg-primary/90"
           onClick={handleSubmit}
-          disabled={!content.trim() || submitting || uploading}
+          disabled={!content.trim() || submitting || uploading || loadingPost}
         >
           {submitting ? (
             <>
