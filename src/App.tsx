@@ -119,8 +119,7 @@ const App = () => (
         <Sonner />
         <PushPermissionBanner />
         <BrowserRouter>
-          <VerificationBanner />
-          <VoiceController />
+          <AppLayout>
           <Routes>
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/auth" element={<Auth />} />
