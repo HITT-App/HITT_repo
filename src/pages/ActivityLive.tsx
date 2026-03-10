@@ -362,155 +362,172 @@ const ActivityLive = () => {
 
   // ========== LIVE SCREEN ==========
   return (
-    <div className={cn(
-      "min-h-screen flex flex-col transition-colors duration-500",
-      isHolding ? "bg-destructive/20" : "bg-background"
-    )}>
-      {/* Header - floating over map */}
+    <div className="h-[100dvh] relative overflow-hidden bg-background">
+      {/* Full-screen map */}
+      <div className="absolute inset-0">
+        <LiveActivityMap positions={positions} gpsStatus={gpsStatus} />
+      </div>
+
+      {/* Floating header */}
       <header className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-[1002]">
-        <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-sm rounded-full shadow-sm" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" className="bg-card/70 backdrop-blur-md rounded-full border border-border/20" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <span className="text-xs font-semibold uppercase tracking-wider text-foreground bg-background/80 backdrop-blur-sm px-4 py-1.5 rounded-full shadow-sm">{activityType}</span>
-        <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-sm rounded-full shadow-sm" onClick={() => setShowSettings(true)}>
+        <span className="text-xs font-semibold uppercase tracking-wider text-foreground bg-card/70 backdrop-blur-md px-4 py-1.5 rounded-full border border-border/20">
+          {activityType}
+        </span>
+        <Button variant="ghost" size="icon" className="bg-card/70 backdrop-blur-md rounded-full border border-border/20" onClick={() => setShowSettings(true)}>
           <Settings className="w-5 h-5" />
         </Button>
       </header>
 
-      {/* Full-width Map */}
-      <div className="relative w-full" style={{ height: "45vh", minHeight: 220 }}>
-        <LiveActivityMap positions={positions} gpsStatus={gpsStatus} />
-        <div className="absolute top-16 left-4 z-[1001]"><GpsIndicator /></div>
+      {/* GPS indicator - floating on map */}
+      <div className="absolute top-16 left-4 z-[1001]"><GpsIndicator /></div>
 
-        {/* Mini floating timer on map */}
-        <div className="absolute bottom-6 right-4 z-[1001] bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-sm">
-          <span className="text-sm font-mono font-semibold text-foreground">{formatTime(elapsed)}</span>
+      {/* Auto-pause banner */}
+      {autoPausedRef.current && (
+        <button
+          onClick={() => {
+            autoPausedRef.current = false;
+            setIsPaused(false);
+            if (settings.autoVibrate) navigator.vibrate?.(100);
+          }}
+          className="absolute top-16 left-1/2 -translate-x-1/2 z-[1001] bg-accent/90 text-accent-foreground px-5 py-2 rounded-full text-sm font-semibold shadow-lg animate-bounce"
+        >
+          Auto-paused · Tap to resume
+        </button>
+      )}
+
+      {/* Compact bottom card */}
+      <div className={cn(
+        "absolute bottom-0 left-0 right-0 z-[1002] transition-colors duration-500",
+        isHolding ? "bg-destructive/95" : "bg-card/95",
+        "backdrop-blur-xl rounded-t-[28px] border-t border-border/20"
+      )}>
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
 
-        {/* Auto-pause banner */}
-        {autoPausedRef.current && (
-          <button
-            onClick={() => {
-              autoPausedRef.current = false;
-              setIsPaused(false);
-              if (settings.autoVibrate) navigator.vibrate?.(100);
-            }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1001] bg-accent/90 text-accent-foreground px-5 py-2 rounded-full text-sm font-semibold shadow-lg animate-bounce"
-          >
-            Auto-paused · Tap to resume
-          </button>
-        )}
-      </div>
-
-      {/* Stats Panel — gradient fade transition */}
-      <div className="flex-1 flex flex-col justify-between -mt-6 relative z-10">
-        {/* Gradient fade from map */}
-        <div className="h-6 bg-gradient-to-b from-transparent to-background" />
-
-        <div className="flex-1 flex flex-col justify-between px-4 pb-4 bg-background">
-          <div>
-            {/* Large timer */}
-            <div className="text-center mb-5">
-              <div className={cn(
-                "font-mono font-bold tracking-tight transition-all",
-                elapsed >= 3600 ? "text-4xl" : "text-6xl"
-              )}>
-                {formatTime(elapsed)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {isPaused ? (autoPausedRef.current ? "Auto-Paused" : "Paused") : "Elapsed Time"}
-              </p>
+        {/* Inline stats row */}
+        <div className="flex items-center justify-around px-5 pb-4 pt-1">
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Footprints className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[10px] uppercase text-muted-foreground tracking-wider">Distance</span>
             </div>
-
-            {/* 2x2 Stats Grid */}
-            <div className="grid grid-cols-2 gap-3 mb-5">
-              <div className="relative overflow-hidden rounded-2xl bg-card border border-border/40 p-3.5">
-                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary/80 to-primary/20" />
-                <Flame className="w-4 h-4 text-primary mb-1.5" />
-                <div className="text-2xl font-bold text-foreground">{calories}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Calories</div>
-              </div>
-              <div className="relative overflow-hidden rounded-2xl bg-card border border-border/40 p-3.5">
-                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary/80 to-primary/20" />
-                <Footprints className="w-4 h-4 text-primary mb-1.5" />
-                <div className="text-2xl font-bold text-foreground">{distanceKm.toFixed(2)}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Kilometers</div>
-              </div>
-              <div className="relative overflow-hidden rounded-2xl bg-card border border-border/40 p-3.5">
-                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary/60 to-primary/10" />
-                <Gauge className="w-4 h-4 text-primary mb-1.5" />
-                <div className="text-2xl font-bold text-foreground">{currentSpeed > 0 ? currentSpeed.toFixed(1) : "--"}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Speed km/h</div>
-              </div>
-              <div className="relative overflow-hidden rounded-2xl bg-card border border-border/40 p-3.5">
-                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary/60 to-primary/10" />
-                <Mountain className="w-4 h-4 text-primary mb-1.5" />
-                <div className="text-2xl font-bold text-foreground">{pace}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Pace min/km</div>
-              </div>
-            </div>
+            <span className="text-xl font-bold text-foreground font-mono">{distanceKm.toFixed(2)}<span className="text-xs text-muted-foreground ml-0.5">km</span></span>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center justify-center gap-5 pb-2">
-            {/* Lock toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "w-11 h-11 rounded-full transition-all",
-                isLocked ? "bg-muted text-muted-foreground" : "text-muted-foreground"
-              )}
-              onClick={() => {
-                setIsLocked((l) => !l);
-                if (settings.autoVibrate) navigator.vibrate?.(30);
-              }}
-            >
-              {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-            </Button>
+          {/* Divider */}
+          <div className="h-10 w-px bg-border/30" />
 
-            {/* Pause/Play */}
-            <Button
-              variant="outline"
-              size="icon"
-              className={cn(
-                "w-16 h-16 rounded-full transition-transform active:scale-90",
-                isLocked && "opacity-40 pointer-events-none"
-              )}
-              onClick={togglePause}
-            >
-              {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
-            </Button>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase text-muted-foreground tracking-wider mb-0.5">Duration</span>
+            <span className={cn(
+              "font-bold text-foreground font-mono",
+              isPaused ? "text-muted-foreground" : "text-foreground",
+              elapsed >= 3600 ? "text-lg" : "text-xl"
+            )}>
+              {formatTime(elapsed)}
+            </span>
+            {isPaused && !autoPausedRef.current && (
+              <span className="text-[9px] text-muted-foreground">Paused</span>
+            )}
+          </div>
 
-            {/* Hold to Finish */}
-            <div className="relative">
-              <button
-                className={cn(
-                  "w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all touch-manipulation",
-                  isLocked && "opacity-40 pointer-events-none",
-                  isHolding ? "bg-destructive scale-110" : "bg-destructive/80"
-                )}
-                onMouseDown={handleHoldStart}
-                onMouseUp={handleHoldEnd}
-                onMouseLeave={handleHoldEnd}
-                onTouchStart={handleHoldStart}
-                onTouchEnd={handleHoldEnd}
-              >
-                <span className="text-destructive-foreground text-[11px] font-semibold leading-tight text-center">
-                  Hold to<br />Finish
-                </span>
-              </button>
-              {/* Always-visible subtle pulse ring */}
-              {!isHolding && !isLocked && (
-                <div className="absolute inset-[-6px] rounded-full border-2 border-destructive/30 animate-ping pointer-events-none" style={{ animationDuration: "2.5s" }} />
-              )}
-              {/* Hold progress ring */}
-              {isHolding && (
-                <svg className="absolute inset-[-4px] w-[80px] h-[80px] -rotate-90 pointer-events-none" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="46" fill="none" stroke="hsl(var(--destructive-foreground))" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${holdProgress * 2.89} 289`} className="transition-all" />
-                </svg>
-              )}
+          {/* Divider */}
+          <div className="h-10 w-px bg-border/30" />
+
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Flame className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[10px] uppercase text-muted-foreground tracking-wider">Calories</span>
             </div>
+            <span className="text-xl font-bold text-foreground font-mono">{calories}</span>
+          </div>
+        </div>
+
+        {/* Extra stats row - speed & pace */}
+        <div className="flex items-center justify-around px-5 pb-4">
+          <div className="flex items-center gap-2">
+            <Gauge className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              {currentSpeed > 0 ? currentSpeed.toFixed(1) : "--"} km/h
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Mountain className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              {pace} min/km
+            </span>
+          </div>
+          {elevation !== null && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                ↑ {elevation}m
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Controls row */}
+        <div className="flex items-center justify-center gap-5 px-5 pb-8">
+          {/* Lock toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "w-11 h-11 rounded-full transition-all",
+              isLocked ? "bg-muted text-muted-foreground" : "text-muted-foreground"
+            )}
+            onClick={() => {
+              setIsLocked((l) => !l);
+              if (settings.autoVibrate) navigator.vibrate?.(30);
+            }}
+          >
+            {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+          </Button>
+
+          {/* Pause/Play */}
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn(
+              "w-16 h-16 rounded-full transition-transform active:scale-90 border-2",
+              isLocked && "opacity-40 pointer-events-none"
+            )}
+            onClick={togglePause}
+          >
+            {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
+          </Button>
+
+          {/* Hold to Finish */}
+          <div className="relative">
+            <button
+              className={cn(
+                "w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all touch-manipulation",
+                isLocked && "opacity-40 pointer-events-none",
+                isHolding ? "bg-destructive scale-110" : "bg-destructive/80"
+              )}
+              onMouseDown={handleHoldStart}
+              onMouseUp={handleHoldEnd}
+              onMouseLeave={handleHoldEnd}
+              onTouchStart={handleHoldStart}
+              onTouchEnd={handleHoldEnd}
+            >
+              <span className="text-destructive-foreground text-[10px] font-semibold leading-tight text-center">
+                Hold to<br />Finish
+              </span>
+            </button>
+            {!isHolding && !isLocked && (
+              <div className="absolute inset-[-5px] rounded-full border-2 border-destructive/30 animate-ping pointer-events-none" style={{ animationDuration: "2.5s" }} />
+            )}
+            {isHolding && (
+              <svg className="absolute inset-[-3px] w-[70px] h-[70px] -rotate-90 pointer-events-none" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="46" fill="none" stroke="hsl(var(--destructive-foreground))" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${holdProgress * 2.89} 289`} className="transition-all" />
+              </svg>
+            )}
           </div>
         </div>
       </div>

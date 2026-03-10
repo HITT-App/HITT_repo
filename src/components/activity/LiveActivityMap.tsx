@@ -13,12 +13,23 @@ interface LiveActivityMapProps {
   gpsStatus: "searching" | "active" | "unavailable" | "denied";
 }
 
+interface LiveActivityMapProps {
+  positions: GpsPoint[];
+  gpsStatus: "searching" | "active" | "unavailable" | "denied";
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+}
+
 const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const polylineRef = useRef<L.Polyline | null>(null);
   const dotRef = useRef<L.CircleMarker | null>(null);
   const pulseRef = useRef<L.CircleMarker | null>(null);
+
+  // Expose zoom methods
+  const handleZoomIn = () => mapRef.current?.zoomIn();
+  const handleZoomOut = () => mapRef.current?.zoomOut();
 
   // Initialize map
   useEffect(() => {
@@ -34,15 +45,12 @@ const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
       doubleClickZoom: false,
     });
 
-    // Dark sporty map style via CartoDB Dark Matter
     L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
       { maxZoom: 19 }
     ).addTo(map);
 
     mapRef.current = map;
-
-    // Fix Leaflet sizing after mount
     setTimeout(() => map.invalidateSize(), 100);
 
     return () => {
@@ -50,7 +58,6 @@ const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
       mapRef.current = null;
     };
   }, []);
-
   // Update trail & position
   useEffect(() => {
     const map = mapRef.current;
@@ -127,8 +134,24 @@ const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
   }, []);
 
   return (
-    <div className="w-full h-full relative rounded-2xl overflow-hidden shadow-lg">
+    <div className="w-full h-full relative overflow-hidden">
       <div ref={containerRef} className="w-full h-full absolute inset-0" />
+
+      {/* Zoom controls */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-2">
+        <button
+          onClick={handleZoomIn}
+          className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md border border-border/30 flex items-center justify-center text-foreground text-lg font-bold active:scale-90 transition-transform"
+        >
+          +
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md border border-border/30 flex items-center justify-center text-foreground text-lg font-bold active:scale-90 transition-transform"
+        >
+          −
+        </button>
+      </div>
 
       {/* GPS status overlays */}
       {gpsStatus !== "active" && (

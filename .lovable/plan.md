@@ -1,52 +1,80 @@
 
+# Fix Admin Panel: User Visibility and Data Access
 
-# Activity Live — Map-Dominant Redesign
+## Problem
+The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
 
-Redesign the live tracking screen to match the reference screenshots: a full-screen map with a compact bottom panel, keeping our dark CartoDB theme.
+There are 6 users in the database, but the admin sees 1.
 
-## Layout Changes
+## Root Cause
+The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
+- `profiles` -- affects user list and total user count
+- `activity_logs` -- affects "Active (7d)" stat
+- `meal_logs` -- affects "Meals Logged" stat
+- `workout_progress` -- affects "Completed" stat
+- `user_badges` -- affects "Badges Earned" stat
+- `coaching_sessions` -- affects "Sessions" stat
 
-```text
-┌─────────────────────────┐
-│  ← Activity Title    ⚙  │  ← floating header (transparent)
-│                         │
-│                         │
-│    FULL-SCREEN MAP      │  ← map fills entire viewport
-│    (dark theme kept)    │
-│                         │
-│   [GPS indicator]       │
-│          [+][-] zoom    │  ← zoom controls on right side
-│                         │
-│  ◉ Route Mode ∨        │  ← optional route mode chip
-├─────────────────────────┤
-│ From: Current Location  │  ← compact bottom card (white/dark card)
-│ ◉ 4.2km  🕐 23m  🔥128c│  ← inline stats row
-│                         │
-│  [ Pause ]   [ Finish ] │  ← controls row
-└─────────────────────────┘
+## Solution
+
+### 1. Database Migration: Add Admin SELECT Policies
+Add new RLS policies to allow admins to read all rows in the affected tables:
+
+```sql
+-- Admins can view all profiles
+CREATE POLICY "Admins can view all profiles"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all activity logs
+CREATE POLICY "Admins can view all activity logs"
+  ON public.activity_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all meal logs
+CREATE POLICY "Admins can view all meal logs"
+  ON public.meal_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all workout progress
+CREATE POLICY "Admins can view all workout progress"
+  ON public.workout_progress FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all user badges
+CREATE POLICY "Admins can view all user badges"
+  ON public.user_badges FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all coaching sessions
+CREATE POLICY "Admins can view all coaching sessions"
+  ON public.coaching_sessions FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 ```
 
-## Key Changes
+### 2. Improve AdminUsers Page
+Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
 
-1. **Full-screen map** — map takes `100vh` minus a small bottom card (~180px), instead of current 45vh split
-2. **Compact bottom card** — rounded-t-3xl card overlaying bottom of map with:
-   - Activity label / location text
-   - Inline stats row: Distance, Duration (timer), Calories — horizontal, compact
-   - Control buttons (pause/play + hold-to-finish) in a row
-3. **Floating zoom controls** — add `+` / `−` buttons on the right side of the map (dark circular buttons matching reference)
-4. **Keep dark CartoDB tiles** — matches our existing theme
-5. **Remove** the large timer section, 2x2 stat grid, and gradient fade — replaced by compact inline stats
-6. **Mini timer** stays on the stat bar as the duration value
-7. **GPS indicator** remains floating on the map
-8. **Lock button** moved into the bottom card controls row
+- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
+- Add pagination (currently limited to 100 users)
+- Add role filter tabs (All / Admins / Moderators)
+- Show user join date
+- Add moderator role management (currently only admin toggle)
 
-## Files to Edit
+### 3. Files Changed
 
-- **`src/pages/ActivityLive.tsx`** — restructure layout: full-screen map + compact bottom card with inline stats and controls
-- **`src/components/activity/LiveActivityMap.tsx`** — add zoom control buttons (custom positioned), keep dark theme and existing marker/trail logic
+| File | Change |
+|------|--------|
+| New migration SQL | Add 6 admin SELECT policies |
+| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
 
-## What Stays the Same
-- All GPS logic, speed calculation, auto-pause, wake lock, hold-to-finish, confetti, settings sheet
-- Dark CartoDB map tiles, pulsing marker, glowing trail
-- Completion screen
-
+### 4. No Changes Needed
+- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
+- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
+- Admin dashboard, sidebar, routing -- all working correctly
