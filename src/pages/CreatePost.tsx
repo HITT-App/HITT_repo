@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Settings, Image, Mic, Paperclip, X, Loader2, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +27,8 @@ const suggestedTags = ["fitnessrock", "hiitAI", "healthylifestyle", "workout"];
 
 const CreatePost = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editPostId = searchParams.get("edit");
   const { user } = useAuth();
   const { createPost } = useCommunityActions();
   const { uploadImage, uploading } = useImageUpload();
@@ -40,6 +43,44 @@ const CreatePost = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [pollOptions, setPollOptions] = useState(["", "", "", ""]);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingPost, setLoadingPost] = useState(!!editPostId);
+
+  // Load existing post data when editing
+  useEffect(() => {
+    if (!editPostId) return;
+    const loadPost = async () => {
+      setLoadingPost(true);
+      const { data, error } = await supabase
+        .from("community_posts")
+        .select("*")
+        .eq("id", editPostId)
+        .single();
+      if (data && !error) {
+        setContent(data.content || "");
+        setPostType((data.post_type as "text" | "poll" | "before-after") || "text");
+        setCategory(data.category || "workout");
+        setTags(data.tags || []);
+        if (data.image_url) {
+          setImageUrl(data.image_url);
+          setImagePreview(data.image_url);
+        }
+        if (data.before_image_url) {
+          setBeforeImageUrl(data.before_image_url);
+          setBeforeImagePreview(data.before_image_url);
+        }
+        if (data.after_image_url) {
+          setAfterImageUrl(data.after_image_url);
+          setAfterImagePreview(data.after_image_url);
+        }
+        if (data.poll_options) {
+          const po = data.poll_options as { options?: string[] };
+          if (po.options) setPollOptions([...po.options, ...Array(4 - po.options.length).fill("")].slice(0, 4));
+        }
+      }
+      setLoadingPost(false);
+    };
+    loadPost();
+  }, [editPostId]);
   
   // Image states
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -136,6 +177,31 @@ const CreatePost = () => {
       }
     }
 
+    if (editPostId) {
+      // Update existing post
+      const { error } = await supabase
+        .from("community_posts")
+        .update({
+          content: postData.content,
+          post_type: postData.post_type,
+          category: postData.category,
+          tags: postData.tags,
+          image_url: postData.image_url || null,
+          before_image_url: postData.before_image_url || null,
+          after_image_url: postData.after_image_url || null,
+          poll_options: postData.poll_options || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editPostId)
+        .eq("user_id", user.id);
+
+      setSubmitting(false);
+      if (!error) {
+        setShowSuccessDialog(true);
+      }
+      return;
+    }
+
     const result = await createPost(postData);
     
     setSubmitting(false);
@@ -190,7 +256,7 @@ const CreatePost = () => {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold">Add New Post</h1>
+        <h1 className="text-lg font-semibold">{editPostId ? "Edit Post" : "Add New Post"}</h1>
         <Button variant="ghost" size="icon">
           <Settings className="w-5 h-5" />
         </Button>
@@ -439,7 +505,7 @@ const CreatePost = () => {
         <Button 
           className="w-full bg-primary hover:bg-primary/90"
           onClick={handleSubmit}
-          disabled={!content.trim() || submitting || uploading}
+          disabled={!content.trim() || submitting || uploading || loadingPost}
         >
           {submitting ? (
             <>
@@ -447,7 +513,7 @@ const CreatePost = () => {
               Submitting...
             </>
           ) : (
-            "Submit Post →"
+            editPostId ? "Update Post →" : "Submit Post →"
           )}
         </Button>
       </div>
