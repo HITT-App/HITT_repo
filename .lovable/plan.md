@@ -1,75 +1,80 @@
 
+# Fix Admin Panel: User Visibility and Data Access
 
-# Admin Home Layout Manager
+## Problem
+The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
 
-Add a new "Layout" admin page where admins can visually enable/disable home page sections and drag-and-drop to reorder them. The home page (`Index.tsx`) will then render sections dynamically based on this saved order.
+There are 6 users in the database, but the admin sees 1.
 
-## Database
+## Root Cause
+The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
+- `profiles` -- affects user list and total user count
+- `activity_logs` -- affects "Active (7d)" stat
+- `meal_logs` -- affects "Meals Logged" stat
+- `workout_progress` -- affects "Completed" stat
+- `user_badges` -- affects "Badges Earned" stat
+- `coaching_sessions` -- affects "Sessions" stat
 
-Create a `home_layout` table to store section order and visibility:
+## Solution
+
+### 1. Database Migration: Add Admin SELECT Policies
+Add new RLS policies to allow admins to read all rows in the affected tables:
 
 ```sql
-CREATE TABLE public.home_layout (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  section_key text UNIQUE NOT NULL,
-  label text NOT NULL,
-  enabled boolean DEFAULT true,
-  sort_order integer DEFAULT 0,
-  updated_at timestamptz DEFAULT now()
-);
+-- Admins can view all profiles
+CREATE POLICY "Admins can view all profiles"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-ALTER TABLE public.home_layout ENABLE ROW LEVEL SECURITY;
+-- Admins can view all activity logs
+CREATE POLICY "Admins can view all activity logs"
+  ON public.activity_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
--- Anyone can read (needed for home page rendering)
-CREATE POLICY "Anyone can read home layout" ON public.home_layout FOR SELECT TO authenticated USING (true);
+-- Admins can view all meal logs
+CREATE POLICY "Admins can view all meal logs"
+  ON public.meal_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
--- Only admins can modify
-CREATE POLICY "Admins can update home layout" ON public.home_layout FOR UPDATE TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+-- Admins can view all workout progress
+CREATE POLICY "Admins can view all workout progress"
+  ON public.workout_progress FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
--- Seed with current sections
-INSERT INTO public.home_layout (section_key, label, sort_order, enabled) VALUES
-  ('hero', 'Hero Banner', 0, true),
-  ('header', 'Header & Score', 1, true),
-  ('stats_grid', 'Stats Grid', 2, true),
-  ('fitness_metrics', 'Fitness Metrics', 3, true),
-  ('activity', 'Activity', 4, true),
-  ('workouts', 'Workouts', 5, true),
-  ('coaching', 'Coach Session', 6, true),
-  ('nutrition', 'Nutrition', 7, true),
-  ('sleep', 'Sleep', 8, true),
-  ('ai_coach', 'AI Coach', 9, true),
-  ('resources', 'Resources', 10, true);
+-- Admins can view all user badges
+CREATE POLICY "Admins can view all user badges"
+  ON public.user_badges FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all coaching sessions
+CREATE POLICY "Admins can view all coaching sessions"
+  ON public.coaching_sessions FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 ```
 
-## New Files
+### 2. Improve AdminUsers Page
+Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
 
-### `src/hooks/useHomeLayout.ts`
-- Fetch `home_layout` ordered by `sort_order`
-- Return `{ sections, loading }` — each section has `section_key`, `enabled`, `sort_order`
+- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
+- Add pagination (currently limited to 100 users)
+- Add role filter tabs (All / Admins / Moderators)
+- Show user join date
+- Add moderator role management (currently only admin toggle)
 
-### `src/pages/admin/AdminLayout.tsx` (new admin page)
-- List all sections as draggable cards with toggle switches
-- Use simple pointer-event-based drag-and-drop (no external library needed — use `onDragStart`/`onDragOver`/`onDrop` with HTML5 drag API)
-- Each card shows: drag handle icon, section label, enable/disable switch
-- Save button updates `sort_order` and `enabled` for all rows in one batch
+### 3. Files Changed
 
-## Modified Files
+| File | Change |
+|------|--------|
+| New migration SQL | Add 6 admin SELECT policies |
+| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
 
-### `src/pages/Index.tsx`
-- Import `useHomeLayout` hook
-- Build a section map: `{ hero: <HomeHero />, workouts: <WorkoutsSection />, ... }`
-- Render sections by iterating the sorted layout array, checking both `enabled` from layout AND the corresponding feature flag
-
-### `src/components/admin/AdminSidebar.tsx`
-- Add "Layout" nav item pointing to `/admin/layout`
-
-### `src/App.tsx`
-- Add route: `/admin/layout` → `AdminRoute` wrapping the new layout page
-
-## UX Design
-- Each section is a horizontal card with: `☰` drag handle | Section label | `Switch` toggle
-- Dragging reorders; switches toggle visibility
-- "Save Layout" button at top persists changes
-- "Reset to Default" button restores original order
-- Changes reflect immediately on the home page for all users
-
+### 4. No Changes Needed
+- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
+- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
+- Admin dashboard, sidebar, routing -- all working correctly

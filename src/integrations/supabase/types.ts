@@ -1258,6 +1258,33 @@ export type Database = {
         }
         Relationships: []
       }
+      home_layout: {
+        Row: {
+          enabled: boolean | null
+          id: string
+          label: string
+          section_key: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          enabled?: boolean | null
+          id?: string
+          label: string
+          section_key: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          enabled?: boolean | null
+          id?: string
+          label?: string
+          section_key?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       leaderboard_scores: {
         Row: {
           category: string

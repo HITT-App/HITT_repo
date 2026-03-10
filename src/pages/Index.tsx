@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 
 import { QuickStartFAB } from "@/components/QuickStartFAB";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
@@ -11,8 +11,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserLevel, XP_REWARDS } from "@/hooks/useUserLevel";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useHomeLayout } from "@/hooks/useHomeLayout";
 
-// New home components
 import {
   HomeHeader,
   FitnessMetricsCard,
@@ -39,13 +39,13 @@ const Index = () => {
   const { profile } = useProfile();
   const { addXP, previousLevel } = useUserLevel();
   const { flags } = useFeatureFlags();
+  const { sections, loading: layoutLoading } = useHomeLayout();
   
   const displayName = profile?.display_name || 
                       user?.user_metadata?.display_name || 
                       user?.email?.split("@")[0] || 
                       "Athlete";
 
-  // Show welcome screen on first sign-in per session
   useEffect(() => {
     if (user && !sessionStorage.getItem("hiit_welcomed")) {
       setShowWelcome(true);
@@ -78,6 +78,68 @@ const Index = () => {
     }
   };
 
+  // Map section keys to feature flag keys (null = always show)
+  const featureFlagMap: Record<string, string | null> = {
+    hero: null,
+    header: null,
+    stats_grid: null,
+    fitness_metrics: "health_metrics_enabled",
+    activity: "activity_enabled",
+    workouts: "workouts_enabled",
+    coaching: "coaching_enabled",
+    nutrition: "nutrition_enabled",
+    sleep: "sleep_enabled",
+    ai_coach: "ai_coach_enabled",
+    resources: "resources_enabled",
+  };
+
+  // Map section keys to components
+  const sectionComponents: Record<string, ReactNode> = {
+    hero: <HomeHero userName={displayName} />,
+    header: <HomeHeader userName={displayName} score={61} avatarUrl={profile?.avatar_url} />,
+    stats_grid: <StatsGrid />,
+    fitness_metrics: <FitnessMetricsCard hasData={true} />,
+    activity: <ActivitySection />,
+    workouts: <WorkoutsSection />,
+    coaching: <CoachSessionSection />,
+    nutrition: <NutritionSection hasData={true} />,
+    sleep: <SleepSection hasData={true} />,
+    ai_coach: <AICoachSection />,
+    resources: <ResourcesSection />,
+  };
+
+  const renderSections = () => {
+    if (layoutLoading || sections.length === 0) {
+      // Fallback to default order
+      return (
+        <>
+          <HomeHero userName={displayName} />
+          <HomeHeader userName={displayName} score={61} avatarUrl={profile?.avatar_url} />
+          <StatsGrid />
+          {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
+          {flags.activity_enabled && <ActivitySection />}
+          {flags.workouts_enabled && <WorkoutsSection />}
+          {flags.coaching_enabled && <CoachSessionSection />}
+          {flags.nutrition_enabled && <NutritionSection hasData={true} />}
+          {flags.sleep_enabled && <SleepSection hasData={true} />}
+          {flags.ai_coach_enabled && <AICoachSection />}
+          {flags.resources_enabled && <ResourcesSection />}
+        </>
+      );
+    }
+
+    return sections
+      .filter((s) => {
+        if (!s.enabled) return false;
+        const flagKey = featureFlagMap[s.section_key];
+        if (flagKey && !flags[flagKey]) return false;
+        return true;
+      })
+      .map((s) => (
+        <div key={s.section_key}>{sectionComponents[s.section_key]}</div>
+      ));
+  };
+
   return (
     <div className="min-h-screen bg-background flex justify-center">
       {showWelcome && (
@@ -89,12 +151,10 @@ const Index = () => {
       )}
 
       <div className="w-full max-w-md min-h-screen relative overflow-x-hidden pb-28">
-        {/* Daily Check-in - only if gamification enabled */}
         {flags.gamification_enabled && (
           <DailyCheckIn onComplete={handleCheckInComplete} />
         )}
 
-        {/* Level Up Celebration Modal */}
         {flags.gamification_enabled && (
           <LevelUpModal
             isOpen={levelUpData.isOpen}
@@ -105,42 +165,7 @@ const Index = () => {
           />
         )}
 
-        {/* Video Hero Section */}
-        <HomeHero userName={displayName} />
-
-        {/* Header with HIIT Score + Search */}
-        <HomeHeader userName={displayName} score={61} avatarUrl={profile?.avatar_url} />
-
-        {/* Stats Grid */}
-        <StatsGrid />
-
-        {/* Fitness Metrics Card */}
-        {flags.health_metrics_enabled && (
-          <FitnessMetricsCard hasData={true} />
-        )}
-
-        {/* Activity Section */}
-        {flags.activity_enabled && <ActivitySection />}
-
-        {/* Workouts Carousel */}
-        {flags.workouts_enabled && <WorkoutsSection />}
-
-        {/* Coach Session */}
-        {flags.coaching_enabled && <CoachSessionSection />}
-
-        {/* Nutrition */}
-        {flags.nutrition_enabled && <NutritionSection hasData={true} />}
-
-        {/* Sleep */}
-        {flags.sleep_enabled && <SleepSection hasData={true} />}
-
-        {/* AI Coach */}
-        {flags.ai_coach_enabled && <AICoachSection />}
-
-        {/* Resources */}
-        {flags.resources_enabled && <ResourcesSection />}
-
-        {/* Quick Start FAB removed */}
+        {renderSections()}
       </div>
     </div>
   );
