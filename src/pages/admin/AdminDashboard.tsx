@@ -31,7 +31,6 @@ export default function AdminDashboard() {
   const { stats, loading: statsLoading } = useAdminStats();
   const { activities, loading: activityLoading } = useRecentActivity(8);
 
-  // Stats configuration with icons and colors
   const statCards = [
     { title: "Total Users", value: stats.totalUsers, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
     { title: "Active (7d)", value: stats.activeUsers, icon: Activity, color: "text-green-500", bg: "bg-green-500/10" },
@@ -49,7 +48,6 @@ export default function AdminDashboard() {
     { title: "Badges Earned", value: stats.badgesEarned, icon: Award, color: "text-fuchsia-500", bg: "bg-fuchsia-500/10" },
   ];
 
-  // Management areas with navigation
   const managementCards = [
     { title: "Workouts", description: "Manage workout library", icon: Dumbbell, href: "/admin/workouts", color: "text-orange-500" },
     { title: "Meals", description: "Manage meal database", icon: Utensils, href: "/admin/meals", color: "text-amber-500" },
@@ -61,7 +59,6 @@ export default function AdminDashboard() {
     { title: "Analytics", description: "View app metrics", icon: BarChart3, href: "/admin/analytics", color: "text-emerald-500" },
   ];
 
-  // Quick actions
   const quickActions = [
     { title: "Send Notification", icon: Send, href: "/admin/notifications", variant: "default" as const },
     { title: "Add Workout", icon: Dumbbell, href: "/admin/workouts", variant: "outline" as const },
@@ -70,7 +67,6 @@ export default function AdminDashboard() {
     { title: "Settings", icon: Settings, href: "/admin/settings", variant: "outline" as const },
   ];
 
-  // Activity icon mapping
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "signup": return <UserPlus className="h-4 w-4 text-blue-500" />;
@@ -84,21 +80,21 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout title="Admin Dashboard" description="Overview and quick access to all management areas">
-      <div className="space-y-6">
-        {/* Stats Grid */}
+      <div className="space-y-4 md:space-y-6">
+        {/* Stats Grid - 2 columns on mobile */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">Platform Statistics</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <h2 className="text-base md:text-lg font-semibold mb-2">Platform Statistics</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3">
             {statCards.map((stat) => {
               const Icon = stat.icon;
               return (
                 <Card key={stat.title} className="relative overflow-hidden">
-                  <CardContent className="p-3">
-                    <div className={`absolute top-2 right-2 p-1.5 rounded-full ${stat.bg}`}>
-                      <Icon className={`h-3.5 w-3.5 ${stat.color}`} />
+                  <CardContent className="p-2.5 md:p-3">
+                    <div className={`absolute top-2 right-2 p-1 md:p-1.5 rounded-full ${stat.bg}`}>
+                      <Icon className={`h-3 w-3 md:h-3.5 md:w-3.5 ${stat.color}`} />
                     </div>
-                    <p className="text-xs text-muted-foreground truncate pr-8">{stat.title}</p>
-                    <p className="text-xl font-bold mt-1">
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate pr-6">{stat.title}</p>
+                    <p className="text-lg md:text-xl font-bold mt-0.5">
                       {statsLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
@@ -112,14 +108,13 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - scrollable on mobile */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Quick Actions</CardTitle>
-            <CardDescription>Common administrative tasks</CardDescription>
+          <CardHeader className="pb-2 px-3 pt-3 md:px-5 md:pt-5 md:pb-3">
+            <CardTitle className="text-sm md:text-base">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
+          <CardContent className="px-3 pb-3 md:px-5 md:pb-5">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {quickActions.map((action) => {
                 const Icon = action.icon;
                 return (
@@ -128,9 +123,9 @@ export default function AdminDashboard() {
                     variant={action.variant}
                     size="sm"
                     onClick={() => navigate(action.href)}
-                    className="gap-2"
+                    className="gap-1.5 shrink-0 text-xs"
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-3.5 w-3.5" />
                     {action.title}
                   </Button>
                 );
@@ -139,27 +134,27 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Management Areas */}
+        {/* Management + Activity stacked on mobile */}
+        <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0">
           <div>
-            <h2 className="text-lg font-semibold mb-3">Management Areas</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <h2 className="text-base md:text-lg font-semibold mb-2">Management Areas</h2>
+            <div className="grid grid-cols-2 gap-2 md:gap-3">
               {managementCards.map((card) => {
                 const Icon = card.icon;
                 return (
                   <Card
                     key={card.title}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="cursor-pointer hover:bg-muted/50 active:scale-[0.98] transition-all"
                     onClick={() => navigate(card.href)}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-muted">
-                          <Icon className={`h-5 w-5 ${card.color}`} />
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 md:p-2 rounded-lg bg-muted shrink-0">
+                          <Icon className={`h-4 w-4 md:h-5 md:w-5 ${card.color}`} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-sm">{card.title}</h3>
-                          <p className="text-xs text-muted-foreground truncate">{card.description}</p>
+                        <div className="min-w-0">
+                          <h3 className="font-medium text-xs md:text-sm">{card.title}</h3>
+                          <p className="text-[10px] md:text-xs text-muted-foreground truncate">{card.description}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -169,12 +164,11 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recent Activity */}
           <div>
-            <h2 className="text-lg font-semibold mb-3">Recent Activity</h2>
+            <h2 className="text-base md:text-lg font-semibold mb-2">Recent Activity</h2>
             <Card>
               <CardContent className="p-0">
-                <ScrollArea className="h-[340px]">
+                <ScrollArea className="h-[280px] md:h-[340px]">
                   {activityLoading ? (
                     <div className="flex items-center justify-center h-full p-6">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -187,17 +181,17 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="divide-y">
                       {activities.map((activity) => (
-                        <div key={activity.id} className="flex items-start gap-3 p-3 hover:bg-muted/30">
+                        <div key={activity.id} className="flex items-start gap-2.5 p-2.5 md:p-3 hover:bg-muted/30">
                           <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium">{activity.title}</p>
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs md:text-sm font-medium truncate">{activity.title}</p>
+                              <Badge variant="secondary" className="text-[9px] md:text-[10px] px-1 py-0 shrink-0">
                                 {activity.type}
                               </Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">{activity.relativeTime}</p>
+                            <p className="text-[10px] md:text-xs text-muted-foreground truncate">{activity.description}</p>
+                            <p className="text-[9px] md:text-[10px] text-muted-foreground mt-0.5">{activity.relativeTime}</p>
                           </div>
                         </div>
                       ))}
