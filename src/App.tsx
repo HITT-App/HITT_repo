@@ -108,6 +108,7 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminHomeLayout from "./pages/admin/AdminHomeLayout";
+import CommunityChatroom from "./pages/CommunityChatroom";
 
 const queryClient = new QueryClient();
 
