@@ -76,6 +76,8 @@ const StoryViewer = () => {
     }
   }, [currentGroup, storyIndex, groupIndex, storyGroups.length, navigate]);
 
+  goNextRef.current = goNext;
+
   const goPrev = useCallback(() => {
     if (storyIndex > 0) {
       setStoryIndex((i) => i - 1);
