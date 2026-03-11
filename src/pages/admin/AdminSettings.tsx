@@ -153,6 +153,63 @@ export default function AdminSettings() {
   return (
     <AdminLayout title="Settings" description="Manage app configuration">
       <div className="space-y-6 max-w-2xl">
+        {/* Hero Video Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Video className="h-5 w-5" />
+              Hero Video
+            </CardTitle>
+            <CardDescription>
+              Upload a video for the home screen hero section. Leave empty to use the default.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {heroVideoUrl && (
+              <div className="rounded-lg overflow-hidden border border-border">
+                <video
+                  src={heroVideoUrl}
+                  className="w-full h-40 object-cover"
+                  muted
+                  autoPlay
+                  loop
+                  playsInline
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={handleVideoUpload}
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingVideo}
+              >
+                {uploadingVideo ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {heroVideoUrl ? "Replace Video" : "Upload Video"}
+              </Button>
+              {heroVideoUrl && (
+                <Button variant="destructive" size="sm" onClick={handleRemoveVideo}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Reset to Default
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {heroVideoUrl ? "Custom video is active" : "Using default bundled video"}
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Feature Flags */}
         <Card>
           <CardHeader>
