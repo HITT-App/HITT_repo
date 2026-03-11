@@ -183,6 +183,7 @@ export default function AdminSettings() {
     }
   };
 
+  const handleToggle = (flagName: string, enabled: boolean) => {
     setChanges((prev) => ({ ...prev, [flagName]: enabled }));
   };
 
