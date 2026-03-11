@@ -177,7 +177,7 @@ export default function AdminSettings() {
                 />
               </div>
             )}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
