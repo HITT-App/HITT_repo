@@ -56,6 +56,8 @@ import CommunityProfileSettings from "./pages/CommunityProfileSettings";
 import CommunityChat from "./pages/CommunityChat";
 
 import CreatePost from "./pages/CreatePost";
+import CreateStory from "./pages/CreateStory";
+import StoryViewer from "./pages/StoryViewer";
 import PostComments from "./pages/PostComments";
 import Resources from "./pages/Resources";
 import HeartRate from "./pages/HeartRate";
