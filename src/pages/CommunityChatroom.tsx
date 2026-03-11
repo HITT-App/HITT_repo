@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Send, Loader2, ChevronDown, MessageCircle, Users,
   Plus, Image as ImageIcon, Smile, X, Reply, Play, Pause,
-  Shield, Trash2, Pin, MoreVertical, PinOff,
+  Shield, Trash2, Pin, MoreVertical, PinOff, Settings, Megaphone,
+  Paintbrush, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +22,9 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import GifPicker from "@/components/chatroom/GifPicker";
 import VoiceRecorder from "@/components/chatroom/VoiceRecorder";
 import ImageLightbox from "@/components/chatroom/ImageLightbox";
@@ -44,7 +48,23 @@ interface UserProfile {
   avatar_url: string | null;
 }
 
+interface BroadcastNotice {
+  text: string;
+  sender: string;
+  timestamp: number;
+}
+
 const REACTIONS = ["🔥", "💪", "❤️", "😂", "👏"];
+
+const BACKGROUND_PRESETS = [
+  { id: "none", label: "Default", value: "", preview: "bg-background" },
+  { id: "gradient-sunset", label: "Sunset", value: "linear-gradient(135deg, hsl(20 80% 12%), hsl(340 60% 15%))", preview: "bg-gradient-to-br from-orange-950 to-rose-950" },
+  { id: "gradient-ocean", label: "Ocean", value: "linear-gradient(135deg, hsl(200 70% 10%), hsl(220 60% 18%))", preview: "bg-gradient-to-br from-cyan-950 to-blue-950" },
+  { id: "gradient-forest", label: "Forest", value: "linear-gradient(135deg, hsl(140 50% 10%), hsl(160 40% 15%))", preview: "bg-gradient-to-br from-green-950 to-emerald-950" },
+  { id: "gradient-midnight", label: "Midnight", value: "linear-gradient(135deg, hsl(250 40% 10%), hsl(280 50% 14%))", preview: "bg-gradient-to-br from-indigo-950 to-purple-950" },
+  { id: "gradient-ember", label: "Ember", value: "linear-gradient(135deg, hsl(0 60% 12%), hsl(30 50% 10%))", preview: "bg-gradient-to-br from-red-950 to-amber-950" },
+  { id: "gradient-slate", label: "Slate", value: "linear-gradient(135deg, hsl(210 20% 12%), hsl(220 15% 18%))", preview: "bg-gradient-to-br from-slate-900 to-slate-800" },
+];
 
 function DateSeparator({ date }: { date: string }) {
   const d = new Date(date);
@@ -125,6 +145,13 @@ export default function CommunityChatroom() {
   const [adminUserIds, setAdminUserIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
   const [onlineCount, setOnlineCount] = useState(1);
+  // Admin panel state
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [chatBackground, setChatBackground] = useState("");
+  const [noticeText, setNoticeText] = useState("");
+  const [sendingNotice, setSendingNotice] = useState(false);
+  const [activeNotice, setActiveNotice] = useState<BroadcastNotice | null>(null);
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -145,6 +172,21 @@ export default function CommunityChatroom() {
       el.classList.add("ring-2", "ring-primary/50");
       setTimeout(() => el.classList.remove("ring-2", "ring-primary/50"), 2000);
     }
+  }, []);
+
+  // Load chatroom background from app_settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "chatroom_background")
+        .maybeSingle();
+      if (data?.value) {
+        setChatBackground(data.value);
+      }
+    };
+    loadSettings();
   }, []);
 
   // Fetch admin user IDs for badge display
@@ -215,6 +257,23 @@ export default function CommunityChatroom() {
 
     return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Broadcast channel for admin notices
+  useEffect(() => {
+    const broadcastChannel = supabase.channel("chatroom-broadcast");
+
+    broadcastChannel
+      .on("broadcast", { event: "admin_notice" }, (payload) => {
+        const notice = payload.payload as BroadcastNotice;
+        setActiveNotice(notice);
+        setNoticeDismissed(false);
+        // Auto-dismiss after 30 seconds
+        setTimeout(() => setActiveNotice(null), 30000);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(broadcastChannel); };
   }, []);
 
   // Presence for typing + online count
@@ -355,7 +414,6 @@ export default function CommunityChatroom() {
       toast.error("Failed to delete message");
     } else {
       toast.success("Message deleted");
-      // Also log moderation action
       await supabase.from("moderation_logs").insert({
         moderator_id: user?.id,
         action_type: "delete_message",
@@ -369,7 +427,6 @@ export default function CommunityChatroom() {
 
   const handleTogglePin = async (msg: ChatMessage) => {
     const newPinState = !msg.is_pinned;
-    // Unpin all first if pinning a new one
     if (newPinState) {
       await supabase
         .from("chatroom_messages")
@@ -385,6 +442,57 @@ export default function CommunityChatroom() {
     } else {
       toast.success(newPinState ? "Message pinned" : "Message unpinned");
     }
+  };
+
+  const handleSetBackground = async (bgValue: string) => {
+    setChatBackground(bgValue);
+    // Upsert to app_settings
+    const { data: existing } = await supabase
+      .from("app_settings")
+      .select("id")
+      .eq("key", "chatroom_background")
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from("app_settings")
+        .update({ value: bgValue, updated_by: user?.id, updated_at: new Date().toISOString() } as any)
+        .eq("key", "chatroom_background");
+    } else {
+      await supabase
+        .from("app_settings")
+        .insert({ key: "chatroom_background", value: bgValue, updated_by: user?.id } as any);
+    }
+    toast.success("Background updated");
+  };
+
+  const handleSendNotice = async () => {
+    if (!noticeText.trim()) return;
+    setSendingNotice(true);
+
+    const notice: BroadcastNotice = {
+      text: noticeText.trim(),
+      sender: displayName,
+      timestamp: Date.now(),
+    };
+
+    // Broadcast to all connected users
+    const broadcastChannel = supabase.channel("chatroom-broadcast");
+    await broadcastChannel.subscribe();
+    await broadcastChannel.send({
+      type: "broadcast",
+      event: "admin_notice",
+      payload: notice,
+    });
+
+    // Also show it locally
+    setActiveNotice(notice);
+    setNoticeDismissed(false);
+    setTimeout(() => setActiveNotice(null), 30000);
+
+    setNoticeText("");
+    setSendingNotice(false);
+    toast.success("Notice sent to all users");
   };
 
   const renderMessageContent = (msg: ChatMessage) => {
@@ -426,16 +534,48 @@ export default function CommunityChatroom() {
         </div>
         <div className="flex items-center gap-1.5">
           {isAdmin && (
-            <div className="h-6 px-2 rounded-full bg-primary/10 flex items-center gap-1">
-              <Shield className="h-3 w-3 text-primary" />
-              <span className="text-[10px] font-semibold text-primary">Mod</span>
-            </div>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={() => setShowAdminPanel(true)}
+              >
+                <Settings className="h-4 w-4 text-primary" />
+              </Button>
+              <div className="h-6 px-2 rounded-full bg-primary/10 flex items-center gap-1">
+                <Shield className="h-3 w-3 text-primary" />
+                <span className="text-[10px] font-semibold text-primary">Mod</span>
+              </div>
+            </>
           )}
           <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
             <Users className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
         </div>
       </div>
+
+      {/* Active broadcast notice */}
+      {activeNotice && !noticeDismissed && (
+        <div className="flex items-start gap-2.5 px-4 py-3 bg-primary/10 border-b border-primary/20 shrink-0 animate-in slide-in-from-top-2 duration-300">
+          <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+            <Megaphone className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Admin Notice</p>
+              <span className="text-[9px] text-muted-foreground">from {activeNotice.sender}</span>
+            </div>
+            <p className="text-[13px] text-foreground mt-0.5 leading-snug">{activeNotice.text}</p>
+          </div>
+          <button
+            onClick={() => setNoticeDismissed(true)}
+            className="h-6 w-6 rounded-full bg-secondary/80 flex items-center justify-center shrink-0"
+          >
+            <X className="h-3 w-3 text-muted-foreground" />
+          </button>
+        </div>
+      )}
 
       {/* Pinned message banner */}
       {pinnedMessage && (
@@ -471,6 +611,7 @@ export default function CommunityChatroom() {
         ref={scrollContainerRef}
         onScroll={handleScroll}
         className="flex-1 min-h-0 overflow-y-auto px-3 py-2 scroll-smooth"
+        style={chatBackground ? { background: chatBackground } : undefined}
       >
         {loading ? (
           <div className="flex justify-center items-center h-full">
@@ -663,6 +804,86 @@ export default function CommunityChatroom() {
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </button>
       )}
+
+      {/* Admin Panel Dialog */}
+      <Dialog open={showAdminPanel} onOpenChange={setShowAdminPanel}>
+        <DialogContent className="max-w-[360px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Shield className="h-4 w-4 text-primary" />
+              Admin Controls
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 mt-2">
+            {/* Background Picker */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Paintbrush className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Chat Background</h3>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {BACKGROUND_PRESETS.map((preset) => {
+                  const isActive = chatBackground === preset.value;
+                  return (
+                    <button
+                      key={preset.id}
+                      onClick={() => handleSetBackground(preset.value)}
+                      className={`relative flex flex-col items-center gap-1.5 p-1.5 rounded-xl border-2 transition-all ${
+                        isActive
+                          ? "border-primary shadow-md"
+                          : "border-border/50 hover:border-border"
+                      }`}
+                    >
+                      <div className={`h-10 w-full rounded-lg ${preset.preview} ${!preset.value ? "border border-border/60" : ""}`} />
+                      <span className="text-[10px] font-medium text-muted-foreground">{preset.label}</span>
+                      {isActive && (
+                        <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Broadcast Notice */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Megaphone className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Broadcast Notice</h3>
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-2">
+                Send a pop-up notice visible to all users currently in the chatroom.
+              </p>
+              <textarea
+                value={noticeText}
+                onChange={(e) => setNoticeText(e.target.value)}
+                placeholder="Type your announcement..."
+                className="w-full h-20 px-3 py-2 rounded-xl bg-secondary/60 border border-border/50 text-sm resize-none outline-none focus:border-primary/40 placeholder:text-muted-foreground/50 transition-colors"
+                maxLength={280}
+              />
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[10px] text-muted-foreground">{noticeText.length}/280</span>
+                <Button
+                  size="sm"
+                  onClick={handleSendNotice}
+                  disabled={!noticeText.trim() || sendingNotice}
+                  className="rounded-full h-8 px-4 text-xs gap-1.5"
+                >
+                  {sendingNotice ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Megaphone className="h-3 w-3" />
+                  )}
+                  Send Notice
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
