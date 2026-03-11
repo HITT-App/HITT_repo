@@ -177,13 +177,22 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
                 <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
             </div>
-            <button
-              onClick={() => onOpenChange(false)}
-              className="p-2 rounded-full hover:bg-secondary transition-colors"
-              aria-label="Close menu"
-            >
-              <X size={20} className="text-muted-foreground" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="p-2 rounded-full hover:bg-secondary transition-colors"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun size={20} className="text-muted-foreground" /> : <Moon size={20} className="text-muted-foreground" />}
+              </button>
+              <button
+                onClick={() => onOpenChange(false)}
+                className="p-2 rounded-full hover:bg-secondary transition-colors"
+                aria-label="Close menu"
+              >
+                <X size={20} className="text-muted-foreground" />
+              </button>
+            </div>
           </div>
         </DrawerHeader>
         
