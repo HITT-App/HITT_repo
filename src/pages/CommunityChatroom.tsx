@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { Slider } from "@/components/ui/slider";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
@@ -148,6 +149,7 @@ export default function CommunityChatroom() {
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [chatBackground, setChatBackground] = useState("");
+  const [bgOpacity, setBgOpacity] = useState(100);
   const [noticeText, setNoticeText] = useState("");
   const [sendingNotice, setSendingNotice] = useState(false);
   const [activeNotice, setActiveNotice] = useState<BroadcastNotice | null>(null);
@@ -179,14 +181,19 @@ export default function CommunityChatroom() {
   // Load chatroom background from app_settings
   useEffect(() => {
     const loadSettings = async () => {
-      const { data } = await supabase
+      const { data: bgData } = await supabase
         .from("app_settings")
         .select("value")
         .eq("key", "chatroom_background")
         .maybeSingle();
-      if (data?.value) {
-        setChatBackground(data.value);
-      }
+      if (bgData?.value) setChatBackground(bgData.value);
+
+      const { data: opData } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "chatroom_bg_opacity")
+        .maybeSingle();
+      if (opData?.value) setBgOpacity(Number(opData.value));
     };
     loadSettings();
   }, []);
@@ -468,6 +475,25 @@ export default function CommunityChatroom() {
     toast.success("Background updated");
   };
 
+  const handleSetOpacity = async (value: number) => {
+    setBgOpacity(value);
+    const { data: existing } = await supabase
+      .from("app_settings")
+      .select("id")
+      .eq("key", "chatroom_bg_opacity")
+      .maybeSingle();
+    if (existing) {
+      await supabase
+        .from("app_settings")
+        .update({ value: String(value), updated_by: user?.id, updated_at: new Date().toISOString() } as any)
+        .eq("key", "chatroom_bg_opacity");
+    } else {
+      await supabase
+        .from("app_settings")
+        .insert({ key: "chatroom_bg_opacity", value: String(value), updated_by: user?.id } as any);
+    }
+  };
+
   const handleBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -633,8 +659,14 @@ export default function CommunityChatroom() {
         ref={scrollContainerRef}
         onScroll={handleScroll}
         className="flex-1 min-h-0 overflow-y-auto px-3 py-2 scroll-smooth relative"
-        style={chatBackground && !isVideoBg ? { background: chatBackground } : undefined}
       >
+        {/* Background layer with opacity */}
+        {chatBackground && !isVideoBg && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: chatBackground, opacity: bgOpacity / 100 }}
+          />
+        )}
         {isVideoBg && (
           <video
             autoPlay
@@ -642,6 +674,7 @@ export default function CommunityChatroom() {
             muted
             playsInline
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            style={{ opacity: bgOpacity / 100 }}
             src={chatBackground.replace("video:", "")}
           />
         )}
@@ -929,6 +962,24 @@ export default function CommunityChatroom() {
                 className="hidden"
                 onChange={handleBgImageUpload}
               />
+              {/* Opacity slider */}
+              {chatBackground && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-medium text-muted-foreground">Opacity</span>
+                    <span className="text-[11px] font-medium text-muted-foreground">{bgOpacity}%</span>
+                  </div>
+                  <Slider
+                    value={[bgOpacity]}
+                    onValueChange={(v) => setBgOpacity(v[0])}
+                    onValueCommit={(v) => handleSetOpacity(v[0])}
+                    min={10}
+                    max={100}
+                    step={5}
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Broadcast Notice */}
