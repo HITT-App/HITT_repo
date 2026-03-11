@@ -882,16 +882,27 @@ export default function CommunityChatroom() {
                   onClick={() => bgFileInputRef.current?.click()}
                   disabled={uploadingBg}
                   className={`relative flex flex-col items-center gap-1.5 p-1.5 rounded-xl border-2 transition-all ${
-                    isCustomImageBg
+                    isCustomBg
                       ? "border-primary shadow-md"
                       : "border-dashed border-border/50 hover:border-border"
                   }`}
                 >
-                  {isCustomImageBg ? (
-                    <div
-                      className="h-10 w-full rounded-lg bg-cover bg-center"
-                      style={{ backgroundImage: chatBackground.match(/url\(([^)]+)\)/)?.[0] || "" }}
-                    />
+                  {isCustomBg ? (
+                    isVideoBg ? (
+                      <video
+                        src={chatBackground.replace("video:", "")}
+                        className="h-10 w-full rounded-lg object-cover"
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                      />
+                    ) : (
+                      <div
+                        className="h-10 w-full rounded-lg bg-cover bg-center"
+                        style={{ backgroundImage: chatBackground.match(/url\(([^)]+)\)/)?.[0] || "" }}
+                      />
+                    )
                   ) : (
                     <div className="h-10 w-full rounded-lg bg-secondary/60 flex items-center justify-center">
                       {uploadingBg ? (
@@ -902,7 +913,7 @@ export default function CommunityChatroom() {
                     </div>
                   )}
                   <span className="text-[10px] font-medium text-muted-foreground">Custom</span>
-                  {isCustomImageBg && (
+                  {isCustomBg && (
                     <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
                       <Check className="h-2.5 w-2.5 text-primary-foreground" />
                     </div>
@@ -912,7 +923,7 @@ export default function CommunityChatroom() {
               <input
                 ref={bgFileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
                 className="hidden"
                 onChange={handleBgImageUpload}
               />
