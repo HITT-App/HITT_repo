@@ -15,6 +15,7 @@ const HIDDEN_NAV_ROUTES = [
   "/assessment",
   "/onboarding",
   "/community/chatroom",
+  "/community/post",
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
