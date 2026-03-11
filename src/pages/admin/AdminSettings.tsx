@@ -84,7 +84,7 @@ export default function AdminSettings() {
       if (updateError) throw updateError;
 
       setHeroVideoUrl(publicUrl);
-      toast({ title: "Hero video updated successfully" });
+      toast({ title: "✅ Hero video saved!", description: "The new video is now live on the home screen." });
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Failed to upload video" });
