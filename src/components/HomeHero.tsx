@@ -145,7 +145,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
         playsInline
         className="absolute inset-0 w-full h-full object-cover scale-105"
       >
-        <source src={heroVideo} type="video/mp4" />
+        <source src={customVideoUrl || heroVideo} type="video/mp4" />
       </video>
       
       {/* Gradient Overlay - cleaner */}
