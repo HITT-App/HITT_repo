@@ -856,7 +856,7 @@ export default function CommunityChatroom() {
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {BACKGROUND_PRESETS.map((preset) => {
-                  const isActive = !isCustomImageBg && chatBackground === preset.value;
+                  const isActive = !isCustomBg && chatBackground === preset.value;
                   return (
                     <button
                       key={preset.id}
