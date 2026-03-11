@@ -121,7 +121,68 @@ export default function AdminSettings() {
     }
   };
 
-  const handleToggle = (flagName: string, enabled: boolean) => {
+  const handleSplashUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"];
+    if (!validTypes.includes(file.type)) {
+      toast({ variant: "destructive", title: "Please select an image or video file" });
+      return;
+    }
+    setUploadingSplash(true);
+    try {
+      const fileName = `splash-bg-${Date.now()}.${file.name.split(".").pop()}`;
+      const { error: uploadError } = await supabase.storage
+        .from("app-assets")
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("app-assets").getPublicUrl(fileName);
+      const publicUrl = urlData.publicUrl;
+      const isVideo = file.type.startsWith("video/");
+      const value = isVideo ? `video:${publicUrl}` : publicUrl;
+
+      const { data: existing } = await supabase
+        .from("app_settings")
+        .select("id")
+        .eq("key", "splash_background_url")
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("app_settings")
+          .update({ value, updated_at: new Date().toISOString() })
+          .eq("key", "splash_background_url");
+      } else {
+        await supabase
+          .from("app_settings")
+          .insert({ key: "splash_background_url", value } as any);
+      }
+
+      setSplashBgUrl(value);
+      toast({ title: "✅ Splash background saved!" });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Failed to upload" });
+    } finally {
+      setUploadingSplash(false);
+      if (splashInputRef.current) splashInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveSplash = async () => {
+    try {
+      await supabase
+        .from("app_settings")
+        .update({ value: null, updated_at: new Date().toISOString() })
+        .eq("key", "splash_background_url");
+      setSplashBgUrl(null);
+      toast({ title: "Splash background reset to default" });
+    } catch {
+      toast({ variant: "destructive", title: "Failed to reset" });
+    }
+  };
+
     setChanges((prev) => ({ ...prev, [flagName]: enabled }));
   };
 
