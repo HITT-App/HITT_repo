@@ -51,6 +51,15 @@ export default function AdminSettings() {
     setHeroVideoUrl(data?.value || null);
   };
 
+  const fetchSplashBg = async () => {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "splash_background_url")
+      .maybeSingle();
+    setSplashBgUrl(data?.value || null);
+  };
+
   useEffect(() => {
     fetchFlags();
     fetchHeroVideo();
