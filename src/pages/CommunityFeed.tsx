@@ -209,7 +209,7 @@ const CommunityFeed = () => {
               variant="ghost"
               size="icon"
               className="h-9 w-9 rounded-full touch-manipulation relative"
-              onClick={() => navigate("/community/notifications")}
+              onClick={() => navigate("/notifications")}
             >
               <Bell className="w-[18px] h-[18px]" />
               {unreadCount > 0 && (
