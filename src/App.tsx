@@ -54,7 +54,7 @@ import CommunitySearch from "./pages/CommunitySearch";
 import CommunityProfile from "./pages/CommunityProfile";
 import CommunityProfileSettings from "./pages/CommunityProfileSettings";
 import CommunityChat from "./pages/CommunityChat";
-import CommunityNotifications from "./pages/CommunityNotifications";
+
 import CreatePost from "./pages/CreatePost";
 import PostComments from "./pages/PostComments";
 import Resources from "./pages/Resources";
