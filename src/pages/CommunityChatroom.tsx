@@ -5,7 +5,7 @@ import {
   Plus, Image as ImageIcon, Smile, X, Reply, Play, Pause,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -27,6 +27,12 @@ interface ChatMessage {
   reply_to_id?: string;
 }
 
+interface UserProfile {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
 const REACTIONS = ["🔥", "💪", "❤️", "😂", "👏"];
 
 function DateSeparator({ date }: { date: string }) {
@@ -36,7 +42,7 @@ function DateSeparator({ date }: { date: string }) {
   else if (isYesterday(d)) label = "Yesterday";
 
   return (
-    <div className="flex items-center justify-center py-4">
+    <div className="flex items-center justify-center py-3">
       <span className="text-[11px] font-medium text-muted-foreground bg-secondary/80 px-3 py-1 rounded-full">
         {label}
       </span>
@@ -63,11 +69,8 @@ function VoicePlayer({ src }: { src: string }) {
 
   const toggle = () => {
     if (!audioRef.current) return;
-    if (playing) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
+    if (playing) audioRef.current.pause();
+    else audioRef.current.play();
     setPlaying(!playing);
   };
 
@@ -106,6 +109,7 @@ export default function CommunityChatroom() {
   const [reactions, setReactions] = useState<Record<string, string[]>>({});
   const [showReactionsFor, setShowReactionsFor] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +121,23 @@ export default function CommunityChatroom() {
     bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "instant" });
   }, []);
 
+  // Fetch profiles for all unique user_ids in messages
+  const fetchUserProfiles = useCallback(async (userIds: string[]) => {
+    const newIds = userIds.filter((id) => !userProfiles[id]);
+    if (newIds.length === 0) return;
+
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id, display_name, avatar_url")
+      .in("user_id", newIds);
+
+    if (data) {
+      const profileMap: Record<string, UserProfile> = {};
+      data.forEach((p) => { profileMap[p.user_id] = p; });
+      setUserProfiles((prev) => ({ ...prev, ...profileMap }));
+    }
+  }, [userProfiles]);
+
   // Fetch messages
   useEffect(() => {
     const fetchMessages = async () => {
@@ -125,7 +146,12 @@ export default function CommunityChatroom() {
         .select("*")
         .order("created_at", { ascending: true })
         .limit(200);
-      if (data) setMessages(data as ChatMessage[]);
+      if (data) {
+        const msgs = data as ChatMessage[];
+        setMessages(msgs);
+        const userIds = [...new Set(msgs.map((m) => m.user_id))];
+        fetchUserProfiles(userIds);
+      }
       setLoading(false);
     };
     fetchMessages();
@@ -133,11 +159,14 @@ export default function CommunityChatroom() {
     const channel = supabase
       .channel("chatroom")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chatroom_messages" }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as ChatMessage]);
+        const newMsg = payload.new as ChatMessage;
+        setMessages((prev) => [...prev, newMsg]);
+        fetchUserProfiles([newMsg.user_id]);
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Presence for typing
@@ -188,11 +217,7 @@ export default function CommunityChatroom() {
     typingTimeoutRef.current = setTimeout(() => broadcastTyping(false), 2000);
   };
 
-  const sendMessage = async (
-    content: string,
-    messageType: string = "text",
-    mediaUrl?: string
-  ) => {
+  const sendMessage = async (content: string, messageType = "text", mediaUrl?: string) => {
     if (!user) return;
     setSending(true);
     await supabase.from("chatroom_messages").insert({
@@ -219,15 +244,11 @@ export default function CommunityChatroom() {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = await uploadImage(file, "community-images");
-    if (url) {
-      await sendMessage("", "image", url);
-    }
+    if (url) await sendMessage("", "image", url);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleGifSelect = (gifUrl: string) => {
-    sendMessage("", "gif", gifUrl);
-  };
+  const handleGifSelect = (gifUrl: string) => sendMessage("", "gif", gifUrl);
 
   const handleVoiceComplete = async (blob: Blob) => {
     if (!user) return;
@@ -248,50 +269,38 @@ export default function CommunityChatroom() {
   const toggleReaction = (msgId: string, emoji: string) => {
     setReactions((prev) => {
       const existing = prev[msgId] || [];
-      if (existing.includes(emoji)) {
-        return { ...prev, [msgId]: existing.filter((e) => e !== emoji) };
-      }
-      return { ...prev, [msgId]: [...existing, emoji] };
+      return existing.includes(emoji)
+        ? { ...prev, [msgId]: existing.filter((e) => e !== emoji) }
+        : { ...prev, [msgId]: [...existing, emoji] };
     });
     setShowReactionsFor(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
-  const getReplyMessage = (replyId?: string) => {
-    if (!replyId) return null;
-    return messages.find((m) => m.id === replyId);
+  const getReplyMessage = (replyId?: string) => replyId ? messages.find((m) => m.id === replyId) : null;
+
+  const getUserDisplay = (userId: string, fallbackName?: string) => {
+    const p = userProfiles[userId];
+    return {
+      name: p?.display_name || fallbackName || "User",
+      avatar: p?.avatar_url || null,
+    };
   };
 
-  const renderMessageContent = (msg: ChatMessage, isOwn: boolean) => {
+  const renderMessageContent = (msg: ChatMessage) => {
     const type = msg.message_type || "text";
-
     switch (type) {
       case "image":
         return (
           <button onClick={() => setLightboxSrc(msg.media_url || "")} className="block">
-            <img
-              src={msg.media_url}
-              alt="Shared image"
-              className="rounded-xl max-w-[220px] max-h-[220px] object-cover"
-              loading="lazy"
-            />
+            <img src={msg.media_url} alt="Shared image" className="rounded-xl max-w-[220px] max-h-[220px] object-cover" loading="lazy" />
           </button>
         );
       case "gif":
-        return (
-          <img
-            src={msg.media_url}
-            alt="GIF"
-            className="rounded-xl max-w-[220px] max-h-[200px] object-cover"
-            loading="lazy"
-          />
-        );
+        return <img src={msg.media_url} alt="GIF" className="rounded-xl max-w-[220px] max-h-[200px] object-cover" loading="lazy" />;
       case "voice":
         return <VoicePlayer src={msg.media_url || ""} />;
       default:
@@ -300,9 +309,9 @@ export default function CommunityChatroom() {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background">
+    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-card/80 backdrop-blur-xl sticky top-0 z-10">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-card/80 backdrop-blur-xl z-10 shrink-0">
         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => navigate("/community")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -321,18 +330,18 @@ export default function CommunityChatroom() {
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages area - takes all remaining space */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-2 scroll-smooth"
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-2 scroll-smooth"
       >
         {loading ? (
-          <div className="flex justify-center py-20">
+          <div className="flex justify-center items-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-20">
+          <div className="flex flex-col items-center justify-center h-full text-center gap-4">
             <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center">
               <MessageCircle className="h-7 w-7 text-muted-foreground" />
             </div>
@@ -348,7 +357,8 @@ export default function CommunityChatroom() {
               const isOwn = msg.user_id === user?.id;
               const isNewDay = !prevMsg || !isSameDay(new Date(msg.created_at), new Date(prevMsg.created_at));
               const isConsecutive = !isNewDay && prevMsg?.user_id === msg.user_id;
-              const initials = (msg.display_name || "U").slice(0, 2).toUpperCase();
+              const { name: senderName, avatar: senderAvatar } = getUserDisplay(msg.user_id, msg.display_name);
+              const initials = senderName.slice(0, 2).toUpperCase();
               const replyMsg = getReplyMessage(msg.reply_to_id);
               const msgReactions = reactions[msg.id] || [];
 
@@ -356,14 +366,14 @@ export default function CommunityChatroom() {
                 <div key={msg.id}>
                   {isNewDay && <DateSeparator date={msg.created_at} />}
 
-                  <div
-                    className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""} ${isConsecutive ? "mt-0.5" : "mt-3"}`}
-                  >
+                  <div className={`flex gap-2.5 ${isOwn ? "flex-row-reverse" : ""} ${isConsecutive ? "mt-0.5" : "mt-4"}`}>
+                    {/* Avatar for other users */}
                     {!isOwn && (
-                      <div className="w-7 shrink-0">
+                      <div className="w-9 shrink-0 self-end">
                         {!isConsecutive && (
-                          <Avatar className="h-7 w-7">
-                            <AvatarFallback className="text-[10px] font-semibold bg-secondary text-muted-foreground">
+                          <Avatar className="h-9 w-9 ring-2 ring-border/30">
+                            {senderAvatar && <AvatarImage src={senderAvatar} alt={senderName} />}
+                            <AvatarFallback className="text-[11px] font-bold bg-primary/10 text-primary">
                               {initials}
                             </AvatarFallback>
                           </Avatar>
@@ -371,17 +381,20 @@ export default function CommunityChatroom() {
                       </div>
                     )}
 
-                    <div className={`max-w-[78%] ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
+                    <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
+                      {/* Sender name - clearly visible */}
                       {!isOwn && !isConsecutive && (
-                        <p className="text-[11px] font-medium text-muted-foreground mb-0.5 px-1">
-                          {msg.display_name}
+                        <p className="text-[12px] font-semibold text-foreground/80 mb-1 px-1.5">
+                          {senderName}
                         </p>
                       )}
 
                       {/* Reply quote */}
                       {replyMsg && (
                         <div className="px-2.5 py-1.5 mb-0.5 rounded-lg bg-muted/50 border-l-2 border-primary/50 max-w-full">
-                          <p className="text-[10px] font-semibold text-primary truncate">{replyMsg.display_name}</p>
+                          <p className="text-[10px] font-semibold text-primary truncate">
+                            {getUserDisplay(replyMsg.user_id, replyMsg.display_name).name}
+                          </p>
                           <p className="text-[11px] text-muted-foreground truncate">
                             {replyMsg.message_type === "image" ? "📷 Photo" :
                              replyMsg.message_type === "voice" ? "🎤 Voice" :
@@ -397,20 +410,20 @@ export default function CommunityChatroom() {
                           (msg.message_type === "image" || msg.message_type === "gif")
                             ? "p-1 bg-transparent"
                             : isOwn
-                            ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-lg"
-                            : "bg-secondary text-foreground rounded-2xl rounded-tl-lg"
+                            ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-md"
+                            : "bg-secondary text-foreground rounded-2xl rounded-tl-md"
                         }`}
                         onDoubleClick={() => setShowReactionsFor(showReactionsFor === msg.id ? null : msg.id)}
                         onClick={() => {
                           if (showReactionsFor && showReactionsFor !== msg.id) setShowReactionsFor(null);
                         }}
                       >
-                        {renderMessageContent(msg, isOwn)}
+                        {renderMessageContent(msg)}
 
-                        {/* Reply button */}
+                        {/* Reply button on tap for mobile */}
                         <button
                           onClick={(e) => { e.stopPropagation(); setReplyTo(msg); }}
-                          className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 rounded-full bg-secondary flex items-center justify-center"
+                          className={`absolute ${isOwn ? "-left-8" : "-right-8"} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 rounded-full bg-secondary flex items-center justify-center`}
                         >
                           <Reply className="h-3 w-3 text-muted-foreground" />
                         </button>
@@ -427,13 +440,9 @@ export default function CommunityChatroom() {
 
                       {/* Reaction picker */}
                       {showReactionsFor === msg.id && (
-                        <div className="flex gap-1 mt-1 bg-card border border-border rounded-full px-2 py-1 shadow-lg">
+                        <div className="flex gap-1 mt-1 bg-card border border-border rounded-full px-2 py-1 shadow-lg z-10">
                           {REACTIONS.map((emoji) => (
-                            <button
-                              key={emoji}
-                              onClick={() => toggleReaction(msg.id, emoji)}
-                              className="text-base hover:scale-125 transition-transform active:scale-95"
-                            >
+                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)} className="text-base hover:scale-125 transition-transform active:scale-95">
                               {emoji}
                             </button>
                           ))}
@@ -442,7 +451,7 @@ export default function CommunityChatroom() {
 
                       {/* Timestamp */}
                       {(!messages[i + 1] || messages[i + 1]?.user_id !== msg.user_id) && (
-                        <p className={`text-[10px] text-muted-foreground mt-0.5 px-1 ${isOwn ? "text-right" : ""}`}>
+                        <p className={`text-[10px] text-muted-foreground mt-0.5 px-1.5 ${isOwn ? "text-right" : ""}`}>
                           {format(new Date(msg.created_at), "h:mm a")}
                         </p>
                       )}
@@ -475,7 +484,7 @@ export default function CommunityChatroom() {
       {showScrollBtn && (
         <button
           onClick={() => scrollToBottom(true)}
-          className="absolute bottom-24 right-4 h-9 w-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center z-20 transition-all active:scale-95"
+          className="absolute bottom-28 right-4 h-9 w-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center z-20 transition-all active:scale-95"
         >
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </button>
@@ -492,20 +501,14 @@ export default function CommunityChatroom() {
 
       {/* Attachment options */}
       {showAttachments && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-secondary/30 border-t border-border/40">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-secondary transition-colors"
-          >
+        <div className="flex items-center gap-2 px-4 py-2 bg-secondary/30 border-t border-border/40 shrink-0">
+          <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-secondary transition-colors">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <ImageIcon className="h-5 w-5 text-primary" />
             </div>
             <span className="text-[10px] text-muted-foreground">Photo</span>
           </button>
-          <button
-            onClick={() => { setShowGifPicker(true); setShowAttachments(false); }}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-secondary transition-colors"
-          >
+          <button onClick={() => { setShowGifPicker(true); setShowAttachments(false); }} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-secondary transition-colors">
             <div className="h-10 w-10 rounded-full bg-accent/30 flex items-center justify-center">
               <Smile className="h-5 w-5 text-accent-foreground" />
             </div>
@@ -515,39 +518,19 @@ export default function CommunityChatroom() {
       )}
 
       {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
-        className="hidden"
-        onChange={handleImageUpload}
-      />
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleImageUpload} />
 
-      {/* Input */}
-      <div className="border-t border-border/60 bg-card/80 backdrop-blur-xl px-3 py-2.5 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+      {/* Input bar */}
+      <div className="border-t border-border/60 bg-card/80 backdrop-blur-xl px-3 py-2.5 pb-[calc(5rem+env(safe-area-inset-bottom))] shrink-0">
         <div className="flex items-center gap-2">
           {!recording && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full shrink-0"
-              onClick={() => setShowAttachments(!showAttachments)}
-            >
-              {showAttachments ? (
-                <X className="h-4.5 w-4.5 text-muted-foreground" />
-              ) : (
-                <Plus className="h-4.5 w-4.5 text-muted-foreground" />
-              )}
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => setShowAttachments(!showAttachments)}>
+              {showAttachments ? <X className="h-4 w-4 text-muted-foreground" /> : <Plus className="h-4 w-4 text-muted-foreground" />}
             </Button>
           )}
 
           {recording ? (
-            <VoiceRecorder
-              recording={recording}
-              onStartRecording={() => setRecording(true)}
-              onStopRecording={() => setRecording(false)}
-              onRecordComplete={handleVoiceComplete}
-            />
+            <VoiceRecorder recording={recording} onStartRecording={() => setRecording(true)} onStopRecording={() => setRecording(false)} onRecordComplete={handleVoiceComplete} />
           ) : (
             <>
               <div className="flex-1 flex items-center gap-2 bg-secondary/60 rounded-full px-4 py-1 border border-border/40 focus-within:border-primary/30 transition-colors">
@@ -561,25 +544,11 @@ export default function CommunityChatroom() {
               </div>
 
               {newMessage.trim() ? (
-                <Button
-                  size="icon"
-                  className="h-9 w-9 rounded-full shrink-0"
-                  onClick={handleSend}
-                  disabled={sending || uploading}
-                >
-                  {sending || uploading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
-                  )}
+                <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={handleSend} disabled={sending || uploading}>
+                  {sending || uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                 </Button>
               ) : (
-                <VoiceRecorder
-                  recording={recording}
-                  onStartRecording={() => setRecording(true)}
-                  onStopRecording={() => setRecording(false)}
-                  onRecordComplete={handleVoiceComplete}
-                />
+                <VoiceRecorder recording={recording} onStartRecording={() => setRecording(true)} onStopRecording={() => setRecording(false)} onRecordComplete={handleVoiceComplete} />
               )}
             </>
           )}
