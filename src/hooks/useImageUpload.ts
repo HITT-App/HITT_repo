@@ -3,6 +3,54 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+const compressImage = (file: File, maxWidth = 1920, quality = 0.8): Promise<File> => {
+  return new Promise((resolve) => {
+    // Skip compression for GIFs (animated) and non-image files
+    if (file.type === 'image/gif' || !file.type.startsWith('image/')) {
+      resolve(file);
+      return;
+    }
+
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    img.onload = () => {
+      let { width, height } = img;
+
+      // Only downscale, never upscale
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx?.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob && blob.size < file.size) {
+            // Use compressed version only if it's actually smaller
+            const compressed = new File([blob], file.name.replace(/\.\w+$/, '.webp'), {
+              type: 'image/webp',
+              lastModified: Date.now(),
+            });
+            resolve(compressed);
+          } else {
+            resolve(file);
+          }
+        },
+        'image/webp',
+        quality
+      );
+    };
+
+    img.onerror = () => resolve(file);
+    img.src = URL.createObjectURL(file);
+  });
+};
+
 export const useImageUpload = () => {
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
@@ -40,7 +88,7 @@ export const useImageUpload = () => {
     if (file.size > maxSize) {
       toast({
         title: 'File too large',
-        description: 'Please upload an image smaller than 5MB',
+        description: isVideo ? 'Please upload a video smaller than 20MB' : 'Please upload an image smaller than 5MB',
         variant: 'destructive',
       });
       return null;
@@ -49,13 +97,16 @@ export const useImageUpload = () => {
     setUploading(true);
 
     try {
+      // Compress images before upload
+      const processedFile = isVideo ? file : await compressImage(file);
+
       // Generate unique file name with user folder
-      const fileExt = file.name.split('.').pop();
+      const fileExt = processedFile.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(fileName, file, {
+        .upload(fileName, processedFile, {
           cacheControl: '3600',
           upsert: false,
         });
