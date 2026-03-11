@@ -66,7 +66,7 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
                   key={item.id}
                   onClick={() => handleNavClick(item)}
                   className={cn(
-                    "nav-item py-2 px-3 min-w-[52px] min-h-[48px] touch-manipulation rounded-xl",
+                    "nav-item py-2 px-3 min-w-[52px] min-h-[48px] touch-manipulation rounded-xl relative",
                     isActive && "active"
                   )}
                   aria-label={item.label}
@@ -77,6 +77,11 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
                     strokeWidth={isActive ? 2 : 1.5}
                     className="transition-all duration-200"
                   />
+                  {item.id === "community" && unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                   <span className="text-[10px] font-medium mt-0.5">{item.label}</span>
                 </button>
               );
