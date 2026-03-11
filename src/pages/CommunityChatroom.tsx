@@ -180,14 +180,19 @@ export default function CommunityChatroom() {
   // Load chatroom background from app_settings
   useEffect(() => {
     const loadSettings = async () => {
-      const { data } = await supabase
+      const { data: bgData } = await supabase
         .from("app_settings")
         .select("value")
         .eq("key", "chatroom_background")
         .maybeSingle();
-      if (data?.value) {
-        setChatBackground(data.value);
-      }
+      if (bgData?.value) setChatBackground(bgData.value);
+
+      const { data: opData } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "chatroom_bg_opacity")
+        .maybeSingle();
+      if (opData?.value) setBgOpacity(Number(opData.value));
     };
     loadSettings();
   }, []);
