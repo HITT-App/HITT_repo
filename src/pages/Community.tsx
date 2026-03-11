@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import hiitLogo from "@/assets/hiit-logo.webp";
 import { ArrowRight, Newspaper, Trophy, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
