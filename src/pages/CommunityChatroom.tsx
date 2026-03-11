@@ -474,10 +474,11 @@ export default function CommunityChatroom() {
     setUploadingBg(true);
     const url = await uploadImage(file, "app-assets");
     if (url) {
-      const bgValue = `url(${url}) center/cover no-repeat`;
+      const isVideo = file.type.startsWith("video/");
+      const bgValue = isVideo ? `video:${url}` : `url(${url}) center/cover no-repeat`;
       await handleSetBackground(bgValue);
     } else {
-      toast.error("Failed to upload image");
+      toast.error("Failed to upload file");
     }
     setUploadingBg(false);
     if (bgFileInputRef.current) bgFileInputRef.current.value = "";

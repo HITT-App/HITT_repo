@@ -22,18 +22,21 @@ export const useImageUpload = () => {
     }
 
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const videoTypes = ['video/mp4', 'video/webm', 'video/ogg'];
+    const validTypes = [...imageTypes, ...videoTypes];
     if (!validTypes.includes(file.type)) {
       toast({
         title: 'Invalid file type',
-        description: 'Please upload a JPEG, PNG, GIF, or WebP image',
+        description: 'Please upload a JPEG, PNG, GIF, WebP image or MP4, WebM video',
         variant: 'destructive',
       });
       return null;
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024;
+    // Validate file size (max 20MB for videos, 5MB for images)
+    const isVideo = videoTypes.includes(file.type);
+    const maxSize = isVideo ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
         title: 'File too large',
