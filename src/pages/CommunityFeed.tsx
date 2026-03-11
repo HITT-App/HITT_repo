@@ -263,10 +263,11 @@ const CommunityFeed = () => {
         </div>
       </header>
 
-      {/* Stories / Quick actions row */}
+      {/* Stories row */}
       <div className="flex gap-3 px-4 py-3 overflow-x-auto scrollbar-hide">
+        {/* Add Story button */}
         <button
-          onClick={() => navigate("/community/create")}
+          onClick={() => navigate("/community/create-story")}
           className="flex flex-col items-center gap-1 shrink-0 touch-manipulation"
         >
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-dashed border-primary/30 flex items-center justify-center">
@@ -274,33 +275,35 @@ const CommunityFeed = () => {
           </div>
           <span className="text-[10px] font-medium text-muted-foreground">Your Story</span>
         </button>
-        {(() => {
-          const seen = new Set<string>();
-          if (user) seen.add(user.id);
-          return posts.filter((post) => {
-            if (seen.has(post.user_id)) return false;
-            seen.add(post.user_id);
-            return true;
-          }).slice(0, 5).map((post) => (
+
+        {/* Real stories from database */}
+        {storyGroups.map((group) => {
+          const isOwn = group.user_id === user?.id;
+          return (
             <button
-              key={`story-${post.user_id}`}
-              onClick={() => navigate(`/community/user/${post.user_id}`)}
+              key={`story-${group.user_id}`}
+              onClick={() => navigate(`/community/story/${group.user_id}`)}
               className="flex flex-col items-center gap-1 shrink-0 touch-manipulation"
             >
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary p-[2px]">
+              <div className={cn(
+                "w-16 h-16 rounded-2xl p-[2px]",
+                group.has_unviewed
+                  ? "bg-gradient-to-br from-primary to-orange-500"
+                  : "bg-gradient-to-br from-muted to-muted-foreground/20"
+              )}>
                 <Avatar className="w-full h-full rounded-[14px]">
-                  <AvatarImage src={post.profile?.avatar_url || ""} className="rounded-[14px]" />
+                  <AvatarImage src={group.profile?.avatar_url || ""} className="rounded-[14px]" />
                   <AvatarFallback className="rounded-[14px] bg-secondary text-xs font-medium">
-                    {getInitials(post.profile?.display_name || post.profile?.username)}
+                    {(group.profile?.display_name || "U")[0]}
                   </AvatarFallback>
                 </Avatar>
               </div>
               <span className="text-[10px] font-medium text-muted-foreground truncate w-16 text-center">
-                {post.profile?.display_name?.split(" ")[0] || "User"}
+                {isOwn ? "Your Story" : group.profile?.display_name?.split(" ")[0] || "User"}
               </span>
             </button>
-          ));
-        })()}
+          );
+        })}
       </div>
 
       {/* Composer prompt */}
