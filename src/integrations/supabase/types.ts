@@ -447,6 +447,9 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          media_url: string | null
+          message_type: string
+          reply_to_id: string | null
           user_id: string
         }
         Insert: {
@@ -454,6 +457,9 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          media_url?: string | null
+          message_type?: string
+          reply_to_id?: string | null
           user_id: string
         }
         Update: {
@@ -461,9 +467,20 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          media_url?: string | null
+          message_type?: string
+          reply_to_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chatroom_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "chatroom_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coach_availability: {
         Row: {
