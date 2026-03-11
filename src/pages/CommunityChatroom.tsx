@@ -484,6 +484,8 @@ export default function CommunityChatroom() {
   };
 
   const isCustomImageBg = chatBackground.startsWith("url(");
+  const isVideoBg = chatBackground.startsWith("video:");
+  const isCustomBg = isCustomImageBg || isVideoBg;
 
   const handleSendNotice = async () => {
     if (!noticeText.trim()) return;
