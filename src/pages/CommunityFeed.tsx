@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
@@ -14,26 +14,61 @@ import { useCommunityPosts, useCommunityActions, CommunityPost } from "@/hooks/u
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useCommunityProfile } from "@/hooks/useCommunity";
+import { useSavedPosts } from "@/hooks/useCommunityExtras";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import DeletePostDialog from "@/components/community/DeletePostDialog";
 
 const CommunityFeed = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("popular");
   const { posts, loading, refetch } = useCommunityPosts();
   const { likePost, unlikePost, deletePost } = useCommunityActions();
   const { user } = useAuth();
   const { profile } = useProfile();
   const { profile: communityProfile } = useCommunityProfile();
-  const [savedPosts, setSavedPosts] = useState<string[]>([]);
+  const { isPostSaved, savePost, unsavePost } = useSavedPosts();
   const [hiddenPosts, setHiddenPosts] = useState<string[]>([]);
   const [likingPosts, setLikingPosts] = useState<string[]>([]);
   const [likeAnimations, setLikeAnimations] = useState<string[]>([]);
   const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  // Local optimistic state for likes
+  const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { is_liked: boolean; likes_count: number }>>({});
 
-  const handleDeletePost = async (postId: string) => {
-    const success = await deletePost(postId);
+  // Fetch following list for "Following" tab
+  useEffect(() => {
+    if (!user) return;
+    const fetchFollowing = async () => {
+      const { data } = await supabase
+        .from('community_follows')
+        .select('following_id')
+        .eq('follower_id', user.id);
+      setFollowingIds(new Set(data?.map(f => f.following_id) || []));
+    };
+    fetchFollowing();
+  }, [user]);
+
+  // Tab filtering
+  const filteredPosts = useMemo(() => {
+    let result = posts.filter((p) => !hiddenPosts.includes(p.id));
+    if (activeTab === "trending") {
+      result = [...result].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+    } else if (activeTab === "following") {
+      result = result.filter((p) => followingIds.has(p.user_id));
+    }
+    return result;
+  }, [posts, hiddenPosts, activeTab, followingIds]);
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    const success = await deletePost(pendingDeleteId);
     if (success) refetch();
+    setPendingDeleteId(null);
   };
 
   const handleHidePost = (postId: string) => {
@@ -49,10 +84,13 @@ const CommunityFeed = () => {
     { key: "following", label: "Following", icon: Users },
   ];
 
-  const toggleSave = (postId: string) => {
-    setSavedPosts((prev) =>
-      prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]
-    );
+  const toggleSave = async (postId: string) => {
+    if (!user) { navigate("/auth"); return; }
+    if (isPostSaved(postId)) {
+      await unsavePost(postId);
+    } else {
+      await savePost(postId);
+    }
   };
 
   const handleLike = async (post: CommunityPost) => {
@@ -61,22 +99,44 @@ const CommunityFeed = () => {
 
     setLikingPosts((prev) => [...prev, post.id]);
 
-    if (!post.is_liked) {
+    const currentIsLiked = optimisticLikes[post.id]?.is_liked ?? post.is_liked;
+    const currentCount = optimisticLikes[post.id]?.likes_count ?? post.likes_count;
+
+    // Optimistic update
+    const newIsLiked = !currentIsLiked;
+    const newCount = newIsLiked ? currentCount + 1 : currentCount - 1;
+    setOptimisticLikes((prev) => ({ ...prev, [post.id]: { is_liked: newIsLiked, likes_count: newCount } }));
+
+    if (!currentIsLiked) {
       setLikeAnimations((prev) => [...prev, post.id]);
       setTimeout(() => setLikeAnimations((prev) => prev.filter((id) => id !== post.id)), 600);
     }
 
-    if (post.is_liked) {
-      await unlikePost(post.id);
-    } else {
-      await likePost(post.id);
+    const success = currentIsLiked ? await unlikePost(post.id) : await likePost(post.id);
+
+    if (!success) {
+      // Revert on failure
+      setOptimisticLikes((prev) => ({ ...prev, [post.id]: { is_liked: currentIsLiked!, likes_count: currentCount } }));
     }
 
     setLikingPosts((prev) => prev.filter((id) => id !== post.id));
   };
 
   const handleDoubleTapLike = (post: CommunityPost) => {
-    if (!post.is_liked) handleLike(post);
+    const currentIsLiked = optimisticLikes[post.id]?.is_liked ?? post.is_liked;
+    if (!currentIsLiked) handleLike(post);
+  };
+
+  const handleShare = async (post: CommunityPost) => {
+    const url = `${window.location.origin}/community/post/${post.id}/comments`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Check out this post", url });
+      } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copied", description: "Post link copied to clipboard" });
+    }
   };
 
   const getInitials = (name: string | null | undefined) => {
@@ -192,10 +252,9 @@ const CommunityFeed = () => {
           </div>
           <span className="text-[10px] font-medium text-muted-foreground">Your Story</span>
         </button>
-        {/* Unique recent posters */}
         {(() => {
           const seen = new Set<string>();
-          if (user) seen.add(user.id); // exclude self
+          if (user) seen.add(user.id);
           return posts.filter((post) => {
             if (seen.has(post.user_id)) return false;
             seen.add(post.user_id);
@@ -241,29 +300,38 @@ const CommunityFeed = () => {
         </div>
       </div>
 
-
-      {posts.length === 0 && (
+      {filteredPosts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
           <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-5">
             <Sparkles className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-lg font-bold mb-2">Your feed is empty</h3>
+          <h3 className="text-lg font-bold mb-2">
+            {activeTab === "following" ? "No posts from people you follow" : "Your feed is empty"}
+          </h3>
           <p className="text-sm text-muted-foreground mb-5 max-w-[260px]">
-            Follow people or create your first post to get started!
+            {activeTab === "following"
+              ? "Follow people to see their posts here!"
+              : "Follow people or create your first post to get started!"}
           </p>
-          <Button onClick={() => navigate("/community/create")} className="rounded-full px-6">
-            <Plus className="w-4 h-4 mr-1.5" /> Create Post
+          <Button onClick={() => activeTab === "following" ? navigate("/community/search") : navigate("/community/create")} className="rounded-full px-6">
+            {activeTab === "following" ? (
+              <><Search className="w-4 h-4 mr-1.5" /> Find People</>
+            ) : (
+              <><Plus className="w-4 h-4 mr-1.5" /> Create Post</>
+            )}
           </Button>
         </div>
       )}
 
       {/* Posts */}
       <div className="space-y-2 px-3">
-        {posts.filter((p) => !hiddenPosts.includes(p.id)).map((post) => {
+        {filteredPosts.map((post) => {
           const isExpanded = expandedPosts.includes(post.id);
           const truncate = shouldTruncate(post.content);
-          const isSaved = savedPosts.includes(post.id);
+          const isSaved = isPostSaved(post.id);
           const isLikeAnimating = likeAnimations.includes(post.id);
+          const postIsLiked = optimisticLikes[post.id]?.is_liked ?? post.is_liked;
+          const postLikesCount = optimisticLikes[post.id]?.likes_count ?? post.likes_count;
 
           return (
             <article
@@ -289,9 +357,6 @@ const CommunityFeed = () => {
                     >
                       {post.profile?.display_name || post.profile?.username || "Anonymous"}
                     </span>
-                    {post.profile?.username && (
-                      <span className="text-xs text-muted-foreground hidden">@{post.profile.username}</span>
-                    )}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] text-muted-foreground">
@@ -323,7 +388,7 @@ const CommunityFeed = () => {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
-                          onClick={() => handleDeletePost(post.id)}
+                          onClick={() => setPendingDeleteId(post.id)}
                         >
                           <Trash2 className="w-4 h-4 mr-2" /> Delete
                         </DropdownMenuItem>
@@ -381,7 +446,6 @@ const CommunityFeed = () => {
                     className="w-full aspect-[4/3] object-cover"
                     loading="lazy"
                   />
-                  {/* Double-tap heart animation */}
                   {isLikeAnimating && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <Heart className="w-20 h-20 text-white fill-white drop-shadow-lg animate-ping" />
@@ -464,7 +528,7 @@ const CommunityFeed = () => {
                   <button
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all touch-manipulation",
-                      post.is_liked
+                      postIsLiked
                         ? "text-red-500 bg-red-500/8"
                         : "text-muted-foreground hover:bg-secondary/60"
                     )}
@@ -474,11 +538,11 @@ const CommunityFeed = () => {
                     <Heart
                       className={cn(
                         "w-[18px] h-[18px] transition-transform",
-                        post.is_liked && "fill-current scale-110",
+                        postIsLiked && "fill-current scale-110",
                         isLikeAnimating && "animate-bounce"
                       )}
                     />
-                    <span className="text-xs font-semibold">{formatNumber(post.likes_count)}</span>
+                    <span className="text-xs font-semibold">{formatNumber(postLikesCount)}</span>
                   </button>
 
                   {/* Comment */}
@@ -491,7 +555,10 @@ const CommunityFeed = () => {
                   </button>
 
                   {/* Share */}
-                  <button className="flex items-center px-2.5 py-2 rounded-full text-muted-foreground hover:bg-secondary/60 transition-all touch-manipulation">
+                  <button
+                    className="flex items-center px-2.5 py-2 rounded-full text-muted-foreground hover:bg-secondary/60 transition-all touch-manipulation"
+                    onClick={() => handleShare(post)}
+                  >
                     <Share2 className="w-[18px] h-[18px]" />
                   </button>
                 </div>
@@ -521,6 +588,13 @@ const CommunityFeed = () => {
       >
         <Plus className="w-6 h-6" />
       </button>
+
+      {/* Delete confirmation dialog */}
+      <DeletePostDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 };
