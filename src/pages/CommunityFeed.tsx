@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
   Flame, Users, TrendingUp, Loader2, Share2, Sparkles,
-  Send, Pencil, Trash2, EyeOff,
+  Send, Pencil, Trash2, EyeOff, Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +15,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useCommunityProfile } from "@/hooks/useCommunity";
 import { useSavedPosts } from "@/hooks/useCommunityExtras";
+import { useReactions, ReactionType } from "@/hooks/useReactions";
+import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
+import { ReactionPicker } from "@/components/community/ReactionPicker";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
