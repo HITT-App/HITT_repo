@@ -157,6 +157,22 @@ export default function WorkoutPlayer() {
         
         // Update streak and check for new badges
         await recordWorkout();
+
+        // Auto-post workout completion to community feed
+        const durationMin = Math.floor(totalElapsed / 60);
+        const calories = workout.calories_burned || Math.round(durationMin * 7);
+        await supabase.from('community_posts').insert({
+          user_id: user.id,
+          content: `Just completed "${workout.title}"! 💪 ${durationMin} min · ${calories} kcal burned`,
+          post_type: 'workout',
+          category: 'fitness',
+          tags: ['workout', 'completed'],
+          workout_data: {
+            duration: durationMin,
+            calories,
+            type: workout.title,
+          },
+        });
       } catch (error) {
         console.error('Error saving progress:', error);
       }
