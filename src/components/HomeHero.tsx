@@ -20,7 +20,7 @@ const getTimeGreeting = (): string => {
 export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
   const greeting = getTimeGreeting();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasPlayed, setHasPlayed] = useState(false);
+  const [hasPlayed, setHasPlayed] = useState(() => sessionStorage.getItem('voice_greeting_played') === 'true');
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -88,6 +88,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
       
       await audio.play();
       setHasPlayed(true);
+      sessionStorage.setItem('voice_greeting_played', 'true');
     } catch (error) {
       console.error("Voice greeting error:", error);
       setIsPlaying(false);
