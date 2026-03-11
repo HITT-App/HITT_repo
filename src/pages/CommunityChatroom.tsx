@@ -962,6 +962,24 @@ export default function CommunityChatroom() {
                 className="hidden"
                 onChange={handleBgImageUpload}
               />
+              {/* Opacity slider */}
+              {chatBackground && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-medium text-muted-foreground">Opacity</span>
+                    <span className="text-[11px] font-medium text-muted-foreground">{bgOpacity}%</span>
+                  </div>
+                  <Slider
+                    value={[bgOpacity]}
+                    onValueChange={(v) => setBgOpacity(v[0])}
+                    onValueCommit={(v) => handleSetOpacity(v[0])}
+                    min={10}
+                    max={100}
+                    step={5}
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Broadcast Notice */}
