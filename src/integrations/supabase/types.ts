@@ -961,6 +961,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_read: boolean | null
+          metadata: Json | null
           post_id: string | null
           type: string
           user_id: string
@@ -971,6 +972,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_read?: boolean | null
+          metadata?: Json | null
           post_id?: string | null
           type: string
           user_id: string
@@ -981,6 +983,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_read?: boolean | null
+          metadata?: Json | null
           post_id?: string | null
           type?: string
           user_id?: string
@@ -1141,6 +1144,38 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      community_reactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          reaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          reaction_type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          reaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       community_saved_posts: {
         Row: {

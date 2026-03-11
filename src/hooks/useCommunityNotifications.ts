@@ -6,11 +6,12 @@ export interface CommunityNotification {
   id: string;
   user_id: string;
   actor_id: string;
-  type: 'like' | 'follow' | 'comment' | 'comment_like' | 'mention';
+  type: 'like' | 'follow' | 'comment' | 'comment_like' | 'mention' | 'friend_request' | 'friend_accept';
   post_id: string | null;
   comment_id: string | null;
   is_read: boolean;
   created_at: string;
+  metadata?: Record<string, any>;
   actor?: {
     display_name: string | null;
     username: string | null;
@@ -59,6 +60,7 @@ export const useCommunityNotifications = () => {
       const enrichedNotifications: CommunityNotification[] = notifData.map(notif => ({
         ...notif,
         type: notif.type as CommunityNotification['type'],
+        metadata: (notif as any).metadata || {},
         actor: profileMap.get(notif.actor_id),
       }));
 

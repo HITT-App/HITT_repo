@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
   Flame, Users, TrendingUp, Loader2, Share2, Sparkles,
-  Send, Pencil, Trash2, EyeOff,
+  Send, Pencil, Trash2, EyeOff, Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +15,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useCommunityProfile } from "@/hooks/useCommunity";
 import { useSavedPosts } from "@/hooks/useCommunityExtras";
+import { useReactions, ReactionType } from "@/hooks/useReactions";
+import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
+import { ReactionPicker } from "@/components/community/ReactionPicker";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,14 +34,18 @@ const CommunityFeed = () => {
   const { profile } = useProfile();
   const { profile: communityProfile } = useCommunityProfile();
   const { isPostSaved, savePost, unsavePost } = useSavedPosts();
+  const { unreadCount } = useCommunityNotifications();
   const [hiddenPosts, setHiddenPosts] = useState<string[]>([]);
   const [likingPosts, setLikingPosts] = useState<string[]>([]);
   const [likeAnimations, setLikeAnimations] = useState<string[]>([]);
   const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  // Local optimistic state for likes
   const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { is_liked: boolean; likes_count: number }>>({});
+
+  // Reactions hook
+  const postIds = useMemo(() => posts.map(p => p.id), [posts]);
+  const { reactions, react: reactToPost } = useReactions(postIds);
 
   // Fetch following list for "Following" tab
   useEffect(() => {
@@ -198,6 +205,19 @@ const CommunityFeed = () => {
             <h1 className="text-lg font-bold tracking-tight">Feed</h1>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full touch-manipulation relative"
+              onClick={() => navigate("/community/notifications")}
+            >
+              <Bell className="w-[18px] h-[18px]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center min-w-[18px] px-1">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -524,26 +544,15 @@ const CommunityFeed = () => {
               {/* Engagement bar */}
               <div className="flex items-center justify-between px-3.5 py-2.5 border-t border-border/30">
                 <div className="flex items-center gap-1">
-                  {/* Like */}
-                  <button
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all touch-manipulation",
-                      postIsLiked
-                        ? "text-red-500 bg-red-500/8"
-                        : "text-muted-foreground hover:bg-secondary/60"
-                    )}
-                    onClick={() => handleLike(post)}
+                  {/* Reactions */}
+                  <ReactionPicker
+                    userReaction={reactions[post.id]?.userReaction || null}
+                    counts={reactions[post.id]?.counts || {}}
+                    total={reactions[post.id]?.total || postLikesCount}
+                    onReact={(type: ReactionType) => reactToPost(post.id, type)}
                     disabled={likingPosts.includes(post.id)}
-                  >
-                    <Heart
-                      className={cn(
-                        "w-[18px] h-[18px] transition-transform",
-                        postIsLiked && "fill-current scale-110",
-                        isLikeAnimating && "animate-bounce"
-                      )}
-                    />
-                    <span className="text-xs font-semibold">{formatNumber(postLikesCount)}</span>
-                  </button>
+                    formatNumber={formatNumber}
+                  />
 
                   {/* Comment */}
                   <button
