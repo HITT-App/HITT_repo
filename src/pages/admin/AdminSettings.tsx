@@ -22,8 +22,11 @@ export default function AdminSettings() {
   const [saving, setSaving] = useState(false);
   const [changes, setChanges] = useState<Record<string, boolean>>({});
   const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null);
+  const [splashBgUrl, setSplashBgUrl] = useState<string | null>(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingSplash, setUploadingSplash] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const splashInputRef = useRef<HTMLInputElement>(null);
 
   const fetchFlags = async () => {
     const { data, error } = await supabase
