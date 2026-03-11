@@ -1,65 +1,80 @@
 
+# Fix Admin Panel: User Visibility and Data Access
 
-# Make Leaderboard Fully Operational
+## Problem
+The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
 
-## Current State
-- `ChallengeLeaderboard` page (`/leaderboard`) uses **hardcoded static data** -- fake names, fake progress, no database queries
-- `LeaderboardTab` (inside Achievements page) already works with real Supabase data via `useLeaderboard`, `useUserRanking`, `useRealtimeLeaderboard`
-- The `leaderboard_scores` table exists with points, rankings, categories, and realtime enabled
-- Friends system exists via `user_friends` table
-- User levels/XP system exists via `user_levels` table
+There are 6 users in the database, but the admin sees 1.
 
-## Plan
+## Root Cause
+The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
+- `profiles` -- affects user list and total user count
+- `activity_logs` -- affects "Active (7d)" stat
+- `meal_logs` -- affects "Meals Logged" stat
+- `workout_progress` -- affects "Completed" stat
+- `user_badges` -- affects "Badges Earned" stat
+- `coaching_sessions` -- affects "Sessions" stat
 
-### 1. Rewrite `ChallengeLeaderboard` page to use real data
-Replace all static data with live queries from `leaderboard_scores` + `profiles`:
+## Solution
 
-- **Your Place card**: Show the logged-in user's `total_points`, `rank_position`, and `weekly_points` from `useUserRanking`
-- **All Leaderboard tab**: Fetch from `useLeaderboard("worldwide")` showing real users with avatars, display names, points
-- **Friends tab**: Query `user_friends` (status = accepted) to get friend IDs, then filter `leaderboard_scores` to only show friends
-- **Auto-initialize**: If user has no leaderboard entry, create one via `initializeLeaderboard`
-- **Realtime**: Subscribe via `useRealtimeLeaderboard` for live rank changes
+### 1. Database Migration: Add Admin SELECT Policies
+Add new RLS policies to allow admins to read all rows in the affected tables:
 
-### 2. Add recommended features
+```sql
+-- Admins can view all profiles
+CREATE POLICY "Admins can view all profiles"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-**a. Time-period filter (Weekly / Monthly / All Time)**
-- Add a segmented control to toggle between `weekly_points`, `monthly_points`, and `total_points` for sorting/display
+-- Admins can view all activity logs
+CREATE POLICY "Admins can view all activity logs"
+  ON public.activity_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-**b. User level badge display**
-- Show each user's level title and badge from `user_levels` alongside their name (fetch via join)
+-- Admins can view all meal logs
+CREATE POLICY "Admins can view all meal logs"
+  ON public.meal_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-**c. "You" indicator + scroll-to-self**
-- Highlight the current user's row with a ring/border
-- Show a floating "Jump to your rank" button if user is not visible in the list
+-- Admins can view all workout progress
+CREATE POLICY "Admins can view all workout progress"
+  ON public.workout_progress FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-**d. Top 3 podium**
-- Display the top 3 users in a visual podium layout (gold/silver/bronze) above the scrollable list
+-- Admins can view all user badges
+CREATE POLICY "Admins can view all user badges"
+  ON public.user_badges FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-**e. Points breakdown tooltip**
-- Show weekly vs monthly vs total points breakdown when tapping a user's score
-
-**f. Pull-to-refresh**
-- Invalidate leaderboard queries on pull gesture (or a refresh button)
-
-### 3. Files to modify
-
-- **`src/pages/ChallengeLeaderboard.tsx`** -- Full rewrite: remove static data, integrate hooks, add podium + time filter + friends tab with real data
-- **`src/hooks/useAchievements.ts`** -- Add a `useFriendsLeaderboard` hook that fetches accepted friend IDs then queries `leaderboard_scores` filtered to those IDs
-- No database changes needed -- existing `leaderboard_scores`, `profiles`, `user_friends`, `user_levels` tables cover all requirements
-
-### Technical Details
-
-**Friends leaderboard query flow:**
-```text
-1. Query user_friends WHERE (user_id = me OR friend_id = me) AND status = 'accepted'
-2. Extract friend user IDs
-3. Query leaderboard_scores WHERE user_id IN (friendIds + myId)
-4. Join with profiles for display names/avatars
-5. Sort by selected point type, assign ranks
+-- Admins can view all coaching sessions
+CREATE POLICY "Admins can view all coaching sessions"
+  ON public.coaching_sessions FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 ```
 
-**Time period mapping:**
-- "This Week" → sort by `weekly_points`
-- "This Month" → sort by `monthly_points`  
-- "All Time" → sort by `total_points`
+### 2. Improve AdminUsers Page
+Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
 
+- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
+- Add pagination (currently limited to 100 users)
+- Add role filter tabs (All / Admins / Moderators)
+- Show user join date
+- Add moderator role management (currently only admin toggle)
+
+### 3. Files Changed
+
+| File | Change |
+|------|--------|
+| New migration SQL | Add 6 admin SELECT policies |
+| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
+
+### 4. No Changes Needed
+- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
+- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
+- Admin dashboard, sidebar, routing -- all working correctly

@@ -115,40 +115,100 @@ export function useAchievementProgress() {
 }
 
 // Hook for leaderboard
-export function useLeaderboard(category: "gym" | "worldwide" | "friends" = "worldwide") {
+export function useLeaderboard(
+  category: "gym" | "worldwide" | "friends" = "worldwide",
+  sortBy: "total_points" | "weekly_points" | "monthly_points" = "total_points"
+) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["leaderboard", category],
+    queryKey: ["leaderboard", category, sortBy],
     queryFn: async () => {
       let query = supabase
         .from("leaderboard_scores")
-        .select(`
-          *
-        `)
+        .select("*")
         .eq("category", category)
-        .order("total_points", { ascending: false })
+        .order(sortBy, { ascending: false })
         .limit(100);
 
       const { data, error } = await query;
       
       if (error) throw error;
       
-      // Fetch profiles for each user
+      // Fetch profiles + levels for each user
       const userIds = data.map((entry: any) => entry.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, display_name, avatar_url")
-        .in("user_id", userIds);
+      const [profilesRes, levelsRes] = await Promise.all([
+        supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", userIds),
+        supabase.from("user_levels").select("user_id, level, title, xp").in("user_id", userIds),
+      ]);
       
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map(profilesRes.data?.map(p => [p.user_id, p]) || []);
+      const levelMap = new Map(levelsRes.data?.map(l => [l.user_id, l]) || []);
       
       return data.map((entry: any, index: number) => ({
         ...entry,
         rank_position: index + 1,
         profile: profileMap.get(entry.user_id) || null,
-      })) as LeaderboardEntry[];
+        userLevel: levelMap.get(entry.user_id) || null,
+      })) as (LeaderboardEntry & { userLevel: { level: number; title: string; xp: number } | null })[];
     },
+  });
+}
+
+// Hook for friends leaderboard
+export function useFriendsLeaderboard(
+  sortBy: "total_points" | "weekly_points" | "monthly_points" = "total_points"
+) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["friends-leaderboard", sortBy, user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      // Get accepted friends
+      const { data: friendships, error: fErr } = await supabase
+        .from("user_friends")
+        .select("user_id, friend_id")
+        .eq("status", "accepted");
+
+      if (fErr) throw fErr;
+
+      const friendIds = new Set<string>();
+      friendIds.add(user.id);
+      friendships?.forEach(f => {
+        if (f.user_id === user.id) friendIds.add(f.friend_id);
+        else friendIds.add(f.user_id);
+      });
+
+      const ids = Array.from(friendIds);
+      if (ids.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from("leaderboard_scores")
+        .select("*")
+        .eq("category", "worldwide")
+        .in("user_id", ids)
+        .order(sortBy, { ascending: false });
+
+      if (error) throw error;
+
+      const [profilesRes, levelsRes] = await Promise.all([
+        supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", ids),
+        supabase.from("user_levels").select("user_id, level, title, xp").in("user_id", ids),
+      ]);
+
+      const profileMap = new Map(profilesRes.data?.map(p => [p.user_id, p]) || []);
+      const levelMap = new Map(levelsRes.data?.map(l => [l.user_id, l]) || []);
+
+      return data.map((entry: any, index: number) => ({
+        ...entry,
+        rank_position: index + 1,
+        profile: profileMap.get(entry.user_id) || null,
+        userLevel: levelMap.get(entry.user_id) || null,
+      })) as (LeaderboardEntry & { userLevel: { level: number; title: string; xp: number } | null })[];
+    },
+    enabled: !!user?.id,
   });
 }
 
