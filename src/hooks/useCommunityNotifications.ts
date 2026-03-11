@@ -60,6 +60,7 @@ export const useCommunityNotifications = () => {
       const enrichedNotifications: CommunityNotification[] = notifData.map(notif => ({
         ...notif,
         type: notif.type as CommunityNotification['type'],
+        metadata: (notif as any).metadata || {},
         actor: profileMap.get(notif.actor_id),
       }));
 
