@@ -826,6 +826,7 @@ export default function CommunityChatroom() {
             <div ref={bottomRef} />
           </div>
         )}
+        </div>
       </div>
 
       {/* Scroll to bottom FAB */}
