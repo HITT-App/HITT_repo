@@ -1,80 +1,53 @@
 
-# Fix Admin Panel: User Visibility and Data Access
 
-## Problem
-The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
+# Feature-Packed Community Chatroom
 
-There are 6 users in the database, but the admin sees 1.
+## Current State
+The `chatroom_messages` table only has `content`, `display_name`, `user_id`, `created_at`. Text-only messages, no media support.
 
-## Root Cause
-The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
-- `profiles` -- affects user list and total user count
-- `activity_logs` -- affects "Active (7d)" stat
-- `meal_logs` -- affects "Meals Logged" stat
-- `workout_progress` -- affects "Completed" stat
-- `user_badges` -- affects "Badges Earned" stat
-- `coaching_sessions` -- affects "Sessions" stat
+## Plan
 
-## Solution
+### 1. Database Migration
+Add columns to `chatroom_messages`:
+- `message_type` TEXT (default 'text') — values: 'text', 'image', 'voice', 'gif'
+- `media_url` TEXT (nullable) — URL for images, voice notes, GIFs
+- `reply_to_id` UUID (nullable, FK to self) — for reply threading
 
-### 1. Database Migration: Add Admin SELECT Policies
-Add new RLS policies to allow admins to read all rows in the affected tables:
+### 2. Rewrite `src/pages/CommunityChatroom.tsx`
+Major feature additions:
 
-```sql
--- Admins can view all profiles
-CREATE POLICY "Admins can view all profiles"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+**Image sharing**: Attachment button opens file picker, uploads to `community-images` bucket (existing), sends message with `message_type: 'image'` and `media_url`. Images render as rounded thumbnails in bubbles with tap-to-fullscreen lightbox.
 
--- Admins can view all activity logs
-CREATE POLICY "Admins can view all activity logs"
-  ON public.activity_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+**GIF picker**: Integration with Tenor/GIPHY API via a search sheet. User searches, taps a GIF, sends as `message_type: 'gif'` with the GIF URL. Will use the free Tenor API (no key required for basic usage) embedded in the client.
 
--- Admins can view all meal logs
-CREATE POLICY "Admins can view all meal logs"
-  ON public.meal_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+**Voice notes**: Hold-to-record using MediaRecorder API. Records audio, uploads to `community-images` bucket as `.webm`, sends as `message_type: 'voice'`. Renders as a playable waveform-style audio bar in the bubble.
 
--- Admins can view all workout progress
-CREATE POLICY "Admins can view all workout progress"
-  ON public.workout_progress FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+**Reply threading**: Long-press or swipe on a message shows reply option. Reply banner appears above input showing quoted message. Sends with `reply_to_id`. Rendered as a small quoted block above the bubble.
 
--- Admins can view all user badges
-CREATE POLICY "Admins can view all user badges"
-  ON public.user_badges FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+**Message reactions**: Tap-and-hold shows emoji picker (subset: 🔥 💪 ❤️ 😂 👏). Stored client-side initially, can be extended to DB later.
 
--- Admins can view all coaching sessions
-CREATE POLICY "Admins can view all coaching sessions"
-  ON public.coaching_sessions FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-```
+**Typing indicator**: Simple presence channel showing "X is typing..." below messages.
 
-### 2. Improve AdminUsers Page
-Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
+**Enhanced input bar**: Plus (+) button expands attachment options (camera, gallery, GIF, voice). Animated transitions between states.
 
-- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
-- Add pagination (currently limited to 100 users)
-- Add role filter tabs (All / Admins / Moderators)
-- Show user join date
-- Add moderator role management (currently only admin toggle)
+### 3. New Components
+- `src/components/chatroom/GifPicker.tsx` — Sheet with search + grid of GIF results
+- `src/components/chatroom/VoiceRecorder.tsx` — Hold-to-record UI with timer + waveform
+- `src/components/chatroom/ImageLightbox.tsx` — Full-screen image viewer
+- `src/components/chatroom/ReplyPreview.tsx` — Quoted reply banner above input
 
-### 3. Files Changed
+### 4. Files Changed
+- **DB migration**: Add `message_type`, `media_url`, `reply_to_id` columns
+- `src/pages/CommunityChatroom.tsx` — Full rewrite with all features
+- `src/components/chatroom/GifPicker.tsx` — New
+- `src/components/chatroom/VoiceRecorder.tsx` — New
+- `src/components/chatroom/ImageLightbox.tsx` — New
+- `src/components/chatroom/ReplyPreview.tsx` — New
 
-| File | Change |
-|------|--------|
-| New migration SQL | Add 6 admin SELECT policies |
-| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
+### Technical Notes
+- Reuses existing `community-images` storage bucket for image/voice uploads
+- Voice recording uses native `MediaRecorder` API (no dependencies)
+- GIF search uses Tenor API (free tier, no key needed for limited usage)
+- Typing indicators use Supabase Realtime presence channel
+- All new message types render gracefully — unknown types fall back to text
 
-### 4. No Changes Needed
-- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
-- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
-- Admin dashboard, sidebar, routing -- all working correctly
