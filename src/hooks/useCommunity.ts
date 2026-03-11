@@ -195,22 +195,61 @@ export const useCommunityProfile = (userId?: string) => {
 
         if (error && error.code !== 'PGRST116') throw error;
 
-        if (data) {
-          // Check if current user follows this user
-          let isFollowing = false;
-          if (user && user.id !== targetUserId) {
-            const { data: followData } = await supabase
-              .from('community_follows')
-              .select('id')
-              .eq('follower_id', user.id)
-              .eq('following_id', targetUserId)
-              .single();
-            isFollowing = !!followData;
-          }
+        // Check if current user follows this user
+        let isFollowing = false;
+        if (user && user.id !== targetUserId) {
+          const { data: followData } = await supabase
+            .from('community_follows')
+            .select('id')
+            .eq('follower_id', user.id)
+            .eq('following_id', targetUserId)
+            .single();
+          isFollowing = !!followData;
+        }
 
+        if (data) {
+          // If community profile has no display_name/avatar, fall back to main profile
+          if (!data.display_name || !data.avatar_url) {
+            const { data: mainProfile } = await supabase
+              .from('profiles')
+              .select('display_name, avatar_url')
+              .eq('user_id', targetUserId)
+              .single();
+            if (mainProfile) {
+              data.display_name = data.display_name || mainProfile.display_name;
+              data.avatar_url = data.avatar_url || mainProfile.avatar_url;
+            }
+          }
           setProfile({ ...data, is_following: isFollowing });
         } else {
-          setProfile(null);
+          // No community profile — build one from main profiles table
+          const { data: mainProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', targetUserId)
+            .single();
+
+          if (mainProfile) {
+            setProfile({
+              id: mainProfile.id,
+              user_id: mainProfile.user_id,
+              username: null,
+              display_name: mainProfile.display_name,
+              bio: null,
+              avatar_url: mainProfile.avatar_url,
+              banner_url: null,
+              followers_count: 0,
+              following_count: 0,
+              posts_count: 0,
+              likes_received: 0,
+              is_private: false,
+              onboarding_completed: false,
+              created_at: mainProfile.created_at,
+              is_following: isFollowing,
+            });
+          } else {
+            setProfile(null);
+          }
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
