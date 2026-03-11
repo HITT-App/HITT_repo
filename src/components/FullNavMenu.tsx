@@ -62,6 +62,7 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
   const { isAdmin } = useAdminRole();
   const { flags } = useFeatureFlags();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
 
   const menuSections = [
     {
