@@ -208,6 +208,19 @@ const CommunityFeed = () => {
             <Button
               variant="ghost"
               size="icon"
+              className="h-9 w-9 rounded-full touch-manipulation relative"
+              onClick={() => navigate("/community/notifications")}
+            >
+              <Bell className="w-[18px] h-[18px]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center min-w-[18px] px-1">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-9 w-9 rounded-full touch-manipulation"
               onClick={() => navigate("/community/search")}
             >
