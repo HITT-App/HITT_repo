@@ -229,7 +229,7 @@ export default function CommunityChatroom() {
       )}
 
       {/* Input */}
-      <div className="border-t border-border/60 bg-card/80 backdrop-blur-xl px-3 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
+      <div className="border-t border-border/60 bg-card/80 backdrop-blur-xl px-3 py-2.5 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         <div className="flex items-center gap-2 bg-secondary/60 rounded-full px-4 py-1 border border-border/40 focus-within:border-primary/30 transition-colors">
           <input
             value={newMessage}
