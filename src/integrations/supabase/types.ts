@@ -1250,6 +1250,68 @@ export type Database = {
           },
         ]
       }
+      community_stories: {
+        Row: {
+          background_color: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          media_url: string | null
+          story_type: string
+          text_content: string | null
+          user_id: string
+        }
+        Insert: {
+          background_color?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_url?: string | null
+          story_type?: string
+          text_content?: string | null
+          user_id: string
+        }
+        Update: {
+          background_color?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_url?: string | null
+          story_type?: string
+          text_content?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      community_story_views: {
+        Row: {
+          id: string
+          story_id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          story_id: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          story_id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_story_views_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "community_stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
