@@ -134,7 +134,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
 
   return (
     <div 
-      className="relative h-[55vh] min-h-[380px] sm:h-[60vh] sm:min-h-[450px] w-full overflow-hidden"
+      className="relative h-[65vh] min-h-[440px] sm:h-[70vh] sm:min-h-[500px] w-full overflow-hidden"
       style={{ paddingTop: "var(--safe-area-inset-top, 0px)" }}
     >
       {/* Background Video */}
@@ -148,40 +148,42 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
         src={customVideoUrl || heroVideo}
       />
       
-      {/* Gradient Overlay - cleaner */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/70" />
+      {/* Gradient Overlay — cinematic bottom-heavy fade */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
 
-      {/* Content */}
-      <div className="relative h-full flex flex-col justify-end p-6 pb-8">
-        {/* Logo - top center */}
-        <div className="absolute top-10 left-0 right-0 flex justify-center opacity-0 animate-fade-up" style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}>
-          <img src={hiitLogo} alt="HIIT Logo" className="w-14 h-14 rounded-2xl object-cover border border-white/10 shadow-lg" />
+      {/* Logo — floating top center */}
+      <div className="absolute top-8 left-0 right-0 flex justify-center opacity-0 animate-fade-up" style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}>
+        <div className="relative">
+          <div className="absolute -inset-2 rounded-3xl bg-primary/20 blur-xl" />
+          <img src={hiitLogo} alt="HIIT Logo" className="relative w-14 h-14 rounded-2xl object-cover border border-white/10 shadow-2xl" />
         </div>
+      </div>
 
-        {/* Bottom Section - Greeting */}
-        <div className="mb-16 opacity-0 animate-fade-up" style={{ animationDelay: "0.3s", animationFillMode: "forwards" }}>
-          <div className="flex items-end justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium tracking-widest uppercase text-white/40 mb-2">
-                {greeting}
-              </p>
-              <h1 className="text-4xl font-bold text-white tracking-tight leading-tight">
-                {userName}.
-              </h1>
-              <p className="mt-3 text-base text-white/50 font-light">
-                Need a plan for today?
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleMute}
-              className="text-white/40 hover:text-white hover:bg-white/10 transition-colors rounded-full mb-1"
-              aria-label={isMuted ? "Unmute voice" : "Mute voice"}
-            >
-              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-            </Button>
-          </div>
+      {/* Bottom content — pinned to bottom-left */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 pb-10">
+        <div className="opacity-0 animate-fade-up" style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}>
+          <span className="inline-block text-[11px] font-semibold tracking-[0.2em] uppercase text-primary/80 mb-3">
+            {greeting}
+          </span>
+          <h1 className="text-[42px] leading-[1.05] font-extrabold text-white tracking-tight">
+            {userName}<span className="text-primary">.</span>
+          </h1>
+        </div>
+        
+        <div className="flex items-end justify-between mt-4 opacity-0 animate-fade-up" style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}>
+          <p className="text-[15px] text-white/45 font-light tracking-wide">
+            Need a plan for today?
+          </p>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleMute}
+            className="text-white/30 hover:text-white hover:bg-white/10 transition-all rounded-full h-9 w-9"
+            aria-label={isMuted ? "Unmute voice" : "Mute voice"}
+          >
+            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
         </div>
       </div>
     </div>
