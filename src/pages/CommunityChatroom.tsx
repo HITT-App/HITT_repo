@@ -468,6 +468,23 @@ export default function CommunityChatroom() {
     toast.success("Background updated");
   };
 
+  const handleBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingBg(true);
+    const url = await uploadImage(file, "app-assets");
+    if (url) {
+      const bgValue = `url(${url}) center/cover no-repeat`;
+      await handleSetBackground(bgValue);
+    } else {
+      toast.error("Failed to upload image");
+    }
+    setUploadingBg(false);
+    if (bgFileInputRef.current) bgFileInputRef.current.value = "";
+  };
+
+  const isCustomImageBg = chatBackground.startsWith("url(");
+
   const handleSendNotice = async () => {
     if (!noticeText.trim()) return;
     setSendingNotice(true);
