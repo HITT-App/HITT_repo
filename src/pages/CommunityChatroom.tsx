@@ -366,7 +366,7 @@ export default function CommunityChatroom() {
                 <div key={msg.id}>
                   {isNewDay && <DateSeparator date={msg.created_at} />}
 
-                  <div className={`flex gap-2.5 ${isOwn ? "flex-row-reverse" : ""} ${isConsecutive ? "mt-0.5" : "mt-4"}`}>
+                  <div className={`flex gap-2.5 ${isConsecutive ? "mt-0.5" : "mt-4"}`}>
                     {/* Avatar for all users */}
                     <div className="w-9 shrink-0 self-end">
                       {!isConsecutive && (
