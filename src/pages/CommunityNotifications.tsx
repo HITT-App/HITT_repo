@@ -156,7 +156,7 @@ const CommunityNotifications = () => {
     <div
       key={notification.id}
       className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
-        notification.is_read ? "hover:bg-muted/50" : "bg-primary/5 hover:bg-primary/10"
+        notification.is_read ? "hover:bg-muted/50" : "bg-muted/40 hover:bg-muted/60 border border-border/50"
       }`}
       onClick={() => handleNotificationClick(notification)}
     >
