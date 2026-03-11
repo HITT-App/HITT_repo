@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, RefreshCw } from "lucide-react";
+import { Loader2, Save, RefreshCw, Upload, Trash2, Video } from "lucide-react";
 
 interface FeatureFlag {
   id: string;
@@ -21,6 +21,9 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changes, setChanges] = useState<Record<string, boolean>>({});
+  const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchFlags = async () => {
     const { data, error } = await supabase
@@ -36,9 +39,74 @@ export default function AdminSettings() {
     setLoading(false);
   };
 
+  const fetchHeroVideo = async () => {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "hero_video_url")
+      .single();
+    setHeroVideoUrl(data?.value || null);
+  };
+
   useEffect(() => {
     fetchFlags();
+    fetchHeroVideo();
   }, []);
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      toast({ variant: "destructive", title: "Please select a video file" });
+      return;
+    }
+
+    setUploadingVideo(true);
+    try {
+      const fileName = `hero-video-${Date.now()}.${file.name.split(".").pop()}`;
+      const { error: uploadError } = await supabase.storage
+        .from("app-assets")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("app-assets")
+        .getPublicUrl(fileName);
+
+      const publicUrl = urlData.publicUrl;
+
+      const { error: updateError } = await supabase
+        .from("app_settings")
+        .update({ value: publicUrl, updated_at: new Date().toISOString() })
+        .eq("key", "hero_video_url");
+
+      if (updateError) throw updateError;
+
+      setHeroVideoUrl(publicUrl);
+      toast({ title: "Hero video updated successfully" });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Failed to upload video" });
+    } finally {
+      setUploadingVideo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveVideo = async () => {
+    try {
+      await supabase
+        .from("app_settings")
+        .update({ value: null, updated_at: new Date().toISOString() })
+        .eq("key", "hero_video_url");
+
+      setHeroVideoUrl(null);
+      toast({ title: "Hero video reset to default" });
+    } catch {
+      toast({ variant: "destructive", title: "Failed to reset video" });
+    }
+  };
 
   const handleToggle = (flagName: string, enabled: boolean) => {
     setChanges((prev) => ({ ...prev, [flagName]: enabled }));
@@ -85,6 +153,63 @@ export default function AdminSettings() {
   return (
     <AdminLayout title="Settings" description="Manage app configuration">
       <div className="space-y-6 max-w-2xl">
+        {/* Hero Video Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Video className="h-5 w-5" />
+              Hero Video
+            </CardTitle>
+            <CardDescription>
+              Upload a video for the home screen hero section. Leave empty to use the default.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {heroVideoUrl && (
+              <div className="rounded-lg overflow-hidden border border-border">
+                <video
+                  src={heroVideoUrl}
+                  className="w-full h-40 object-cover"
+                  muted
+                  autoPlay
+                  loop
+                  playsInline
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={handleVideoUpload}
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingVideo}
+              >
+                {uploadingVideo ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {heroVideoUrl ? "Replace Video" : "Upload Video"}
+              </Button>
+              {heroVideoUrl && (
+                <Button variant="destructive" size="sm" onClick={handleRemoveVideo}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Reset to Default
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {heroVideoUrl ? "Custom video is active" : "Using default bundled video"}
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Feature Flags */}
         <Card>
           <CardHeader>
