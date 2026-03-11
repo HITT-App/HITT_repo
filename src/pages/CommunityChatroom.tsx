@@ -632,9 +632,19 @@ export default function CommunityChatroom() {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-2 scroll-smooth"
-        style={chatBackground ? { background: chatBackground } : undefined}
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-2 scroll-smooth relative"
+        style={chatBackground && !isVideoBg ? { background: chatBackground } : undefined}
       >
+        {isVideoBg && (
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            src={chatBackground.replace("video:", "")}
+          />
+        )}
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
