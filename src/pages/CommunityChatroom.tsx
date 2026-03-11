@@ -474,6 +474,25 @@ export default function CommunityChatroom() {
     toast.success("Background updated");
   };
 
+  const handleSetOpacity = async (value: number) => {
+    setBgOpacity(value);
+    const { data: existing } = await supabase
+      .from("app_settings")
+      .select("id")
+      .eq("key", "chatroom_bg_opacity")
+      .maybeSingle();
+    if (existing) {
+      await supabase
+        .from("app_settings")
+        .update({ value: String(value), updated_by: user?.id, updated_at: new Date().toISOString() } as any)
+        .eq("key", "chatroom_bg_opacity");
+    } else {
+      await supabase
+        .from("app_settings")
+        .insert({ key: "chatroom_bg_opacity", value: String(value), updated_by: user?.id } as any);
+    }
+  };
+
   const handleBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
