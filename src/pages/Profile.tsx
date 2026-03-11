@@ -256,6 +256,26 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* Appearance */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-2">
+            {theme === 'dark' ? <Moon className="w-4 h-4 text-muted-foreground" /> : <Sun className="w-4 h-4 text-muted-foreground" />}
+            Appearance
+          </Label>
+          <div className="flex items-center justify-between p-4 bg-secondary rounded-xl">
+            <div className="space-y-1">
+              <p className="font-medium text-sm">Dark Mode</p>
+              <p className="text-xs text-muted-foreground">
+                Switch between light and dark theme
+              </p>
+            </div>
+            <Switch 
+              checked={theme === 'dark'} 
+              onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+            />
+          </div>
+        </div>
+
         {/* Voice Activation */}
         <div className="space-y-3">
           <Label className="flex items-center gap-2">
