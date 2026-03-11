@@ -41,8 +41,7 @@ const StoryViewer = () => {
     }
   }, [currentStory?.id]);
 
-  const goNextRef = useRef(goNext);
-  goNextRef.current = goNext;
+  const goNextRef = useRef<() => void>(() => {});
 
   // Progress timer
   useEffect(() => {
