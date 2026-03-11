@@ -11,6 +11,7 @@ import { PushPermissionBanner } from "@/components/notifications/PushPermissionB
 import { VerificationBanner } from "@/components/auth/VerificationBanner";
 import { VoiceController } from "@/components/coach/VoiceController";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppLayout } from "@/components/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -114,6 +115,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <ErrorBoundary>
+    <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
       <TooltipProvider>
@@ -254,6 +256,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
+    </ThemeProvider>
   </ErrorBoundary>
 );
 

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { useStreaksAndBadges } from '@/hooks/useStreaksAndBadges';
@@ -14,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StreakCard } from '@/components/gamification/StreakCard';
 import { BadgesDisplay } from '@/components/gamification/BadgesDisplay';
 import { PasswordChangeSection } from '@/components/profile/PasswordChangeSection';
-import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy, Shield, Mic } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy, Shield, Mic, Sun, Moon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const FITNESS_GOALS = [
@@ -34,6 +35,7 @@ export default function Profile() {
   const { streak, allBadges, earnedBadges, loading: streaksLoading } = useStreaksAndBadges();
   const { isAdmin, loading: adminLoading } = useAdminRole();
   const { enabled: wakeWordEnabled, setEnabled: setWakeWordEnabled } = useWakeWordPreference();
+  const { theme, setTheme } = useTheme();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState('');
@@ -250,6 +252,26 @@ export default function Profile() {
               maxLength={200}
               className="mt-1 bg-secondary border-border resize-none"
               rows={2}
+            />
+          </div>
+        </div>
+
+        {/* Appearance */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-2">
+            {theme === 'dark' ? <Moon className="w-4 h-4 text-muted-foreground" /> : <Sun className="w-4 h-4 text-muted-foreground" />}
+            Appearance
+          </Label>
+          <div className="flex items-center justify-between p-4 bg-secondary rounded-xl">
+            <div className="space-y-1">
+              <p className="font-medium text-sm">Dark Mode</p>
+              <p className="text-xs text-muted-foreground">
+                Switch between light and dark theme
+              </p>
+            </div>
+            <Switch 
+              checked={theme === 'dark'} 
+              onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
             />
           </div>
         </div>
