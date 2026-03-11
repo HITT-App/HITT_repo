@@ -285,7 +285,68 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
-        {/* Feature Flags */}
+        {/* Splash Screen Background */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5" />
+              Splash Screen Background
+            </CardTitle>
+            <CardDescription>
+              Upload a custom image or video for the welcome/onboarding splash screen background.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {splashBgUrl && (
+              <div className="rounded-lg overflow-hidden border border-border">
+                {splashBgUrl.startsWith("video:") ? (
+                  <video
+                    src={splashBgUrl.replace("video:", "")}
+                    className="w-full h-40 object-cover"
+                    muted autoPlay loop playsInline
+                  />
+                ) : (
+                  <img
+                    src={splashBgUrl}
+                    alt="Splash background"
+                    className="w-full h-40 object-cover"
+                  />
+                )}
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                ref={splashInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
+                className="hidden"
+                onChange={handleSplashUpload}
+              />
+              <Button
+                variant="outline"
+                onClick={() => splashInputRef.current?.click()}
+                disabled={uploadingSplash}
+              >
+                {uploadingSplash ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {splashBgUrl ? "Replace Background" : "Upload Background"}
+              </Button>
+              {splashBgUrl && (
+                <Button variant="destructive" size="sm" onClick={handleRemoveSplash}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Reset to Default
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {splashBgUrl ? "Custom background is active" : "Using default orange background"}
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Feature Flags</CardTitle>
