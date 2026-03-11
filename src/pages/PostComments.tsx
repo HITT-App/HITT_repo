@@ -73,9 +73,9 @@ const PostComments = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-border bg-background">
+      <header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border bg-background">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -86,8 +86,8 @@ const PostComments = () => {
       </header>
 
       {/* Comments List */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-6">
+      <ScrollArea className="flex-1">
+        <div className="p-4 pb-24 space-y-6">
           {comments.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
@@ -158,9 +158,9 @@ const PostComments = () => {
         </div>
       </ScrollArea>
 
-      {/* Add Comment Input */}
-      <div className="p-4 border-t border-border bg-background">
-        <div className="flex items-center gap-2">
+      {/* Add Comment Input - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-10 p-4 border-t border-border bg-background pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="flex items-center gap-2 max-w-md mx-auto">
           <Button variant="ghost" size="icon" className="shrink-0">
             <Smile className="w-5 h-5 text-muted-foreground" />
           </Button>
