@@ -474,16 +474,19 @@ export default function CommunityChatroom() {
     setUploadingBg(true);
     const url = await uploadImage(file, "app-assets");
     if (url) {
-      const bgValue = `url(${url}) center/cover no-repeat`;
+      const isVideo = file.type.startsWith("video/");
+      const bgValue = isVideo ? `video:${url}` : `url(${url}) center/cover no-repeat`;
       await handleSetBackground(bgValue);
     } else {
-      toast.error("Failed to upload image");
+      toast.error("Failed to upload file");
     }
     setUploadingBg(false);
     if (bgFileInputRef.current) bgFileInputRef.current.value = "";
   };
 
   const isCustomImageBg = chatBackground.startsWith("url(");
+  const isVideoBg = chatBackground.startsWith("video:");
+  const isCustomBg = isCustomImageBg || isVideoBg;
 
   const handleSendNotice = async () => {
     if (!noticeText.trim()) return;
@@ -629,9 +632,20 @@ export default function CommunityChatroom() {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-2 scroll-smooth"
-        style={chatBackground ? { background: chatBackground } : undefined}
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-2 scroll-smooth relative"
+        style={chatBackground && !isVideoBg ? { background: chatBackground } : undefined}
       >
+        {isVideoBg && (
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            src={chatBackground.replace("video:", "")}
+          />
+        )}
+        <div className="relative z-10">
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -812,6 +826,7 @@ export default function CommunityChatroom() {
             <div ref={bottomRef} />
           </div>
         )}
+        </div>
       </div>
 
       {/* Scroll to bottom FAB */}
@@ -843,7 +858,7 @@ export default function CommunityChatroom() {
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {BACKGROUND_PRESETS.map((preset) => {
-                  const isActive = !isCustomImageBg && chatBackground === preset.value;
+                  const isActive = !isCustomBg && chatBackground === preset.value;
                   return (
                     <button
                       key={preset.id}
@@ -869,16 +884,27 @@ export default function CommunityChatroom() {
                   onClick={() => bgFileInputRef.current?.click()}
                   disabled={uploadingBg}
                   className={`relative flex flex-col items-center gap-1.5 p-1.5 rounded-xl border-2 transition-all ${
-                    isCustomImageBg
+                    isCustomBg
                       ? "border-primary shadow-md"
                       : "border-dashed border-border/50 hover:border-border"
                   }`}
                 >
-                  {isCustomImageBg ? (
-                    <div
-                      className="h-10 w-full rounded-lg bg-cover bg-center"
-                      style={{ backgroundImage: chatBackground.match(/url\(([^)]+)\)/)?.[0] || "" }}
-                    />
+                  {isCustomBg ? (
+                    isVideoBg ? (
+                      <video
+                        src={chatBackground.replace("video:", "")}
+                        className="h-10 w-full rounded-lg object-cover"
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                      />
+                    ) : (
+                      <div
+                        className="h-10 w-full rounded-lg bg-cover bg-center"
+                        style={{ backgroundImage: chatBackground.match(/url\(([^)]+)\)/)?.[0] || "" }}
+                      />
+                    )
                   ) : (
                     <div className="h-10 w-full rounded-lg bg-secondary/60 flex items-center justify-center">
                       {uploadingBg ? (
@@ -889,7 +915,7 @@ export default function CommunityChatroom() {
                     </div>
                   )}
                   <span className="text-[10px] font-medium text-muted-foreground">Custom</span>
-                  {isCustomImageBg && (
+                  {isCustomBg && (
                     <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
                       <Check className="h-2.5 w-2.5 text-primary-foreground" />
                     </div>
@@ -899,7 +925,7 @@ export default function CommunityChatroom() {
               <input
                 ref={bgFileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
                 className="hidden"
                 onChange={handleBgImageUpload}
               />
