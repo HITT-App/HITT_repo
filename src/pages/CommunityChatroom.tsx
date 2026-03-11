@@ -152,9 +152,11 @@ export default function CommunityChatroom() {
   const [sendingNotice, setSendingNotice] = useState(false);
   const [activeNotice, setActiveNotice] = useState<BroadcastNotice | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const [uploadingBg, setUploadingBg] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "User";
