@@ -22,7 +22,19 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(() => sessionStorage.getItem('voice_greeting_played') === 'true');
   const [isMuted, setIsMuted] = useState(false);
+  const [customVideoUrl, setCustomVideoUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "hero_video_url")
+      .single()
+      .then(({ data }) => {
+        if (data?.value) setCustomVideoUrl(data.value);
+      });
+  }, []);
 
   const playVoiceGreeting = async () => {
     if (hasPlayed || isPlaying) return;
