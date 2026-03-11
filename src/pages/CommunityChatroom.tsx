@@ -3,14 +3,24 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Send, Loader2, ChevronDown, MessageCircle, Users,
   Plus, Image as ImageIcon, Smile, X, Reply, Play, Pause,
+  Shield, Trash2, Pin, MoreVertical, PinOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
+import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import GifPicker from "@/components/chatroom/GifPicker";
 import VoiceRecorder from "@/components/chatroom/VoiceRecorder";
 import ImageLightbox from "@/components/chatroom/ImageLightbox";
@@ -25,6 +35,7 @@ interface ChatMessage {
   message_type?: string;
   media_url?: string;
   reply_to_id?: string;
+  is_pinned?: boolean;
 }
 
 interface UserProfile {
@@ -96,6 +107,7 @@ export default function CommunityChatroom() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { uploadImage, uploading } = useImageUpload();
+  const { isAdmin } = useAdminRole();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -110,6 +122,9 @@ export default function CommunityChatroom() {
   const [showReactionsFor, setShowReactionsFor] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+  const [adminUserIds, setAdminUserIds] = useState<Set<string>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
+  const [onlineCount, setOnlineCount] = useState(1);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,8 +132,33 @@ export default function CommunityChatroom() {
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "User";
 
+  const pinnedMessage = messages.find((m) => m.is_pinned);
+
   const scrollToBottom = useCallback((smooth = true) => {
     bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "instant" });
+  }, []);
+
+  const scrollToMessage = useCallback((msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary/50");
+      setTimeout(() => el.classList.remove("ring-2", "ring-primary/50"), 2000);
+    }
+  }, []);
+
+  // Fetch admin user IDs for badge display
+  useEffect(() => {
+    const fetchAdminIds = async () => {
+      const { data } = await supabase
+        .from("user_roles" as any)
+        .select("user_id")
+        .eq("role", "admin");
+      if (data) {
+        setAdminUserIds(new Set((data as any[]).map((r: any) => r.user_id)));
+      }
+    };
+    fetchAdminIds();
   }, []);
 
   // Fetch profiles for all unique user_ids in messages
@@ -147,7 +187,7 @@ export default function CommunityChatroom() {
         .order("created_at", { ascending: true })
         .limit(200);
       if (data) {
-        const msgs = data as ChatMessage[];
+        const msgs = data as unknown as ChatMessage[];
         setMessages(msgs);
         const userIds = [...new Set(msgs.map((m) => m.user_id))];
         fetchUserProfiles(userIds);
@@ -163,13 +203,21 @@ export default function CommunityChatroom() {
         setMessages((prev) => [...prev, newMsg]);
         fetchUserProfiles([newMsg.user_id]);
       })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "chatroom_messages" }, (payload) => {
+        const deletedId = (payload.old as any).id;
+        setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chatroom_messages" }, (payload) => {
+        const updated = payload.new as ChatMessage;
+        setMessages((prev) => prev.map((m) => m.id === updated.id ? { ...m, ...updated } : m));
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Presence for typing
+  // Presence for typing + online count
   useEffect(() => {
     if (!user) return;
     const presenceChannel = supabase.channel("chatroom-presence", {
@@ -179,6 +227,8 @@ export default function CommunityChatroom() {
     presenceChannel
       .on("presence", { event: "sync" }, () => {
         const state = presenceChannel.presenceState();
+        const keys = Object.keys(state);
+        setOnlineCount(keys.length);
         const typing: string[] = [];
         Object.entries(state).forEach(([uid, data]: [string, any]) => {
           if (uid !== user.id && data?.[0]?.typing) {
@@ -187,10 +237,14 @@ export default function CommunityChatroom() {
         });
         setTypingUsers(typing);
       })
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await presenceChannel.track({ typing: false, name: displayName });
+        }
+      });
 
     return () => { supabase.removeChannel(presenceChannel); };
-  }, [user]);
+  }, [user, displayName]);
 
   useEffect(() => {
     scrollToBottom(!loading);
@@ -290,6 +344,49 @@ export default function CommunityChatroom() {
     };
   };
 
+  // Admin actions
+  const handleDeleteMessage = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase
+      .from("chatroom_messages")
+      .delete()
+      .eq("id", deleteTarget.id);
+    if (error) {
+      toast.error("Failed to delete message");
+    } else {
+      toast.success("Message deleted");
+      // Also log moderation action
+      await supabase.from("moderation_logs").insert({
+        moderator_id: user?.id,
+        action_type: "delete_message",
+        target_type: "chatroom_message",
+        target_id: deleteTarget.id,
+        reason: "Admin moderation",
+      } as any);
+    }
+    setDeleteTarget(null);
+  };
+
+  const handleTogglePin = async (msg: ChatMessage) => {
+    const newPinState = !msg.is_pinned;
+    // Unpin all first if pinning a new one
+    if (newPinState) {
+      await supabase
+        .from("chatroom_messages")
+        .update({ is_pinned: false } as any)
+        .eq("is_pinned", true);
+    }
+    const { error } = await supabase
+      .from("chatroom_messages")
+      .update({ is_pinned: newPinState } as any)
+      .eq("id", msg.id);
+    if (error) {
+      toast.error("Failed to update pin");
+    } else {
+      toast.success(newPinState ? "Message pinned" : "Message unpinned");
+    }
+  };
+
   const renderMessageContent = (msg: ChatMessage) => {
     const type = msg.message_type || "text";
     switch (type) {
@@ -322,15 +419,54 @@ export default function CommunityChatroom() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
             </span>
-            <span className="text-[11px] text-muted-foreground">{messages.length} messages</span>
+            <span className="text-[11px] text-muted-foreground">
+              {onlineCount} online · {messages.length} messages
+            </span>
           </div>
         </div>
-        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+        <div className="flex items-center gap-1.5">
+          {isAdmin && (
+            <div className="h-6 px-2 rounded-full bg-primary/10 flex items-center gap-1">
+              <Shield className="h-3 w-3 text-primary" />
+              <span className="text-[10px] font-semibold text-primary">Mod</span>
+            </div>
+          )}
+          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
         </div>
       </div>
 
-      {/* Messages area - takes all remaining space */}
+      {/* Pinned message banner */}
+      {pinnedMessage && (
+        <button
+          onClick={() => scrollToMessage(pinnedMessage.id)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-b border-primary/10 shrink-0 text-left hover:bg-primary/10 transition-colors"
+        >
+          <Pin className="h-3.5 w-3.5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-primary">Pinned Message</p>
+            <p className="text-[12px] text-foreground/70 truncate">
+              {pinnedMessage.message_type !== "text"
+                ? `📎 ${pinnedMessage.message_type}`
+                : pinnedMessage.content.slice(0, 80)}
+            </p>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTogglePin(pinnedMessage);
+              }}
+              className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center shrink-0"
+            >
+              <PinOff className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+        </button>
+      )}
+
+      {/* Messages area */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
@@ -361,13 +497,14 @@ export default function CommunityChatroom() {
               const initials = senderName.slice(0, 2).toUpperCase();
               const replyMsg = getReplyMessage(msg.reply_to_id);
               const msgReactions = reactions[msg.id] || [];
+              const isSenderAdmin = adminUserIds.has(msg.user_id);
 
               return (
-                <div key={msg.id}>
+                <div key={msg.id} id={`msg-${msg.id}`} className="transition-all duration-300 rounded-lg">
                   {isNewDay && <DateSeparator date={msg.created_at} />}
 
                   <div className={`flex gap-2.5 ${isConsecutive ? "mt-0.5" : "mt-4"}`}>
-                    {/* Avatar for all users */}
+                    {/* Avatar */}
                     <div className="w-9 shrink-0 self-end">
                       {!isConsecutive && (
                         <Avatar className="h-9 w-9 ring-2 ring-border/30">
@@ -380,11 +517,19 @@ export default function CommunityChatroom() {
                     </div>
 
                     <div className="max-w-[75%] items-start flex flex-col">
-                      {/* Sender name */}
+                      {/* Sender name + admin badge */}
                       {!isConsecutive && (
-                        <p className="text-[12px] font-semibold text-foreground/80 mb-1 px-1.5">
-                          {isOwn ? "You" : senderName}
-                        </p>
+                        <div className="flex items-center gap-1.5 mb-1 px-1.5">
+                          <p className="text-[12px] font-semibold text-foreground/80">
+                            {isOwn ? "You" : senderName}
+                          </p>
+                          {isSenderAdmin && (
+                            <div className="flex items-center gap-0.5 bg-primary/10 rounded-full px-1.5 py-0.5">
+                              <Shield className="h-2.5 w-2.5 text-primary" />
+                              <span className="text-[9px] font-bold text-primary">ADMIN</span>
+                            </div>
+                          )}
+                        </div>
                       )}
 
                       {/* Reply quote */}
@@ -410,7 +555,7 @@ export default function CommunityChatroom() {
                             : isOwn
                             ? "bg-primary text-primary-foreground rounded-2xl rounded-tl-md"
                             : "bg-secondary text-foreground rounded-2xl rounded-tl-md"
-                        }`}
+                        } ${msg.is_pinned ? "ring-1 ring-primary/30" : ""}`}
                         onDoubleClick={() => setShowReactionsFor(showReactionsFor === msg.id ? null : msg.id)}
                         onClick={() => {
                           if (showReactionsFor && showReactionsFor !== msg.id) setShowReactionsFor(null);
@@ -418,13 +563,44 @@ export default function CommunityChatroom() {
                       >
                         {renderMessageContent(msg)}
 
-                        {/* Reply button on tap for mobile */}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setReplyTo(msg); }}
-                          className={`absolute ${isOwn ? "-left-8" : "-right-8"} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 rounded-full bg-secondary flex items-center justify-center`}
-                        >
-                          <Reply className="h-3 w-3 text-muted-foreground" />
-                        </button>
+                        {/* Pin indicator on message */}
+                        {msg.is_pinned && (
+                          <Pin className="absolute -top-1.5 -right-1.5 h-3 w-3 text-primary" />
+                        )}
+
+                        {/* Action buttons */}
+                        <div className={`absolute -right-16 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5`}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setReplyTo(msg); }}
+                            className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center"
+                          >
+                            <Reply className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                          {isAdmin && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center">
+                                  <MoreVertical className="h-3 w-3 text-muted-foreground" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[140px]">
+                                <DropdownMenuItem onClick={() => handleTogglePin(msg)}>
+                                  {msg.is_pinned ? (
+                                    <><PinOff className="h-3.5 w-3.5 mr-2" /> Unpin</>
+                                  ) : (
+                                    <><Pin className="h-3.5 w-3.5 mr-2" /> Pin message</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteTarget(msg)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
                       </div>
 
                       {/* Reactions display */}
@@ -487,6 +663,24 @@ export default function CommunityChatroom() {
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </button>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete message</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove this message for everyone. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMessage} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Lightbox */}
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
