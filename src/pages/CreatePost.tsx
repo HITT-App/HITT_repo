@@ -36,7 +36,7 @@ const CreatePost = () => {
   const [content, setContent] = useState("");
   const [postType, setPostType] = useState<"text" | "poll" | "before-after">("text");
   const [category, setCategory] = useState("workout");
-  const [tags, setTags] = useState<string[]>(["fitnessrock", "hiitAI"]);
+  const [tags, setTags] = useState<string[]>([]);
   const [showTypeSheet, setShowTypeSheet] = useState(false);
   const [showCategorySheet, setShowCategorySheet] = useState(false);
   const [showMediaSheet, setShowMediaSheet] = useState(false);
