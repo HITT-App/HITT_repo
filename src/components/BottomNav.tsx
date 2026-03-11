@@ -13,6 +13,7 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { flags } = useFeatureFlags();
+  const { unreadCount } = useCommunityNotifications();
 
   const navItems = [
     { id: "home", icon: Home, label: "Home", path: "/" },
