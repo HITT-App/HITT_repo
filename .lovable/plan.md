@@ -1,80 +1,24 @@
 
-# Fix Admin Panel: User Visibility and Data Access
 
-## Problem
-The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
+# Fix PostComments Layout Issues
 
-There are 6 users in the database, but the admin sees 1.
-
-## Root Cause
-The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
-- `profiles` -- affects user list and total user count
-- `activity_logs` -- affects "Active (7d)" stat
-- `meal_logs` -- affects "Meals Logged" stat
-- `workout_progress` -- affects "Completed" stat
-- `user_badges` -- affects "Badges Earned" stat
-- `coaching_sessions` -- affects "Sessions" stat
+## Problems
+1. The comment input bar is hidden behind the bottom navigation
+2. The header appears cut off/missing
+3. The page layout conflicts with AppLayout's `pb-24` wrapper
 
 ## Solution
 
-### 1. Database Migration: Add Admin SELECT Policies
-Add new RLS policies to allow admins to read all rows in the affected tables:
+### 1. Hide bottom nav on comment pages (`AppLayout.tsx`)
+Add `/community/post` to `HIDDEN_NAV_ROUTES` -- this is a focused interaction page (like chatroom) with its own header and input bar.
 
-```sql
--- Admins can view all profiles
-CREATE POLICY "Admins can view all profiles"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### 2. Fix PostComments layout (`PostComments.tsx`)
+- Make the header **sticky** at the top with `z-10`
+- Make the comment input **fixed** at the bottom with safe-area padding
+- Add bottom padding to the scroll area so content isn't hidden behind the fixed input
+- Use `h-screen` with proper flex layout so the scroll area fills available space
 
--- Admins can view all activity logs
-CREATE POLICY "Admins can view all activity logs"
-  ON public.activity_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### Files to modify
+- `src/components/AppLayout.tsx` -- add `/community/post` to hidden nav routes
+- `src/pages/PostComments.tsx` -- fix header stickiness, fix input positioning, improve empty state
 
--- Admins can view all meal logs
-CREATE POLICY "Admins can view all meal logs"
-  ON public.meal_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all workout progress
-CREATE POLICY "Admins can view all workout progress"
-  ON public.workout_progress FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all user badges
-CREATE POLICY "Admins can view all user badges"
-  ON public.user_badges FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all coaching sessions
-CREATE POLICY "Admins can view all coaching sessions"
-  ON public.coaching_sessions FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-```
-
-### 2. Improve AdminUsers Page
-Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
-
-- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
-- Add pagination (currently limited to 100 users)
-- Add role filter tabs (All / Admins / Moderators)
-- Show user join date
-- Add moderator role management (currently only admin toggle)
-
-### 3. Files Changed
-
-| File | Change |
-|------|--------|
-| New migration SQL | Add 6 admin SELECT policies |
-| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
-
-### 4. No Changes Needed
-- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
-- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
-- Admin dashboard, sidebar, routing -- all working correctly
