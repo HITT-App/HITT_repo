@@ -366,7 +366,7 @@ export default function CommunityChatroom() {
                 <div key={msg.id}>
                   {isNewDay && <DateSeparator date={msg.created_at} />}
 
-                  <div className={`flex gap-2.5 ${isOwn ? "flex-row-reverse" : ""} ${isConsecutive ? "mt-0.5" : "mt-4"}`}>
+                  <div className={`flex gap-2.5 ${isConsecutive ? "mt-0.5" : "mt-4"}`}>
                     {/* Avatar for all users */}
                     <div className="w-9 shrink-0 self-end">
                       {!isConsecutive && (
@@ -379,10 +379,10 @@ export default function CommunityChatroom() {
                       )}
                     </div>
 
-                    <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
-                      {/* Sender name - show for all users when not consecutive */}
+                    <div className="max-w-[75%] items-start flex flex-col">
+                      {/* Sender name */}
                       {!isConsecutive && (
-                        <p className={`text-[12px] font-semibold text-foreground/80 mb-1 px-1.5 ${isOwn ? "text-right" : ""}`}>
+                        <p className="text-[12px] font-semibold text-foreground/80 mb-1 px-1.5">
                           {isOwn ? "You" : senderName}
                         </p>
                       )}
@@ -408,7 +408,7 @@ export default function CommunityChatroom() {
                           (msg.message_type === "image" || msg.message_type === "gif")
                             ? "p-1 bg-transparent"
                             : isOwn
-                            ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-md"
+                            ? "bg-primary text-primary-foreground rounded-2xl rounded-tl-md"
                             : "bg-secondary text-foreground rounded-2xl rounded-tl-md"
                         }`}
                         onDoubleClick={() => setShowReactionsFor(showReactionsFor === msg.id ? null : msg.id)}
@@ -449,7 +449,7 @@ export default function CommunityChatroom() {
 
                       {/* Timestamp */}
                       {(!messages[i + 1] || messages[i + 1]?.user_id !== msg.user_id) && (
-                        <p className={`text-[10px] text-muted-foreground mt-0.5 px-1.5 ${isOwn ? "text-right" : ""}`}>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 px-1.5">
                           {format(new Date(msg.created_at), "h:mm a")}
                         </p>
                       )}
