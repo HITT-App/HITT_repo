@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, RefreshCw, Upload, Trash2, Video } from "lucide-react";
+import { Loader2, Save, RefreshCw, Upload, Trash2, Video, Image as ImageIcon } from "lucide-react";
 
 interface FeatureFlag {
   id: string;
@@ -22,8 +22,11 @@ export default function AdminSettings() {
   const [saving, setSaving] = useState(false);
   const [changes, setChanges] = useState<Record<string, boolean>>({});
   const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null);
+  const [splashBgUrl, setSplashBgUrl] = useState<string | null>(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingSplash, setUploadingSplash] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const splashInputRef = useRef<HTMLInputElement>(null);
 
   const fetchFlags = async () => {
     const { data, error } = await supabase
@@ -48,9 +51,19 @@ export default function AdminSettings() {
     setHeroVideoUrl(data?.value || null);
   };
 
+  const fetchSplashBg = async () => {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "splash_background_url")
+      .maybeSingle();
+    setSplashBgUrl(data?.value || null);
+  };
+
   useEffect(() => {
     fetchFlags();
     fetchHeroVideo();
+    fetchSplashBg();
   }, []);
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +118,68 @@ export default function AdminSettings() {
       toast({ title: "Hero video reset to default" });
     } catch {
       toast({ variant: "destructive", title: "Failed to reset video" });
+    }
+  };
+
+  const handleSplashUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"];
+    if (!validTypes.includes(file.type)) {
+      toast({ variant: "destructive", title: "Please select an image or video file" });
+      return;
+    }
+    setUploadingSplash(true);
+    try {
+      const fileName = `splash-bg-${Date.now()}.${file.name.split(".").pop()}`;
+      const { error: uploadError } = await supabase.storage
+        .from("app-assets")
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("app-assets").getPublicUrl(fileName);
+      const publicUrl = urlData.publicUrl;
+      const isVideo = file.type.startsWith("video/");
+      const value = isVideo ? `video:${publicUrl}` : publicUrl;
+
+      const { data: existing } = await supabase
+        .from("app_settings")
+        .select("id")
+        .eq("key", "splash_background_url")
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("app_settings")
+          .update({ value, updated_at: new Date().toISOString() })
+          .eq("key", "splash_background_url");
+      } else {
+        await supabase
+          .from("app_settings")
+          .insert({ key: "splash_background_url", value } as any);
+      }
+
+      setSplashBgUrl(value);
+      toast({ title: "✅ Splash background saved!" });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Failed to upload" });
+    } finally {
+      setUploadingSplash(false);
+      if (splashInputRef.current) splashInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveSplash = async () => {
+    try {
+      await supabase
+        .from("app_settings")
+        .update({ value: null, updated_at: new Date().toISOString() })
+        .eq("key", "splash_background_url");
+      setSplashBgUrl(null);
+      toast({ title: "Splash background reset to default" });
+    } catch {
+      toast({ variant: "destructive", title: "Failed to reset" });
     }
   };
 
@@ -210,7 +285,68 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
-        {/* Feature Flags */}
+        {/* Splash Screen Background */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5" />
+              Splash Screen Background
+            </CardTitle>
+            <CardDescription>
+              Upload a custom image or video for the welcome/onboarding splash screen background.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {splashBgUrl && (
+              <div className="rounded-lg overflow-hidden border border-border">
+                {splashBgUrl.startsWith("video:") ? (
+                  <video
+                    src={splashBgUrl.replace("video:", "")}
+                    className="w-full h-40 object-cover"
+                    muted autoPlay loop playsInline
+                  />
+                ) : (
+                  <img
+                    src={splashBgUrl}
+                    alt="Splash background"
+                    className="w-full h-40 object-cover"
+                  />
+                )}
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                ref={splashInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
+                className="hidden"
+                onChange={handleSplashUpload}
+              />
+              <Button
+                variant="outline"
+                onClick={() => splashInputRef.current?.click()}
+                disabled={uploadingSplash}
+              >
+                {uploadingSplash ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {splashBgUrl ? "Replace Background" : "Upload Background"}
+              </Button>
+              {splashBgUrl && (
+                <Button variant="destructive" size="sm" onClick={handleRemoveSplash}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Reset to Default
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {splashBgUrl ? "Custom background is active" : "Using default orange background"}
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Feature Flags</CardTitle>
