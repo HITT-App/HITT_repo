@@ -41,6 +41,8 @@ const StoryViewer = () => {
     }
   }, [currentStory?.id]);
 
+  const goNextRef = useRef<() => void>(() => {});
+
   // Progress timer
   useEffect(() => {
     setProgress(0);
@@ -50,7 +52,7 @@ const StoryViewer = () => {
       setProgress((prev) => {
         const next = prev + (TICK / STORY_DURATION) * 100;
         if (next >= 100) {
-          goNext();
+          goNextRef.current();
           return 0;
         }
         return next;
@@ -73,6 +75,8 @@ const StoryViewer = () => {
       navigate(-1);
     }
   }, [currentGroup, storyIndex, groupIndex, storyGroups.length, navigate]);
+
+  goNextRef.current = goNext;
 
   const goPrev = useCallback(() => {
     if (storyIndex > 0) {
