@@ -152,9 +152,11 @@ export default function CommunityChatroom() {
   const [sendingNotice, setSendingNotice] = useState(false);
   const [activeNotice, setActiveNotice] = useState<BroadcastNotice | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const [uploadingBg, setUploadingBg] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "User";
@@ -465,6 +467,23 @@ export default function CommunityChatroom() {
     }
     toast.success("Background updated");
   };
+
+  const handleBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingBg(true);
+    const url = await uploadImage(file, "app-assets");
+    if (url) {
+      const bgValue = `url(${url}) center/cover no-repeat`;
+      await handleSetBackground(bgValue);
+    } else {
+      toast.error("Failed to upload image");
+    }
+    setUploadingBg(false);
+    if (bgFileInputRef.current) bgFileInputRef.current.value = "";
+  };
+
+  const isCustomImageBg = chatBackground.startsWith("url(");
 
   const handleSendNotice = async () => {
     if (!noticeText.trim()) return;
@@ -824,7 +843,7 @@ export default function CommunityChatroom() {
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {BACKGROUND_PRESETS.map((preset) => {
-                  const isActive = chatBackground === preset.value;
+                  const isActive = !isCustomImageBg && chatBackground === preset.value;
                   return (
                     <button
                       key={preset.id}
@@ -845,7 +864,45 @@ export default function CommunityChatroom() {
                     </button>
                   );
                 })}
+                {/* Custom image upload tile */}
+                <button
+                  onClick={() => bgFileInputRef.current?.click()}
+                  disabled={uploadingBg}
+                  className={`relative flex flex-col items-center gap-1.5 p-1.5 rounded-xl border-2 transition-all ${
+                    isCustomImageBg
+                      ? "border-primary shadow-md"
+                      : "border-dashed border-border/50 hover:border-border"
+                  }`}
+                >
+                  {isCustomImageBg ? (
+                    <div
+                      className="h-10 w-full rounded-lg bg-cover bg-center"
+                      style={{ backgroundImage: chatBackground.match(/url\(([^)]+)\)/)?.[0] || "" }}
+                    />
+                  ) : (
+                    <div className="h-10 w-full rounded-lg bg-secondary/60 flex items-center justify-center">
+                      {uploadingBg ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : (
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  )}
+                  <span className="text-[10px] font-medium text-muted-foreground">Custom</span>
+                  {isCustomImageBg && (
+                    <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                    </div>
+                  )}
+                </button>
               </div>
+              <input
+                ref={bgFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleBgImageUpload}
+              />
             </div>
 
             {/* Broadcast Notice */}
