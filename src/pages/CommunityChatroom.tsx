@@ -408,7 +408,7 @@ export default function CommunityChatroom() {
                           (msg.message_type === "image" || msg.message_type === "gif")
                             ? "p-1 bg-transparent"
                             : isOwn
-                            ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-md"
+                            ? "bg-primary text-primary-foreground rounded-2xl rounded-tl-md"
                             : "bg-secondary text-foreground rounded-2xl rounded-tl-md"
                         }`}
                         onDoubleClick={() => setShowReactionsFor(showReactionsFor === msg.id ? null : msg.id)}
