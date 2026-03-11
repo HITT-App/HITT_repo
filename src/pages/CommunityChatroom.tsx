@@ -367,25 +367,23 @@ export default function CommunityChatroom() {
                   {isNewDay && <DateSeparator date={msg.created_at} />}
 
                   <div className={`flex gap-2.5 ${isOwn ? "flex-row-reverse" : ""} ${isConsecutive ? "mt-0.5" : "mt-4"}`}>
-                    {/* Avatar for other users */}
-                    {!isOwn && (
-                      <div className="w-9 shrink-0 self-end">
-                        {!isConsecutive && (
-                          <Avatar className="h-9 w-9 ring-2 ring-border/30">
-                            {senderAvatar && <AvatarImage src={senderAvatar} alt={senderName} />}
-                            <AvatarFallback className="text-[11px] font-bold bg-primary/10 text-primary">
-                              {initials}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                      </div>
-                    )}
+                    {/* Avatar for all users */}
+                    <div className="w-9 shrink-0 self-end">
+                      {!isConsecutive && (
+                        <Avatar className="h-9 w-9 ring-2 ring-border/30">
+                          {senderAvatar && <AvatarImage src={senderAvatar} alt={senderName} />}
+                          <AvatarFallback className="text-[11px] font-bold bg-primary/10 text-primary">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
 
                     <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
-                      {/* Sender name - clearly visible */}
-                      {!isOwn && !isConsecutive && (
-                        <p className="text-[12px] font-semibold text-foreground/80 mb-1 px-1.5">
-                          {senderName}
+                      {/* Sender name - show for all users when not consecutive */}
+                      {!isConsecutive && (
+                        <p className={`text-[12px] font-semibold text-foreground/80 mb-1 px-1.5 ${isOwn ? "text-right" : ""}`}>
+                          {isOwn ? "You" : senderName}
                         </p>
                       )}
 
