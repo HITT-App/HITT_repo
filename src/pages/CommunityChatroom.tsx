@@ -659,8 +659,14 @@ export default function CommunityChatroom() {
         ref={scrollContainerRef}
         onScroll={handleScroll}
         className="flex-1 min-h-0 overflow-y-auto px-3 py-2 scroll-smooth relative"
-        style={chatBackground && !isVideoBg ? { background: chatBackground } : undefined}
       >
+        {/* Background layer with opacity */}
+        {chatBackground && !isVideoBg && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: chatBackground, opacity: bgOpacity / 100 }}
+          />
+        )}
         {isVideoBg && (
           <video
             autoPlay
@@ -668,6 +674,7 @@ export default function CommunityChatroom() {
             muted
             playsInline
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            style={{ opacity: bgOpacity / 100 }}
             src={chatBackground.replace("video:", "")}
           />
         )}
