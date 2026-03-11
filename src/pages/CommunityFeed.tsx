@@ -34,14 +34,18 @@ const CommunityFeed = () => {
   const { profile } = useProfile();
   const { profile: communityProfile } = useCommunityProfile();
   const { isPostSaved, savePost, unsavePost } = useSavedPosts();
+  const { unreadCount } = useCommunityNotifications();
   const [hiddenPosts, setHiddenPosts] = useState<string[]>([]);
   const [likingPosts, setLikingPosts] = useState<string[]>([]);
   const [likeAnimations, setLikeAnimations] = useState<string[]>([]);
   const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  // Local optimistic state for likes
   const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { is_liked: boolean; likes_count: number }>>({});
+
+  // Reactions hook
+  const postIds = useMemo(() => posts.map(p => p.id), [posts]);
+  const { reactions, react: reactToPost } = useReactions(postIds);
 
   // Fetch following list for "Following" tab
   useEffect(() => {
