@@ -447,6 +447,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          is_pinned: boolean
           media_url: string | null
           message_type: string
           reply_to_id: string | null
@@ -457,6 +458,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_pinned?: boolean
           media_url?: string | null
           message_type?: string
           reply_to_id?: string | null
@@ -467,6 +469,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_pinned?: boolean
           media_url?: string | null
           message_type?: string
           reply_to_id?: string | null
