@@ -48,14 +48,24 @@ export const useCommunityNotifications = () => {
         return;
       }
 
-      // Get actor profiles
+      // Get actor profiles from community_profiles and fallback to profiles
       const actorIds = [...new Set(notifData.map(n => n.actor_id))];
-      const { data: profiles } = await supabase
-        .from('community_profiles')
-        .select('user_id, display_name, username, avatar_url')
-        .in('user_id', actorIds);
+      const [{ data: communityProfiles }, { data: basicProfiles }] = await Promise.all([
+        supabase
+          .from('community_profiles')
+          .select('user_id, display_name, username, avatar_url')
+          .in('user_id', actorIds),
+        supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', actorIds),
+      ]);
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map<string, { display_name: string | null; username: string | null; avatar_url: string | null }>();
+      // First add basic profiles as fallback
+      basicProfiles?.forEach(p => profileMap.set(p.user_id, { display_name: p.display_name, username: null, avatar_url: p.avatar_url }));
+      // Then override with community profiles (higher priority)
+      communityProfiles?.forEach(p => profileMap.set(p.user_id, p));
 
       const enrichedNotifications: CommunityNotification[] = notifData.map(notif => ({
         ...notif,
