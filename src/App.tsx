@@ -193,6 +193,8 @@ const App = () => (
             {/* Redirect old community notifications route */}
             <Route path="/community/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/community/create" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
+            <Route path="/community/create-story" element={<ProtectedRoute><CreateStory /></ProtectedRoute>} />
+            <Route path="/community/story/:userId" element={<ProtectedRoute><StoryViewer /></ProtectedRoute>} />
             <Route path="/community/post/:postId/comments" element={<ProtectedRoute><PostComments /></ProtectedRoute>} />
             <Route path="/community/user/:userId" element={<ProtectedRoute><CommunityProfile /></ProtectedRoute>} />
             <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
