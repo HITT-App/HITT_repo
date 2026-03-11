@@ -59,6 +59,7 @@ export interface CommunityProfile {
   likes_received: number;
   is_private: boolean;
   onboarding_completed: boolean;
+  created_at: string;
   is_following?: boolean;
 }
 
