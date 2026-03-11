@@ -645,6 +645,7 @@ export default function CommunityChatroom() {
             src={chatBackground.replace("video:", "")}
           />
         )}
+        <div className="relative z-10">
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
