@@ -36,6 +36,7 @@ const CommunityFeed = () => {
   const { profile: communityProfile } = useCommunityProfile();
   const { isPostSaved, savePost, unsavePost } = useSavedPosts();
   const { unreadCount } = useCommunityNotifications();
+  const { storyGroups } = useStories();
   const [hiddenPosts, setHiddenPosts] = useState<string[]>([]);
   const [likingPosts, setLikingPosts] = useState<string[]>([]);
   const [likeAnimations, setLikeAnimations] = useState<string[]>([]);
