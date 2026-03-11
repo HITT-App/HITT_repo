@@ -39,7 +39,7 @@ const Community = () => {
       <div className="flex items-center justify-center p-6 pt-8 bg-gradient-to-b from-primary/5 to-background">
         <div className="text-center">
           <div className="w-48 h-48 mx-auto mb-4 rounded-3xl overflow-hidden bg-muted flex items-center justify-center">
-            <img src="/placeholder.svg" alt="Community" className="w-full h-full object-cover" />
+            <img src={hiitLogo} alt="HIIT Fitness" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-2xl font-bold mb-1">HIIT Fitness Community</h1>
           <p className="text-sm text-muted-foreground">
