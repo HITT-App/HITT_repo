@@ -139,14 +139,14 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
     >
       {/* Background Video */}
       <video
+        key={customVideoUrl || 'default'}
         autoPlay
         loop
         muted
         playsInline
         className="absolute inset-0 w-full h-full object-cover scale-105"
-      >
-        <source src={customVideoUrl || heroVideo} type="video/mp4" />
-      </video>
+        src={customVideoUrl || heroVideo}
+      />
       
       {/* Gradient Overlay - cleaner */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/70" />
