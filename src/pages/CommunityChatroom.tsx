@@ -379,10 +379,10 @@ export default function CommunityChatroom() {
                       )}
                     </div>
 
-                    <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
-                      {/* Sender name - show for all users when not consecutive */}
+                    <div className="max-w-[75%] items-start flex flex-col">
+                      {/* Sender name */}
                       {!isConsecutive && (
-                        <p className={`text-[12px] font-semibold text-foreground/80 mb-1 px-1.5 ${isOwn ? "text-right" : ""}`}>
+                        <p className="text-[12px] font-semibold text-foreground/80 mb-1 px-1.5">
                           {isOwn ? "You" : senderName}
                         </p>
                       )}
