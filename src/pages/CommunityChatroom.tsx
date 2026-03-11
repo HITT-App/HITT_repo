@@ -148,6 +148,7 @@ export default function CommunityChatroom() {
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [chatBackground, setChatBackground] = useState("");
+  const [bgOpacity, setBgOpacity] = useState(100);
   const [noticeText, setNoticeText] = useState("");
   const [sendingNotice, setSendingNotice] = useState(false);
   const [activeNotice, setActiveNotice] = useState<BroadcastNotice | null>(null);
