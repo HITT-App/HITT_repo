@@ -110,7 +110,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Even if signOut fails (e.g. expired session), clear local state
+    }
+    // Force clear user state so UI redirects to auth
+    setUser(null);
   };
 
   const resetPassword = async (email: string) => {
