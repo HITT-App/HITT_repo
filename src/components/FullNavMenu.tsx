@@ -32,7 +32,8 @@ import {
   Video,
   X,
   Crown,
-  Shield
+  Shield,
+  Sun
 } from "lucide-react";
 import {
   Drawer,
