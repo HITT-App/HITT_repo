@@ -39,9 +39,74 @@ export default function AdminSettings() {
     setLoading(false);
   };
 
+  const fetchHeroVideo = async () => {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "hero_video_url")
+      .single();
+    setHeroVideoUrl(data?.value || null);
+  };
+
   useEffect(() => {
     fetchFlags();
+    fetchHeroVideo();
   }, []);
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      toast({ variant: "destructive", title: "Please select a video file" });
+      return;
+    }
+
+    setUploadingVideo(true);
+    try {
+      const fileName = `hero-video-${Date.now()}.${file.name.split(".").pop()}`;
+      const { error: uploadError } = await supabase.storage
+        .from("app-assets")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("app-assets")
+        .getPublicUrl(fileName);
+
+      const publicUrl = urlData.publicUrl;
+
+      const { error: updateError } = await supabase
+        .from("app_settings")
+        .update({ value: publicUrl, updated_at: new Date().toISOString() })
+        .eq("key", "hero_video_url");
+
+      if (updateError) throw updateError;
+
+      setHeroVideoUrl(publicUrl);
+      toast({ title: "Hero video updated successfully" });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Failed to upload video" });
+    } finally {
+      setUploadingVideo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveVideo = async () => {
+    try {
+      await supabase
+        .from("app_settings")
+        .update({ value: null, updated_at: new Date().toISOString() })
+        .eq("key", "hero_video_url");
+
+      setHeroVideoUrl(null);
+      toast({ title: "Hero video reset to default" });
+    } catch {
+      toast({ variant: "destructive", title: "Failed to reset video" });
+    }
+  };
 
   const handleToggle = (flagName: string, enabled: boolean) => {
     setChanges((prev) => ({ ...prev, [flagName]: enabled }));
