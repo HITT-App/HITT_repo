@@ -152,23 +152,23 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/70" />
 
       {/* Content */}
-      <div className="relative h-full flex flex-col justify-between p-5 pt-10">
-        {/* Top Section - Logo */}
-        <div className="flex justify-center opacity-0 animate-fade-up" style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}>
-          <img src={hiitLogo} alt="HIIT Logo" className="w-16 h-16 rounded-2xl object-cover border border-white/20" />
+      <div className="relative h-full flex flex-col justify-end p-6 pb-8">
+        {/* Logo - top center */}
+        <div className="absolute top-10 left-0 right-0 flex justify-center opacity-0 animate-fade-up" style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}>
+          <img src={hiitLogo} alt="HIIT Logo" className="w-14 h-14 rounded-2xl object-cover border border-white/10 shadow-lg" />
         </div>
 
         {/* Bottom Section - Greeting */}
-        <div className="mb-20 opacity-0 animate-fade-up" style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}>
+        <div className="mb-16 opacity-0 animate-fade-up" style={{ animationDelay: "0.3s", animationFillMode: "forwards" }}>
           <div className="flex items-end justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold text-white tracking-tight">
-                {greeting},
-              </h1>
-              <h1 className="text-3xl font-semibold text-primary tracking-tight">
+            <div className="space-y-1">
+              <p className="text-sm font-medium tracking-widest uppercase text-white/40 mb-2">
+                {greeting}
+              </p>
+              <h1 className="text-4xl font-bold text-white tracking-tight leading-tight">
                 {userName}.
               </h1>
-              <p className="mt-2 text-base text-white/70 font-light">
+              <p className="mt-3 text-base text-white/50 font-light">
                 Need a plan for today?
               </p>
             </div>
@@ -176,7 +176,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
               variant="ghost"
               size="icon"
               onClick={toggleMute}
-              className="text-white/70 hover:text-white hover:bg-white/10 transition-colors rounded-full"
+              className="text-white/40 hover:text-white hover:bg-white/10 transition-colors rounded-full mb-1"
               aria-label={isMuted ? "Unmute voice" : "Mute voice"}
             >
               {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
