@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Bot, MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
 import hiitLogo from "@/assets/hiit-logo.webp";
 
 interface BottomNavProps {
