@@ -35,6 +35,7 @@ export default function Profile() {
   const { streak, allBadges, earnedBadges, loading: streaksLoading } = useStreaksAndBadges();
   const { isAdmin, loading: adminLoading } = useAdminRole();
   const { enabled: wakeWordEnabled, setEnabled: setWakeWordEnabled } = useWakeWordPreference();
+  const { theme, setTheme } = useTheme();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState('');
