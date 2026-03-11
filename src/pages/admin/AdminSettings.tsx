@@ -63,6 +63,7 @@ export default function AdminSettings() {
   useEffect(() => {
     fetchFlags();
     fetchHeroVideo();
+    fetchSplashBg();
   }, []);
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
