@@ -88,6 +88,7 @@ export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
       
       await audio.play();
       setHasPlayed(true);
+      sessionStorage.setItem('voice_greeting_played', 'true');
     } catch (error) {
       console.error("Voice greeting error:", error);
       setIsPlaying(false);
