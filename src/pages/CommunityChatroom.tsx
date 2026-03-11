@@ -449,7 +449,7 @@ export default function CommunityChatroom() {
 
                       {/* Timestamp */}
                       {(!messages[i + 1] || messages[i + 1]?.user_id !== msg.user_id) && (
-                        <p className={`text-[10px] text-muted-foreground mt-0.5 px-1.5 ${isOwn ? "text-right" : ""}`}>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 px-1.5">
                           {format(new Date(msg.created_at), "h:mm a")}
                         </p>
                       )}
