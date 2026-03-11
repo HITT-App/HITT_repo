@@ -54,7 +54,7 @@ import CommunitySearch from "./pages/CommunitySearch";
 import CommunityProfile from "./pages/CommunityProfile";
 import CommunityProfileSettings from "./pages/CommunityProfileSettings";
 import CommunityChat from "./pages/CommunityChat";
-import CommunityNotifications from "./pages/CommunityNotifications";
+
 import CreatePost from "./pages/CreatePost";
 import PostComments from "./pages/PostComments";
 import Resources from "./pages/Resources";
@@ -188,7 +188,8 @@ const App = () => (
             <Route path="/community/profile" element={<ProtectedRoute><CommunityProfile /></ProtectedRoute>} />
             <Route path="/community/profile/settings" element={<ProtectedRoute><CommunityProfileSettings /></ProtectedRoute>} />
             <Route path="/community/chat/:userId" element={<ProtectedRoute><CommunityChat /></ProtectedRoute>} />
-            <Route path="/community/notifications" element={<ProtectedRoute><CommunityNotifications /></ProtectedRoute>} />
+            {/* Redirect old community notifications route */}
+            <Route path="/community/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/community/create" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
             <Route path="/community/post/:postId/comments" element={<ProtectedRoute><PostComments /></ProtectedRoute>} />
             <Route path="/community/user/:userId" element={<ProtectedRoute><CommunityProfile /></ProtectedRoute>} />
