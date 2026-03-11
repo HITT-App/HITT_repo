@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { useStreaksAndBadges } from '@/hooks/useStreaksAndBadges';
@@ -14,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StreakCard } from '@/components/gamification/StreakCard';
 import { BadgesDisplay } from '@/components/gamification/BadgesDisplay';
 import { PasswordChangeSection } from '@/components/profile/PasswordChangeSection';
-import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy, Shield, Mic } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy, Shield, Mic, Sun, Moon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const FITNESS_GOALS = [
