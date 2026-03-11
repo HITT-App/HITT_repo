@@ -544,26 +544,15 @@ const CommunityFeed = () => {
               {/* Engagement bar */}
               <div className="flex items-center justify-between px-3.5 py-2.5 border-t border-border/30">
                 <div className="flex items-center gap-1">
-                  {/* Like */}
-                  <button
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all touch-manipulation",
-                      postIsLiked
-                        ? "text-red-500 bg-red-500/8"
-                        : "text-muted-foreground hover:bg-secondary/60"
-                    )}
-                    onClick={() => handleLike(post)}
+                  {/* Reactions */}
+                  <ReactionPicker
+                    userReaction={reactions[post.id]?.userReaction || null}
+                    counts={reactions[post.id]?.counts || {}}
+                    total={reactions[post.id]?.total || postLikesCount}
+                    onReact={(type: ReactionType) => reactToPost(post.id, type)}
                     disabled={likingPosts.includes(post.id)}
-                  >
-                    <Heart
-                      className={cn(
-                        "w-[18px] h-[18px] transition-transform",
-                        postIsLiked && "fill-current scale-110",
-                        isLikeAnimating && "animate-bounce"
-                      )}
-                    />
-                    <span className="text-xs font-semibold">{formatNumber(postLikesCount)}</span>
-                  </button>
+                    formatNumber={formatNumber}
+                  />
 
                   {/* Comment */}
                   <button
