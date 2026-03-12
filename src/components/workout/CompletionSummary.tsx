@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Share2, Trophy, TrendingUp, Sparkles, Download, X, RefreshCw } from 'lucide-react';
+import { Share2, Trophy, TrendingUp, Sparkles, Download, X, RefreshCw, Camera, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 import type { Json } from '@/integrations/supabase/types';
 
@@ -45,17 +46,55 @@ export function CompletionSummary({
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleGenerateImage = async () => {
+  // Fetch profile avatar on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.avatar_url) setProfileAvatarUrl(data.avatar_url);
+      });
+  }, [user]);
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleGenerateImage = async (photoSource?: 'profile' | 'selfie', selfieBase64?: string) => {
     if (!user) {
       toast.error('Please log in to generate images');
       return;
     }
 
+    setShowPhotoOptions(false);
     setIsGeneratingImage(true);
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
+
+      const body: Record<string, unknown> = {
+        activityType: activityType || activityTitle,
+        stats,
+      };
+
+      // Attach user photo if applicable
+      if (photoSource === 'profile' && profileAvatarUrl) {
+        body.userPhotoUrl = profileAvatarUrl;
+      } else if (photoSource === 'selfie' && selfieBase64) {
+        body.userPhotoBase64 = selfieBase64;
+      }
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-activity-image`,
@@ -66,10 +105,7 @@ export function CompletionSummary({
             Authorization: `Bearer ${token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({
-            activityType: activityType || activityTitle,
-            stats,
-          }),
+          body: JSON.stringify(body),
         }
       );
 
@@ -95,6 +131,31 @@ export function CompletionSummary({
     } finally {
       setIsGeneratingImage(false);
     }
+  };
+
+  const handleSelfieUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB');
+      return;
+    }
+
+    try {
+      const base64 = await fileToBase64(file);
+      handleGenerateImage('selfie', base64);
+    } catch {
+      toast.error('Failed to read image');
+    }
+
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleDownloadImage = () => {
@@ -135,6 +196,16 @@ export function CompletionSummary({
 
   return (
     <div className="min-h-screen bg-background flex flex-col animate-fade-in">
+      {/* Hidden file input for selfie upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        capture="user"
+        className="hidden"
+        onChange={handleSelfieUpload}
+      />
+
       {/* Hero header */}
       <div className="relative bg-gradient-to-b from-primary/20 to-background pt-14 pb-6 px-6 text-center">
         <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mx-auto mb-3 animate-scale-in">
@@ -218,7 +289,6 @@ export function CompletionSummary({
                   <p className="text-sm text-foreground font-medium">Creating your share image…</p>
                   <p className="text-xs text-muted-foreground mt-1">This may take 10-15 seconds</p>
                 </div>
-                {/* Animated progress dots */}
                 <div className="flex gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -244,7 +314,6 @@ export function CompletionSummary({
                 </p>
               </div>
             </div>
-            {/* Action buttons under the image */}
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -259,7 +328,7 @@ export function CompletionSummary({
                 variant="outline"
                 size="sm"
                 className="flex-1 gap-1.5 rounded-xl"
-                onClick={handleGenerateImage}
+                onClick={() => setShowPhotoOptions(true)}
                 disabled={isGeneratingImage}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -267,11 +336,74 @@ export function CompletionSummary({
               </Button>
             </div>
           </div>
+        ) : showPhotoOptions ? (
+          <div className="bg-card border border-border rounded-2xl p-4 space-y-3 animate-fade-in">
+            <div className="text-center mb-1">
+              <p className="text-sm font-semibold text-foreground">Choose your style</p>
+              <p className="text-xs text-muted-foreground">Personalise your share image</p>
+            </div>
+
+            {/* Option: Use profile picture */}
+            {profileAvatarUrl && (
+              <button
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-secondary/50 active:bg-secondary transition-colors text-left"
+                onClick={() => handleGenerateImage('profile')}
+              >
+                <Avatar className="w-10 h-10 border-2 border-primary/30">
+                  <AvatarImage src={profileAvatarUrl} alt="Profile" />
+                  <AvatarFallback><User className="w-5 h-5" /></AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">Use Profile Picture</p>
+                  <p className="text-xs text-muted-foreground">AI will feature you in the image</p>
+                </div>
+                <Sparkles className="w-4 h-4 text-primary shrink-0" />
+              </button>
+            )}
+
+            {/* Option: Take/upload selfie */}
+            <button
+              className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-secondary/50 active:bg-secondary transition-colors text-left"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Camera className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Take a Selfie / Upload</p>
+                <p className="text-xs text-muted-foreground">Use a fresh photo for the image</p>
+              </div>
+              <Sparkles className="w-4 h-4 text-primary shrink-0" />
+            </button>
+
+            {/* Option: Generic (no photo) */}
+            <button
+              className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-secondary/50 active:bg-secondary transition-colors text-left"
+              onClick={() => handleGenerateImage()}
+            >
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Silhouette Style</p>
+                <p className="text-xs text-muted-foreground">Dramatic scene without your photo</p>
+              </div>
+            </button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-muted-foreground"
+              onClick={() => setShowPhotoOptions(false)}
+            >
+              Cancel
+            </Button>
+          </div>
         ) : (
           <Button
             variant="outline"
             className="w-full h-14 rounded-2xl gap-2.5 border-dashed border-primary/30 hover:border-primary/50 hover:bg-primary/5 transition-all"
-            onClick={handleGenerateImage}
+            onClick={() => setShowPhotoOptions(true)}
           >
             <Sparkles className="w-5 h-5 text-primary" />
             <span className="font-medium">Generate Share Image ✨</span>
@@ -346,7 +478,7 @@ export function CompletionSummary({
               onClick={(e) => {
                 e.stopPropagation();
                 setShowLightbox(false);
-                handleGenerateImage();
+                setShowPhotoOptions(true);
               }}
             >
               <RefreshCw className="w-4 h-4" />
