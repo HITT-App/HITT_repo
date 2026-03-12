@@ -1,80 +1,36 @@
 
-# Fix Admin Panel: User Visibility and Data Access
 
-## Problem
-The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
+## AI Activity Image Generator
 
-There are 6 users in the database, but the admin sees 1.
+### What we're building
+A "Generate Share Image" button on the CompletionSummary screen that uses AI image generation to create a stylized, dramatic activity summary graphic (like the Strava-style screenshot reference — stats overlaid on a cinematic scene). Users can then save or share it.
 
-## Root Cause
-The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
-- `profiles` -- affects user list and total user count
-- `activity_logs` -- affects "Active (7d)" stat
-- `meal_logs` -- affects "Meals Logged" stat
-- `workout_progress` -- affects "Completed" stat
-- `user_badges` -- affects "Badges Earned" stat
-- `coaching_sessions` -- affects "Sessions" stat
+### Changes
 
-## Solution
+#### 1. New edge function (`supabase/functions/generate-activity-image/index.ts`)
+- Accepts activity data (distance, pace, time, calories, activity type)
+- Calls `google/gemini-3-pro-image-preview` via the Lovable AI Gateway with a prompt like: *"Create a dramatic, cinematic fitness poster showing a runner silhouette with glowing trail. Overlay stats: Distance 13.46 km, Pace 6:55/km, Time 1h 33m. Dark moody atmosphere, neon glow trail effect."*
+- Returns the base64 image
+- Uploads to Supabase storage bucket `activity-images` and returns the public URL
+- Handles auth, rate limits (429/402)
 
-### 1. Database Migration: Add Admin SELECT Policies
-Add new RLS policies to allow admins to read all rows in the affected tables:
+#### 2. Storage bucket
+- Create `activity-images` bucket via migration for storing generated images
+- RLS: authenticated users can insert their own, public read
 
-```sql
--- Admins can view all profiles
-CREATE POLICY "Admins can view all profiles"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+#### 3. Update CompletionSummary (`src/components/workout/CompletionSummary.tsx`)
+- Add "Generate Share Image ✨" button below the map/stats section
+- On click, calls the edge function with activity stats
+- Shows loading state with shimmer animation while generating (~10-15s)
+- Displays the generated image in a lightbox/preview card
+- Add "Save Image" (download) and option to include it in the community post when sharing
 
--- Admins can view all activity logs
-CREATE POLICY "Admins can view all activity logs"
-  ON public.activity_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+#### 4. Update ActivityLive completion (`src/pages/ActivityLive.tsx`)
+- Pass activity type to CompletionSummary so the image prompt can reference the sport (running, cycling, etc.)
 
--- Admins can view all meal logs
-CREATE POLICY "Admins can view all meal logs"
-  ON public.meal_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### Technical details
+- Uses `google/gemini-3-pro-image-preview` for highest quality image generation
+- Edge function uploads base64 result to storage to avoid passing huge payloads back to client
+- The generated image URL can be attached to the `community_posts` `image_url` field when sharing
+- No new DB tables needed — uses existing `community_posts.image_url` + new storage bucket
 
--- Admins can view all workout progress
-CREATE POLICY "Admins can view all workout progress"
-  ON public.workout_progress FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all user badges
-CREATE POLICY "Admins can view all user badges"
-  ON public.user_badges FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all coaching sessions
-CREATE POLICY "Admins can view all coaching sessions"
-  ON public.coaching_sessions FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-```
-
-### 2. Improve AdminUsers Page
-Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
-
-- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
-- Add pagination (currently limited to 100 users)
-- Add role filter tabs (All / Admins / Moderators)
-- Show user join date
-- Add moderator role management (currently only admin toggle)
-
-### 3. Files Changed
-
-| File | Change |
-|------|--------|
-| New migration SQL | Add 6 admin SELECT policies |
-| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
-
-### 4. No Changes Needed
-- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
-- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
-- Admin dashboard, sidebar, routing -- all working correctly
