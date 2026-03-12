@@ -320,44 +320,31 @@ const ActivityLive = () => {
 
   // ========== COMPLETED SCREEN ==========
   if (showCompleted) {
+    const completionStats = [
+      { label: 'Distance', value: distanceKm.toFixed(2), unit: 'km' },
+      { label: 'Duration', value: formatTime(elapsed) },
+      { label: 'Calories', value: calories, unit: 'kcal' },
+      { label: 'Avg Pace', value: pace, unit: 'min/km' },
+    ];
+
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-scale-in">
-          <span className="text-4xl">🏆</span>
-        </div>
-        <h1 className="text-2xl font-bold mb-2">Activity Completed</h1>
-        <p className="text-muted-foreground mb-8 max-w-xs">{getCompletionMessage()}</p>
-
-        <Card className="w-full p-6 mb-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-secondary/50 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-foreground">{formatTime(elapsed)}</div>
-              <div className="text-xs text-muted-foreground mt-1">Duration</div>
-            </div>
-            <div className="bg-secondary/50 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-primary">{calories}</div>
-              <div className="text-xs text-muted-foreground mt-1">Calories</div>
-            </div>
-            <div className="bg-secondary/50 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-foreground">{distanceKm.toFixed(2)}</div>
-              <div className="text-xs text-muted-foreground mt-1">Kilometers</div>
-            </div>
-            <div className="bg-secondary/50 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-foreground">{pace}</div>
-              <div className="text-xs text-muted-foreground mt-1">Avg Pace (min/km)</div>
-            </div>
-          </div>
-        </Card>
-
-        <div className="w-full space-y-3">
-          <Button className="w-full" onClick={() => navigate(`/activity-summary?elapsed=${elapsed}&distance=${distanceKm.toFixed(2)}&calories=${calories}`)}>
-            See Full Summary
-          </Button>
-          <Button variant="outline" className="w-full" onClick={() => navigate("/activity")}>
-            Done
-          </Button>
-        </div>
-      </div>
+      <CompletionSummary
+        activityTitle={activityType.charAt(0).toUpperCase() + activityType.slice(1)}
+        stats={completionStats}
+        mapComponent={
+          positions.length > 1 ? (
+            <LiveActivityMap positions={positions} gpsStatus="active" />
+          ) : undefined
+        }
+        onDone={() => navigate("/activity")}
+        postData={{
+          duration: Math.floor(elapsed / 60),
+          calories,
+          distance: distanceKm.toFixed(2),
+          pace,
+          type: activityType,
+        }}
+      />
     );
   }
 
