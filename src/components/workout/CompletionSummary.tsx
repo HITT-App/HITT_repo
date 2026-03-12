@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-export interface CompletionStat {
+import type { Json } from '@/integrations/supabase/types';
   label: string;
   value: string | number;
   unit?: string;
