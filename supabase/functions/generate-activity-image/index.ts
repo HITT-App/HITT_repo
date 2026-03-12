@@ -37,7 +37,7 @@ serve(async (req) => {
       });
     }
 
-    const { activityType, stats } = await req.json();
+    const { activityType, stats, userPhotoUrl, userPhotoBase64 } = await req.json();
 
     // Build stats overlay text
     const statsText = (stats as Array<{ label: string; value: string | number; unit?: string }>)
@@ -45,40 +45,78 @@ serve(async (req) => {
       .join("  •  ");
 
     const activityName = (activityType || "workout").toLowerCase();
+
+    // Determine if we have a user photo to incorporate
+    const hasUserPhoto = !!(userPhotoUrl || userPhotoBase64);
+
     const sceneMap: Record<string, string> = {
-      run: "a runner silhouette sprinting on an urban road at dusk with a glowing neon orange trail behind them, motion blur on the legs",
-      jogging: "a jogger silhouette running through a misty park at sunrise with warm golden light rays filtering through trees",
-      walking: "a walker silhouette on a scenic mountain trail at golden hour with dramatic clouds",
-      walk: "a walker silhouette on a scenic mountain trail at golden hour with dramatic clouds",
-      hike: "a hiker standing on a dramatic mountain ridge at sunset with clouds below and epic sky",
-      cycling: "a cyclist silhouette racing on a highway at twilight with speed blur and warm orange glow trails",
-      swimming: "a swimmer cutting through glowing turquoise water with dramatic underwater light beams",
-      swim: "a swimmer cutting through glowing turquoise water with dramatic underwater light beams",
-      yoga: "a yoga practitioner in warrior pose silhouette at sunset on a cliff overlooking the ocean with warm tones",
-      hiit: "an athlete mid-burpee in a dark gym with dramatic orange spotlight beams and energy particles",
-      workout: "an athlete in powerful stance with dramatic cinematic orange lighting and energy particles around them",
+      run: "sprinting on an urban road at dusk with a glowing neon orange trail, motion blur energy",
+      jogging: "running through a misty park at sunrise with warm golden light rays filtering through trees",
+      walking: "walking on a scenic mountain trail at golden hour with dramatic clouds",
+      walk: "walking on a scenic mountain trail at golden hour with dramatic clouds",
+      hike: "standing on a dramatic mountain ridge at sunset with clouds below and epic sky",
+      cycling: "cycling on a highway at twilight with speed blur and warm orange glow trails",
+      swimming: "swimming through glowing turquoise water with dramatic underwater light beams",
+      swim: "swimming through glowing turquoise water with dramatic underwater light beams",
+      yoga: "in warrior pose at sunset on a cliff overlooking the ocean with warm tones",
+      hiit: "mid-workout in a dark gym with dramatic orange spotlight beams and energy particles",
+      workout: "in powerful stance with dramatic cinematic orange lighting and energy particles",
     };
 
     const scene = sceneMap[activityName] || sceneMap["workout"];
 
-    const prompt = `Create a premium 1:1 square fitness share card image (Instagram post style).
+    let prompt: string;
+    let messageContent: any;
 
-SCENE: ${scene}
+    if (hasUserPhoto) {
+      // Personalized image — edit user's photo into a cinematic fitness scene
+      prompt = `Transform this person's photo into a premium 1:1 square fitness share card image.
 
-LAYOUT (top to bottom):
-- Top-right corner: A small, subtle semi-transparent watermark logo that says "HIIT" in bold modern font with a small lightning bolt icon. Make it look like a premium app watermark — white text at about 30% opacity.
-- Center: The dramatic cinematic scene fills the entire square
-- Bottom section: A sleek semi-transparent dark gradient bar spanning the full width containing the workout stats in clean white modern typography:
+IMPORTANT: Keep the person's face and likeness clearly recognizable. Place them into a dramatic, cinematic fitness scene where they appear to be ${scene}.
+
+LAYOUT:
+- Top-right corner: A small, subtle semi-transparent watermark that says "HIIT" in bold modern font with a lightning bolt. White text at 30% opacity.
+- Center: The person from the photo, dramatically placed in the fitness scene
+- Bottom: A sleek semi-transparent dark gradient bar with workout stats in clean white typography:
   ${statsText}
 
-STYLE RULES:
-- Square 1:1 aspect ratio (like an Instagram post)
+STYLE:
+- Square 1:1 aspect ratio
 - Ultra-cinematic, dramatic lighting
-- Dark moody atmosphere with warm orange/amber accent glow (brand color)
+- Dark moody atmosphere with warm orange/amber accent glow
+- The person should look heroic and powerful in the scene
+- Stats text clearly legible on dark gradient
+- Premium fitness app aesthetic — aspirational and shareable
+- Make it look like a professional sports magazine cover`;
+
+      // Build multimodal content with the user's photo
+      const photoUrl = userPhotoBase64 || userPhotoUrl;
+      messageContent = [
+        { type: "image_url", image_url: { url: photoUrl } },
+        { type: "text", text: prompt },
+      ];
+    } else {
+      // Generic silhouette image (no user photo)
+      prompt = `Create a premium 1:1 square fitness share card image (Instagram post style).
+
+SCENE: A dramatic silhouette of an athlete ${scene}
+
+LAYOUT:
+- Top-right corner: A small, subtle semi-transparent watermark that says "HIIT" in bold modern font with a lightning bolt. White text at 30% opacity.
+- Center: The dramatic cinematic scene fills the entire square
+- Bottom: A sleek semi-transparent dark gradient bar with workout stats in clean white typography:
+  ${statsText}
+
+STYLE:
+- Square 1:1 aspect ratio
+- Ultra-cinematic, dramatic lighting
+- Dark moody atmosphere with warm orange/amber accent glow
 - Premium fitness app aesthetic — bold, inspiring, social-media ready
-- Stats text must be clearly legible — use semi-bold white text on dark gradient
-- The "HIIT" watermark must be subtle but visible in the top-right corner
+- Stats text clearly legible on dark gradient
 - Overall feeling: premium, aspirational, shareable`;
+
+      messageContent = prompt;
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -97,7 +135,7 @@ STYLE RULES:
       },
       body: JSON.stringify({
         model: "google/gemini-3-pro-image-preview",
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: messageContent }],
         modalities: ["image", "text"],
       }),
     });
