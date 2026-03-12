@@ -2,7 +2,7 @@ import { ThemeProvider as NextThemeProvider } from "next-themes";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
-    <NextThemeProvider attribute="class" defaultTheme="light" storageKey="hiit-theme">
+    <NextThemeProvider attribute="class" defaultTheme="dark" storageKey="hiit-theme">
       {children}
     </NextThemeProvider>
   );
