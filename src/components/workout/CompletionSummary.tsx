@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 import type { Json } from '@/integrations/supabase/types';
+
+export interface CompletionStat {
   label: string;
   value: string | number;
   unit?: string;
