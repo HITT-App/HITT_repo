@@ -330,6 +330,7 @@ const ActivityLive = () => {
     return (
       <CompletionSummary
         activityTitle={activityType.charAt(0).toUpperCase() + activityType.slice(1)}
+        activityType={activityType}
         stats={completionStats}
         mapComponent={
           positions.length > 1 ? (

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Share2, Trophy, TrendingUp } from 'lucide-react';
+import { Share2, Trophy, TrendingUp, Sparkles, Download, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import type { Json } from '@/integrations/supabase/types';
 
@@ -17,19 +18,19 @@ export interface CompletionStat {
 
 interface CompletionSummaryProps {
   activityTitle: string;
+  activityType?: string;
   stats: CompletionStat[];
   achievementMessage?: string;
   badges?: Array<{ name: string; icon: string }>;
   mapComponent?: React.ReactNode;
   onDone: () => void;
-  /** Extra workout_data to include in the community post */
   postData?: Json;
-  /** Rating section (optional, used by WorkoutPlayer) */
   ratingSection?: React.ReactNode;
 }
 
 export function CompletionSummary({
   activityTitle,
+  activityType,
   stats,
   achievementMessage,
   badges = [],
@@ -41,6 +42,70 @@ export function CompletionSummary({
   const { user } = useAuth();
   const [shareToFeed, setShareToFeed] = useState(true);
   const [isPosting, setIsPosting] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [showLightbox, setShowLightbox] = useState(false);
+
+  const handleGenerateImage = async () => {
+    if (!user) {
+      toast.error('Please log in to generate images');
+      return;
+    }
+
+    setIsGeneratingImage(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-activity-image`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            activityType: activityType || activityTitle,
+            stats,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        if (response.status === 429) {
+          toast.error('Rate limit reached. Please try again in a moment.');
+        } else if (response.status === 402) {
+          toast.error('AI credits exhausted. Please add credits.');
+        } else {
+          toast.error(errData.error || 'Failed to generate image');
+        }
+        return;
+      }
+
+      const data = await response.json();
+      if (data.imageUrl) {
+        setGeneratedImageUrl(data.imageUrl);
+        setShowLightbox(true);
+        toast.success('Share image generated! ✨');
+      }
+    } catch {
+      toast.error('Failed to generate image. Please try again.');
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleDownloadImage = () => {
+    if (!generatedImageUrl) return;
+    const a = document.createElement('a');
+    a.href = generatedImageUrl;
+    a.download = `activity-${Date.now()}.png`;
+    a.target = '_blank';
+    a.click();
+  };
 
   const handleDone = async () => {
     if (shareToFeed && user) {
@@ -57,6 +122,7 @@ export function CompletionSummary({
           category: 'fitness',
           tags: ['workout', 'completed'],
           workout_data: postData ?? {},
+          image_url: generatedImageUrl || null,
         }]);
         toast.success('Shared to feed!');
       } catch {
@@ -139,6 +205,47 @@ export function CompletionSummary({
         </div>
       )}
 
+      {/* AI Share Image Generator */}
+      <div className="px-6 mt-4">
+        {isGeneratingImage ? (
+          <div className="rounded-2xl border border-border overflow-hidden">
+            <div className="relative h-[200px] bg-card">
+              <Skeleton className="absolute inset-0 rounded-none" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+                <p className="text-sm text-muted-foreground font-medium">Generating your share image…</p>
+                <p className="text-xs text-muted-foreground">This may take 10-15 seconds</p>
+              </div>
+            </div>
+          </div>
+        ) : generatedImageUrl ? (
+          <div
+            className="rounded-2xl border border-border overflow-hidden cursor-pointer relative group"
+            onClick={() => setShowLightbox(true)}
+          >
+            <img
+              src={generatedImageUrl}
+              alt="AI generated activity share image"
+              className="w-full h-[200px] object-cover"
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+              <p className="text-transparent group-hover:text-white text-sm font-medium transition-colors">
+                Tap to view
+              </p>
+            </div>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            className="w-full h-14 rounded-2xl gap-2 border-dashed border-primary/30"
+            onClick={handleGenerateImage}
+          >
+            <Sparkles className="w-5 h-5 text-primary" />
+            <span className="font-medium">Generate Share Image ✨</span>
+          </Button>
+        )}
+      </div>
+
       {/* Rating section (optional) */}
       {ratingSection && (
         <div className="px-6 mt-4">
@@ -153,7 +260,9 @@ export function CompletionSummary({
             <Share2 className="w-5 h-5 text-primary" />
             <div>
               <p className="text-sm font-medium text-foreground">Share to Feed</p>
-              <p className="text-xs text-muted-foreground">Let friends see your achievement</p>
+              <p className="text-xs text-muted-foreground">
+                {generatedImageUrl ? 'Post with your AI image' : 'Let friends see your achievement'}
+              </p>
             </div>
           </div>
           <Switch checked={shareToFeed} onCheckedChange={setShareToFeed} />
@@ -167,6 +276,38 @@ export function CompletionSummary({
           {isPosting ? 'Sharing…' : shareToFeed ? 'Share & Done' : 'Done'}
         </Button>
       </div>
+
+      {/* Lightbox */}
+      {showLightbox && generatedImageUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
+          onClick={() => setShowLightbox(false)}
+        >
+          <button
+            onClick={() => setShowLightbox(false)}
+            className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 flex items-center justify-center z-10"
+          >
+            <X className="h-5 w-5 text-white" />
+          </button>
+          <img
+            src={generatedImageUrl}
+            alt="AI generated activity share image"
+            className="max-w-full max-h-[75vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <Button
+            variant="outline"
+            className="mt-4 gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownloadImage();
+            }}
+          >
+            <Download className="w-4 h-4" />
+            Save Image
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
