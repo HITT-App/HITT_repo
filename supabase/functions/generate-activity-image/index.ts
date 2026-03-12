@@ -65,18 +65,24 @@ serve(async (req) => {
 
     const scene = sceneMap[activityName] || sceneMap["workout"];
 
+    // Logo watermark URL stored in activity-images bucket
+    const logoUrl = `${Deno.env.get("SUPABASE_URL")!}/storage/v1/object/public/activity-images/branding/hiit-watermark.png`;
+
     let prompt: string;
     let messageContent: any;
 
+    const watermarkInstruction = `The second image provided is the HIIT brand logo. Place this EXACT logo as a subtle semi-transparent watermark in the top-right corner of the generated image at about 15-20% opacity. The logo should be small (roughly 10-12% of the image width) and recognizable but not distracting.`;
+
     if (hasUserPhoto) {
-      // Personalized image — edit user's photo into a cinematic fitness scene
-      prompt = `Transform this person's photo into a premium 1:1 square fitness share card image.
+      prompt = `Transform the first person's photo into a premium 1:1 square fitness share card image.
 
 IMPORTANT: Keep the person's face and likeness clearly recognizable. Place them into a dramatic, cinematic fitness scene where they appear to be ${scene}.
 
+${watermarkInstruction}
+
 LAYOUT:
-- Top-right corner: A small, subtle semi-transparent watermark that says "HIIT" in bold modern font with a lightning bolt. White text at 30% opacity.
-- Center: The person from the photo, dramatically placed in the fitness scene
+- Top-right corner: The HIIT logo watermark (from the second reference image) at low opacity
+- Center: The person from the first photo, dramatically placed in the fitness scene
 - Bottom: A sleek semi-transparent dark gradient bar with workout stats in clean white typography:
   ${statsText}
 
@@ -89,20 +95,21 @@ STYLE:
 - Premium fitness app aesthetic — aspirational and shareable
 - Make it look like a professional sports magazine cover`;
 
-      // Build multimodal content with the user's photo
       const photoUrl = userPhotoBase64 || userPhotoUrl;
       messageContent = [
         { type: "image_url", image_url: { url: photoUrl } },
+        { type: "image_url", image_url: { url: logoUrl } },
         { type: "text", text: prompt },
       ];
     } else {
-      // Generic silhouette image (no user photo)
       prompt = `Create a premium 1:1 square fitness share card image (Instagram post style).
 
 SCENE: A dramatic silhouette of an athlete ${scene}
 
+${watermarkInstruction}
+
 LAYOUT:
-- Top-right corner: A small, subtle semi-transparent watermark that says "HIIT" in bold modern font with a lightning bolt. White text at 30% opacity.
+- Top-right corner: The HIIT logo watermark (from the provided reference image) at low opacity
 - Center: The dramatic cinematic scene fills the entire square
 - Bottom: A sleek semi-transparent dark gradient bar with workout stats in clean white typography:
   ${statsText}
@@ -115,7 +122,10 @@ STYLE:
 - Stats text clearly legible on dark gradient
 - Overall feeling: premium, aspirational, shareable`;
 
-      messageContent = prompt;
+      messageContent = [
+        { type: "image_url", image_url: { url: logoUrl } },
+        { type: "text", text: prompt },
+      ];
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
