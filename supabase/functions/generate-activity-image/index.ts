@@ -42,34 +42,43 @@ serve(async (req) => {
     // Build stats overlay text
     const statsText = (stats as Array<{ label: string; value: string | number; unit?: string }>)
       .map((s) => `${s.label}: ${s.value}${s.unit ? " " + s.unit : ""}`)
-      .join(" | ");
+      .join("  •  ");
 
     const activityName = (activityType || "workout").toLowerCase();
     const sceneMap: Record<string, string> = {
-      run: "a runner silhouette sprinting on an urban road at dusk with a glowing neon trail behind them",
-      jogging: "a jogger silhouette running through a misty park at sunrise with golden light rays",
-      walking: "a walker silhouette on a scenic mountain trail at golden hour",
-      walk: "a walker silhouette on a scenic mountain trail at golden hour",
-      hike: "a hiker standing on a dramatic mountain ridge at sunset with clouds below",
-      cycling: "a cyclist silhouette racing on a highway at twilight with speed blur and neon glow",
-      swimming: "a swimmer cutting through glowing turquoise water with dramatic underwater lighting",
-      swim: "a swimmer cutting through glowing turquoise water with dramatic underwater lighting",
-      yoga: "a yoga practitioner in a tree pose silhouette at sunset on a cliff overlooking the ocean",
-      hiit: "an athlete mid-burpee in a dark gym with dramatic spotlight and sweat particles",
-      workout: "an athlete working out with dramatic cinematic lighting and energy particles",
+      run: "a runner silhouette sprinting on an urban road at dusk with a glowing neon orange trail behind them, motion blur on the legs",
+      jogging: "a jogger silhouette running through a misty park at sunrise with warm golden light rays filtering through trees",
+      walking: "a walker silhouette on a scenic mountain trail at golden hour with dramatic clouds",
+      walk: "a walker silhouette on a scenic mountain trail at golden hour with dramatic clouds",
+      hike: "a hiker standing on a dramatic mountain ridge at sunset with clouds below and epic sky",
+      cycling: "a cyclist silhouette racing on a highway at twilight with speed blur and warm orange glow trails",
+      swimming: "a swimmer cutting through glowing turquoise water with dramatic underwater light beams",
+      swim: "a swimmer cutting through glowing turquoise water with dramatic underwater light beams",
+      yoga: "a yoga practitioner in warrior pose silhouette at sunset on a cliff overlooking the ocean with warm tones",
+      hiit: "an athlete mid-burpee in a dark gym with dramatic orange spotlight beams and energy particles",
+      workout: "an athlete in powerful stance with dramatic cinematic orange lighting and energy particles around them",
     };
 
     const scene = sceneMap[activityName] || sceneMap["workout"];
 
-    const prompt = `Create a dramatic, cinematic fitness share card image. The scene shows ${scene}. 
-    
-At the bottom of the image, overlay these workout stats in a clean, modern typography style with a semi-transparent dark bar:
-${statsText}
+    const prompt = `Create a premium 1:1 square fitness share card image (Instagram post style).
 
-Style: Ultra-cinematic, dramatic lighting, dark moody atmosphere with vibrant accent colors (electric blue or orange glow). 
-The image should look like a premium fitness app share card — bold, inspiring, and social-media ready.
-Make the stats text clearly legible against the background.
-Aspect ratio: 9:16 portrait format for mobile sharing.`;
+SCENE: ${scene}
+
+LAYOUT (top to bottom):
+- Top-right corner: A small, subtle semi-transparent watermark logo that says "HIIT" in bold modern font with a small lightning bolt icon. Make it look like a premium app watermark — white text at about 30% opacity.
+- Center: The dramatic cinematic scene fills the entire square
+- Bottom section: A sleek semi-transparent dark gradient bar spanning the full width containing the workout stats in clean white modern typography:
+  ${statsText}
+
+STYLE RULES:
+- Square 1:1 aspect ratio (like an Instagram post)
+- Ultra-cinematic, dramatic lighting
+- Dark moody atmosphere with warm orange/amber accent glow (brand color)
+- Premium fitness app aesthetic — bold, inspiring, social-media ready
+- Stats text must be clearly legible — use semi-bold white text on dark gradient
+- The "HIIT" watermark must be subtle but visible in the top-right corner
+- Overall feeling: premium, aspirational, shareable`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
