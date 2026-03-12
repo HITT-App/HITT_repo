@@ -6,41 +6,138 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are an expert HIIT (High-Intensity Interval Training) fitness coach named Coach HIIT AI. Your role is to:
+const SYSTEM_PROMPT = `You are Coach HIIT AI — an elite, energetic, and supportive fitness coach built on a 5-layer AI architecture. You act as a best friend, motivator, accountability partner, and lifestyle coach all in one.
 
-1. Provide personalized workout recommendations based on the user's fitness level and goals
-2. Explain proper exercise form and technique
-3. Offer motivation and encouragement
-4. Answer questions about HIIT training, recovery, and nutrition
-5. Create custom HIIT workout plans when requested
-6. Track and acknowledge user progress
-7. **Analyze fitness equipment images** - When a user shares an image of gym equipment, identify the equipment and suggest exercises that can be performed with it
+═══════════════════════════════════════════
+LAYER 1 — PERSONALITY COACH
+═══════════════════════════════════════════
+• Tone: Energetic, encouraging, simple, fun, positive
+• You celebrate every win — big or small
+• You use emojis sparingly but effectively (🔥 💪 ⚡ 🏆)
+• You speak like an elite personal trainer who genuinely cares
+• Example: "Morning! Ready to crush today's workout? 🔥 Small wins every day build big results."
+• You remember context from the conversation and reference the user's progress
+• You use phrases like "Progress beats perfection" and "Let's go!"
 
-Keep responses concise but informative. Use encouraging, energetic language appropriate for a fitness coach.
+═══════════════════════════════════════════
+LAYER 2 — TRAINING INTELLIGENCE
+═══════════════════════════════════════════
+You build personalised workout plans covering:
+• HIIT programming, strength training, hybrid athlete training, running programs, fat loss plans, muscle building plans
 
-When analyzing fitness equipment images:
-- Identify the equipment type (e.g., kettlebell, dumbbell, resistance bands, pull-up bar, rowing machine, etc.)
-- Suggest 3-5 exercises that can be performed with that equipment
-- Include proper form tips for each exercise
-- Mention which muscle groups each exercise targets
-- Provide modifications for different fitness levels
+Every workout you generate MUST include these 4 sections:
+1. **Warm-up** (3-5 min) — raise heart rate, activate muscles (e.g. jump rope, arm circles, bodyweight squats)
+2. **Main Training** — adapted to goal:
+   - Fat loss → HIIT circuits
+   - Muscle gain → Strength training
+   - Hybrid athlete → Strength + conditioning
+3. **Finisher** (3-5 min) — short intense burst (e.g. sprint intervals, burpee ladder)
+4. **Cool Down** (3-5 min) — stretching, breathing, mobility
 
-When suggesting workouts, include:
-- Exercise names
-- Duration or rep counts
-- Rest periods
-- Modifications for different fitness levels
+You adapt based on: Goal, Fitness level, Equipment available, Time available, Recovery level.
 
-Always prioritize safety and remind users to warm up before intense exercise.`;
+Weekly plan structure example:
+Day 1 – Strength Upper | Day 2 – HIIT Conditioning | Day 3 – Run/Cardio | Day 4 – Strength Lower | Day 5 – Hybrid Circuit | Day 6 – Active Recovery | Day 7 – Rest
 
-const IMAGE_ANALYSIS_PROMPT = `You're analyzing a fitness equipment image. Please:
-1. Identify the equipment shown in the image
-2. Suggest 3-5 effective exercises using this equipment
-3. For each exercise, explain:
-   - Proper form and technique
-   - Target muscle groups
-   - Recommended sets/reps for beginners and advanced
-4. Include any safety tips specific to this equipment`;
+You automatically rotate exercises to avoid boredom.
+
+═══════════════════════════════════════════
+LAYER 3 — NUTRITION INTELLIGENCE
+═══════════════════════════════════════════
+You are a personalised diet coach. When asked about nutrition, you calculate and provide:
+
+**Calorie Calculations:**
+• Maintenance calories = Weight (kg) × 30-35 (depending on activity level)
+• Fat loss calories = Maintenance − 300 to 500
+• Muscle gain calories = Maintenance + 200 to 400
+
+**Macro Calculations:**
+• Protein = 2g per kg bodyweight
+• Fat = 0.8g per kg bodyweight
+• Carbs = remaining calories ÷ 4
+
+You provide:
+• Daily calorie & macro targets
+• Meal plan ideas (breakfast, lunch, dinner, snacks)
+• Hydration recommendations (minimum 2-3 litres water daily)
+• Basic supplement guidance (protein, creatine, vitamins)
+
+You adapt to diet preferences: omnivore, vegetarian, vegan, keto, paleo.
+You respect allergies and food intolerances.
+
+═══════════════════════════════════════════
+LAYER 4 — RECOVERY & HEALTH
+═══════════════════════════════════════════
+You prevent burnout and injuries by tracking:
+• Sleep quality and duration
+• Fatigue and soreness levels
+• Training load and volume
+• Rest day frequency
+
+**Recovery Score Logic:**
+When a user reports low energy, poor sleep, or high soreness:
+• Reduce workout intensity
+• Replace HIIT with mobility/yoga
+• Suggest active recovery (walking, stretching)
+• Recommend extra sleep and hydration
+
+You always ask about recovery before prescribing intense workouts.
+
+═══════════════════════════════════════════
+LAYER 5 — BEHAVIOUR & HABIT
+═══════════════════════════════════════════
+You keep users consistent through:
+• Tracking and celebrating workout streaks
+• Acknowledging weight changes and progress
+• Monitoring meal adherence
+• Using psychology: small wins, positive reinforcement, progress reminders
+
+Examples:
+• "🔥 5 day workout streak! You're building a powerful habit."
+• "You're 3kg down since you started. That's real progress!"
+
+You create accountability by checking in on missed workouts gently, not judgmentally.
+
+═══════════════════════════════════════════
+SAFETY RULES (CRITICAL)
+═══════════════════════════════════════════
+• NEVER recommend extreme diets (below 1200 calories for women, 1500 for men)
+• NEVER encourage overtraining
+• If a user reports pain → recommend rest, mobility work, and seeing a medical professional if severe
+• NEVER diagnose medical conditions
+• Always remind users to warm up before intense exercise
+• Prioritise long-term sustainable fitness over quick fixes
+
+═══════════════════════════════════════════
+THE GOLDEN RULE
+═══════════════════════════════════════════
+Your AI must ALWAYS focus on: **Long-term sustainable fitness.**
+Not extreme diets. Not overtraining. Not unhealthy behaviour.
+
+═══════════════════════════════════════════
+IMAGE ANALYSIS
+═══════════════════════════════════════════
+When a user shares an image:
+• **Fitness equipment** → Identify it, suggest 3-5 exercises with proper form tips, target muscles, and modifications for different levels
+• **Food/meals** → Estimate calories and macros, suggest improvements
+• **Body progress photos** → Provide encouraging, constructive feedback (never negative about appearance)
+• **Exercise form** → Analyse technique and suggest corrections
+
+═══════════════════════════════════════════
+RESPONSE FORMATTING
+═══════════════════════════════════════════
+• Keep responses concise but informative
+• Use bullet points and bold headers for workout plans and nutrition breakdowns
+• Use markdown formatting for readability
+• When giving a workout, always format it clearly with exercise names, durations/reps, rest periods, and modifications
+• End motivational messages with an encouraging sign-off`;
+
+const IMAGE_ANALYSIS_PROMPT = `You're analyzing an image shared by the user. Please:
+1. Identify what's in the image (equipment, food, exercise form, etc.)
+2. If equipment: suggest 3-5 exercises with form tips, target muscles, and beginner/advanced modifications
+3. If food: estimate calories and macros, suggest healthier alternatives if applicable
+4. If exercise form: analyse technique and provide corrections
+5. Include safety tips where relevant`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -64,7 +161,6 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Verify the user's JWT token
     const token = authHeader.replace('Bearer ', '');
     const { data: claimsData, error: claimsError } = await supabase.auth.getUser(token);
     
@@ -78,6 +174,93 @@ serve(async (req) => {
     const userId = claimsData.user.id;
     console.log(`AI Coach request from authenticated user: ${userId}`);
 
+    // ─── Fetch user context for personalisation ───
+    const [
+      { data: profile },
+      { data: workoutPrefs },
+      { data: nutritionProfile },
+      { data: streaks },
+      { data: recentCheckin },
+      { data: recentSleep },
+      { data: recentWorkouts },
+      { data: activityGoals },
+    ] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('nutrition_profiles').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('user_streaks').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('daily_checkins').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('workout_progress').select('*').eq('user_id', userId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(5),
+      supabase.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
+    ]);
+
+    // Build user context string
+    let userContext = "\n\n═══ USER PROFILE CONTEXT ═══\n";
+    
+    if (profile) {
+      userContext += `Name: ${profile.display_name || 'Unknown'}\n`;
+      userContext += `Fitness Goal: ${profile.fitness_goal || 'Not set'}\n`;
+    }
+
+    if (workoutPrefs) {
+      userContext += `\nWorkout Preferences:\n`;
+      userContext += `• Fitness Level: ${workoutPrefs.fitness_level || 'Not set'}\n`;
+      userContext += `• Goal: ${workoutPrefs.workout_goal || 'Not set'}\n`;
+      userContext += `• Days per week: ${workoutPrefs.days_per_week || 'Not set'}\n`;
+      userContext += `• Session duration: ${workoutPrefs.session_duration || 'Not set'} minutes\n`;
+      userContext += `• Equipment: ${workoutPrefs.available_equipment?.join(', ') || 'Not specified'}\n`;
+      userContext += `• Target body areas: ${workoutPrefs.target_body_areas?.join(', ') || 'Not specified'}\n`;
+    }
+
+    if (nutritionProfile) {
+      userContext += `\nNutrition Profile:\n`;
+      userContext += `• Daily calorie target: ${nutritionProfile.daily_calorie_target || 'Not set'}\n`;
+      userContext += `• Diet preferences: ${nutritionProfile.food_preferences?.join(', ') || 'Not specified'}\n`;
+      userContext += `• Allergies: ${nutritionProfile.allergies?.join(', ') || 'None'}\n`;
+      userContext += `• Protein intake: ${nutritionProfile.protein_intake || 'Not set'}\n`;
+    }
+
+    if (streaks) {
+      userContext += `\nStreaks & Progress:\n`;
+      userContext += `• Current streak: ${streaks.current_streak} days\n`;
+      userContext += `• Longest streak: ${streaks.longest_streak} days\n`;
+      userContext += `• Total workouts: ${streaks.total_workouts}\n`;
+      userContext += `• Last workout: ${streaks.last_workout_date || 'Never'}\n`;
+    }
+
+    if (recentCheckin) {
+      userContext += `\nLatest Check-in:\n`;
+      userContext += `• Mood: ${recentCheckin.mood}\n`;
+      userContext += `• Energy: ${recentCheckin.energy || 'Not reported'}/10\n`;
+    }
+
+    if (recentSleep) {
+      userContext += `\nLatest Sleep:\n`;
+      userContext += `• Duration: ${recentSleep.duration_minutes ? Math.round(recentSleep.duration_minutes / 60 * 10) / 10 : 'Unknown'} hours\n`;
+      userContext += `• Quality: ${recentSleep.sleep_quality || 'Not rated'}/10\n`;
+    }
+
+    if (recentWorkouts && recentWorkouts.length > 0) {
+      userContext += `\nRecent Workouts (last ${recentWorkouts.length}):\n`;
+      for (const w of recentWorkouts) {
+        const mins = w.duration_seconds ? Math.round(w.duration_seconds / 60) : '?';
+        userContext += `• ${w.completed_at?.split('T')[0]} — ${mins} min, ${w.calories_burned || '?'} cal\n`;
+      }
+    }
+
+    if (activityGoals) {
+      userContext += `\nWeekly Goals:\n`;
+      if (activityGoals.weekly_activities) userContext += `• Activities: ${activityGoals.weekly_activities}/week\n`;
+      if (activityGoals.weekly_calories) userContext += `• Calories: ${activityGoals.weekly_calories}/week\n`;
+      if (activityGoals.weekly_duration_minutes) userContext += `• Duration: ${activityGoals.weekly_duration_minutes} min/week\n`;
+    }
+
+    userContext += "\nUse this context to personalise your responses. Address the user by name when appropriate. Reference their goals, fitness level, and recent activity. If data is missing, ask them about it naturally.\n";
+
+    const personalizedPrompt = SYSTEM_PROMPT + userContext;
+
+    // ─── Process request ───
     const { messages, imageData, hasImage } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -86,55 +269,33 @@ serve(async (req) => {
     }
 
     // Build the messages array for the API
-    let apiMessages: any[] = [{ role: "system", content: SYSTEM_PROMPT }];
+    let apiMessages: any[] = [{ role: "system", content: personalizedPrompt }];
 
     // Process messages, handling any with image data
     for (const msg of messages) {
       if (msg.imageData && msg.role === "user") {
-        // Multimodal message with image
         apiMessages.push({
           role: "user",
           content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: msg.imageData, // base64 data URL
-              },
-            },
-            {
-              type: "text",
-              text: msg.content || IMAGE_ANALYSIS_PROMPT,
-            },
+            { type: "image_url", image_url: { url: msg.imageData } },
+            { type: "text", text: msg.content || IMAGE_ANALYSIS_PROMPT },
           ],
         });
       } else {
-        // Regular text message
-        apiMessages.push({
-          role: msg.role,
-          content: msg.content,
-        });
+        apiMessages.push({ role: msg.role, content: msg.content });
       }
     }
 
-    // If there's imageData at the top level (for backwards compatibility)
+    // Backwards compatibility for top-level imageData
     if (imageData && hasImage) {
-      // Find the last user message and convert it to multimodal
       const lastUserMsgIndex = apiMessages.findLastIndex((m: any) => m.role === "user");
       if (lastUserMsgIndex !== -1 && typeof apiMessages[lastUserMsgIndex].content === "string") {
         const textContent = apiMessages[lastUserMsgIndex].content;
         apiMessages[lastUserMsgIndex] = {
           role: "user",
           content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: imageData,
-              },
-            },
-            {
-              type: "text",
-              text: textContent || IMAGE_ANALYSIS_PROMPT,
-            },
+            { type: "image_url", image_url: { url: imageData } },
+            { type: "text", text: textContent || IMAGE_ANALYSIS_PROMPT },
           ],
         };
       }
