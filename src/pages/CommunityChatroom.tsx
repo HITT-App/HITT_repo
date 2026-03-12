@@ -952,7 +952,6 @@ export default function CommunityChatroom() {
           </div>
         )}
         </div>
-        </div>
       </div>
 
       {/* Scroll to bottom FAB with unread count */}
