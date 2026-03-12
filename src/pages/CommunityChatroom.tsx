@@ -743,15 +743,11 @@ export default function CommunityChatroom() {
       )}
 
       {/* Messages area */}
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-2 relative"
-      >
-        {/* Background layer with opacity */}
+      <div className="flex-1 min-h-0 relative">
+        {/* Background layer - fixed behind scroll content */}
         {chatBackground && !isVideoBg && (
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute inset-0 pointer-events-none z-0"
             style={{ background: chatBackground, opacity: bgOpacity / 100 }}
           />
         )}
@@ -761,12 +757,16 @@ export default function CommunityChatroom() {
             loop
             muted
             playsInline
-            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
             style={{ opacity: bgOpacity / 100 }}
             src={chatBackground.replace("video:", "")}
           />
         )}
-        <div className="relative z-10">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="absolute inset-0 overflow-y-auto px-3 py-2 z-10"
+        >
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
