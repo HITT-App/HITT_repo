@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { HIITLogo } from '@/components/HIITLogo';
 import { AIFormAnalysis } from '@/components/workout/AIFormAnalysis';
 import { NewBadgeModal } from '@/components/gamification/NewBadgeModal';
+import { CompletionSummary } from '@/components/workout/CompletionSummary';
 import { 
   ArrowLeft, Play, Pause, SkipForward, SkipBack, 
   MoreHorizontal, Volume2, Settings, Download, Share2, Camera
@@ -157,22 +158,6 @@ export default function WorkoutPlayer() {
         
         // Update streak and check for new badges
         await recordWorkout();
-
-        // Auto-post workout completion to community feed
-        const durationMin = Math.floor(totalElapsed / 60);
-        const calories = workout.calories_burned || Math.round(durationMin * 7);
-        await supabase.from('community_posts').insert({
-          user_id: user.id,
-          content: `Just completed "${workout.title}"! 💪 ${durationMin} min · ${calories} kcal burned`,
-          post_type: 'workout',
-          category: 'fitness',
-          tags: ['workout', 'completed'],
-          workout_data: {
-            duration: durationMin,
-            calories,
-            type: workout.title,
-          },
-        });
       } catch (error) {
         console.error('Error saving progress:', error);
       }
@@ -183,6 +168,10 @@ export default function WorkoutPlayer() {
     clearNewBadges();
     toast({ title: 'Great workout!', description: 'Your progress has been saved.' });
     navigate('/workout-library');
+  };
+
+  const workoutDurationMin = Math.floor(totalElapsed / 60);
+  const workoutCalories = workout?.calories_burned || Math.round(workoutDurationMin * 7);
   };
 
   const formatTime = (seconds: number) => {
@@ -210,59 +199,46 @@ export default function WorkoutPlayer() {
 
   // Completed Screen
   if (showCompleted) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center mb-8">
-          <span className="text-6xl">🏋️</span>
-        </div>
-        
-        <h1 className="text-3xl font-bold mb-2">Workout Completed.</h1>
-        <p className="text-muted-foreground mb-8">Good Job! Here is your quick post-workout summary.</p>
+    const completionStats = [
+      { label: 'Duration', value: workoutDurationMin, unit: 'min' },
+      { label: 'Calories', value: workoutCalories, unit: 'kcal' },
+      { label: 'Exercises', value: exercises.length },
+    ];
 
-        <div className="flex items-center justify-center gap-8 mb-8">
-          <div className="text-center">
-            <p className="text-3xl font-bold">{Math.floor(totalElapsed / 60)}</p>
-            <p className="text-xs text-muted-foreground">Minute</p>
-          </div>
-          <div className="text-center">
-            <p className="text-3xl font-bold">{workout?.calories_burned || 158}</p>
-            <p className="text-xs text-muted-foreground">kcal</p>
-          </div>
-          <div className="text-center">
-            <p className="text-3xl font-bold">128</p>
-            <p className="text-xs text-muted-foreground">BPM</p>
-          </div>
-        </div>
-
-        {/* Rating */}
-        <div className="mb-8">
-          <p className="text-lg font-semibold mb-4">How was the workout?</p>
-          <p className="text-sm text-muted-foreground mb-4">Please rate your experience to better improve our platform.</p>
-          <div className="flex justify-center gap-2">
-            {[1, 2, 3, 4, 5].map(star => (
-              <button
-                key={star}
-                onClick={() => setRating(star)}
-                className="text-4xl transition-transform hover:scale-110"
-              >
-                {star <= rating ? '⭐' : '☆'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="w-full space-y-3">
-          <Button variant="outline" className="w-full h-12 rounded-2xl">
-            Submit Feedback →
-          </Button>
-          <Button onClick={handleFinish} className="w-full h-12 rounded-2xl">
-            Continue
-          </Button>
-          <Button variant="ghost" className="w-full text-primary" onClick={handleFinish}>
-            Skip this
-          </Button>
+    const ratingSection = (
+      <div className="text-center">
+        <p className="text-sm font-semibold text-foreground mb-3">How was the workout?</p>
+        <div className="flex justify-center gap-2">
+          {[1, 2, 3, 4, 5].map(star => (
+            <button
+              key={star}
+              onClick={() => setRating(star)}
+              className="text-3xl transition-transform hover:scale-110"
+            >
+              {star <= rating ? '⭐' : '☆'}
+            </button>
+          ))}
         </div>
       </div>
+    );
+
+    return (
+      <>
+        <CompletionSummary
+          activityTitle={workout?.title || 'Workout'}
+          stats={completionStats}
+          achievementMessage={newBadges.length > 0 ? 'New achievement unlocked!' : undefined}
+          badges={newBadges.map(b => ({ name: b.name, icon: b.icon }))}
+          onDone={handleFinish}
+          ratingSection={ratingSection}
+          postData={{
+            duration: workoutDurationMin,
+            calories: workoutCalories,
+            type: workout?.title || 'Workout',
+          }}
+        />
+        <NewBadgeModal badges={newBadges} onClose={clearNewBadges} />
+      </>
     );
   }
 

@@ -1,39 +1,80 @@
 
+# Fix Admin Panel: User Visibility and Data Access
 
-## Enhanced Activity/Workout Completion Summary with Auto-Post
+## Problem
+The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
 
-### What we're building
-A Strava-style completion summary screen (inspired by the screenshot) for both **ActivityLive** and **WorkoutPlayer**, showing key stats (distance, pace, time, achievements), a route map preview, and a toggle to auto-share to the community feed. Users can choose to post or skip before navigating away.
+There are 6 users in the database, but the admin sees 1.
 
-### Changes
+## Root Cause
+The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
+- `profiles` -- affects user list and total user count
+- `activity_logs` -- affects "Active (7d)" stat
+- `meal_logs` -- affects "Meals Logged" stat
+- `workout_progress` -- affects "Completed" stat
+- `user_badges` -- affects "Badges Earned" stat
+- `coaching_sessions` -- affects "Sessions" stat
 
-#### 1. ActivityLive completion screen (`src/pages/ActivityLive.tsx`)
-- Replace the current basic completion card with a rich dark summary:
-  - **Top stats row**: Distance, Pace, Time, Achievements count (horizontal, bold values)
-  - **Achievement banner**: If personal best or milestone, show a congratulatory card (e.g. "You just set your 2nd fastest 10K!")
-  - **Route map snapshot**: Render a static `LiveActivityMap` showing the GPS trail
-  - **Kudos/social row**: Show "Share to Feed" toggle (on by default)
-  - **Action buttons**: "Share & Done" / "Done" depending on toggle
-- Auto-post logic: currently only WorkoutPlayer posts — add the same for ActivityLive, including `workout_data` with distance, pace, duration, calories, and activity type
-- The post is only created when user confirms (not silently like WorkoutPlayer currently does)
+## Solution
 
-#### 2. WorkoutPlayer completion screen (`src/pages/WorkoutPlayer.tsx`)
-- Redesign the existing completed screen to match the same Strava-style layout:
-  - **Top stats row**: Duration, Calories, BPM (keep existing data)
-  - **Achievement banner**: Show badge earned or streak milestone
-  - **Share toggle**: Let user opt-in/out of community post (currently auto-posts silently)
-  - Move the auto-post from `completeWorkout()` into the "Share & Done" button handler so users control it
-- Keep the rating section but make it more compact
+### 1. Database Migration: Add Admin SELECT Policies
+Add new RLS policies to allow admins to read all rows in the affected tables:
 
-#### 3. Shared completion summary component (`src/components/workout/CompletionSummary.tsx`)
-Create a reusable component used by both pages:
-- Props: `stats` array (label/value pairs), `achievementMessage?`, `mapPositions?` (for GPS trail), `onShare`, `onDone`, `activityTitle`
-- Renders the dark card layout, stats row, optional map, share toggle, and buttons
-- Handles the community post insert internally when share is confirmed
+```sql
+-- Admins can view all profiles
+CREATE POLICY "Admins can view all profiles"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-### Technical details
-- **No DB changes needed** — uses existing `community_posts` table with `workout_data` JSON field
-- Move the auto-post from `completeWorkout()` in WorkoutPlayer to a user-controlled action
-- ActivityLive already has GPS positions array — pass it to the static map in the summary
-- Achievement detection: check `newBadges` from `useStreaksAndBadges` + compare personal bests from `workout_progress`/`activity_logs`
+-- Admins can view all activity logs
+CREATE POLICY "Admins can view all activity logs"
+  ON public.activity_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
+-- Admins can view all meal logs
+CREATE POLICY "Admins can view all meal logs"
+  ON public.meal_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all workout progress
+CREATE POLICY "Admins can view all workout progress"
+  ON public.workout_progress FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all user badges
+CREATE POLICY "Admins can view all user badges"
+  ON public.user_badges FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all coaching sessions
+CREATE POLICY "Admins can view all coaching sessions"
+  ON public.coaching_sessions FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+```
+
+### 2. Improve AdminUsers Page
+Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
+
+- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
+- Add pagination (currently limited to 100 users)
+- Add role filter tabs (All / Admins / Moderators)
+- Show user join date
+- Add moderator role management (currently only admin toggle)
+
+### 3. Files Changed
+
+| File | Change |
+|------|--------|
+| New migration SQL | Add 6 admin SELECT policies |
+| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
+
+### 4. No Changes Needed
+- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
+- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
+- Admin dashboard, sidebar, routing -- all working correctly
