@@ -48,14 +48,14 @@ export function CompletionSummary({
           .map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ''} ${s.label.toLowerCase()}`)
           .join(' · ');
 
-        await supabase.from('community_posts').insert({
+        await supabase.from('community_posts').insert([{
           user_id: user.id,
           content: `Just completed "${activityTitle}"! 💪 ${statsLine}`,
           post_type: 'workout',
           category: 'fitness',
           tags: ['workout', 'completed'],
           workout_data: postData ?? {},
-        });
+        }]);
         toast.success('Shared to feed!');
       } catch {
         toast.error('Failed to share');
