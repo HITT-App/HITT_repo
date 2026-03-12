@@ -4,7 +4,7 @@ import {
   ArrowLeft, Send, Loader2, ChevronDown, MessageCircle, Users,
   Plus, Image as ImageIcon, Smile, X, Reply, Play, Pause,
   Shield, Trash2, Pin, MoreVertical, PinOff, Settings, Megaphone,
-  Paintbrush, Check,
+  Paintbrush, Check, ArrowDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,6 +26,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
 import GifPicker from "@/components/chatroom/GifPicker";
 import VoiceRecorder from "@/components/chatroom/VoiceRecorder";
 import ImageLightbox from "@/components/chatroom/ImageLightbox";
@@ -53,6 +56,13 @@ interface BroadcastNotice {
   text: string;
   sender: string;
   timestamp: number;
+}
+
+interface PresenceUser {
+  user_id: string;
+  name: string;
+  avatar?: string | null;
+  typing?: boolean;
 }
 
 const REACTIONS = ["🔥", "💪", "❤️", "😂", "👏"];
@@ -146,6 +156,10 @@ export default function CommunityChatroom() {
   const [adminUserIds, setAdminUserIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
   const [onlineCount, setOnlineCount] = useState(1);
+  const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
+  const [showUserList, setShowUserList] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [tappedMessageId, setTappedMessageId] = useState<string | null>(null);
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [chatBackground, setChatBackground] = useState("");
@@ -160,13 +174,18 @@ export default function CommunityChatroom() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isNearBottomRef = useRef(true);
+  const initialScrollDoneRef = useRef(false);
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "User";
 
   const pinnedMessage = messages.find((m) => m.is_pinned);
 
   const scrollToBottom = useCallback((smooth = true) => {
-    bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "instant" });
+    const el = scrollContainerRef.current;
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "instant" });
+    }
   }, []);
 
   const scrollToMessage = useCallback((msgId: string) => {
@@ -253,6 +272,10 @@ export default function CommunityChatroom() {
         const newMsg = payload.new as ChatMessage;
         setMessages((prev) => [...prev, newMsg]);
         fetchUserProfiles([newMsg.user_id]);
+        // Track unread if scrolled up
+        if (!isNearBottomRef.current) {
+          setUnreadCount((prev) => prev + 1);
+        }
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "chatroom_messages" }, (payload) => {
         const deletedId = (payload.old as any).id;
@@ -285,7 +308,7 @@ export default function CommunityChatroom() {
     return () => { supabase.removeChannel(broadcastChannel); };
   }, []);
 
-  // Presence for typing + online count
+  // Presence for typing + online users list
   useEffect(() => {
     if (!user) return;
     const presenceChannel = supabase.channel("chatroom-presence", {
@@ -297,40 +320,79 @@ export default function CommunityChatroom() {
         const state = presenceChannel.presenceState();
         const keys = Object.keys(state);
         setOnlineCount(keys.length);
+
+        // Build online users list
+        const users: PresenceUser[] = [];
         const typing: string[] = [];
         Object.entries(state).forEach(([uid, data]: [string, any]) => {
-          if (uid !== user.id && data?.[0]?.typing) {
-            typing.push(data[0].name || "Someone");
+          const presenceData = data?.[0] || {};
+          users.push({
+            user_id: uid,
+            name: presenceData.name || "User",
+            avatar: presenceData.avatar || null,
+            typing: presenceData.typing || false,
+          });
+          if (uid !== user.id && presenceData.typing) {
+            typing.push(presenceData.name || "Someone");
           }
         });
+        setOnlineUsers(users);
         setTypingUsers(typing);
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
-          await presenceChannel.track({ typing: false, name: displayName });
+          await presenceChannel.track({
+            typing: false,
+            name: displayName,
+            avatar: profile?.avatar_url || null,
+          });
         }
       });
 
     return () => { supabase.removeChannel(presenceChannel); };
-  }, [user, displayName]);
+  }, [user, displayName, profile?.avatar_url]);
 
+  // Scroll to bottom after initial load
   useEffect(() => {
-    scrollToBottom(!loading);
-  }, [messages, loading, scrollToBottom]);
+    if (!loading && messages.length > 0 && !initialScrollDoneRef.current) {
+      initialScrollDoneRef.current = true;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToBottom(false);
+        });
+      });
+    }
+  }, [loading, messages.length, scrollToBottom]);
+
+  // Auto-scroll on new messages if near bottom
+  useEffect(() => {
+    if (initialScrollDoneRef.current && isNearBottomRef.current && messages.length > 0) {
+      requestAnimationFrame(() => scrollToBottom(true));
+    }
+  }, [messages.length, scrollToBottom]);
 
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    setShowScrollBtn(distFromBottom > 120);
+    const nearBottom = distFromBottom < 120;
+    isNearBottomRef.current = nearBottom;
+    setShowScrollBtn(!nearBottom);
+    if (nearBottom) {
+      setUnreadCount(0);
+    }
   }, []);
 
   const broadcastTyping = useCallback((isTyping: boolean) => {
     const channel = supabase.channel("chatroom-presence", {
       config: { presence: { key: user?.id || "" } },
     });
-    channel.track({ typing: isTyping, name: displayName });
-  }, [user, displayName]);
+    channel.track({
+      typing: isTyping,
+      name: displayName,
+      avatar: profile?.avatar_url || null,
+    });
+  }, [user, displayName, profile?.avatar_url]);
 
   const handleInputChange = (value: string) => {
     setNewMessage(value);
@@ -412,6 +474,11 @@ export default function CommunityChatroom() {
     };
   };
 
+  // Handle tap on message for mobile reply
+  const handleMessageTap = useCallback((msgId: string) => {
+    setTappedMessageId((prev) => prev === msgId ? null : msgId);
+  }, []);
+
   // Admin actions
   const handleDeleteMessage = async () => {
     if (!deleteTarget) return;
@@ -455,7 +522,6 @@ export default function CommunityChatroom() {
 
   const handleSetBackground = async (bgValue: string) => {
     setChatBackground(bgValue);
-    // Upsert to app_settings
     const { data: existing } = await supabase
       .from("app_settings")
       .select("id")
@@ -524,7 +590,6 @@ export default function CommunityChatroom() {
       timestamp: Date.now(),
     };
 
-    // Broadcast to all connected users
     const broadcastChannel = supabase.channel("chatroom-broadcast");
     await broadcastChannel.subscribe();
     await broadcastChannel.send({
@@ -533,7 +598,6 @@ export default function CommunityChatroom() {
       payload: notice,
     });
 
-    // Also show it locally
     setActiveNotice(notice);
     setNoticeDismissed(false);
     setTimeout(() => setActiveNotice(null), 30000);
@@ -542,6 +606,22 @@ export default function CommunityChatroom() {
     setSendingNotice(false);
     toast.success("Notice sent to all users");
   };
+
+  // Get unique message senders for user list (offline contributors)
+  const getOfflineContributors = useCallback(() => {
+    const onlineIds = new Set(onlineUsers.map((u) => u.user_id));
+    const senderIds = [...new Set(messages.map((m) => m.user_id))];
+    return senderIds
+      .filter((id) => !onlineIds.has(id))
+      .map((id) => {
+        const p = userProfiles[id];
+        return {
+          user_id: id,
+          name: p?.display_name || "User",
+          avatar: p?.avatar_url || null,
+        };
+      });
+  }, [messages, onlineUsers, userProfiles]);
 
   const renderMessageContent = (msg: ChatMessage) => {
     const type = msg.message_type || "text";
@@ -597,9 +677,17 @@ export default function CommunityChatroom() {
               </div>
             </>
           )}
-          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+          <button
+            onClick={() => setShowUserList(true)}
+            className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center relative"
+          >
             <Users className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
+            {onlineCount > 1 && (
+              <span className="absolute -top-0.5 -right-0.5 h-3.5 min-w-[14px] rounded-full bg-green-500 text-[8px] font-bold text-white flex items-center justify-center px-0.5">
+                {onlineCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -658,7 +746,7 @@ export default function CommunityChatroom() {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-2 scroll-smooth relative"
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-2 relative"
       >
         {/* Background layer with opacity */}
         {chatBackground && !isVideoBg && (
@@ -705,6 +793,7 @@ export default function CommunityChatroom() {
               const replyMsg = getReplyMessage(msg.reply_to_id);
               const msgReactions = reactions[msg.id] || [];
               const isSenderAdmin = adminUserIds.has(msg.user_id);
+              const isTapped = tappedMessageId === msg.id;
 
               return (
                 <div key={msg.id} id={`msg-${msg.id}`} className="transition-all duration-300 rounded-lg">
@@ -765,6 +854,7 @@ export default function CommunityChatroom() {
                         } ${msg.is_pinned ? "ring-1 ring-primary/30" : ""}`}
                         onDoubleClick={() => setShowReactionsFor(showReactionsFor === msg.id ? null : msg.id)}
                         onClick={() => {
+                          handleMessageTap(msg.id);
                           if (showReactionsFor && showReactionsFor !== msg.id) setShowReactionsFor(null);
                         }}
                       >
@@ -775,18 +865,20 @@ export default function CommunityChatroom() {
                           <Pin className="absolute -top-1.5 -right-1.5 h-3 w-3 text-primary" />
                         )}
 
-                        {/* Action buttons */}
-                        <div className={`absolute -right-16 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5`}>
+                        {/* Action buttons - visible on hover AND on tap for mobile */}
+                        <div className={`absolute -right-16 top-1/2 -translate-y-1/2 transition-opacity flex items-center gap-0.5 ${
+                          isTapped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        }`}>
                           <button
-                            onClick={(e) => { e.stopPropagation(); setReplyTo(msg); }}
-                            className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center"
+                            onClick={(e) => { e.stopPropagation(); setReplyTo(msg); setTappedMessageId(null); }}
+                            className="h-7 w-7 rounded-full bg-secondary border border-border/50 flex items-center justify-center shadow-sm"
                           >
                             <Reply className="h-3 w-3 text-muted-foreground" />
                           </button>
                           {isAdmin && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <button className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center">
+                                <button className="h-7 w-7 rounded-full bg-secondary border border-border/50 flex items-center justify-center shadow-sm">
                                   <MoreVertical className="h-3 w-3 text-muted-foreground" />
                                 </button>
                               </DropdownMenuTrigger>
@@ -862,15 +954,120 @@ export default function CommunityChatroom() {
         </div>
       </div>
 
-      {/* Scroll to bottom FAB */}
+      {/* Scroll to bottom FAB with unread count */}
       {showScrollBtn && (
         <button
-          onClick={() => scrollToBottom(true)}
-          className="absolute bottom-28 right-4 h-9 w-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center z-20 transition-all active:scale-95"
+          onClick={() => { scrollToBottom(true); setUnreadCount(0); }}
+          className="absolute bottom-28 right-4 h-9 min-w-[36px] rounded-full bg-card border border-border shadow-lg flex items-center justify-center gap-1.5 z-20 transition-all active:scale-95 px-2.5"
         >
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <ArrowDown className="h-3.5 w-3.5 text-muted-foreground" />
+          {unreadCount > 0 && (
+            <span className="text-[11px] font-semibold text-primary">
+              {unreadCount}
+            </span>
+          )}
         </button>
       )}
+
+      {/* User List Sheet */}
+      <Sheet open={showUserList} onOpenChange={setShowUserList}>
+        <SheetContent side="right" className="w-[300px] p-0">
+          <SheetHeader className="px-4 pt-6 pb-3 border-b border-border/60">
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4 text-primary" />
+              Chat Members
+            </SheetTitle>
+          </SheetHeader>
+          <div className="overflow-y-auto h-[calc(100%-70px)]">
+            {/* Online users */}
+            <div className="px-4 pt-4 pb-2">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Online — {onlineUsers.length}
+              </p>
+              <div className="space-y-1">
+                {onlineUsers.map((u) => {
+                  const initials = u.name.slice(0, 2).toUpperCase();
+                  const isMe = u.user_id === user?.id;
+                  const isUserAdmin = adminUserIds.has(u.user_id);
+                  return (
+                    <button
+                      key={u.user_id}
+                      onClick={() => {
+                        if (!isMe) {
+                          navigate(`/community/profile/${u.user_id}`);
+                          setShowUserList(false);
+                        }
+                      }}
+                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors text-left"
+                    >
+                      <div className="relative">
+                        <Avatar className="h-9 w-9">
+                          {u.avatar && <AvatarImage src={u.avatar} alt={u.name} />}
+                          <AvatarFallback className="text-[11px] font-bold bg-primary/10 text-primary">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {isMe ? `${u.name} (You)` : u.name}
+                          </p>
+                          {isUserAdmin && (
+                            <div className="flex items-center gap-0.5 bg-primary/10 rounded-full px-1.5 py-0.5">
+                              <Shield className="h-2 w-2 text-primary" />
+                              <span className="text-[8px] font-bold text-primary">ADMIN</span>
+                            </div>
+                          )}
+                        </div>
+                        {u.typing && (
+                          <p className="text-[10px] text-primary italic">typing...</p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Offline contributors */}
+            {getOfflineContributors().length > 0 && (
+              <div className="px-4 pt-3 pb-4">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Offline — {getOfflineContributors().length}
+                </p>
+                <div className="space-y-1">
+                  {getOfflineContributors().map((u) => {
+                    const initials = u.name.slice(0, 2).toUpperCase();
+                    return (
+                      <button
+                        key={u.user_id}
+                        onClick={() => {
+                          navigate(`/community/profile/${u.user_id}`);
+                          setShowUserList(false);
+                        }}
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors text-left"
+                      >
+                        <div className="relative">
+                          <Avatar className="h-9 w-9 opacity-60">
+                            {u.avatar && <AvatarImage src={u.avatar} alt={u.name} />}
+                            <AvatarFallback className="text-[11px] font-bold bg-muted text-muted-foreground">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-muted-foreground/40 border-2 border-background" />
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">{u.name}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Admin Panel Dialog */}
       <Dialog open={showAdminPanel} onOpenChange={setShowAdminPanel}>

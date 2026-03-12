@@ -1,34 +1,80 @@
 
+# Fix Admin Panel: User Visibility and Data Access
 
-## Community Chatroom Improvements
+## Problem
+The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
 
-### 1. Auto-scroll to last message on load
-**Problem**: The `scrollToBottom` relies on `bottomRef.current?.scrollIntoView()` but the `bottomRef` div may not be rendered or the scroll container may not be the right element. The `ScrollArea` vs raw div ref mismatch could cause issues.
+There are 6 users in the database, but the admin sees 1.
 
-**Fix**: After messages load (loading transitions to false), use `scrollContainerRef` to set `scrollTop = scrollHeight` with `"instant"` behavior so there's no visible scroll animation on initial load. Also ensure `bottomRef` is placed correctly and scroll fires after DOM paint via `requestAnimationFrame`.
+## Root Cause
+The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
+- `profiles` -- affects user list and total user count
+- `activity_logs` -- affects "Active (7d)" stat
+- `meal_logs` -- affects "Meals Logged" stat
+- `workout_progress` -- affects "Completed" stat
+- `user_badges` -- affects "Badges Earned" stat
+- `coaching_sessions` -- affects "Sessions" stat
 
-### 2. User list drawer/sheet
-**Problem**: The Users icon button in the header doesn't do anything — it's just a static icon.
+## Solution
 
-**Fix**: Add a Sheet/Drawer that opens when the Users button is clicked, showing all online users from the presence channel state. Store the full presence state (not just count) and display each user's avatar, name, and online indicator. Also show offline users who have sent messages in the chat.
+### 1. Database Migration: Add Admin SELECT Policies
+Add new RLS policies to allow admins to read all rows in the affected tables:
 
-### 3. Additional improvements
-- **Long-press to reply on mobile**: The reply button is hover-only (`group-hover:opacity-100`), which doesn't work on mobile. Add a long-press handler or always-visible reply swipe indicator.
-- **Message read indicator**: Show a subtle "new messages" divider when the user returns.
-- **Scroll-to-bottom button shows unread count**: Show how many new messages arrived while scrolled up.
+```sql
+-- Admins can view all profiles
+CREATE POLICY "Admins can view all profiles"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-### Technical approach
+-- Admins can view all activity logs
+CREATE POLICY "Admins can view all activity logs"
+  ON public.activity_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-**Files to modify**: `src/pages/CommunityChatroom.tsx`
+-- Admins can view all meal logs
+CREATE POLICY "Admins can view all meal logs"
+  ON public.meal_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-**Scroll fix**:
-- In the `useEffect` watching `[messages, loading]`, use `requestAnimationFrame` + set `scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight` with instant behavior on initial load.
+-- Admins can view all workout progress
+CREATE POLICY "Admins can view all workout progress"
+  ON public.workout_progress FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-**User list**:
-- Track presence state as `Map<string, {name, avatar}>` instead of just a count.
-- Add `showUserList` state + a `Sheet` component listing online users with avatars.
-- Clicking a user navigates to their community profile.
+-- Admins can view all user badges
+CREATE POLICY "Admins can view all user badges"
+  ON public.user_badges FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-**Mobile reply**:
-- Make reply button visible on tap (not just hover) by toggling visibility on single tap/long-press, or always show a small reply icon.
+-- Admins can view all coaching sessions
+CREATE POLICY "Admins can view all coaching sessions"
+  ON public.coaching_sessions FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+```
 
+### 2. Improve AdminUsers Page
+Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
+
+- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
+- Add pagination (currently limited to 100 users)
+- Add role filter tabs (All / Admins / Moderators)
+- Show user join date
+- Add moderator role management (currently only admin toggle)
+
+### 3. Files Changed
+
+| File | Change |
+|------|--------|
+| New migration SQL | Add 6 admin SELECT policies |
+| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
+
+### 4. No Changes Needed
+- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
+- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
+- Admin dashboard, sidebar, routing -- all working correctly
