@@ -1,36 +1,80 @@
 
+# Fix Admin Panel: User Visibility and Data Access
 
-## Update HIIT AI Coach System Prompt & Context
+## Problem
+The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
 
-### What we're building
-Rewrite the AI coach's system prompt to implement the full 5-layer AI architecture (Personality Coach, Training Intelligence, Nutrition Intelligence, Recovery & Health, Behaviour & Habit) with all the rules from your document. Also enhance the edge function to fetch user profile/assessment data so the AI can personalize responses.
+There are 6 users in the database, but the admin sees 1.
 
-### Changes
+## Root Cause
+The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
+- `profiles` -- affects user list and total user count
+- `activity_logs` -- affects "Active (7d)" stat
+- `meal_logs` -- affects "Meals Logged" stat
+- `workout_progress` -- affects "Completed" stat
+- `user_badges` -- affects "Badges Earned" stat
+- `coaching_sessions` -- affects "Sessions" stat
 
-#### 1. Edge function system prompt (`supabase/functions/ai-coach/index.ts`)
-- Replace the current basic `SYSTEM_PROMPT` with the comprehensive 5-layer prompt covering:
-  - **Personality**: Best friend/motivator tone, energetic, encouraging, celebrating wins
-  - **Training Intelligence**: Structured workout generation (warm-up → main → finisher → cool down), adaptive to goal/level/equipment/time, weekly plan rotation
-  - **Nutrition Intelligence**: Calorie/macro calculations (weight×30-35, protein 2g/kg, fat 0.8g/kg), meal plan generation, hydration/supplement basics
-  - **Recovery & Health**: Recovery scoring, adjusting intensity when fatigued, sleep/soreness awareness
-  - **Behaviour & Habit**: Streak tracking, accountability, small wins psychology, progress reminders
-- Add safety rules: no extreme diets, no overtraining advice, recommend medical help for pain
-- Add the golden rule: long-term sustainable fitness focus
-- Keep existing image analysis prompt
+## Solution
 
-#### 2. Fetch user context in edge function
-- Before calling the AI gateway, query the user's profile, assessment data, and recent activity from the database to inject as context into the system prompt
-- This enables truly personalized responses (knowing their weight, goals, fitness level, equipment, etc.)
+### 1. Database Migration: Add Admin SELECT Policies
+Add new RLS policies to allow admins to read all rows in the affected tables:
 
-#### 3. Update welcome screen suggestions (`src/components/chat/ChatContainer.tsx`)
-- Update the quick-start suggestions to better reflect the 5-layer capabilities:
-  - "Create my weekly training plan"
-  - "Calculate my daily calories & macros"
-  - "Check my recovery score"
-  - "What should I eat today?"
+```sql
+-- Admins can view all profiles
+CREATE POLICY "Admins can view all profiles"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-### Technical details
-- Main change is the system prompt text — no DB changes needed
-- User context query uses existing tables: `profiles`, `user_assessments`, `workout_progress`, `activity_logs`
-- Edge function already has auth + Supabase client set up, just need to add queries before the AI call
+-- Admins can view all activity logs
+CREATE POLICY "Admins can view all activity logs"
+  ON public.activity_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
+-- Admins can view all meal logs
+CREATE POLICY "Admins can view all meal logs"
+  ON public.meal_logs FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all workout progress
+CREATE POLICY "Admins can view all workout progress"
+  ON public.workout_progress FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all user badges
+CREATE POLICY "Admins can view all user badges"
+  ON public.user_badges FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Admins can view all coaching sessions
+CREATE POLICY "Admins can view all coaching sessions"
+  ON public.coaching_sessions FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+```
+
+### 2. Improve AdminUsers Page
+Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
+
+- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
+- Add pagination (currently limited to 100 users)
+- Add role filter tabs (All / Admins / Moderators)
+- Show user join date
+- Add moderator role management (currently only admin toggle)
+
+### 3. Files Changed
+
+| File | Change |
+|------|--------|
+| New migration SQL | Add 6 admin SELECT policies |
+| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
+
+### 4. No Changes Needed
+- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
+- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
+- Admin dashboard, sidebar, routing -- all working correctly

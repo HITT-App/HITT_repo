@@ -68,10 +68,11 @@ export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 justify-center mt-4">
-                {[
-                  'Create a 20-min HIIT workout',
-                  'Check my goals progress',
-                  'Recommend a healthy meal',
+              {[
+                  'Create my weekly training plan',
+                  'Calculate my daily calories & macros',
+                  'Check my recovery score',
+                  'What should I eat today?',
                 ].map((suggestion) => (
                   <button
                     key={suggestion}
