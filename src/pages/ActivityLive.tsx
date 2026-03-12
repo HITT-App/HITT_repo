@@ -15,6 +15,7 @@ import { useActivity } from "@/hooks/useActivity";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
+import { CompletionSummary } from "@/components/workout/CompletionSummary";
 
 // --- Haversine ---
 function haversineDistance(
