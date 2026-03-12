@@ -170,6 +170,10 @@ export default function WorkoutPlayer() {
     navigate('/workout-library');
   };
 
+  const workoutDurationMin = Math.floor(totalElapsed / 60);
+  const workoutCalories = workout?.calories_burned || Math.round(workoutDurationMin * 7);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
