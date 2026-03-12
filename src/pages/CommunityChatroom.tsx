@@ -743,12 +743,16 @@ export default function CommunityChatroom() {
       )}
 
       {/* Messages area */}
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 relative overflow-hidden">
         {/* Background layer - fixed behind scroll content */}
         {chatBackground && !isVideoBg && (
           <div
             className="absolute inset-0 pointer-events-none z-0"
-            style={{ background: chatBackground, opacity: bgOpacity / 100 }}
+            style={{
+              background: chatBackground,
+              opacity: bgOpacity / 100,
+              backgroundAttachment: isCustomImageBg ? "fixed" : undefined,
+            }}
           />
         )}
         {isVideoBg && (
@@ -765,7 +769,7 @@ export default function CommunityChatroom() {
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="absolute inset-0 overflow-y-auto px-3 py-2 z-10"
+          className="absolute inset-0 overflow-y-auto overscroll-contain px-3 py-2 z-10"
         >
         {loading ? (
           <div className="flex justify-center items-center h-full">
