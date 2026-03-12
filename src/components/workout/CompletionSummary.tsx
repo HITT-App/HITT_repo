@@ -23,7 +23,7 @@ interface CompletionSummaryProps {
   mapComponent?: React.ReactNode;
   onDone: () => void;
   /** Extra workout_data to include in the community post */
-  postData?: Record<string, unknown>;
+  postData?: Json;
   /** Rating section (optional, used by WorkoutPlayer) */
   ratingSection?: React.ReactNode;
 }
