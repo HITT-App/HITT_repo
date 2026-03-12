@@ -24,13 +24,20 @@ const updateSW = registerSW({
       }
     };
 
+    // Check immediately on load
     checkForUpdates();
 
-    const interval = window.setInterval(checkForUpdates, 30_000);
+    // Check every 15 seconds (was 30s)
+    const interval = window.setInterval(checkForUpdates, 15_000);
+
+    // Check immediately when user returns to the tab
+    document.addEventListener("visibilitychange", checkForUpdates);
+
     window.addEventListener(
       "beforeunload",
       () => {
         window.clearInterval(interval);
+        document.removeEventListener("visibilitychange", checkForUpdates);
       },
       { once: true }
     );
@@ -44,4 +51,3 @@ const updateSW = registerSW({
 });
 
 createRoot(document.getElementById("root")!).render(<App />);
-
