@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { HIITLogo } from '@/components/HIITLogo';
 import { AIFormAnalysis } from '@/components/workout/AIFormAnalysis';
 import { NewBadgeModal } from '@/components/gamification/NewBadgeModal';
+import { CompletionSummary } from '@/components/workout/CompletionSummary';
 import { 
   ArrowLeft, Play, Pause, SkipForward, SkipBack, 
   MoreHorizontal, Volume2, Settings, Download, Share2, Camera
