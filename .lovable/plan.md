@@ -1,80 +1,63 @@
 
-# Fix Admin Panel: User Visibility and Data Access
 
-## Problem
-The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
+# Multiple Share Image Options for Completion Summary
 
-There are 6 users in the database, but the admin sees 1.
+## Current State
+The completion screen has one "Generate Share Image" button that opens photo style options (profile pic, selfie, silhouette) — all AI-generated. There's no way to quickly share the GPS map or a simple stats card without waiting for AI generation.
 
-## Root Cause
-The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
-- `profiles` -- affects user list and total user count
-- `activity_logs` -- affects "Active (7d)" stat
-- `meal_logs` -- affects "Meals Logged" stat
-- `workout_progress` -- affects "Completed" stat
-- `user_badges` -- affects "Badges Earned" stat
-- `coaching_sessions` -- affects "Sessions" stat
+## Proposed Options
+Replace the single "Generate Share Image" button with a multi-option selector offering 4 share card styles:
 
-## Solution
+1. **Map Card** — Captures the GPS route map with stats overlay and HIIT watermark. Instant (no AI needed). Only shown when `mapComponent` is provided.
+2. **Stats Card** — Clean, dark-themed stats-only card with the HIIT logo watermark. Instant (canvas-rendered, no AI).
+3. **AI Cinematic** — The existing AI-generated image (silhouette, profile pic, or selfie options). Slower but premium.
+4. **Quick Photo** — Upload/take a photo, overlay stats + HIIT watermark using canvas (no AI, instant). Lightweight alternative.
 
-### 1. Database Migration: Add Admin SELECT Policies
-Add new RLS policies to allow admins to read all rows in the affected tables:
+## Technical Approach
 
-```sql
--- Admins can view all profiles
-CREATE POLICY "Admins can view all profiles"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### 1. New edge function not needed for Map/Stats/Quick Photo
+These three options will be rendered client-side using an HTML5 Canvas:
+- Draw the map screenshot or photo as background
+- Overlay a dark gradient bar at the bottom with stats text
+- Stamp the HIIT watermark (`src/assets/hiit-watermark.png`) in the top-right corner
+- Export as PNG data URL
 
--- Admins can view all activity logs
-CREATE POLICY "Admins can view all activity logs"
-  ON public.activity_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### 2. Changes to `CompletionSummary.tsx`
+- Add a `shareStyle` state: `'none' | 'map' | 'stats' | 'ai' | 'photo'`
+- Replace the current single button with a grid of 4 option cards (icon + label)
+- **Map Card option**: Use `html2canvas` or a hidden canvas to capture the map container + overlay stats/watermark. Only visible when `mapComponent` exists.
+- **Stats Card option**: Draw a branded 1080×1080 canvas with dark background, stats, activity icon, and watermark.
+- **AI Cinematic option**: Opens the existing photo source picker (profile/selfie/silhouette).
+- **Quick Photo option**: Opens file picker, then composites the photo with stats overlay on canvas.
 
--- Admins can view all meal logs
-CREATE POLICY "Admins can view all meal logs"
-  ON public.meal_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### 3. Canvas utility function
+Create a shared `generateCanvasCard()` helper that:
+- Creates a 1080×1080 canvas
+- Draws the provided background (map screenshot, photo, or gradient)
+- Adds bottom stats bar with semi-transparent dark gradient
+- Renders stats text in white
+- Stamps the HIIT watermark in the top-right at ~15% opacity
+- Returns a blob URL for preview/download
 
--- Admins can view all workout progress
-CREATE POLICY "Admins can view all workout progress"
-  ON public.workout_progress FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### 4. Map capture
+- Use `leaflet-image` or manually call `map.getContainer()` to get DOM, then use a canvas `drawImage` approach
+- Alternatively, render map tiles to canvas using the existing Leaflet instance ref
 
--- Admins can view all user badges
-CREATE POLICY "Admins can view all user badges"
-  ON public.user_badges FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### Files to modify
+- **`src/components/workout/CompletionSummary.tsx`** — New multi-option UI, canvas rendering logic
+- **`src/components/workout/ShareCardCanvas.ts`** (new) — Reusable canvas card generator utility
 
--- Admins can view all coaching sessions
-CREATE POLICY "Admins can view all coaching sessions"
-  ON public.coaching_sessions FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### UI Layout (share options grid)
+```text
+┌──────────────┐ ┌──────────────┐
+│   🗺️ Map     │ │   📊 Stats   │
+│   Card       │ │   Card       │
+└──────────────┘ └──────────────┘
+┌──────────────┐ ┌──────────────┐
+│   ✨ AI      │ │   📸 Quick   │
+│   Cinematic  │ │   Photo      │
+└──────────────┘ └──────────────┘
 ```
 
-### 2. Improve AdminUsers Page
-Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
+Each card shows a small preview icon, label, and "Instant" or "~15s" time estimate badge.
 
-- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
-- Add pagination (currently limited to 100 users)
-- Add role filter tabs (All / Admins / Moderators)
-- Show user join date
-- Add moderator role management (currently only admin toggle)
-
-### 3. Files Changed
-
-| File | Change |
-|------|--------|
-| New migration SQL | Add 6 admin SELECT policies |
-| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
-
-### 4. No Changes Needed
-- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
-- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
-- Admin dashboard, sidebar, routing -- all working correctly
