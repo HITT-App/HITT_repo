@@ -5,6 +5,8 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
+const isLovablePreview = process.env.SANDPACK === "true" || process.env.LOVABLE === "true";
+
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
