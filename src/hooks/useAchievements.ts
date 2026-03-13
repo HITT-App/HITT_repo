@@ -166,23 +166,27 @@ export function useFriendsLeaderboard(
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Get accepted friends
-      const { data: friendships, error: fErr } = await supabase
-        .from("user_friends")
-        .select("user_id, friend_id")
-        .eq("status", "accepted");
-
-      if (fErr) throw fErr;
+      // Get accepted friends where current user is either side
+      const [{ data: sent }, { data: received }] = await Promise.all([
+        supabase
+          .from("user_friends")
+          .select("friend_id")
+          .eq("user_id", user.id)
+          .eq("status", "accepted"),
+        supabase
+          .from("user_friends")
+          .select("user_id")
+          .eq("friend_id", user.id)
+          .eq("status", "accepted"),
+      ]);
 
       const friendIds = new Set<string>();
       friendIds.add(user.id);
-      friendships?.forEach(f => {
-        if (f.user_id === user.id) friendIds.add(f.friend_id);
-        else friendIds.add(f.user_id);
-      });
+      sent?.forEach(f => friendIds.add(f.friend_id));
+      received?.forEach(f => friendIds.add(f.user_id));
 
       const ids = Array.from(friendIds);
-      if (ids.length === 0) return [];
+      if (ids.length <= 1) return []; // Only self = no friends
 
       const { data, error } = await supabase
         .from("leaderboard_scores")
