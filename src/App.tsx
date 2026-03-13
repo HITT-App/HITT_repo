@@ -27,6 +27,7 @@ import ActivityTracker from "./pages/ActivityTracker";
 import ActivityOnboarding from "./pages/ActivityOnboarding";
 import ActivityDashboard from "./pages/ActivityDashboard";
 import ActivityLive from "./pages/ActivityLive";
+import GymTimer from "./pages/GymTimer";
 import ActivityHistory from "./pages/ActivityHistory";
 import ActivityGoals from "./pages/ActivityGoals";
 import LogActivity from "./pages/LogActivity";

@@ -43,12 +43,15 @@ const categories = [
   },
 ];
 
+const INDOOR_SPORTS = new Set(["Workout", "Weight Training", "HIIT", "Yoga"]);
+
 export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) => {
   const navigate = useNavigate();
 
   const handleSelect = (sport: string) => {
     onOpenChange(false);
-    navigate(`/activity-live?sport=${encodeURIComponent(sport)}`);
+    const route = INDOOR_SPORTS.has(sport) ? "/gym-timer" : "/activity-live";
+    navigate(`${route}?sport=${encodeURIComponent(sport)}`);
   };
 
   return (

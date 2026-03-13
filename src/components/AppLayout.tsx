@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 // Pages where the bottom nav should be hidden (full-screen experiences)
 const HIDDEN_NAV_ROUTES = [
   "/activity-live",
+  "/gym-timer",
   "/sleeping",
   "/workout-player",
   "/live-session",
