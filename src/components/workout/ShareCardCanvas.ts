@@ -65,51 +65,70 @@ async function stampWatermark(ctx: CanvasRenderingContext2D) {
   }
 }
 
-/** Stats-only card with dark gradient background */
+/** Stats card — uses map as background when available, otherwise dark gradient */
 export async function generateStatsCard(
   activityTitle: string,
   activityType: string,
   stats: Array<{ label: string; value: string | number; unit?: string }>,
+  mapElement?: HTMLElement | null,
 ): Promise<string> {
   const canvas = document.createElement('canvas');
   canvas.width = SIZE;
   canvas.height = SIZE;
   const ctx = canvas.getContext('2d')!;
 
-  // Dark gradient background
-  const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
-  bg.addColorStop(0, '#0f0f0f');
-  bg.addColorStop(0.5, '#1a1a2e');
-  bg.addColorStop(1, '#16213e');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, SIZE, SIZE);
+  if (mapElement) {
+    // Capture the live map as the background
+    const { default: html2canvas } = await import('html2canvas');
+    const mapCanvas = await html2canvas(mapElement, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#1a1a2e',
+      width: mapElement.offsetWidth,
+      height: mapElement.offsetHeight,
+    });
+    ctx.fillStyle = '#0f0f0f';
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    const scale = Math.max(SIZE / mapCanvas.width, SIZE / mapCanvas.height);
+    const w = mapCanvas.width * scale;
+    const h = mapCanvas.height * scale;
+    ctx.drawImage(mapCanvas, (SIZE - w) / 2, (SIZE - h) / 2, w, h);
+  } else {
+    // Dark gradient background fallback
+    const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+    bg.addColorStop(0, '#0f0f0f');
+    bg.addColorStop(0.5, '#1a1a2e');
+    bg.addColorStop(1, '#16213e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, SIZE, SIZE);
 
-  // Subtle pattern circles
-  ctx.globalAlpha = 0.04;
-  for (let i = 0; i < 5; i++) {
-    ctx.beginPath();
-    ctx.arc(SIZE * 0.7, SIZE * 0.3, 120 + i * 80, 0, Math.PI * 2);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    // Subtle pattern circles
+    ctx.globalAlpha = 0.04;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.arc(SIZE * 0.7, SIZE * 0.3, 120 + i * 80, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // Activity type emoji/icon
+    const typeIcons: Record<string, string> = {
+      running: '🏃', cycling: '🚴', walking: '🚶', swimming: '🏊',
+      yoga: '🧘', hiit: '🔥', workout: '💪', gym: '🏋️',
+    };
+    const emoji = typeIcons[activityType?.toLowerCase()] || '💪';
+    ctx.font = '120px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(emoji, SIZE / 2, SIZE / 2 - 40);
+
+    // "COMPLETED" label
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '600 28px system-ui, -apple-system, sans-serif';
+    ctx.letterSpacing = '6px';
+    ctx.fillText('COMPLETED', SIZE / 2, SIZE / 2 + 40);
   }
-  ctx.globalAlpha = 1;
-
-  // Activity type emoji/icon
-  const typeIcons: Record<string, string> = {
-    running: '🏃', cycling: '🚴', walking: '🚶', swimming: '🏊',
-    yoga: '🧘', hiit: '🔥', workout: '💪', gym: '🏋️',
-  };
-  const emoji = typeIcons[activityType?.toLowerCase()] || '💪';
-  ctx.font = '120px system-ui';
-  ctx.textAlign = 'center';
-  ctx.fillText(emoji, SIZE / 2, SIZE / 2 - 40);
-
-  // "COMPLETED" label
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.font = '600 28px system-ui, -apple-system, sans-serif';
-  ctx.letterSpacing = '6px';
-  ctx.fillText('COMPLETED', SIZE / 2, SIZE / 2 + 40);
 
   await stampWatermark(ctx);
   drawStatsBar(ctx, activityTitle, stats);

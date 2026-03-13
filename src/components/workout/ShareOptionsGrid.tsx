@@ -9,7 +9,7 @@ interface ShareOptionsGridProps {
   isGenerating: boolean;
 }
 
-const options = [
+const getOptions = (hasMap: boolean) => [
   {
     key: 'map' as const,
     icon: Map,
@@ -22,7 +22,7 @@ const options = [
     key: 'stats' as const,
     icon: BarChart3,
     label: 'Stats Card',
-    desc: 'Dark branded card',
+    desc: hasMap ? 'Route + stats' : 'Dark branded card',
     badge: 'Instant',
     needsMap: false,
   },
