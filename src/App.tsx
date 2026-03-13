@@ -164,6 +164,7 @@ const App = () => (
             <Route path="/activity-onboarding" element={<ProtectedRoute><ActivityOnboarding /></ProtectedRoute>} />
             <Route path="/activity-dashboard" element={<ProtectedRoute><ActivityDashboard /></ProtectedRoute>} />
             <Route path="/activity-live" element={<ProtectedRoute><ActivityLive /></ProtectedRoute>} />
+            <Route path="/gym-timer" element={<ProtectedRoute><GymTimer /></ProtectedRoute>} />
             <Route path="/activity-history" element={<ProtectedRoute><ActivityHistory /></ProtectedRoute>} />
             <Route path="/activity-goals" element={<ProtectedRoute><ActivityGoals /></ProtectedRoute>} />
             <Route path="/log-activity" element={<ProtectedRoute><LogActivity /></ProtectedRoute>} />
