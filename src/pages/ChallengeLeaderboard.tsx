@@ -262,7 +262,7 @@ function PodiumCard({
   const avatarSizes: Record<number, string> = { 1: "w-16 h-16", 2: "w-12 h-12", 3: "w-12 h-12" };
   const medals = { 1: "🥇", 2: "🥈", 3: "🥉" };
   const points = (entry as any)[sortBy] || 0;
-  const ringColor = isMe ? "ring-2 ring-primary" : isFirst ? "ring-2 ring-yellow-500" : "ring-2 ring-border";
+  const ringColor = isMe ? "ring-2 ring-primary" : isFirst ? "ring-2 ring-primary/80" : "ring-2 ring-border";
 
   return (
     <div className={`flex flex-col items-center ${isFirst ? "order-2" : rank === 2 ? "order-1" : "order-3"}`}>
