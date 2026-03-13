@@ -129,7 +129,7 @@ export function CompletionSummary({
       if (style === 'map' && mapContainerRef?.current) {
         dataUrl = await generateMapCard(mapContainerRef.current, activityTitle, stats);
       } else {
-        dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats);
+        dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, mapContainerRef?.current);
       }
       setGeneratedImageUrl(dataUrl);
       toast.success('Share card created! 🎨');

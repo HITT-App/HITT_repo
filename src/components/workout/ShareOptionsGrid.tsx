@@ -45,7 +45,7 @@ const getOptions = (hasMap: boolean) => [
 ];
 
 export function ShareOptionsGrid({ hasMap, onSelect, isGenerating }: ShareOptionsGridProps) {
-  const visible = options.filter((o) => !o.needsMap || hasMap);
+  const visible = getOptions(hasMap).filter((o) => !o.needsMap || hasMap);
 
   return (
     <div className="space-y-2">
