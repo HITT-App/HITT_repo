@@ -1,80 +1,36 @@
 
-# Fix Admin Panel: User Visibility and Data Access
+
+# Fix Indoor Activities Routing — Gym Timer Instead of GPS Map
 
 ## Problem
-The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
-
-There are 6 users in the database, but the admin sees 1.
-
-## Root Cause
-The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
-- `profiles` -- affects user list and total user count
-- `activity_logs` -- affects "Active (7d)" stat
-- `meal_logs` -- affects "Meals Logged" stat
-- `workout_progress` -- affects "Completed" stat
-- `user_badges` -- affects "Badges Earned" stat
-- `coaching_sessions` -- affects "Sessions" stat
+When selecting "Workout", "Weight Training", "HIIT", or "Yoga" from the Choose a Sport sheet, users land on the GPS map-based live tracker — which makes no sense for indoor/gym activities.
 
 ## Solution
+Route indoor activities to a **gym-focused timer screen** instead of the map-based tracker. Two categories of sports:
 
-### 1. Database Migration: Add Admin SELECT Policies
-Add new RLS policies to allow admins to read all rows in the affected tables:
+**Outdoor (keep GPS map):** Run, Trail Run, Walk, Hike, Swim, Surf, Cycling
+**Indoor (new timer UI):** Workout, Weight Training, HIIT, Yoga
 
-```sql
--- Admins can view all profiles
-CREATE POLICY "Admins can view all profiles"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### New Gym Timer Page (`src/pages/GymTimer.tsx`)
+A full-screen timer experience designed for indoor workouts:
+- Large centered elapsed timer (MM:SS or HH:MM:SS)
+- Activity type icon and name at top
+- Stats row: Sets, Calories (estimated from MET), Duration
+- Set counter with +/- buttons (tap to log sets)
+- Heart rate zone indicator (visual only, no sensor)
+- Pause/Play and Hold-to-Finish controls (same pattern as ActivityLive)
+- On completion, navigates to the same `CompletionSummary` but without a map component — so the share options show Stats Card, AI Cinematic, and Quick Photo (no Map Card)
 
--- Admins can view all activity logs
-CREATE POLICY "Admins can view all activity logs"
-  ON public.activity_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### Changes to `ChooseSportSheet.tsx`
+- Define an `INDOOR_SPORTS` set: `["Workout", "Weight Training", "HIIT", "Yoga"]`
+- In `handleSelect`, route indoor sports to `/gym-timer?sport=X` and outdoor sports to `/activity-live?sport=X`
 
--- Admins can view all meal logs
-CREATE POLICY "Admins can view all meal logs"
-  ON public.meal_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### Route Registration (`App.tsx`)
+- Add `/gym-timer` route pointing to the new `GymTimer` page
 
--- Admins can view all workout progress
-CREATE POLICY "Admins can view all workout progress"
-  ON public.workout_progress FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### Files to create/modify
+- **`src/pages/GymTimer.tsx`** (new) — Timer-focused indoor workout screen with set tracking, elapsed time, calories, and completion flow
+- **`src/components/ChooseSportSheet.tsx`** — Split routing by indoor vs outdoor
+- **`src/App.tsx`** — Register `/gym-timer` route
+- **`src/components/AppLayout.tsx`** — Add `/gym-timer` to `HIDDEN_NAV_ROUTES`
 
--- Admins can view all user badges
-CREATE POLICY "Admins can view all user badges"
-  ON public.user_badges FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all coaching sessions
-CREATE POLICY "Admins can view all coaching sessions"
-  ON public.coaching_sessions FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-```
-
-### 2. Improve AdminUsers Page
-Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
-
-- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
-- Add pagination (currently limited to 100 users)
-- Add role filter tabs (All / Admins / Moderators)
-- Show user join date
-- Add moderator role management (currently only admin toggle)
-
-### 3. Files Changed
-
-| File | Change |
-|------|--------|
-| New migration SQL | Add 6 admin SELECT policies |
-| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
-
-### 4. No Changes Needed
-- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
-- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
-- Admin dashboard, sidebar, routing -- all working correctly
