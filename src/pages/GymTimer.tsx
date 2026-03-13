@@ -127,13 +127,17 @@ const GymTimer = () => {
   const hrColor = elapsed < 300 ? "text-blue-400" : elapsed < 1200 ? "text-green-400" : elapsed < 2400 ? "text-orange-400" : "text-red-400";
 
   if (showCompleted) {
+    const completionStats = [
+      { label: "Duration", value: formatTime(elapsed) },
+      { label: "Calories", value: calories, unit: "kcal" },
+      ...(sets > 0 ? [{ label: "Sets", value: sets }] : []),
+    ];
     return (
       <CompletionSummary
-        activityType={activityType}
-        elapsed={elapsed}
-        calories={calories}
-        distance={0}
-        onClose={() => navigate("/activity-dashboard")}
+        activityTitle={activityType}
+        activityType={activityType.toLowerCase()}
+        stats={completionStats}
+        onDone={() => navigate("/activity-dashboard")}
       />
     );
   }
