@@ -2,12 +2,14 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+const SW_REFRESH_FLAG = "sw-refresh-pending";
+const isLovablePreviewHost =
+  typeof window !== "undefined" && window.location.hostname.includes("preview--");
+
 // Only register SW when the PWA plugin is active (not in Lovable preview)
 async function initSW() {
   try {
     const { registerSW } = await import("virtual:pwa-register");
-
-    const SW_REFRESH_FLAG = "sw-refresh-pending";
 
     const updateSW = registerSW({
       immediate: true,
@@ -53,6 +55,34 @@ async function initSW() {
   }
 }
 
-initSW();
+async function resetPreviewCacheIfNeeded() {
+  if (!isLovablePreviewHost) return;
 
-createRoot(document.getElementById("root")!).render(<App />);
+  sessionStorage.removeItem(SW_REFRESH_FLAG);
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+
+    if ("caches" in window) {
+      const cacheKeys = await caches.keys();
+      await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+    }
+  } catch {
+    // best-effort cleanup for preview only
+  }
+}
+
+async function bootstrap() {
+  await resetPreviewCacheIfNeeded();
+
+  if (!isLovablePreviewHost) {
+    await initSW();
+  }
+
+  createRoot(document.getElementById("root")!).render(<App />);
+}
+
+void bootstrap();
