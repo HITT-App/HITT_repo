@@ -3,28 +3,32 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
+import { useCommunityProfile, useCommunityActions } from '@/hooks/useCommunity';
+import { useBlockedUsers } from '@/hooks/useCommunityExtras';
+import { useImageUpload } from '@/hooks/useImageUpload';
 import { useStreaksAndBadges } from '@/hooks/useStreaksAndBadges';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useWakeWordPreference } from '@/hooks/useWakeWordPreference';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StreakCard } from '@/components/gamification/StreakCard';
 import { BadgesDisplay } from '@/components/gamification/BadgesDisplay';
 import { PasswordChangeSection } from '@/components/profile/PasswordChangeSection';
-import { ArrowLeft, Camera, Loader2, User, Target, Save, Trophy, Shield, Mic, Sun, Moon } from 'lucide-react';
+import ImageCropperDialog from '@/components/community/ImageCropperDialog';
+import {
+  ArrowLeft, Camera, Loader2, User, Target, Shield, Mic, Sun, Moon,
+  Pencil, Check, X, Calendar, Lock, Globe,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 const FITNESS_GOALS = [
-  'Lose weight',
-  'Build muscle',
-  'Improve endurance',
-  'Increase flexibility',
-  'General fitness',
-  'Train for competition',
+  'Lose weight', 'Build muscle', 'Improve endurance',
+  'Increase flexibility', 'General fitness', 'Train for competition',
 ];
 
 export default function Profile() {
@@ -32,17 +36,38 @@ export default function Profile() {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const { profile, loading, updating, updateProfile, uploadAvatar } = useProfile();
+  const { profile: communityProfile, loading: communityLoading } = useCommunityProfile();
+  const { createOrUpdateProfile } = useCommunityActions();
+  const { uploadImage, uploading: imageUploading } = useImageUpload();
   const { streak, allBadges, earnedBadges, loading: streaksLoading } = useStreaksAndBadges();
   const { isAdmin, loading: adminLoading } = useAdminRole();
   const { enabled: wakeWordEnabled, setEnabled: setWakeWordEnabled } = useWakeWordPreference();
+  const { blockedUsers, unblockUser, loading: blockedLoading } = useBlockedUsers();
   const { theme, setTheme } = useTheme();
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [displayName, setDisplayName] = useState('');
-  const [fitnessGoal, setFitnessGoal] = useState('');
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Editable fields
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [fitnessGoal, setFitnessGoal] = useState('');
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
+
+  // Inline editing state
+  const [editingField, setEditingField] = useState<'name' | 'username' | 'bio' | null>(null);
+  const [tempValue, setTempValue] = useState('');
+
+  // Cropper state
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperImage, setCropperImage] = useState('');
+  const [cropperType, setCropperType] = useState<'avatar' | 'banner'>('avatar');
+  const [saving, setSaving] = useState(false);
+
+  // Load from both profiles
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name || '');
@@ -51,50 +76,100 @@ export default function Profile() {
     }
   }, [profile]);
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    if (communityProfile) {
+      setUsername(communityProfile.username || '');
+      setBio(communityProfile.bio || '');
+      setBannerUrl(communityProfile.banner_url);
+      setIsPrivate(communityProfile.is_private || false);
+      if (!avatarPreview && communityProfile.avatar_url) {
+        setAvatarPreview(communityProfile.avatar_url);
+      }
+    }
+  }, [communityProfile]);
 
-    // Validate file type
+  const handleFileSelect = (file: File, type: 'avatar' | 'banner') => {
     if (!file.type.startsWith('image/')) {
       toast({ variant: 'destructive', title: 'Invalid file', description: 'Please select an image file' });
       return;
     }
-
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast({ variant: 'destructive', title: 'File too large', description: 'Please select an image under 5MB' });
+      toast({ variant: 'destructive', title: 'File too large', description: 'Max 5MB' });
       return;
     }
-
-    // Show preview immediately
     const reader = new FileReader();
-    reader.onloadend = () => setAvatarPreview(reader.result as string);
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        setCropperImage(e.target.result as string);
+        setCropperType(type);
+        setCropperOpen(true);
+      }
+    };
     reader.readAsDataURL(file);
+  };
 
-    // Upload to storage
-    setUploadingAvatar(true);
-    const publicUrl = await uploadAvatar(file);
-    setUploadingAvatar(false);
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    const file = new File([croppedBlob], `${cropperType}-${Date.now()}.jpg`, { type: 'image/jpeg' });
 
-    if (publicUrl) {
-      await updateProfile({ avatar_url: publicUrl });
-      setAvatarPreview(publicUrl);
+    if (cropperType === 'avatar') {
+      // Upload to avatars bucket via useProfile
+      const publicUrl = await uploadAvatar(file);
+      if (publicUrl) {
+        setAvatarPreview(publicUrl);
+        await updateProfile({ avatar_url: publicUrl });
+        // Sync to community profile
+        await createOrUpdateProfile({ avatar_url: publicUrl });
+      }
+    } else {
+      const url = await uploadImage(file, 'community-images');
+      if (url) {
+        setBannerUrl(url);
+        await createOrUpdateProfile({ banner_url: url });
+      }
     }
   };
 
-  const handleSave = async () => {
-    const trimmedName = displayName.trim();
-    
-    if (trimmedName.length > 50) {
-      toast({ variant: 'destructive', title: 'Invalid name', description: 'Display name must be under 50 characters' });
-      return;
+  const startEditing = (field: 'name' | 'username' | 'bio') => {
+    setEditingField(field);
+    setTempValue(field === 'name' ? displayName : field === 'username' ? username : bio);
+  };
+
+  const cancelEditing = () => {
+    setEditingField(null);
+    setTempValue('');
+  };
+
+  const confirmEditing = async () => {
+    if (!editingField) return;
+    setSaving(true);
+
+    if (editingField === 'name') {
+      const trimmed = tempValue.trim();
+      if (trimmed.length > 50) {
+        toast({ variant: 'destructive', title: 'Too long', description: 'Max 50 characters' });
+        setSaving(false);
+        return;
+      }
+      setDisplayName(trimmed);
+      await updateProfile({ display_name: trimmed || null });
+      await createOrUpdateProfile({ display_name: trimmed || undefined });
+    } else if (editingField === 'username') {
+      const cleaned = tempValue.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      setUsername(cleaned);
+      await createOrUpdateProfile({ username: cleaned || undefined });
+    } else if (editingField === 'bio') {
+      setBio(tempValue);
+      await createOrUpdateProfile({ bio: tempValue || undefined });
     }
 
-    await updateProfile({
-      display_name: trimmedName || null,
-      fitness_goal: fitnessGoal || null,
-    });
+    setEditingField(null);
+    setTempValue('');
+    setSaving(false);
+  };
+
+  const handleSaveFitnessGoal = async (goal: string) => {
+    setFitnessGoal(goal);
+    await updateProfile({ fitness_goal: goal || null });
   };
 
   const handleSignOut = async () => {
@@ -103,13 +178,13 @@ export default function Profile() {
   };
 
   const getInitials = () => {
-    if (displayName) {
-      return displayName.slice(0, 2).toUpperCase();
-    }
+    if (displayName) return displayName.slice(0, 2).toUpperCase();
     return user?.email?.slice(0, 2).toUpperCase() || 'U';
   };
 
-  if (loading || streaksLoading || adminLoading) {
+  const isLoading = loading || communityLoading || streaksLoading || adminLoading;
+
+  if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -118,198 +193,379 @@ export default function Profile() {
   }
 
   const earnedBadgeIds = earnedBadges.map(eb => eb.badge_id);
+  const joinedDate = user?.created_at ? format(new Date(user.created_at), 'MMMM yyyy') : '';
+  const stats = communityProfile || { posts_count: 0, followers_count: 0, following_count: 0, likes_received: 0 };
 
   return (
-    <div className="min-h-screen bg-background pb-8">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-background sticky top-0 z-10">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-background sticky top-0 z-20">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="font-semibold">Profile</h1>
         </div>
-        <div className="flex items-center gap-2">
-          {isAdmin && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/admin')}
-              className="gap-2"
-            >
-              <Shield className="w-4 h-4" />
-              Admin
-            </Button>
-          )}
-          <Button onClick={handleSave} disabled={updating} size="sm" className="gap-2">
-            {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save
+        {isAdmin && (
+          <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="gap-2">
+            <Shield className="w-4 h-4" />
+            Admin
           </Button>
-        </div>
+        )}
       </header>
 
-      <div className="p-5 max-w-md mx-auto space-y-6">
-        {/* Avatar Section */}
-        <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            <Avatar className="w-24 h-24 border border-border">
-              <AvatarImage src={avatarPreview || undefined} alt="Profile" />
-              <AvatarFallback className="bg-secondary text-lg font-medium">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingAvatar}
-              className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center active:opacity-80 transition-opacity disabled:opacity-50"
-            >
-              {uploadingAvatar ? (
-                <Loader2 className="w-4 h-4 text-primary-foreground animate-spin" />
-              ) : (
-                <Camera className="w-4 h-4 text-primary-foreground" />
-              )}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              className="hidden"
-            />
-          </div>
-          <p className="text-sm text-muted-foreground">{user?.email}</p>
-        </div>
+      {/* Banner */}
+      <div className="relative h-36 bg-gradient-to-br from-primary/30 to-primary/10 overflow-hidden group">
+        {bannerUrl && (
+          <img src={bannerUrl} alt="Banner" className="w-full h-full object-cover" />
+        )}
+        <button
+          onClick={() => bannerInputRef.current?.click()}
+          className="absolute top-3 right-3 w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity border border-border"
+        >
+          <Camera className="w-4 h-4 text-foreground" />
+        </button>
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFileSelect(file, 'banner');
+            e.target.value = '';
+          }}
+        />
+      </div>
 
-        {/* Streak Card */}
-        {streak && (
-          <StreakCard
-            currentStreak={streak.current_streak}
-            longestStreak={streak.longest_streak}
-            totalWorkouts={streak.total_workouts}
-            lastWorkoutDate={streak.last_workout_date}
+      {/* Avatar overlapping banner */}
+      <div className="px-5 -mt-12 relative z-10">
+        <div className="relative w-24 h-24">
+          <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
+            <AvatarImage src={avatarPreview || undefined} alt="Profile" />
+            <AvatarFallback className="bg-secondary text-lg font-medium">
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
+          <button
+            onClick={() => avatarInputRef.current?.click()}
+            className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center border-2 border-background"
+          >
+            <Camera className="w-3.5 h-3.5 text-primary-foreground" />
+          </button>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFileSelect(file, 'avatar');
+              e.target.value = '';
+            }}
           />
+        </div>
+      </div>
+
+      {/* Name, username, bio — inline editable */}
+      <div className="px-5 mt-3 space-y-1">
+        {/* Display Name */}
+        {editingField === 'name' ? (
+          <div className="flex items-center gap-2">
+            <Input
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              maxLength={50}
+              className="h-9 text-lg font-bold bg-secondary"
+              autoFocus
+            />
+            <Button size="icon" variant="ghost" onClick={confirmEditing} disabled={saving}>
+              <Check className="w-4 h-4 text-primary" />
+            </Button>
+            <Button size="icon" variant="ghost" onClick={cancelEditing}>
+              <X className="w-4 h-4 text-muted-foreground" />
+            </Button>
+          </div>
+        ) : (
+          <button onClick={() => startEditing('name')} className="flex items-center gap-2 group/edit">
+            <h2 className="text-xl font-bold text-foreground">
+              {displayName || 'Add your name'}
+            </h2>
+            <Pencil className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+          </button>
         )}
 
-        {/* Badges Section */}
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-muted-foreground" />
-            Badges & Achievements
-          </Label>
-          <BadgesDisplay 
-            allBadges={allBadges} 
-            earnedBadgeIds={earnedBadgeIds}
-            showLocked={true}
-          />
-        </div>
-
-        {/* Display Name */}
-        <div className="space-y-2">
-          <Label htmlFor="displayName" className="flex items-center gap-2">
-            <User className="w-4 h-4 text-muted-foreground" />
-            Display Name
-          </Label>
-          <Input
-            id="displayName"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Enter your name"
-            maxLength={50}
-            className="bg-secondary border-border"
-          />
-        </div>
-
-        {/* Fitness Goal */}
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-muted-foreground" />
-            Fitness Goal
-          </Label>
-          <div className="grid grid-cols-2 gap-2">
-            {FITNESS_GOALS.map((goal) => (
-              <button
-                key={goal}
-                onClick={() => setFitnessGoal(goal)}
-                className={`p-3.5 rounded-xl text-sm font-medium transition-all touch-manipulation ${
-                  fitnessGoal === goal
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground active:bg-secondary/70'
-                }`}
-              >
-                {goal}
-              </button>
-            ))}
+        {/* Username */}
+        {editingField === 'username' ? (
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+              <Input
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                className="h-8 pl-7 text-sm bg-secondary"
+                autoFocus
+              />
+            </div>
+            <Button size="icon" variant="ghost" onClick={confirmEditing} disabled={saving} className="h-8 w-8">
+              <Check className="w-3.5 h-3.5 text-primary" />
+            </Button>
+            <Button size="icon" variant="ghost" onClick={cancelEditing} className="h-8 w-8">
+              <X className="w-3.5 h-3.5 text-muted-foreground" />
+            </Button>
           </div>
-          <div className="pt-3">
-            <Label htmlFor="customGoal" className="text-xs text-muted-foreground">
-              Or enter a custom goal
-            </Label>
+        ) : (
+          <button onClick={() => startEditing('username')} className="flex items-center gap-1.5 group/edit">
+            <span className="text-sm text-muted-foreground">
+              {username ? `@${username}` : 'Set username'}
+            </span>
+            <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+          </button>
+        )}
+
+        {/* Bio */}
+        {editingField === 'bio' ? (
+          <div className="space-y-2 pt-1">
             <Textarea
-              id="customGoal"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              maxLength={300}
+              rows={3}
+              className="text-sm bg-secondary resize-none"
+              autoFocus
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{tempValue.length}/300</span>
+              <div className="flex gap-1">
+                <Button size="sm" variant="ghost" onClick={cancelEditing}>Cancel</Button>
+                <Button size="sm" onClick={confirmEditing} disabled={saving}>Save</Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => startEditing('bio')} className="flex items-start gap-1.5 group/edit text-left pt-1">
+            <span className="text-sm text-muted-foreground">
+              {bio || 'Add a bio...'}
+            </span>
+            <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity mt-0.5 shrink-0" />
+          </button>
+        )}
+
+        {/* Joined date */}
+        {joinedDate && (
+          <div className="flex items-center gap-1.5 pt-1">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Joined {joinedDate}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Stats row */}
+      <div className="px-5 mt-4 flex gap-5">
+        {[
+          { label: 'Posts', value: stats.posts_count },
+          { label: 'Followers', value: stats.followers_count },
+          { label: 'Following', value: stats.following_count },
+        ].map((s) => (
+          <div key={s.label} className="text-center">
+            <p className="font-bold text-foreground">{s.value}</p>
+            <p className="text-xs text-muted-foreground">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="profile" className="mt-5">
+        <TabsList className="w-full rounded-none border-b border-border bg-transparent h-auto p-0">
+          <TabsTrigger
+            value="profile"
+            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3"
+          >
+            Profile
+          </TabsTrigger>
+          <TabsTrigger
+            value="settings"
+            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3"
+          >
+            Settings
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ===== PROFILE TAB ===== */}
+        <TabsContent value="profile" className="p-5 space-y-6 mt-0">
+          {/* Streak Card */}
+          {streak && (
+            <StreakCard
+              currentStreak={streak.current_streak}
+              longestStreak={streak.longest_streak}
+              totalWorkouts={streak.total_workouts}
+              lastWorkoutDate={streak.last_workout_date}
+            />
+          )}
+
+          {/* Badges */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              🏆 Badges & Achievements
+            </h3>
+            <BadgesDisplay allBadges={allBadges} earnedBadgeIds={earnedBadgeIds} showLocked />
+          </div>
+
+          {/* Fitness Goal */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <Target className="w-4 h-4 text-muted-foreground" />
+              Fitness Goal
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {FITNESS_GOALS.map((goal) => (
+                <button
+                  key={goal}
+                  onClick={() => handleSaveFitnessGoal(goal)}
+                  className={`p-3 rounded-xl text-sm font-medium transition-all touch-manipulation ${
+                    fitnessGoal === goal
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground active:bg-secondary/70'
+                  }`}
+                >
+                  {goal}
+                </button>
+              ))}
+            </div>
+            <Textarea
               value={FITNESS_GOALS.includes(fitnessGoal) ? '' : fitnessGoal}
               onChange={(e) => setFitnessGoal(e.target.value)}
-              placeholder="Describe your fitness goal..."
+              onBlur={() => handleSaveFitnessGoal(fitnessGoal)}
+              placeholder="Or enter a custom goal..."
               maxLength={200}
-              className="mt-1 bg-secondary border-border resize-none"
+              className="bg-secondary border-border resize-none"
               rows={2}
             />
           </div>
-        </div>
+        </TabsContent>
 
-        {/* Appearance */}
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            {theme === 'dark' ? <Moon className="w-4 h-4 text-muted-foreground" /> : <Sun className="w-4 h-4 text-muted-foreground" />}
-            Appearance
-          </Label>
+        {/* ===== SETTINGS TAB ===== */}
+        <TabsContent value="settings" className="p-5 space-y-5 mt-0">
+          {/* Appearance */}
           <div className="flex items-center justify-between p-4 bg-secondary rounded-xl">
-            <div className="space-y-1">
-              <p className="font-medium text-sm">Dark Mode</p>
-              <p className="text-xs text-muted-foreground">
-                Switch between light and dark theme
-              </p>
+            <div className="flex items-center gap-3">
+              {theme === 'dark' ? <Moon className="w-4 h-4 text-muted-foreground" /> : <Sun className="w-4 h-4 text-muted-foreground" />}
+              <div>
+                <p className="font-medium text-sm">Dark Mode</p>
+                <p className="text-xs text-muted-foreground">Switch between themes</p>
+              </div>
             </div>
-            <Switch 
-              checked={theme === 'dark'} 
-              onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-            />
+            <Switch checked={theme === 'dark'} onCheckedChange={(c) => setTheme(c ? 'dark' : 'light')} />
           </div>
-        </div>
 
-        {/* Voice Activation */}
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <Mic className="w-4 h-4 text-muted-foreground" />
-            Voice Activation
-          </Label>
+          {/* Voice */}
           <div className="flex items-center justify-between p-4 bg-secondary rounded-xl">
-            <div className="space-y-1">
-              <p className="font-medium text-sm">"Ok HIIT" Wake Word</p>
-              <p className="text-xs text-muted-foreground">
-                Say "Ok HIIT" anywhere in the app to start voice mode
-              </p>
+            <div className="flex items-center gap-3">
+              <Mic className="w-4 h-4 text-muted-foreground" />
+              <div>
+                <p className="font-medium text-sm">"Ok HIIT" Wake Word</p>
+                <p className="text-xs text-muted-foreground">Say "Ok HIIT" to start voice mode</p>
+              </div>
             </div>
-            <Switch 
-              checked={wakeWordEnabled} 
-              onCheckedChange={setWakeWordEnabled}
-            />
+            <Switch checked={wakeWordEnabled} onCheckedChange={setWakeWordEnabled} />
           </div>
-        </div>
 
-        {/* Password Change Section */}
-        <PasswordChangeSection />
+          {/* Privacy */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-foreground text-sm">Privacy</h3>
+            <div className="flex gap-2">
+              {[
+                { label: 'Public', icon: Globe, value: false },
+                { label: 'Private', icon: Lock, value: true },
+              ].map(({ label, icon: Icon, value }) => (
+                <button
+                  key={label}
+                  onClick={async () => {
+                    setIsPrivate(value);
+                    await createOrUpdateProfile({ is_private: value });
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-medium transition-all ${
+                    isPrivate === value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Private profiles are only visible to approved followers
+            </p>
+          </div>
 
-        {/* Sign Out */}
-        <div className="pt-6">
-          <Button
-            variant="outline"
-            onClick={handleSignOut}
-            className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
-          >
-            Sign Out
-          </Button>
-        </div>
-      </div>
+          {/* Password */}
+          <PasswordChangeSection />
+
+          {/* Blocked Users */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-foreground text-sm">Blocked Users</h3>
+            {blockedLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : blockedUsers.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-3">No blocked users</p>
+            ) : (
+              <div className="space-y-2">
+                {blockedUsers.map((block) => (
+                  <div key={block.blocked_id} className="flex items-center justify-between p-3 bg-secondary rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-9 h-9">
+                        <AvatarImage src={block.blocked_user?.avatar_url || undefined} />
+                        <AvatarFallback className="bg-muted text-xs">
+                          {block.blocked_user?.display_name?.[0] || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{block.blocked_user?.display_name || 'Unknown'}</p>
+                        <p className="text-xs text-muted-foreground">@{block.blocked_user?.username || 'user'}</p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={async () => {
+                        const success = await unblockUser(block.blocked_id);
+                        if (success) toast({ title: 'User unblocked' });
+                      }}
+                    >
+                      Unblock
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sign Out */}
+          <div className="pt-4">
+            <Button
+              variant="outline"
+              onClick={handleSignOut}
+              className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+            >
+              Sign Out
+            </Button>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Image Cropper Dialog */}
+      <ImageCropperDialog
+        open={cropperOpen}
+        onOpenChange={setCropperOpen}
+        imageSrc={cropperImage}
+        aspectRatio={cropperType === 'avatar' ? 1 : 3}
+        onCropComplete={handleCropComplete}
+        title={cropperType === 'avatar' ? 'Crop Profile Picture' : 'Crop Banner Image'}
+      />
     </div>
   );
 }
