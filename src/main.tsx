@@ -40,14 +40,10 @@ function setupPreviewFreshnessGuards() {
       return;
     }
 
+    // Always refresh when returning to a preview tab
     const hiddenAtRaw = sessionStorage.getItem(PREVIEW_LAST_HIDDEN_AT);
-    if (!hiddenAtRaw) return;
-
-    sessionStorage.removeItem(PREVIEW_LAST_HIDDEN_AT);
-    const hiddenAt = Number(hiddenAtRaw);
-    if (!Number.isFinite(hiddenAt)) return;
-
-    if (Date.now() - hiddenAt > 1500) {
+    if (hiddenAtRaw) {
+      sessionStorage.removeItem(PREVIEW_LAST_HIDDEN_AT);
       refreshPreviewNow();
     }
   };
