@@ -125,7 +125,7 @@ export function BadgesDisplay({
                   </p>
                   
                   {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-popover border border-border rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-40">
+                  <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-popover border border-border rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-40">
                     <p className="text-xs font-medium text-foreground">{badge.name}</p>
                     <p className="text-[10px] text-muted-foreground">{badge.description}</p>
                   </div>
@@ -161,7 +161,7 @@ export function BadgesDisplay({
                   </p>
                   
                   {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-popover border border-border rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-40">
+                  <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-popover border border-border rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-40">
                     <p className="text-xs font-medium text-foreground">{badge.name}</p>
                     <p className="text-[10px] text-muted-foreground">{badge.description}</p>
                   </div>
