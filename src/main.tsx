@@ -3,8 +3,63 @@ import App from "./App.tsx";
 import "./index.css";
 
 const SW_REFRESH_FLAG = "sw-refresh-pending";
+const PREVIEW_BUSTER_PARAM = "__preview_ts";
+const PREVIEW_LAST_HIDDEN_AT = "preview-last-hidden-at";
+const PREVIEW_MAX_AGE_MS = 45_000;
+
 const isLovablePreviewHost =
   typeof window !== "undefined" && window.location.hostname.includes("preview--");
+
+function buildPreviewBustedUrl() {
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set(PREVIEW_BUSTER_PARAM, `${Date.now()}`);
+  return nextUrl.toString();
+}
+
+function shouldRefreshPreviewOnLoad() {
+  if (!isLovablePreviewHost) return false;
+
+  const url = new URL(window.location.href);
+  const rawTimestamp = url.searchParams.get(PREVIEW_BUSTER_PARAM);
+  const timestamp = rawTimestamp ? Number(rawTimestamp) : Number.NaN;
+
+  if (!Number.isFinite(timestamp)) return true;
+  return Date.now() - timestamp > PREVIEW_MAX_AGE_MS;
+}
+
+function refreshPreviewNow() {
+  window.location.replace(buildPreviewBustedUrl());
+}
+
+function setupPreviewFreshnessGuards() {
+  if (!isLovablePreviewHost) return;
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      sessionStorage.setItem(PREVIEW_LAST_HIDDEN_AT, `${Date.now()}`);
+      return;
+    }
+
+    const hiddenAtRaw = sessionStorage.getItem(PREVIEW_LAST_HIDDEN_AT);
+    if (!hiddenAtRaw) return;
+
+    sessionStorage.removeItem(PREVIEW_LAST_HIDDEN_AT);
+    const hiddenAt = Number(hiddenAtRaw);
+    if (!Number.isFinite(hiddenAt)) return;
+
+    if (Date.now() - hiddenAt > 1500) {
+      refreshPreviewNow();
+    }
+  };
+
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+      refreshPreviewNow();
+    }
+  });
+}
 
 // Only register SW when the PWA plugin is active (not in Lovable preview)
 async function initSW() {
@@ -76,10 +131,17 @@ async function resetPreviewCacheIfNeeded() {
 }
 
 async function bootstrap() {
+  if (shouldRefreshPreviewOnLoad()) {
+    refreshPreviewNow();
+    return;
+  }
+
   await resetPreviewCacheIfNeeded();
 
   if (!isLovablePreviewHost) {
     await initSW();
+  } else {
+    setupPreviewFreshnessGuards();
   }
 
   createRoot(document.getElementById("root")!).render(<App />);
