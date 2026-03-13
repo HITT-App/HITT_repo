@@ -111,13 +111,10 @@ const GymTimer = () => {
     confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
 
     try {
-      await logActivity({
+      await logActivity.mutateAsync({
         activity_type: activityType,
-        started_at: new Date(startTimeRef.current).toISOString(),
-        ended_at: new Date().toISOString(),
         duration_seconds: elapsed,
         calories_burned: calories,
-        status: "completed",
         notes: sets > 0 ? `${sets} sets completed` : undefined,
       });
     } catch {
