@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    VitePWA({
+    !isLovablePreview && VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png"],
       manifest: {
@@ -47,16 +47,11 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,jpg,jpeg,mp4}"],
-        // Import custom push notification handler
         importScripts: ["/sw-push.js"],
-        // Increase limit for large JS bundles
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        // Force new SW to take over immediately
         skipWaiting: true,
         clientsClaim: true,
-        // Use navigation preload for faster page loads
         navigationPreload: true,
-        // Clean old caches on update
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
