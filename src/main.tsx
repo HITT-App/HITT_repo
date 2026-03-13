@@ -8,7 +8,10 @@ const PREVIEW_LAST_HIDDEN_AT = "preview-last-hidden-at";
 const PREVIEW_MAX_AGE_MS = 45_000;
 
 const isLovablePreviewHost =
-  typeof window !== "undefined" && window.location.hostname.includes("preview--");
+  typeof window !== "undefined" &&
+  (window.location.hostname.includes("preview--") ||
+    window.location.hostname === "lovableproject.com" ||
+    window.location.hostname.endsWith(".lovableproject.com"));
 
 function buildPreviewBustedUrl() {
   const nextUrl = new URL(window.location.href);
@@ -48,7 +51,14 @@ function setupPreviewFreshnessGuards() {
     }
   };
 
+  const onWindowFocus = () => {
+    if (shouldRefreshPreviewOnLoad()) {
+      refreshPreviewNow();
+    }
+  };
+
   document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("focus", onWindowFocus);
 
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) {
