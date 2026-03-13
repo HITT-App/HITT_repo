@@ -244,9 +244,28 @@ serve(async (req) => {
     }
 
     if (recentCheckin) {
-      userContext += `\nLatest Check-in:\n`;
+      userContext += `\nToday's Check-in:\n`;
       userContext += `• Mood: ${recentCheckin.mood}\n`;
-      userContext += `• Energy: ${recentCheckin.energy || 'Not reported'}/10\n`;
+      userContext += `• Energy: ${recentCheckin.energy || 'Not reported'}/5\n`;
+    }
+
+    if (recentCheckins && recentCheckins.length > 1) {
+      userContext += `\nMood History (last ${recentCheckins.length} days):\n`;
+      for (const c of recentCheckins) {
+        userContext += `• ${c.date}: mood=${c.mood}, energy=${c.energy || '?'}/5\n`;
+      }
+      // Detect patterns
+      const moodCounts: Record<string, number> = {};
+      const energyValues: number[] = [];
+      for (const c of recentCheckins) {
+        moodCounts[c.mood] = (moodCounts[c.mood] || 0) + 1;
+        if (c.energy) energyValues.push(c.energy);
+      }
+      const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+      const avgEnergy = energyValues.length > 0 ? (energyValues.reduce((a, b) => a + b, 0) / energyValues.length).toFixed(1) : null;
+      userContext += `• Dominant mood this week: ${dominantMood || 'unknown'}\n`;
+      if (avgEnergy) userContext += `• Average energy this week: ${avgEnergy}/5\n`;
+      userContext += `\n⚠️ IMPORTANT: Use this mood/energy data to adapt your coaching. If user is tired/stressed/low energy, suggest lighter workouts, recovery, and encouragement. If fired up/strong/high energy, push them harder.\n`;
     }
 
     if (recentSleep) {
