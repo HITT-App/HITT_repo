@@ -193,6 +193,7 @@ serve(async (req) => {
       { data: nutritionProfile },
       { data: streaks },
       { data: recentCheckin },
+      { data: recentCheckins },
       { data: recentSleep },
       { data: recentWorkouts },
       { data: activityGoals },
