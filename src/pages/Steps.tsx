@@ -229,7 +229,7 @@ const Steps = () => {
                         {Math.round(Number(item.value)).toLocaleString()} steps
                       </p>
                       {item.notes === "google_fit_sync" ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] bg-green-500/15 text-green-500 px-1.5 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
                           <ShieldCheck className="w-3 h-3" />
                           Verified · Google Fit
                         </span>
