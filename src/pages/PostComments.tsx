@@ -80,7 +80,7 @@ const PostComments = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="text-lg font-semibold">All Comments</h1>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
           <Settings className="w-5 h-5" />
         </Button>
       </header>

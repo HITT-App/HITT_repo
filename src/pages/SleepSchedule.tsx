@@ -96,9 +96,7 @@ const SleepSchedule = () => {
             </Button>
             <span className="font-semibold">New Sleep Schedule</span>
           </div>
-          <Button variant="ghost" size="icon">
-            <Info className="w-5 h-5" />
-          </Button>
+          <div className="w-10" />
         </div>
       </header>
 
