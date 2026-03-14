@@ -122,12 +122,16 @@ async function initSW() {
 }
 
 async function resetPreviewCacheIfNeeded() {
-  if (!isLovablePreviewHost) return;
+  if (!isLovablePreviewHost) return false;
 
   sessionStorage.removeItem(SW_REFRESH_FLAG);
 
+  const alreadyResetInSession = sessionStorage.getItem(PREVIEW_SW_RESET_FLAG) === "1";
+  let hadActiveController = false;
+
   try {
     if ("serviceWorker" in navigator) {
+      hadActiveController = Boolean(navigator.serviceWorker.controller);
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(registrations.map((registration) => registration.unregister()));
     }
@@ -139,6 +143,15 @@ async function resetPreviewCacheIfNeeded() {
   } catch {
     // best-effort cleanup for preview only
   }
+
+  if (!alreadyResetInSession && hadActiveController) {
+    sessionStorage.setItem(PREVIEW_SW_RESET_FLAG, "1");
+    refreshPreviewNow();
+    return true;
+  }
+
+  sessionStorage.setItem(PREVIEW_SW_RESET_FLAG, "1");
+  return false;
 }
 
 async function bootstrap() {
@@ -147,7 +160,8 @@ async function bootstrap() {
     return;
   }
 
-  await resetPreviewCacheIfNeeded();
+  const triggeredReload = await resetPreviewCacheIfNeeded();
+  if (triggeredReload) return;
 
   if (!isLovablePreviewHost) {
     await initSW();
