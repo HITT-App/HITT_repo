@@ -1,22 +1,48 @@
-import { ArrowLeft, Activity, Settings, TrendingUp, TrendingDown, Clock, ChevronRight, Info } from "lucide-react";
+import { ArrowLeft, Activity, Settings, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { useHealthMetrics } from "@/hooks/useHealthMetrics";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 const BloodPressure = () => {
   const navigate = useNavigate();
-  const [systolic] = useState(128);
-  const [diastolic] = useState(60);
-  const [timeRange, setTimeRange] = useState("1d");
+  const { logMetric, useMetricHistory, latestMetrics } = useHealthMetrics();
+  const { data: history = [] } = useMetricHistory("blood_pressure", 20);
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [sysInput, setSysInput] = useState("");
+  const [diaInput, setDiaInput] = useState("");
 
-  const timeRanges = ["1h", "1d", "1w", "1m", "All Time"];
+  const latest = latestMetrics?.blood_pressure;
+  const systolic = latest ? Math.round(Number(latest.value)) : null;
+  const diastolic = latest?.secondary_value ? Math.round(Number(latest.secondary_value)) : null;
 
-  const insights = {
-    systolicRange: "130-147",
-    diastolicRange: "86-97",
-    pulseRate: "80-97"
+  const handleLog = async () => {
+    const sys = Number(sysInput);
+    const dia = Number(diaInput);
+    if (!sys || sys < 60 || sys > 300 || !dia || dia < 30 || dia > 200) {
+      toast.error("Enter valid blood pressure values");
+      return;
+    }
+    try {
+      await logMetric.mutateAsync({ metric_type: "blood_pressure", value: sys, secondary_value: dia, unit: "mmHg" });
+      toast.success("Blood pressure logged!");
+      setSysInput("");
+      setDiaInput("");
+      setShowLogForm(false);
+    } catch {
+      toast.error("Failed to log");
+    }
+  };
+
+  const getBPStatus = (sys: number) => {
+    if (sys < 120) return { label: "Normal", color: "text-green-600" };
+    if (sys < 130) return { label: "Elevated", color: "text-yellow-600" };
+    if (sys < 140) return { label: "Hypertension Stage 1", color: "text-orange-600" };
+    return { label: "Hypertension Stage 2", color: "text-red-600" };
   };
 
   const ranges = [
@@ -26,155 +52,51 @@ const BloodPressure = () => {
     { label: "Hypertension Stage 2", systolic: "140+/90+mmHg", color: "bg-red-500" },
   ];
 
-  const history = [
-    { reading: "128/80 mmHg", status: "Above Optimal", time: "10:00AM" },
-    { reading: "128/80 mmHg", status: "Slightly Above Range", time: "10:00AM" },
-    { reading: "128/80 mmHg", status: "within Optimal Range", time: "10:00AM", optimal: true },
-  ];
-
   return (
     <div className="min-h-screen bg-background pb-6">
-      {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></Button>
         <h1 className="text-lg font-semibold text-foreground">Blood Pressure</h1>
-        <Button variant="ghost" size="icon">
-          <Settings className="w-5 h-5" />
-        </Button>
+        <Button variant="ghost" size="icon"><Settings className="w-5 h-5" /></Button>
       </header>
 
       <div className="p-4 space-y-6">
-        {/* Current Reading Display */}
         <Card className="p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Activity className="w-6 h-6 text-purple-500" />
-            <span className="text-4xl font-bold text-foreground">{systolic}/{diastolic}</span>
+            <span className="text-4xl font-bold text-foreground">
+              {systolic && diastolic ? `${systolic}/${diastolic}` : "--/--"}
+            </span>
             <span className="text-lg text-muted-foreground">mmHg</span>
           </div>
-          <p className="text-sm text-yellow-600">Slightly above optimal range</p>
-        </Card>
-
-        {/* Circular Gauge */}
-        <Card className="p-6">
-          <div className="relative w-40 h-40 mx-auto">
-            <svg className="w-full h-full -rotate-90">
-              <circle
-                cx="80"
-                cy="80"
-                r="70"
-                fill="none"
-                stroke="hsl(var(--muted))"
-                strokeWidth="12"
-              />
-              <circle
-                cx="80"
-                cy="80"
-                r="70"
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth="12"
-                strokeDasharray={`${(systolic / 200) * 440} 440`}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold">{systolic}</span>
-              <span className="text-sm text-muted-foreground">sys</span>
-              <div className="w-8 h-px bg-border my-1" />
-              <span className="text-3xl font-bold">{diastolic}</span>
-              <span className="text-sm text-muted-foreground">dia</span>
-            </div>
-          </div>
-          <p className="text-center text-sm text-muted-foreground mt-4">
-            Your readings are in the normal range. Keep up with regular monitoring.
+          <p className={`text-sm ${systolic ? getBPStatus(systolic).color : "text-muted-foreground"}`}>
+            {systolic ? getBPStatus(systolic).label : "No readings yet"}
           </p>
         </Card>
 
-        {/* Time Range Selector */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {timeRanges.map((range) => (
-            <Button
-              key={range}
-              variant={timeRange === range ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimeRange(range)}
-              className="whitespace-nowrap"
-            >
-              {range}
-            </Button>
-          ))}
-        </div>
-
-        {/* Blood Pressure Chart */}
-        <Card className="p-4">
-          <div className="flex justify-between mb-2">
-            <span className="text-xs text-muted-foreground">Systolic</span>
-            <span className="text-xs text-muted-foreground">Diastolic</span>
-            <span className="text-xs text-muted-foreground">Average</span>
-          </div>
-          <div className="h-32 flex items-center justify-center">
-            <div className="w-full h-24 relative">
-              {/* Systolic line */}
-              <svg className="absolute inset-0 w-full h-full">
-                <polyline
-                  fill="none"
-                  stroke="#8b5cf6"
-                  strokeWidth="2"
-                  points="0,60 40,55 80,50 120,65 160,58 200,62 240,55 280,60"
-                />
-                <polyline
-                  fill="none"
-                  stroke="#06b6d4"
-                  strokeWidth="2"
-                  points="0,75 40,80 80,78 120,82 160,76 200,80 240,78 280,75"
-                />
+        {/* Gauge */}
+        {systolic && diastolic && (
+          <Card className="p-6">
+            <div className="relative w-40 h-40 mx-auto">
+              <svg className="w-full h-full -rotate-90">
+                <circle cx="80" cy="80" r="70" fill="none" stroke="hsl(var(--muted))" strokeWidth="12" />
+                <circle cx="80" cy="80" r="70" fill="none" stroke="hsl(var(--primary))" strokeWidth="12"
+                  strokeDasharray={`${(systolic / 200) * 440} 440`} strokeLinecap="round" />
               </svg>
-            </div>
-          </div>
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>1w</span>
-            <span>1m</span>
-            <span>3m</span>
-            <span>6m</span>
-            <span>All Time</span>
-          </div>
-        </Card>
-
-        {/* Blood Pressure Insight */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">Blood Pressure Insight</h2>
-            <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-          </div>
-          <Card className="p-4 space-y-4">
-            <div className="flex justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Systolic</p>
-                <p className="text-lg font-bold text-foreground">{insights.systolicRange}</p>
-                <p className="text-xs text-muted-foreground">mmHg</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Diastolic</p>
-                <p className="text-lg font-bold text-foreground">{insights.diastolicRange}</p>
-                <p className="text-xs text-muted-foreground">mmHg</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Pulse Rate</p>
-                <p className="text-lg font-bold text-foreground">{insights.pulseRate}</p>
-                <p className="text-xs text-muted-foreground">bpm</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-bold">{systolic}</span>
+                <span className="text-sm text-muted-foreground">sys</span>
+                <div className="w-8 h-px bg-border my-1" />
+                <span className="text-3xl font-bold">{diastolic}</span>
+                <span className="text-sm text-muted-foreground">dia</span>
               </div>
             </div>
           </Card>
-        </div>
+        )}
 
-        {/* What Your Numbers Mean */}
+        {/* Ranges */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">About Blood Pressure</h2>
-            <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-          </div>
+          <h2 className="font-semibold text-foreground mb-3">About Blood Pressure</h2>
           <Card className="p-4 space-y-3">
             {ranges.map((range) => (
               <div key={range.label} className="flex items-center gap-3">
@@ -188,35 +110,56 @@ const BloodPressure = () => {
           </Card>
         </div>
 
-        {/* Blood Pressure History */}
+        {/* History */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">Blood Pressure History</h2>
-            <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-          </div>
-          <div className="space-y-2">
-            {history.map((item, idx) => (
-              <Card key={idx} className="p-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${item.optimal ? 'bg-green-100' : 'bg-purple-100'}`}>
-                    <Activity className={`w-5 h-5 ${item.optimal ? 'text-green-500' : 'text-purple-500'}`} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{item.reading}</p>
-                    <p className={`text-xs ${item.optimal ? 'text-green-600' : 'text-yellow-600'}`}>{item.status}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{item.time}</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </Card>
-            ))}
-          </div>
+          <h2 className="font-semibold text-foreground mb-3">Blood Pressure History</h2>
+          {history.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No readings logged yet</p>
+          ) : (
+            <div className="space-y-2">
+              {history.slice(0, 10).map((item) => {
+                const sys = Math.round(Number(item.value));
+                const dia = item.secondary_value ? Math.round(Number(item.secondary_value)) : 0;
+                const status = getBPStatus(sys);
+                return (
+                  <Card key={item.id} className="p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                        <Activity className="w-5 h-5 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">{sys}/{dia} mmHg</p>
+                        <p className={`text-xs ${status.color}`}>{status.label}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(item.recorded_at), "MMM d, h:mm a")}
+                    </span>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Log Button */}
-        <Button className="w-full" size="lg">
+        {/* Log Form */}
+        {showLogForm && (
+          <Card className="p-4 space-y-3 animate-fade-in">
+            <p className="font-semibold text-foreground">Log Blood Pressure</p>
+            <div className="flex gap-2">
+              <Input type="number" placeholder="Systolic (e.g. 120)" value={sysInput} onChange={(e) => setSysInput(e.target.value)} />
+              <Input type="number" placeholder="Diastolic (e.g. 80)" value={diaInput} onChange={(e) => setDiaInput(e.target.value)} />
+            </div>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={handleLog} disabled={logMetric.isPending}>
+                {logMetric.isPending ? "Saving..." : "Save"}
+              </Button>
+              <Button variant="outline" onClick={() => setShowLogForm(false)}>Cancel</Button>
+            </div>
+          </Card>
+        )}
+
+        <Button className="w-full" size="lg" onClick={() => setShowLogForm(true)}>
           <Activity className="w-5 h-5 mr-2" />
           Log Blood Pressure
         </Button>

@@ -1,8 +1,13 @@
-import { ArrowLeft, Smile, Settings, ChevronRight, Bell, Calendar, TrendingUp } from "lucide-react";
+import { ArrowLeft, Smile, Settings, ChevronRight, Bell, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 
 const moods = [
   { emoji: "😊", label: "Happy", color: "bg-yellow-100" },
@@ -15,183 +20,213 @@ const moods = [
 
 const Mood = () => {
   const navigate = useNavigate();
-  const [selectedMonth, setSelectedMonth] = useState("December 2025");
-  const [currentMood] = useState("Happy");
-  const [streak] = useState(7);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [selectedDate] = useState(new Date());
 
-  const history = [
-    { mood: "Overjoyed", note: "Feeling Bad", time: "10:00 AM" },
-    { mood: "Happy", note: "Had a happy moment", time: "10:00 AM" },
-    { mood: "Sad", note: "Tragic Event", time: "10:00 AM" },
-  ];
+  // Fetch today's checkin
+  const today = format(new Date(), "yyyy-MM-dd");
+  const { data: todayCheckin } = useQuery({
+    queryKey: ["mood-today", user?.id, today],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("daily_checkins")
+        .select("*")
+        .eq("user_id", user!.id)
+        .eq("date", today)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
-  const calendarDays = Array.from({ length: 31 }, (_, i) => ({
-    day: i + 1,
-    mood: moods[Math.floor(Math.random() * moods.length)],
-    logged: Math.random() > 0.3,
-  }));
+  // Fetch month checkins for calendar
+  const monthStart = startOfMonth(selectedDate);
+  const monthEnd = endOfMonth(selectedDate);
+  const { data: monthCheckins = [] } = useQuery({
+    queryKey: ["mood-month", user?.id, format(monthStart, "yyyy-MM")],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("daily_checkins")
+        .select("*")
+        .eq("user_id", user!.id)
+        .gte("date", format(monthStart, "yyyy-MM-dd"))
+        .lte("date", format(monthEnd, "yyyy-MM-dd"))
+        .order("date", { ascending: false });
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
 
-  const insights = {
-    mostLogged: "Overjoyed",
-    entries: 12,
-    trend: "-5% vs last month"
-  };
+  // Fetch recent history
+  const { data: history = [] } = useQuery({
+    queryKey: ["mood-history", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("daily_checkins")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("date", { ascending: false })
+        .limit(10);
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
 
-  const tags = ["Joyful", "Selfish", "Altruistic", "Mindful", "Grateful"];
+  // Log mood mutation
+  const logMood = useMutation({
+    mutationFn: async (mood: string) => {
+      const { error } = await supabase.from("daily_checkins").upsert(
+        { user_id: user!.id, mood, date: today },
+        { onConflict: "user_id,date" }
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mood-today"] });
+      queryClient.invalidateQueries({ queryKey: ["mood-month"] });
+      queryClient.invalidateQueries({ queryKey: ["mood-history"] });
+      queryClient.invalidateQueries({ queryKey: ["today-mood"] });
+      toast.success("Mood logged!");
+    },
+    onError: () => toast.error("Failed to log mood"),
+  });
+
+  const currentMoodData = todayCheckin
+    ? moods.find((m) => m.label.toLowerCase() === todayCheckin.mood?.toLowerCase())
+    : null;
+
+  // Calendar days
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const checkinMap = new Map(monthCheckins.map((c: any) => [c.date, c.mood]));
+
+  // Streak
+  const streak = (() => {
+    let count = 0;
+    const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
+    for (let i = 0; i < sorted.length; i++) {
+      const expected = new Date();
+      expected.setDate(expected.getDate() - i);
+      if (sorted[i].date === format(expected, "yyyy-MM-dd")) count++;
+      else break;
+    }
+    return count;
+  })();
 
   return (
     <div className="min-h-screen bg-background pb-6">
-      {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></Button>
         <h1 className="text-lg font-semibold text-foreground">Mood</h1>
-        <Button variant="ghost" size="icon">
-          <Settings className="w-5 h-5" />
-        </Button>
+        <Button variant="ghost" size="icon"><Settings className="w-5 h-5" /></Button>
       </header>
 
       <div className="p-4 space-y-6">
-        {/* Current Mood Display */}
+        {/* Current Mood */}
         <Card className="p-6 text-center">
-          <div className="text-5xl mb-2">😊</div>
-          <h2 className="text-2xl font-bold text-foreground">{currentMood}</h2>
-          <p className="text-sm text-muted-foreground">Logged today at 10:22 AM</p>
+          <div className="text-5xl mb-2">{currentMoodData?.emoji || "🙂"}</div>
+          <h2 className="text-2xl font-bold text-foreground">
+            {currentMoodData?.label || "How are you feeling?"}
+          </h2>
+          {todayCheckin && (
+            <p className="text-sm text-muted-foreground">Logged today</p>
+          )}
         </Card>
 
-        {/* Month Selector */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm">
-            <Calendar className="w-4 h-4 mr-2" />
-            {selectedMonth}
-          </Button>
-        </div>
-
-        {/* Mood Calendar Grid */}
-        <Card className="p-4">
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
-              <div key={i} className="text-center text-xs text-muted-foreground font-medium">
-                {day}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-            {calendarDays.slice(0, 28).map((day, i) => (
-              <div
-                key={i}
-                className={`aspect-square rounded-lg flex items-center justify-center text-lg ${
-                  day.logged ? day.mood.color : 'bg-muted'
-                }`}
+        {/* Mood Selector */}
+        <div>
+          <h2 className="font-semibold text-foreground mb-3">Log Today's Mood</h2>
+          <div className="grid grid-cols-3 gap-3">
+            {moods.map((mood) => (
+              <Button
+                key={mood.label}
+                variant={currentMoodData?.label === mood.label ? "default" : "outline"}
+                className="flex flex-col h-auto py-3"
+                onClick={() => logMood.mutate(mood.label.toLowerCase())}
+                disabled={logMood.isPending}
               >
-                {day.logged ? day.mood.emoji : <span className="text-xs text-muted-foreground">{day.day}</span>}
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Log Mood Button */}
-        <Button className="w-full" size="lg">
-          Log Mood →
-        </Button>
-
-        {/* Mood Insight / Streak */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">Mood Insight</h2>
-            <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-          </div>
-          <Card className="p-4 flex items-center gap-4">
-            <div className="text-4xl">🏆</div>
-            <div>
-              <p className="text-lg font-bold text-foreground">{streak} days</p>
-              <p className="text-sm text-muted-foreground">Mood Streak</p>
-              <p className="text-xs text-muted-foreground">You've checked in your mood for {streak} days straight!</p>
-            </div>
-          </Card>
-        </div>
-
-        {/* Mood History */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">Mood History</h2>
-            <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-          </div>
-          <div className="space-y-2">
-            {history.map((item, idx) => (
-              <Card key={idx} className="p-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-xl">
-                    {moods.find(m => m.label === item.mood)?.emoji || "😊"}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{item.mood}</p>
-                    <p className="text-xs text-muted-foreground">{item.note}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{item.time}</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Mood Reminder */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">Mood Reminder</h2>
-            <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-          </div>
-          <Card className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Bell className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium text-foreground">Daily Reminder</p>
-                <p className="text-xs text-muted-foreground">On 09:00 AM</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </Card>
-        </div>
-
-        {/* Most Logged Tags */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">Choose Tags (Optional)</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <Button key={tag} variant="outline" size="sm" className="rounded-full">
-                {tag}
+                <span className="text-2xl mb-1">{mood.emoji}</span>
+                <span className="text-xs">{mood.label}</span>
               </Button>
             ))}
           </div>
         </div>
 
-        {/* Mood Statistics */}
+        {/* Calendar */}
         <Card className="p-4">
-          <h3 className="font-semibold text-foreground mb-3">Mood Insight</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Most Logged Mood</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-2xl">🤩</span>
-                <span className="font-semibold">{insights.mostLogged}</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Entries this month</p>
-              <p className="text-2xl font-bold">{insights.entries}</p>
-            </div>
+          <p className="font-semibold text-foreground mb-3">{format(selectedDate, "MMMM yyyy")}</p>
+          <div className="grid grid-cols-7 gap-2 mb-2">
+            {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
+              <div key={i} className="text-center text-xs text-muted-foreground font-medium">{day}</div>
+            ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground">Trend</p>
-            <p className="text-sm text-red-500">{insights.trend}</p>
+          <div className="grid grid-cols-7 gap-2">
+            {/* Offset for first day */}
+            {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, i) => (
+              <div key={`pad-${i}`} />
+            ))}
+            {daysInMonth.map((day) => {
+              const dateStr = format(day, "yyyy-MM-dd");
+              const moodStr = checkinMap.get(dateStr);
+              const moodData = moodStr ? moods.find((m) => m.label.toLowerCase() === moodStr) : null;
+              return (
+                <div
+                  key={dateStr}
+                  className={`aspect-square rounded-lg flex items-center justify-center text-sm ${
+                    moodData ? moodData.color : "bg-muted"
+                  }`}
+                >
+                  {moodData ? (
+                    <span className="text-lg">{moodData.emoji}</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">{day.getDate()}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </Card>
+
+        {/* Streak */}
+        {streak > 0 && (
+          <Card className="p-4 flex items-center gap-4">
+            <div className="text-4xl">🏆</div>
+            <div>
+              <p className="text-lg font-bold text-foreground">{streak} day{streak > 1 ? "s" : ""}</p>
+              <p className="text-sm text-muted-foreground">Mood Streak</p>
+            </div>
+          </Card>
+        )}
+
+        {/* History */}
+        <div>
+          <h2 className="font-semibold text-foreground mb-3">Mood History</h2>
+          {history.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No mood entries yet</p>
+          ) : (
+            <div className="space-y-2">
+              {history.slice(0, 7).map((item: any) => {
+                const moodData = moods.find((m) => m.label.toLowerCase() === item.mood?.toLowerCase());
+                return (
+                  <Card key={item.id} className="p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${moodData?.color || "bg-muted"}`}>
+                        {moodData?.emoji || "🙂"}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground capitalize">{item.mood}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(item.date), "MMM d, yyyy")}</p>
+                      </div>
+                    </div>
+                    {item.energy && (
+                      <span className="text-xs text-muted-foreground">Energy: {item.energy}/5</span>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
