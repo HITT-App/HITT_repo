@@ -1,4 +1,4 @@
-import { ArrowLeft, Footprints, Settings, Target, Plus, RefreshCw, Unplug, Smartphone } from "lucide-react";
+import { ArrowLeft, Footprints, Settings, Target, Plus, RefreshCw, Unplug, Smartphone, ShieldCheck, Pencil } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -228,9 +228,15 @@ const Steps = () => {
                       <p className="font-semibold text-foreground">
                         {Math.round(Number(item.value)).toLocaleString()} steps
                       </p>
-                      {item.notes === "google_fit_sync" && (
-                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-                          Google Fit
+                      {item.notes === "google_fit_sync" ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
+                          <ShieldCheck className="w-3 h-3" />
+                          Verified · Google Fit
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                          <Pencil className="w-3 h-3" />
+                          Manual
                         </span>
                       )}
                     </div>
