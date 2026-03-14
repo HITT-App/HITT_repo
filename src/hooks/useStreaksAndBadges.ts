@@ -3,6 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+// Leaderboard point values for actions
+const POINTS = {
+  WORKOUT_COMPLETE: 50,
+  STREAK_DAY_BONUS: 10,
+  BADGE_EARNED: 25,
+  DAILY_CHECKIN: 5,
+  MEAL_LOGGED: 5,
+} as const;
+
 interface UserStreak {
   id: string;
   user_id: string;
@@ -152,6 +161,18 @@ export function useStreaksAndBadges() {
 
       setStreak(currentStreak);
 
+      // Award leaderboard points for workout completion
+      let pointsToAward = POINTS.WORKOUT_COMPLETE;
+      // Bonus for streak continuation
+      if (currentStreak && currentStreak.current_streak > 1) {
+        pointsToAward += POINTS.STREAK_DAY_BONUS * Math.min(currentStreak.current_streak, 10);
+      }
+      await supabase.rpc("award_points", {
+        p_user_id: user.id,
+        p_points: pointsToAward,
+        p_category: "worldwide",
+      });
+
       // Check for new badges
       await checkAndAwardBadges(currentStreak);
       
@@ -192,6 +213,15 @@ export function useStreaksAndBadges() {
     if (newlyEarned.length > 0) {
       setNewBadges(newlyEarned);
       
+      // Award leaderboard points for each badge
+      if (user) {
+        await supabase.rpc("award_points", {
+          p_user_id: user.id,
+          p_points: POINTS.BADGE_EARNED * newlyEarned.length,
+          p_category: "worldwide",
+        });
+      }
+
       // Show toast for each new badge
       newlyEarned.forEach(badge => {
         toast({

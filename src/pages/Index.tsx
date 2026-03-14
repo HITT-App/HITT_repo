@@ -68,6 +68,15 @@ const Index = () => {
 
   const handleCheckInComplete = async (mood: string, energy: number) => {
     const result = await addXP(XP_REWARDS.DAILY_CHECKIN);
+    // Award leaderboard points for daily check-in
+    if (user?.id) {
+      const { supabase } = await import("@/integrations/supabase/client");
+      await supabase.rpc("award_points", {
+        p_user_id: user.id,
+        p_points: 5,
+        p_category: "worldwide",
+      });
+    }
     if (result?.leveledUp) {
       setLevelUpData({
         isOpen: true,
