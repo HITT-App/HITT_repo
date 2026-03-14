@@ -281,8 +281,9 @@ const ActivityLive = () => {
         calories_burned: calories,
         intensity_level: 3,
       });
+      const pts = await recordWorkout();
+      setPointsEarned(pts);
       setShowCompleted(true);
-      // Fire confetti
       confetti({
         particleCount: 120,
         spread: 80,
