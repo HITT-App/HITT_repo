@@ -213,6 +213,15 @@ export function useStreaksAndBadges() {
     if (newlyEarned.length > 0) {
       setNewBadges(newlyEarned);
       
+      // Award leaderboard points for each badge
+      if (user) {
+        await supabase.rpc("award_points", {
+          p_user_id: user.id,
+          p_points: POINTS.BADGE_EARNED * newlyEarned.length,
+          p_category: "worldwide",
+        });
+      }
+
       // Show toast for each new badge
       newlyEarned.forEach(badge => {
         toast({
