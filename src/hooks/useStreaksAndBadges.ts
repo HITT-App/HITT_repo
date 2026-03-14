@@ -92,8 +92,8 @@ export function useStreaksAndBadges() {
   }, [user]);
 
   // Update streak after workout completion
-  const recordWorkout = useCallback(async () => {
-    if (!user) return;
+  const recordWorkout = useCallback(async (): Promise<number> => {
+    if (!user) return 0;
 
     const today = new Date().toISOString().split('T')[0];
     
