@@ -153,9 +153,7 @@ const CommunityProfileSettings = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="text-lg font-semibold">Community Profile Settings</h1>
-        <Button variant="ghost" size="icon">
-          <Info className="w-5 h-5" />
-        </Button>
+        <div className="w-10" />
       </header>
 
       <div className="p-4 space-y-6">

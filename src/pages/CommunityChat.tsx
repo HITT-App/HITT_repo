@@ -115,7 +115,7 @@ const CommunityChat = () => {
             <p className="text-xs text-muted-foreground">@{otherUserProfile.username}</p>
           )}
         </div>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/chat-settings")}>
           <Settings className="w-5 h-5" />
         </Button>
       </header>

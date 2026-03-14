@@ -43,7 +43,7 @@ const Weight = () => {
       <header className="flex items-center justify-between p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></Button>
         <h1 className="text-lg font-semibold text-foreground">Weight</h1>
-        <Button variant="ghost" size="icon"><Settings className="w-5 h-5" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}><Settings className="w-5 h-5" /></Button>
       </header>
 
       <div className="p-4 space-y-6">
