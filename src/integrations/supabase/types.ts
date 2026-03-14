@@ -1423,6 +1423,39 @@ export type Database = {
         }
         Relationships: []
       }
+      google_fit_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          refresh_token: string
+          token_expires_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          refresh_token: string
+          token_expires_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          refresh_token?: string
+          token_expires_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       health_metrics: {
         Row: {
           created_at: string
