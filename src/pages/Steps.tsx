@@ -228,9 +228,15 @@ const Steps = () => {
                       <p className="font-semibold text-foreground">
                         {Math.round(Number(item.value)).toLocaleString()} steps
                       </p>
-                      {item.notes === "google_fit_sync" && (
-                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-                          Google Fit
+                      {item.notes === "google_fit_sync" ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-green-500/15 text-green-500 px-1.5 py-0.5 rounded-full">
+                          <ShieldCheck className="w-3 h-3" />
+                          Verified · Google Fit
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                          <Pencil className="w-3 h-3" />
+                          Manual
                         </span>
                       )}
                     </div>
