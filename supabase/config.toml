@@ -5,9 +5,3 @@ project_id = "iglwpwdnwztutbaybhfq"
 
 [functions.generate-activity-image]
 verify_jwt = false
-
-[functions.google-fit-auth]
-verify_jwt = false
-
-[functions.google-fit-sync]
-verify_jwt = false

@@ -1,63 +1,22 @@
-import { ArrowLeft, Footprints, Settings, Target, Plus, RefreshCw, Unplug, Smartphone, ShieldCheck, Pencil } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Footprints, Settings, Target, Plus, ShieldCheck, Pencil } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
-import { useGoogleFit } from "@/hooks/useGoogleFit";
 import { toast } from "sonner";
-import { format, formatDistanceToNow } from "date-fns";
-import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 const Steps = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const queryClient = useQueryClient();
   const { logMetric, useMetricHistory, useTodayTotal } = useHealthMetrics();
   const { data: history = [] } = useMetricHistory("steps", 20);
   const { data: todaySteps = 0 } = useTodayTotal("steps");
   const [showLogForm, setShowLogForm] = useState(false);
   const [stepsInput, setStepsInput] = useState("");
   const goal = 10000;
-
-  const {
-    isConnected,
-    isLoading: fitLoading,
-    isSyncing,
-    lastSynced,
-    connect,
-    disconnect,
-    syncSteps,
-    handleOAuthCallback,
-  } = useGoogleFit();
-
-  // Handle OAuth callback
-  useEffect(() => {
-    const code = searchParams.get("code");
-    if (code) {
-      // Remove code from URL
-      searchParams.delete("code");
-      searchParams.delete("scope");
-      setSearchParams(searchParams, { replace: true });
-
-      handleOAuthCallback(code).then((success) => {
-        if (success) {
-          toast.success("Google Fit connected! Syncing steps...");
-          syncSteps().then((steps) => {
-            if (steps !== null) {
-              toast.success(`Synced ${steps.toLocaleString()} steps from Google Fit`);
-              queryClient.invalidateQueries({ queryKey: ["health-metrics-today"] });
-              queryClient.invalidateQueries({ queryKey: ["health-metrics-history"] });
-            }
-          });
-        } else {
-          toast.error("Failed to connect Google Fit");
-        }
-      });
-    }
-  }, []);
 
   const progressPercent = Math.min((todaySteps / goal) * 100, 100);
 
@@ -77,22 +36,6 @@ const Steps = () => {
     }
   };
 
-  const handleSync = async () => {
-    const steps = await syncSteps();
-    if (steps !== null) {
-      toast.success(`Synced ${steps.toLocaleString()} steps from Google Fit`);
-      queryClient.invalidateQueries({ queryKey: ["health-metrics-today"] });
-      queryClient.invalidateQueries({ queryKey: ["health-metrics-history"] });
-    } else {
-      toast.error("Sync failed");
-    }
-  };
-
-  const handleDisconnect = async () => {
-    await disconnect();
-    toast.success("Google Fit disconnected");
-  };
-
   const quickSteps = [1000, 2500, 5000];
 
   return (
@@ -108,49 +51,6 @@ const Steps = () => {
       </header>
 
       <div className="p-4 space-y-6">
-        {/* Google Fit Connection Card */}
-        <Card className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Smartphone className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-foreground">Google Fit</p>
-              <p className="text-xs text-muted-foreground">
-                {fitLoading
-                  ? "Checking..."
-                  : isConnected
-                  ? lastSynced
-                    ? `Last synced ${formatDistanceToNow(new Date(lastSynced), { addSuffix: true })}`
-                    : "Connected"
-                  : "Auto-sync steps from your phone"}
-              </p>
-            </div>
-          </div>
-
-          {isConnected ? (
-            <div className="flex gap-2">
-              <Button
-                className="flex-1"
-                variant="outline"
-                size="sm"
-                onClick={handleSync}
-                disabled={isSyncing}
-              >
-                <RefreshCw className={`w-4 h-4 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
-                {isSyncing ? "Syncing..." : "Sync Now"}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleDisconnect}>
-                <Unplug className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button className="w-full" size="sm" onClick={connect} disabled={fitLoading}>
-              Connect Google Fit
-            </Button>
-          )}
-        </Card>
-
         {/* Today's Progress */}
         <Card className="p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -228,10 +128,10 @@ const Steps = () => {
                       <p className="font-semibold text-foreground">
                         {Math.round(Number(item.value)).toLocaleString()} steps
                       </p>
-                      {item.notes === "google_fit_sync" ? (
+                      {item.notes === "health_connect_sync" ? (
                         <span className="inline-flex items-center gap-1 text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
                           <ShieldCheck className="w-3 h-3" />
-                          Verified · Google Fit
+                          Verified · Auto-synced
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
