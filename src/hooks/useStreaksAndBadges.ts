@@ -161,6 +161,18 @@ export function useStreaksAndBadges() {
 
       setStreak(currentStreak);
 
+      // Award leaderboard points for workout completion
+      let pointsToAward = POINTS.WORKOUT_COMPLETE;
+      // Bonus for streak continuation
+      if (currentStreak && currentStreak.current_streak > 1) {
+        pointsToAward += POINTS.STREAK_DAY_BONUS * Math.min(currentStreak.current_streak, 10);
+      }
+      await supabase.rpc("award_points", {
+        p_user_id: user.id,
+        p_points: pointsToAward,
+        p_category: "worldwide",
+      });
+
       // Check for new badges
       await checkAndAwardBadges(currentStreak);
       
