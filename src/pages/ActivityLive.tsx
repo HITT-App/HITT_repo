@@ -66,6 +66,7 @@ const ActivityLive = () => {
   const [searchParams] = useSearchParams();
   const activityType = searchParams.get("type") || searchParams.get("sport") || "jogging";
   const { logActivity } = useActivity();
+  const { recordWorkout } = useStreaksAndBadges();
 
   // Core state
   const [elapsed, setElapsed] = useState(0);
