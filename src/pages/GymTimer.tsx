@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { useActivity } from "@/hooks/useActivity";
+import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
