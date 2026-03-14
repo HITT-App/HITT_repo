@@ -1,187 +1,159 @@
-import { ArrowLeft, Scale, Settings, TrendingUp, TrendingDown, Target, ChevronRight } from "lucide-react";
+import { ArrowLeft, Scale, Settings, Target, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
+import { useHealthMetrics } from "@/hooks/useHealthMetrics";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 const Weight = () => {
   const navigate = useNavigate();
-  const [currentWeight] = useState(67.8);
-  const [unit] = useState("kg");
-  const [timeRange, setTimeRange] = useState("1m");
+  const { logMetric, useMetricHistory, getLatestValue } = useHealthMetrics();
+  const { data: history = [] } = useMetricHistory("weight", 30);
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [weightInput, setWeightInput] = useState("");
 
-  const timeRanges = ["1w", "1m", "3m", "6m", "All Time"];
+  const currentWeight = getLatestValue("weight") || "--";
+  const goalWeight = 60;
 
-  const insights = {
-    bmi: 20.08,
-    bodyFat: "32.8%",
-    metabolicAge: "22y"
+  const handleLog = async () => {
+    const val = Number(weightInput);
+    if (!val || val < 20 || val > 300) {
+      toast.error("Enter a valid weight (20-300 kg)");
+      return;
+    }
+    try {
+      await logMetric.mutateAsync({ metric_type: "weight", value: val, unit: "kg" });
+      toast.success("Weight logged!");
+      setWeightInput("");
+      setShowLogForm(false);
+    } catch {
+      toast.error("Failed to log");
+    }
   };
 
-  const history = [
-    { weight: "78 kg", change: "1,252 steps left", time: "10:00 AM" },
-    { weight: "78 kg", change: "Goal completed", time: "10:00 AM", completed: true },
-    { weight: "78 kg", change: "Mile With Your walk", time: "10:00 AM" },
-  ];
-
-  const weeklyData = [
-    { day: "Mon", value: 68.2 },
-    { day: "Tue", value: 67.8 },
-    { day: "Wed", value: 68.0 },
-    { day: "Thu", value: 67.5 },
-    { day: "Fri", value: 67.8 },
-    { day: "Sat", value: 67.2 },
-    { day: "Sun", value: 67.8 },
-  ];
+  // Chart data from recent history (last 7)
+  const chartData = history.slice(0, 7).reverse();
 
   return (
     <div className="min-h-screen bg-background pb-6">
-      {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></Button>
         <h1 className="text-lg font-semibold text-foreground">Weight</h1>
-        <Button variant="ghost" size="icon">
-          <Settings className="w-5 h-5" />
-        </Button>
+        <Button variant="ghost" size="icon"><Settings className="w-5 h-5" /></Button>
       </header>
 
       <div className="p-4 space-y-6">
-        {/* Current Weight Display */}
         <Card className="p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Scale className="w-6 h-6 text-green-500" />
             <span className="text-4xl font-bold text-foreground">{currentWeight}</span>
-            <span className="text-lg text-muted-foreground">{unit}</span>
+            <span className="text-lg text-muted-foreground">kg</span>
           </div>
-          <p className="text-sm text-green-600">You're on a normal weight range.</p>
+          <p className="text-sm text-green-600">
+            {currentWeight !== "--" ? "Keep tracking your progress!" : "Log your first weight reading"}
+          </p>
         </Card>
 
-        {/* Time Range Selector */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {timeRanges.map((range) => (
-            <Button
-              key={range}
-              variant={timeRange === range ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimeRange(range)}
-              className="whitespace-nowrap"
-            >
-              {range}
-            </Button>
-          ))}
-        </div>
-
-        {/* Weight Chart */}
-        <Card className="p-4">
-          <div className="h-32 flex items-end justify-around gap-2">
-            {weeklyData.map((day, i) => {
-              const height = ((day.value - 66) / 3) * 100;
-              return (
-                <div key={i} className="flex flex-col items-center gap-1">
-                  <div
-                    className="w-6 bg-green-400 rounded-t"
-                    style={{ height: `${height}%` }}
-                  />
-                  <span className="text-xs text-muted-foreground">{day.day}</span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Weight Insights */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">Weight Insights</h2>
-            <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-          </div>
+        {/* Chart */}
+        {chartData.length > 1 && (
           <Card className="p-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">Body Mass Index</p>
-                <p className="text-xl font-bold text-foreground">{insights.bmi}</p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto bg-green-100 rounded-lg flex items-center justify-center mb-1">
-                  <div className="w-8 h-12 bg-green-500 rounded" />
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">Metabolic Age</p>
-                <p className="text-xl font-bold text-foreground">{insights.metabolicAge}</p>
-                <p className="text-xs text-muted-foreground">Than average of your group</p>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground mb-1">Body Fat</p>
-              <div className="flex items-center gap-2">
-                <p className="text-xl font-bold text-foreground">{insights.bodyFat}</p>
-                <span className="text-xs text-red-500">▼ 4% vs last month</span>
-              </div>
+            <div className="h-32 flex items-end justify-around gap-2">
+              {chartData.map((d, i) => {
+                const val = Number(d.value);
+                const minW = Math.min(...chartData.map((c) => Number(c.value))) - 2;
+                const maxW = Math.max(...chartData.map((c) => Number(c.value))) + 2;
+                const height = Math.max(10, ((val - minW) / (maxW - minW)) * 100);
+                return (
+                  <div key={i} className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{val.toFixed(1)}</span>
+                    <div className="w-6 bg-green-400 rounded-t" style={{ height: `${height}%` }} />
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(d.recorded_at), "EEE")}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </Card>
+        )}
+
+        {/* History */}
+        <div>
+          <h2 className="font-semibold text-foreground mb-3">Weight History</h2>
+          {history.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No weight logged yet</p>
+          ) : (
+            <div className="space-y-2">
+              {history.slice(0, 10).map((item, idx) => {
+                const prevVal = idx < history.length - 1 ? Number(history[idx + 1].value) : null;
+                const curVal = Number(item.value);
+                const change = prevVal ? (curVal - prevVal).toFixed(1) : null;
+                return (
+                  <Card key={item.id} className="p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <Scale className="w-5 h-5 text-green-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">{curVal.toFixed(1)} kg</p>
+                        {change && (
+                          <p className={`text-xs ${Number(change) <= 0 ? "text-green-600" : "text-red-500"}`}>
+                            {Number(change) > 0 ? "+" : ""}{change} kg
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(item.recorded_at), "MMM d")}
+                    </span>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Weight History */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">Weight History</h2>
-            <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-          </div>
-          <div className="space-y-2">
-            {history.map((item, idx) => (
-              <Card key={idx} className="p-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${item.completed ? 'bg-green-100' : 'bg-muted'}`}>
-                    <Scale className={`w-5 h-5 ${item.completed ? 'text-green-500' : 'text-muted-foreground'}`} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{item.weight}</p>
-                    <p className={`text-xs ${item.completed ? 'text-green-600' : 'text-muted-foreground'}`}>{item.change}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{item.time}</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Weight Goal */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-foreground">Weight Goal</h2>
-            <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-          </div>
+        {/* Goal */}
+        {currentWeight !== "--" && (
           <Card className="p-4">
             <div className="flex items-center gap-3 mb-3">
               <Target className="w-5 h-5 text-primary" />
               <div>
-                <p className="text-lg font-bold text-foreground">60.00kg</p>
+                <p className="text-lg font-bold text-foreground">{goalWeight} kg</p>
                 <p className="text-xs text-muted-foreground">Weight Goal</p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              You're on track! Keep logging your weight daily to improve your health & overall score.
-            </p>
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-              <span>55%</span>
-              <span>61.1kg</span>
+              <span>{currentWeight} kg</span>
+              <span>{goalWeight} kg target</span>
             </div>
-            <Progress value={55} className="h-2" />
-            <Button variant="link" className="text-primary p-0 h-auto mt-2 text-sm">
-              Edit Goal
-            </Button>
+            <Progress
+              value={Math.max(0, Math.min(100, ((Number(currentWeight) - goalWeight) / (Number(currentWeight) * 0.3)) * 100))}
+              className="h-2"
+            />
           </Card>
-        </div>
+        )}
 
-        {/* Log Button */}
-        <Button className="w-full" size="lg">
+        {/* Log Form */}
+        {showLogForm && (
+          <Card className="p-4 space-y-3 animate-fade-in">
+            <p className="font-semibold text-foreground">Log Weight</p>
+            <Input type="number" step="0.1" placeholder="Enter weight in kg" value={weightInput}
+              onChange={(e) => setWeightInput(e.target.value)} />
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={handleLog} disabled={logMetric.isPending}>
+                {logMetric.isPending ? "Saving..." : "Save"}
+              </Button>
+              <Button variant="outline" onClick={() => setShowLogForm(false)}>Cancel</Button>
+            </div>
+          </Card>
+        )}
+
+        <Button className="w-full" size="lg" onClick={() => setShowLogForm(true)}>
           <Scale className="w-5 h-5 mr-2" />
           Log Weight
         </Button>

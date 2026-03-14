@@ -1423,6 +1423,42 @@ export type Database = {
         }
         Relationships: []
       }
+      health_metrics: {
+        Row: {
+          created_at: string
+          id: string
+          metric_type: string
+          notes: string | null
+          recorded_at: string
+          secondary_value: number | null
+          unit: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metric_type: string
+          notes?: string | null
+          recorded_at?: string
+          secondary_value?: number | null
+          unit?: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metric_type?: string
+          notes?: string | null
+          recorded_at?: string
+          secondary_value?: number | null
+          unit?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
       home_layout: {
         Row: {
           enabled: boolean | null
