@@ -44,6 +44,7 @@ export function CompletionSummary({
   postData,
   ratingSection,
   mapContainerRef,
+  pointsEarned,
 }: CompletionSummaryProps) {
   const { user } = useAuth();
   const [shareToFeed, setShareToFeed] = useState(true);
