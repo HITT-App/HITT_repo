@@ -1,80 +1,34 @@
 
-# Fix Admin Panel: User Visibility and Data Access
 
-## Problem
-The admin panel only shows 1 user (yourself) because the database security policies on the `profiles` table only allow each user to see their own profile. This same issue affects admin stats -- counts for users, activity logs, meal logs, workout progress, and user badges are all under-reported because the admin can only see their own data.
+## Step Detection: What's Possible
 
-There are 6 users in the database, but the admin sees 1.
+Background step counting is a **native device feature** — web browsers cannot access the phone's pedometer or count steps when the app is closed. There are two realistic paths:
 
-## Root Cause
-The following tables have SELECT policies restricted to `auth.uid() = user_id` with no admin override:
-- `profiles` -- affects user list and total user count
-- `activity_logs` -- affects "Active (7d)" stat
-- `meal_logs` -- affects "Meals Logged" stat
-- `workout_progress` -- affects "Completed" stat
-- `user_badges` -- affects "Badges Earned" stat
-- `coaching_sessions` -- affects "Sessions" stat
+### Option A: Connect to Google Fit / Apple Health (Recommended)
+- Use **Google Fit REST API** (OAuth) to pull step data that the phone already tracks automatically
+- On iOS, Apple HealthKit requires a native app — not accessible from the web
+- This gives you real historical step data without building a pedometer
+- Users authorize once, then the app syncs their daily steps automatically
+- Works even when the app isn't open because Google Fit tracks steps natively
 
-## Solution
+### Option B: Convert to Native App (Capacitor)
+- Wrap the app with Capacitor and use native pedometer plugins (`@nicemob/capacitor-health-connect` for Android, HealthKit for iOS)
+- Full background step counting, real-time sync
+- Requires users to install via app store or sideload
+- Significant setup effort (Xcode, Android Studio, etc.)
 
-### 1. Database Migration: Add Admin SELECT Policies
-Add new RLS policies to allow admins to read all rows in the affected tables:
+### What Can't Work
+- Web browsers have no background step counting API
+- The Web Sensor API (Accelerometer) only works while the page is actively open and has very limited browser support
+- There is no way for a PWA to count steps in the background
 
-```sql
--- Admins can view all profiles
-CREATE POLICY "Admins can view all profiles"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+### Recommendation
+**Option A (Google Fit integration)** is the most practical for your current web/PWA setup. It would:
+1. Add a "Connect Google Fit" button on the Steps page
+2. OAuth flow to authorize read access to step data
+3. Backend function to fetch daily step counts from Google Fit API
+4. Auto-sync steps into your existing `health_metrics` table
+5. Show real device-tracked steps alongside manually logged ones
 
--- Admins can view all activity logs
-CREATE POLICY "Admins can view all activity logs"
-  ON public.activity_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+This covers Android users well. For iOS users, manual logging would remain the fallback until a native app is built.
 
--- Admins can view all meal logs
-CREATE POLICY "Admins can view all meal logs"
-  ON public.meal_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all workout progress
-CREATE POLICY "Admins can view all workout progress"
-  ON public.workout_progress FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all user badges
-CREATE POLICY "Admins can view all user badges"
-  ON public.user_badges FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Admins can view all coaching sessions
-CREATE POLICY "Admins can view all coaching sessions"
-  ON public.coaching_sessions FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-```
-
-### 2. Improve AdminUsers Page
-Upgrade the User Management page with the AdminLayout for consistent navigation, and add useful features:
-
-- Use `AdminLayout` wrapper instead of custom header (consistent with other admin pages)
-- Add pagination (currently limited to 100 users)
-- Add role filter tabs (All / Admins / Moderators)
-- Show user join date
-- Add moderator role management (currently only admin toggle)
-
-### 3. Files Changed
-
-| File | Change |
-|------|--------|
-| New migration SQL | Add 6 admin SELECT policies |
-| `src/pages/admin/AdminUsers.tsx` | Use AdminLayout, add role filters, show join date, add moderator role toggle, increase limit |
-
-### 4. No Changes Needed
-- Admin stats hook (`useAdminStats.ts`) -- will automatically show correct numbers once RLS is fixed
-- Recent activity hook (`useRecentActivity.ts`) -- profiles query will return all recent signups once RLS is fixed
-- Admin dashboard, sidebar, routing -- all working correctly
