@@ -212,9 +212,7 @@ export function CompletionSummary({
           ))}
         </div>
         <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/25 to-primary/5 flex items-center justify-center mx-auto mb-3 animate-scale-in shadow-[0_0_40px_hsl(var(--primary)/0.2)]">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center">
-            <Trophy className="w-8 h-8 text-primary" />
-          </div>
+          <HIITLogo size="lg" showGlow className="rounded-full" />
         </div>
         <h1 className="text-2xl font-bold text-foreground mb-0.5">{activityTitle}</h1>
         <p className="text-sm text-muted-foreground">Completed</p>
