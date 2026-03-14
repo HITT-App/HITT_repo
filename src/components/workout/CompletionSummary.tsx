@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Share2, Trophy, TrendingUp, Sparkles, Download, X, RefreshCw, Camera, User, Zap, Star } from 'lucide-react';
+import { Share2, TrendingUp, Sparkles, Download, X, RefreshCw, Camera, User, Zap, Star } from 'lucide-react';
+import { HIITLogo } from '@/components/HIITLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
