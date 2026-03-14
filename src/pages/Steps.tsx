@@ -1,4 +1,4 @@
-import { ArrowLeft, Footprints, Settings, Target, Plus, RefreshCw, Unplug, Smartphone } from "lucide-react";
+import { ArrowLeft, Footprints, Settings, Target, Plus, RefreshCw, Unplug, Smartphone, ShieldCheck, Pencil } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
