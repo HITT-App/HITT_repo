@@ -120,10 +120,12 @@ const GymTimer = () => {
         calories_burned: calories,
         notes: sets > 0 ? `${sets} sets completed` : undefined,
       });
+      const pts = await recordWorkout();
+      setPointsEarned(pts);
     } catch {
       toast.error("Failed to save activity");
     }
-  }, [activityType, elapsed, calories, sets, logActivity, settings.autoVibrate]);
+  }, [activityType, elapsed, calories, sets, logActivity, settings.autoVibrate, recordWorkout]);
 
   // Heart rate zone visual (decorative)
   const hrZone = elapsed < 300 ? "Warm Up" : elapsed < 1200 ? "Fat Burn" : elapsed < 2400 ? "Cardio" : "Peak";
