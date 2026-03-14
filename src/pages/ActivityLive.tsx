@@ -76,6 +76,7 @@ const ActivityLive = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [pointsEarned, setPointsEarned] = useState(0);
 
   // GPS state
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("searching");
