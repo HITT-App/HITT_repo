@@ -158,7 +158,8 @@ export default function WorkoutPlayer() {
         });
         
         // Update streak and check for new badges
-        await recordWorkout();
+        const pts = await recordWorkout();
+        setPointsEarned(pts);
       } catch (error) {
         console.error('Error saving progress:', error);
       }
