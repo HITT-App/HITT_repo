@@ -1,4 +1,4 @@
-import { ArrowLeft, Footprints, Settings, Target, Plus, ShieldCheck, Pencil, Play, Square, Activity } from "lucide-react";
+import { ArrowLeft, Footprints, Settings, Target, Plus, ShieldCheck, Pencil, Play, Square, Activity, RotateCcw, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -114,13 +114,49 @@ const Steps = () => {
 
         {/* Live Pedometer */}
         {pedometer.isSupported && (
-          <Card className="p-5 border-primary/30">
+          <Card className={`p-5 ${pedometer.isActive ? "border-primary" : pedometer.wasPaused ? "border-yellow-500/50" : "border-primary/30"}`}>
             <div className="flex items-center gap-2 mb-3">
               <Activity className="w-5 h-5 text-primary" />
               <h2 className="font-semibold text-foreground">Live Step Counter</h2>
             </div>
 
-            {pedometer.isActive ? (
+            {pedometer.wasPaused && !pedometer.isActive ? (
+              /* Paused / interrupted session */
+              <div className="text-center space-y-3">
+                <div className="rounded-lg bg-yellow-500/10 p-3 mb-2">
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
+                    ⚠️ Session interrupted
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {pedometer.steps.toLocaleString()} steps · {formatTime(pedometer.elapsed)} elapsed
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button className="flex-1" onClick={() => pedometer.resume()}>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Resume
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleStopPedometer}
+                    disabled={logMetric.isPending}
+                  >
+                    {logMetric.isPending ? "Saving…" : "Save & End"}
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
+                  onClick={() => pedometer.discard()}
+                >
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  Discard
+                </Button>
+              </div>
+            ) : pedometer.isActive ? (
+              /* Active session */
               <div className="text-center space-y-4">
                 <div className="flex items-center justify-center gap-1">
                   <span className="relative flex h-3 w-3">
@@ -133,6 +169,11 @@ const Steps = () => {
                 <p className="text-sm text-muted-foreground">
                   {formatTime(pedometer.elapsed)} elapsed
                 </p>
+                <div className="rounded-lg bg-muted/50 p-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    💡 Keep your screen on and app open for accurate counting
+                  </p>
+                </div>
                 <Button
                   variant="destructive"
                   className="w-full"
@@ -145,9 +186,10 @@ const Steps = () => {
                 </Button>
               </div>
             ) : (
+              /* Idle — start new */
               <div className="text-center space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Start a walking session to count steps in real-time using your phone's motion sensors.
+                  Count steps in real-time using your phone's motion sensors. Keep the app open during your walk.
                 </p>
                 <Button className="w-full" size="lg" onClick={() => pedometer.start()}>
                   <Play className="w-4 h-4 mr-2" />
