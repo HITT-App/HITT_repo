@@ -22,6 +22,7 @@ const activityTypes = [
 const LogActivity = () => {
   const navigate = useNavigate();
   const { logActivity } = useActivity();
+  const { recordWorkout } = useStreaksAndBadges();
   const [step, setStep] = useState(0);
   const [selectedType, setSelectedType] = useState("");
   const [duration, setDuration] = useState(30);
