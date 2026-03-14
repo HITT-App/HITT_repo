@@ -30,6 +30,7 @@ interface CompletionSummaryProps {
   postData?: Json;
   ratingSection?: React.ReactNode;
   mapContainerRef?: React.RefObject<HTMLDivElement>;
+  pointsEarned?: number;
 }
 
 export function CompletionSummary({
