@@ -175,9 +175,11 @@ export function useStreaksAndBadges() {
 
       // Check for new badges
       await checkAndAwardBadges(currentStreak);
-      
+
+      return pointsToAward;
     } catch (error) {
       console.error('Error recording workout:', error);
+      return 0;
     }
   }, [user, streak, allBadges, earnedBadges]);
 
