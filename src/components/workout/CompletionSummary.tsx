@@ -194,9 +194,26 @@ export function CompletionSummary({
       <input ref={photoFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleQuickPhotoUpload} />
 
       {/* Hero header */}
-      <div className="relative bg-gradient-to-b from-primary/20 to-background pt-14 pb-6 px-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mx-auto mb-3 animate-scale-in">
-          <Trophy className="w-8 h-8 text-primary" />
+      <div className="relative bg-gradient-to-b from-primary/20 via-primary/5 to-background pt-14 pb-6 px-6 text-center overflow-hidden">
+        {/* Decorative particles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1.5 h-1.5 rounded-full bg-primary/30 animate-pulse"
+              style={{
+                top: `${15 + i * 12}%`,
+                left: `${10 + i * 15}%`,
+                animationDelay: `${i * 0.3}s`,
+                animationDuration: `${2 + i * 0.5}s`,
+              }}
+            />
+          ))}
+        </div>
+        <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/25 to-primary/5 flex items-center justify-center mx-auto mb-3 animate-scale-in shadow-[0_0_40px_hsl(var(--primary)/0.2)]">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center">
+            <Trophy className="w-8 h-8 text-primary" />
+          </div>
         </div>
         <h1 className="text-2xl font-bold text-foreground mb-0.5">{activityTitle}</h1>
         <p className="text-sm text-muted-foreground">Completed</p>
