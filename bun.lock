@@ -5,6 +5,9 @@
     "": {
       "name": "vite_react_shadcn_ts",
       "dependencies": {
+        "@capacitor/android": "^8.2.0",
+        "@capacitor/core": "^8.2.0",
+        "@capacitor/ios": "^8.2.0",
         "@elevenlabs/react": "^0.13.0",
         "@hookform/resolvers": "^3.10.0",
         "@radix-ui/react-accordion": "^1.2.11",
@@ -269,6 +272,12 @@
     "@babel/types": ["@babel/types@7.28.6", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-0ZrskXVEHSWIqZM/sQZ4EV3jZJXRkio/WCxaqKZP1g//CEWEPSfeZFcms4XeKBCHU0ZKnIkdJeU/kF+eRp5lBg=="],
 
     "@bufbuild/protobuf": ["@bufbuild/protobuf@1.10.1", "", {}, "sha512-wJ8ReQbHxsAfXhrf9ixl0aYbZorRuOWpBNzm8pL8ftmSxQx/wnJD5Eg861NwJU/czy2VXFIebCeZnZrI9rktIQ=="],
+
+    "@capacitor/android": ["@capacitor/android@8.2.0", "", { "peerDependencies": { "@capacitor/core": "^8.2.0" } }, "sha512-XLm5OsWLPfXQxDxzFS7SOdMEgGvW+2c7TGLXkTR2cSKdkWK5Abns4imlT5qghKYhjM9r74IrDkBWg/9ALUGNKQ=="],
+
+    "@capacitor/core": ["@capacitor/core@8.2.0", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-oKaoNeNtH2iIZMDFVrb1atoyRECDGHcfLMunJ5KWN8DtvpVBeeA4c41e20NTuhMxw1cSYbpq2PV2hb+/9CJxlQ=="],
+
+    "@capacitor/ios": ["@capacitor/ios@8.2.0", "", { "peerDependencies": { "@capacitor/core": "^8.2.0" } }, "sha512-X2/VtM4qP/R1SM0VQ5W/VotEc6PS/KTooD33EijsfAHWBdee+xmBapW8SeNLnu16wJ+tsfWlvtipaJEyfKbRKQ=="],
 
     "@elevenlabs/client": ["@elevenlabs/client@0.13.0", "", { "dependencies": { "@elevenlabs/types": "0.4.0", "livekit-client": "^2.11.4" } }, "sha512-0UjouSOVK+mECJuYg/DqM9V1NIsabIrlRmw/RjEMS5UmOpsAga3KxMC3et8fKh8G/MI2cZtLr2764wIOZgyrQg=="],
 
