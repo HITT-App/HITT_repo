@@ -45,6 +45,7 @@ const GymTimer = () => {
   const [searchParams] = useSearchParams();
   const activityType = searchParams.get("sport") || "Workout";
   const { logActivity } = useActivity();
+  const { recordWorkout } = useStreaksAndBadges();
 
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
