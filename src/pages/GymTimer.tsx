@@ -55,6 +55,7 @@ const GymTimer = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [sets, setSets] = useState(0);
   const [settings, setSettings] = useState({ autoVibrate: true, showCalories: true });
+  const [pointsEarned, setPointsEarned] = useState(0);
 
   const startTimeRef = useRef(Date.now());
   const pausedAtRef = useRef(0);
