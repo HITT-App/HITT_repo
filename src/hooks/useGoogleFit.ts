@@ -36,28 +36,35 @@ export function useGoogleFit() {
   }, [checkStatus]);
 
   const connect = useCallback(async () => {
-    // Get the client ID from the edge function's env - we'll use a public endpoint approach
-    // The client ID is public (it's in the OAuth redirect URL), so we store it as a VITE var too
-    // For now, we use a known approach: redirect to Google OAuth
-    const clientId = import.meta.env.VITE_GOOGLE_FIT_CLIENT_ID;
-    if (!clientId) {
-      // Fallback: fetch from a simple status-like call? No - client ID must be on frontend
-      console.error("VITE_GOOGLE_FIT_CLIENT_ID not set");
-      return;
+    if (!user) return;
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("google-fit-auth", {
+        body: { action: "get_client_id" },
+        headers: { Authorization: `Bearer ${session.session?.access_token}` },
+      });
+
+      const clientId = res.data?.client_id;
+      if (!clientId) {
+        console.error("Could not fetch Google Fit client ID");
+        return;
+      }
+
+      const redirectUri = `${window.location.origin}/steps`;
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: "code",
+        scope: GOOGLE_FIT_SCOPE,
+        access_type: "offline",
+        prompt: "consent",
+      });
+
+      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    } catch (e) {
+      console.error("Connect failed:", e);
     }
-
-    const redirectUri = `${window.location.origin}/steps`;
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: "code",
-      scope: GOOGLE_FIT_SCOPE,
-      access_type: "offline",
-      prompt: "consent",
-    });
-
-    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  }, []);
+  }, [user]);
 
   const handleOAuthCallback = useCallback(
     async (code: string) => {

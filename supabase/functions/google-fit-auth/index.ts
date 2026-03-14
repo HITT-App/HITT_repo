@@ -112,6 +112,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (action === "get_client_id") {
+      return new Response(
+        JSON.stringify({ client_id: clientId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (action === "status") {
       const { data } = await supabase
         .from("google_fit_connections")
