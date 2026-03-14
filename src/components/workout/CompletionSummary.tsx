@@ -223,16 +223,37 @@ export function CompletionSummary({
       <div className="px-5 -mt-1">
         <div className={cn('grid gap-2.5', stats.length <= 3 ? 'grid-cols-3' : 'grid-cols-2')}>
           {stats.map((stat, i) => (
-            <div key={i} className="bg-card border border-border rounded-2xl p-3.5 text-center">
-              <p className="text-xl font-bold text-foreground leading-tight">
+            <div key={i} className="bg-card border border-border/60 rounded-2xl p-3.5 text-center relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent pointer-events-none" />
+              <p className="text-xl font-bold text-foreground leading-tight relative">
                 {stat.value}
                 {stat.unit && <span className="text-xs font-normal text-muted-foreground ml-1">{stat.unit}</span>}
               </p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">{stat.label}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5 relative">{stat.label}</p>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Points earned banner */}
+      {pointsEarned != null && pointsEarned > 0 && (
+        <div className="px-5 mt-3 animate-fade-in" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+          <div className="relative bg-gradient-to-r from-primary/15 via-primary/10 to-accent/10 border border-primary/20 rounded-2xl p-4 flex items-center gap-4 overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,_hsl(var(--primary)/0.1),_transparent_60%)] pointer-events-none" />
+            <div className="relative w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 shadow-[0_0_20px_hsl(var(--primary)/0.3)]">
+              <Zap className="w-6 h-6 text-primary" />
+            </div>
+            <div className="relative flex-1">
+              <p className="text-2xl font-bold text-foreground">+{pointsEarned} <span className="text-sm font-semibold text-primary">pts</span></p>
+              <p className="text-xs text-muted-foreground">Leaderboard Points Earned</p>
+            </div>
+            <div className="relative flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-full">
+              <Star className="w-3 h-3 text-primary fill-primary" />
+              <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">XP</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Achievement banner */}
       {(achievementMessage || badges.length > 0) && (

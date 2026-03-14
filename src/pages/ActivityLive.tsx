@@ -336,6 +336,7 @@ const ActivityLive = () => {
         activityTitle={activityType.charAt(0).toUpperCase() + activityType.slice(1)}
         activityType={activityType}
         stats={completionStats}
+        pointsEarned={pointsEarned}
         mapComponent={
           positions.length > 1 ? (
             <LiveActivityMap positions={positions} gpsStatus="active" />

@@ -40,6 +40,7 @@ const LogActivity = () => {
           ? Number((duration * 0.15).toFixed(1)) 
           : undefined,
       });
+      await recordWorkout();
       toast.success("Activity logged successfully!");
       navigate("/activity");
     } catch (error) {

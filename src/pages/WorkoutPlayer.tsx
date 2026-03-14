@@ -230,6 +230,7 @@ export default function WorkoutPlayer() {
           stats={completionStats}
           achievementMessage={newBadges.length > 0 ? 'New achievement unlocked!' : undefined}
           badges={newBadges.map(b => ({ name: b.name, icon: b.icon }))}
+          pointsEarned={pointsEarned}
           onDone={handleFinish}
           ratingSection={ratingSection}
           postData={{

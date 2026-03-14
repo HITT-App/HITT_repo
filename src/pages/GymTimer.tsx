@@ -142,6 +142,7 @@ const GymTimer = () => {
         activityTitle={activityType}
         activityType={activityType.toLowerCase()}
         stats={completionStats}
+        pointsEarned={pointsEarned}
         onDone={() => navigate("/activity-dashboard")}
       />
     );
