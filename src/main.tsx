@@ -5,13 +5,18 @@ import "./index.css";
 const SW_REFRESH_FLAG = "sw-refresh-pending";
 const PREVIEW_BUSTER_PARAM = "__preview_ts";
 const PREVIEW_LAST_HIDDEN_AT = "preview-last-hidden-at";
+const PREVIEW_SW_RESET_FLAG = "preview-sw-reset-done";
 const PREVIEW_MAX_AGE_MS = 45_000;
+
+const isEmbeddedPreview =
+  typeof window !== "undefined" && window.self !== window.top;
 
 const isLovablePreviewHost =
   typeof window !== "undefined" &&
   (window.location.hostname.includes("preview--") ||
     window.location.hostname === "lovableproject.com" ||
-    window.location.hostname.endsWith(".lovableproject.com"));
+    window.location.hostname.endsWith(".lovableproject.com") ||
+    (window.location.hostname.endsWith(".lovable.app") && isEmbeddedPreview));
 
 function buildPreviewBustedUrl() {
   const nextUrl = new URL(window.location.href);
