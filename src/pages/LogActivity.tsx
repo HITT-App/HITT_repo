@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useActivity } from "@/hooks/useActivity";
+import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { toast } from "sonner";
 
 const activityTypes = [
