@@ -1,4 +1,4 @@
-import { ArrowLeft, Footprints, Settings, Target, Plus, ShieldCheck, Pencil } from "lucide-react";
+import { ArrowLeft, Footprints, Settings, Target, Plus, ShieldCheck, Pencil, Play, Square, Activity } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -6,8 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
+import { usePedometer } from "@/hooks/usePedometer";
 import { toast } from "sonner";
 import { format } from "date-fns";
+
+const formatTime = (s: number) => {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+};
 
 const Steps = () => {
   const navigate = useNavigate();
@@ -16,6 +23,7 @@ const Steps = () => {
   const { data: todaySteps = 0 } = useTodayTotal("steps");
   const [showLogForm, setShowLogForm] = useState(false);
   const [stepsInput, setStepsInput] = useState("");
+  const pedometer = usePedometer();
   const goal = 10000;
 
   const progressPercent = Math.min((todaySteps / goal) * 100, 100);
@@ -33,6 +41,25 @@ const Steps = () => {
       setShowLogForm(false);
     } catch {
       toast.error("Failed to log");
+    }
+  };
+
+  const handleStopPedometer = async () => {
+    const counted = pedometer.stop();
+    if (counted > 0) {
+      try {
+        await logMetric.mutateAsync({
+          metric_type: "steps",
+          value: counted,
+          unit: "steps",
+          notes: "pedometer_session",
+        });
+        toast.success(`${counted.toLocaleString()} steps saved from walk session!`);
+      } catch {
+        toast.error("Failed to save steps");
+      }
+    } else {
+      toast("No steps detected in this session");
     }
   };
 
@@ -85,6 +112,52 @@ const Steps = () => {
           </div>
         </Card>
 
+        {/* Live Pedometer */}
+        {pedometer.isSupported && (
+          <Card className="p-5 border-primary/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Activity className="w-5 h-5 text-primary" />
+              <h2 className="font-semibold text-foreground">Live Step Counter</h2>
+            </div>
+
+            {pedometer.isActive ? (
+              <div className="text-center space-y-4">
+                <div className="flex items-center justify-center gap-1">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+                  </span>
+                  <span className="text-xs text-primary font-medium ml-1">Counting…</span>
+                </div>
+                <p className="text-5xl font-bold text-foreground">{pedometer.steps.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatTime(pedometer.elapsed)} elapsed
+                </p>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  size="lg"
+                  onClick={handleStopPedometer}
+                  disabled={logMetric.isPending}
+                >
+                  <Square className="w-4 h-4 mr-2" />
+                  {logMetric.isPending ? "Saving…" : "Stop & Save"}
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Start a walking session to count steps in real-time using your phone's motion sensors.
+                </p>
+                <Button className="w-full" size="lg" onClick={() => pedometer.start()}>
+                  <Play className="w-4 h-4 mr-2" />
+                  Start Walking
+                </Button>
+              </div>
+            )}
+          </Card>
+        )}
+
         {/* Quick Add */}
         <div>
           <h2 className="font-semibold text-foreground mb-3">Quick Add</h2>
@@ -132,6 +205,11 @@ const Steps = () => {
                         <span className="inline-flex items-center gap-1 text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
                           <ShieldCheck className="w-3 h-3" />
                           Verified · Auto-synced
+                        </span>
+                      ) : item.notes === "pedometer_session" ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
+                          <Activity className="w-3 h-3" />
+                          Pedometer Session
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
