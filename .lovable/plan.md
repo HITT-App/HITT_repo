@@ -1,34 +1,26 @@
 
+# Google Fit Step Sync Integration
 
-## Step Detection: What's Possible
+## What was built
+Google Fit integration to automatically sync step data from the user's phone into the app.
 
-Background step counting is a **native device feature** — web browsers cannot access the phone's pedometer or count steps when the app is closed. There are two realistic paths:
+### Architecture
+1. **`google_fit_connections` table** — stores OAuth tokens per user (with RLS)
+2. **`google-fit-auth` edge function** — handles OAuth code exchange, token storage, connection status, and disconnect
+3. **`google-fit-sync` edge function** — fetches today's steps from Google Fit REST API, refreshes tokens automatically, upserts into `health_metrics`
+4. **`useGoogleFit` hook** — frontend hook managing OAuth flow, sync, and connection state
+5. **Steps page** — shows Google Fit connection card with connect/sync/disconnect buttons
 
-### Option A: Connect to Google Fit / Apple Health (Recommended)
-- Use **Google Fit REST API** (OAuth) to pull step data that the phone already tracks automatically
-- On iOS, Apple HealthKit requires a native app — not accessible from the web
-- This gives you real historical step data without building a pedometer
-- Users authorize once, then the app syncs their daily steps automatically
-- Works even when the app isn't open because Google Fit tracks steps natively
+### Flow
+1. User taps "Connect Google Fit" → redirected to Google OAuth consent
+2. Google redirects back to `/steps?code=...` → edge function exchanges code for tokens
+3. Tokens stored in `google_fit_connections` table
+4. "Sync Now" button fetches today's steps via Google Fit REST API
+5. Steps saved to `health_metrics` with `notes = "google_fit_sync"` to distinguish from manual entries
+6. Token refresh handled automatically when expired
 
-### Option B: Convert to Native App (Capacitor)
-- Wrap the app with Capacitor and use native pedometer plugins (`@nicemob/capacitor-health-connect` for Android, HealthKit for iOS)
-- Full background step counting, real-time sync
-- Requires users to install via app store or sideload
-- Significant setup effort (Xcode, Android Studio, etc.)
-
-### What Can't Work
-- Web browsers have no background step counting API
-- The Web Sensor API (Accelerometer) only works while the page is actively open and has very limited browser support
-- There is no way for a PWA to count steps in the background
-
-### Recommendation
-**Option A (Google Fit integration)** is the most practical for your current web/PWA setup. It would:
-1. Add a "Connect Google Fit" button on the Steps page
-2. OAuth flow to authorize read access to step data
-3. Backend function to fetch daily step counts from Google Fit API
-4. Auto-sync steps into your existing `health_metrics` table
-5. Show real device-tracked steps alongside manually logged ones
-
-This covers Android users well. For iOS users, manual logging would remain the fallback until a native app is built.
-
+### Google Cloud Setup Required
+- Enable Fitness API
+- Create OAuth 2.0 Web Client credentials
+- Add redirect URIs: `https://wgfxtech.lovable.app/steps` and preview URL
+- Secrets stored: `GOOGLE_FIT_CLIENT_ID`, `GOOGLE_FIT_CLIENT_SECRET`
