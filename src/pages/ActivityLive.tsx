@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { useActivity } from "@/hooks/useActivity";
+import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -65,6 +66,7 @@ const ActivityLive = () => {
   const [searchParams] = useSearchParams();
   const activityType = searchParams.get("type") || searchParams.get("sport") || "jogging";
   const { logActivity } = useActivity();
+  const { recordWorkout } = useStreaksAndBadges();
 
   // Core state
   const [elapsed, setElapsed] = useState(0);
@@ -74,6 +76,7 @@ const ActivityLive = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [pointsEarned, setPointsEarned] = useState(0);
 
   // GPS state
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("searching");
@@ -278,8 +281,9 @@ const ActivityLive = () => {
         calories_burned: calories,
         intensity_level: 3,
       });
+      const pts = await recordWorkout();
+      setPointsEarned(pts);
       setShowCompleted(true);
-      // Fire confetti
       confetti({
         particleCount: 120,
         spread: 80,
@@ -332,6 +336,7 @@ const ActivityLive = () => {
         activityTitle={activityType.charAt(0).toUpperCase() + activityType.slice(1)}
         activityType={activityType}
         stats={completionStats}
+        pointsEarned={pointsEarned}
         mapComponent={
           positions.length > 1 ? (
             <LiveActivityMap positions={positions} gpsStatus="active" />

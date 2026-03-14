@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Share2, Trophy, TrendingUp, Sparkles, Download, X, RefreshCw, Camera, User } from 'lucide-react';
+import { Share2, Trophy, TrendingUp, Sparkles, Download, X, RefreshCw, Camera, User, Zap, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -30,6 +30,7 @@ interface CompletionSummaryProps {
   postData?: Json;
   ratingSection?: React.ReactNode;
   mapContainerRef?: React.RefObject<HTMLDivElement>;
+  pointsEarned?: number;
 }
 
 export function CompletionSummary({
@@ -43,6 +44,7 @@ export function CompletionSummary({
   postData,
   ratingSection,
   mapContainerRef,
+  pointsEarned,
 }: CompletionSummaryProps) {
   const { user } = useAuth();
   const [shareToFeed, setShareToFeed] = useState(true);
@@ -192,9 +194,26 @@ export function CompletionSummary({
       <input ref={photoFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleQuickPhotoUpload} />
 
       {/* Hero header */}
-      <div className="relative bg-gradient-to-b from-primary/20 to-background pt-14 pb-6 px-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mx-auto mb-3 animate-scale-in">
-          <Trophy className="w-8 h-8 text-primary" />
+      <div className="relative bg-gradient-to-b from-primary/20 via-primary/5 to-background pt-14 pb-6 px-6 text-center overflow-hidden">
+        {/* Decorative particles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1.5 h-1.5 rounded-full bg-primary/30 animate-pulse"
+              style={{
+                top: `${15 + i * 12}%`,
+                left: `${10 + i * 15}%`,
+                animationDelay: `${i * 0.3}s`,
+                animationDuration: `${2 + i * 0.5}s`,
+              }}
+            />
+          ))}
+        </div>
+        <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/25 to-primary/5 flex items-center justify-center mx-auto mb-3 animate-scale-in shadow-[0_0_40px_hsl(var(--primary)/0.2)]">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center">
+            <Trophy className="w-8 h-8 text-primary" />
+          </div>
         </div>
         <h1 className="text-2xl font-bold text-foreground mb-0.5">{activityTitle}</h1>
         <p className="text-sm text-muted-foreground">Completed</p>
@@ -204,16 +223,37 @@ export function CompletionSummary({
       <div className="px-5 -mt-1">
         <div className={cn('grid gap-2.5', stats.length <= 3 ? 'grid-cols-3' : 'grid-cols-2')}>
           {stats.map((stat, i) => (
-            <div key={i} className="bg-card border border-border rounded-2xl p-3.5 text-center">
-              <p className="text-xl font-bold text-foreground leading-tight">
+            <div key={i} className="bg-card border border-border/60 rounded-2xl p-3.5 text-center relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent pointer-events-none" />
+              <p className="text-xl font-bold text-foreground leading-tight relative">
                 {stat.value}
                 {stat.unit && <span className="text-xs font-normal text-muted-foreground ml-1">{stat.unit}</span>}
               </p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">{stat.label}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5 relative">{stat.label}</p>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Points earned banner */}
+      {pointsEarned != null && pointsEarned > 0 && (
+        <div className="px-5 mt-3 animate-fade-in" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+          <div className="relative bg-gradient-to-r from-primary/15 via-primary/10 to-accent/10 border border-primary/20 rounded-2xl p-4 flex items-center gap-4 overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,_hsl(var(--primary)/0.1),_transparent_60%)] pointer-events-none" />
+            <div className="relative w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 shadow-[0_0_20px_hsl(var(--primary)/0.3)]">
+              <Zap className="w-6 h-6 text-primary" />
+            </div>
+            <div className="relative flex-1">
+              <p className="text-2xl font-bold text-foreground">+{pointsEarned} <span className="text-sm font-semibold text-primary">pts</span></p>
+              <p className="text-xs text-muted-foreground">Leaderboard Points Earned</p>
+            </div>
+            <div className="relative flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-full">
+              <Star className="w-3 h-3 text-primary fill-primary" />
+              <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">XP</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Achievement banner */}
       {(achievementMessage || badges.length > 0) && (

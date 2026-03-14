@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useActivity } from "@/hooks/useActivity";
+import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { toast } from "sonner";
 
 const activityTypes = [
@@ -21,6 +22,7 @@ const activityTypes = [
 const LogActivity = () => {
   const navigate = useNavigate();
   const { logActivity } = useActivity();
+  const { recordWorkout } = useStreaksAndBadges();
   const [step, setStep] = useState(0);
   const [selectedType, setSelectedType] = useState("");
   const [duration, setDuration] = useState(30);
@@ -38,6 +40,7 @@ const LogActivity = () => {
           ? Number((duration * 0.15).toFixed(1)) 
           : undefined,
       });
+      await recordWorkout();
       toast.success("Activity logged successfully!");
       navigate("/activity");
     } catch (error) {

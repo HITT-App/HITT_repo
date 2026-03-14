@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { useActivity } from "@/hooks/useActivity";
+import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -44,6 +45,7 @@ const GymTimer = () => {
   const [searchParams] = useSearchParams();
   const activityType = searchParams.get("sport") || "Workout";
   const { logActivity } = useActivity();
+  const { recordWorkout } = useStreaksAndBadges();
 
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -53,6 +55,7 @@ const GymTimer = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [sets, setSets] = useState(0);
   const [settings, setSettings] = useState({ autoVibrate: true, showCalories: true });
+  const [pointsEarned, setPointsEarned] = useState(0);
 
   const startTimeRef = useRef(Date.now());
   const pausedAtRef = useRef(0);
@@ -117,10 +120,12 @@ const GymTimer = () => {
         calories_burned: calories,
         notes: sets > 0 ? `${sets} sets completed` : undefined,
       });
+      const pts = await recordWorkout();
+      setPointsEarned(pts);
     } catch {
       toast.error("Failed to save activity");
     }
-  }, [activityType, elapsed, calories, sets, logActivity, settings.autoVibrate]);
+  }, [activityType, elapsed, calories, sets, logActivity, settings.autoVibrate, recordWorkout]);
 
   // Heart rate zone visual (decorative)
   const hrZone = elapsed < 300 ? "Warm Up" : elapsed < 1200 ? "Fat Burn" : elapsed < 2400 ? "Cardio" : "Peak";
@@ -137,6 +142,7 @@ const GymTimer = () => {
         activityTitle={activityType}
         activityType={activityType.toLowerCase()}
         stats={completionStats}
+        pointsEarned={pointsEarned}
         onDone={() => navigate("/activity-dashboard")}
       />
     );

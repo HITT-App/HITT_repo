@@ -42,6 +42,7 @@ export default function WorkoutPlayer() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { recordWorkout, newBadges, clearNewBadges } = useStreaksAndBadges();
+  const [pointsEarned, setPointsEarned] = useState(0);
   
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -157,7 +158,8 @@ export default function WorkoutPlayer() {
         });
         
         // Update streak and check for new badges
-        await recordWorkout();
+        const pts = await recordWorkout();
+        setPointsEarned(pts);
       } catch (error) {
         console.error('Error saving progress:', error);
       }
@@ -228,6 +230,7 @@ export default function WorkoutPlayer() {
           stats={completionStats}
           achievementMessage={newBadges.length > 0 ? 'New achievement unlocked!' : undefined}
           badges={newBadges.map(b => ({ name: b.name, icon: b.icon }))}
+          pointsEarned={pointsEarned}
           onDone={handleFinish}
           ratingSection={ratingSection}
           postData={{
