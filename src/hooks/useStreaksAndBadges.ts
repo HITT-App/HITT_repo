@@ -3,6 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+// Leaderboard point values for actions
+const POINTS = {
+  WORKOUT_COMPLETE: 50,
+  STREAK_DAY_BONUS: 10,
+  BADGE_EARNED: 25,
+  DAILY_CHECKIN: 5,
+  MEAL_LOGGED: 5,
+} as const;
+
 interface UserStreak {
   id: string;
   user_id: string;
