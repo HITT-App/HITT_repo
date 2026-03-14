@@ -1,22 +1,63 @@
-import { ArrowLeft, Footprints, Settings, TrendingUp, Clock, Target, ChevronRight, Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Footprints, Settings, Target, Plus, RefreshCw, Unplug, Smartphone } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
+import { useGoogleFit } from "@/hooks/useGoogleFit";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Steps = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const { logMetric, useMetricHistory, useTodayTotal } = useHealthMetrics();
   const { data: history = [] } = useMetricHistory("steps", 20);
   const { data: todaySteps = 0 } = useTodayTotal("steps");
   const [showLogForm, setShowLogForm] = useState(false);
   const [stepsInput, setStepsInput] = useState("");
   const goal = 10000;
+
+  const {
+    isConnected,
+    isLoading: fitLoading,
+    isSyncing,
+    lastSynced,
+    connect,
+    disconnect,
+    syncSteps,
+    handleOAuthCallback,
+  } = useGoogleFit();
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const code = searchParams.get("code");
+    if (code) {
+      // Remove code from URL
+      searchParams.delete("code");
+      searchParams.delete("scope");
+      setSearchParams(searchParams, { replace: true });
+
+      handleOAuthCallback(code).then((success) => {
+        if (success) {
+          toast.success("Google Fit connected! Syncing steps...");
+          syncSteps().then((steps) => {
+            if (steps !== null) {
+              toast.success(`Synced ${steps.toLocaleString()} steps from Google Fit`);
+              queryClient.invalidateQueries({ queryKey: ["health-metrics-today"] });
+              queryClient.invalidateQueries({ queryKey: ["health-metrics-history"] });
+            }
+          });
+        } else {
+          toast.error("Failed to connect Google Fit");
+        }
+      });
+    }
+  }, []);
 
   const progressPercent = Math.min((todaySteps / goal) * 100, 100);
 
@@ -36,17 +77,81 @@ const Steps = () => {
     }
   };
 
+  const handleSync = async () => {
+    const steps = await syncSteps();
+    if (steps !== null) {
+      toast.success(`Synced ${steps.toLocaleString()} steps from Google Fit`);
+      queryClient.invalidateQueries({ queryKey: ["health-metrics-today"] });
+      queryClient.invalidateQueries({ queryKey: ["health-metrics-history"] });
+    } else {
+      toast.error("Sync failed");
+    }
+  };
+
+  const handleDisconnect = async () => {
+    await disconnect();
+    toast.success("Google Fit disconnected");
+  };
+
   const quickSteps = [1000, 2500, 5000];
 
   return (
     <div className="min-h-screen bg-background pb-6">
       <header className="flex items-center justify-between p-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
         <h1 className="text-lg font-semibold text-foreground">Steps</h1>
-        <Button variant="ghost" size="icon"><Settings className="w-5 h-5" /></Button>
+        <Button variant="ghost" size="icon">
+          <Settings className="w-5 h-5" />
+        </Button>
       </header>
 
       <div className="p-4 space-y-6">
+        {/* Google Fit Connection Card */}
+        <Card className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Smartphone className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Google Fit</p>
+              <p className="text-xs text-muted-foreground">
+                {fitLoading
+                  ? "Checking..."
+                  : isConnected
+                  ? lastSynced
+                    ? `Last synced ${formatDistanceToNow(new Date(lastSynced), { addSuffix: true })}`
+                    : "Connected"
+                  : "Auto-sync steps from your phone"}
+              </p>
+            </div>
+          </div>
+
+          {isConnected ? (
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                variant="outline"
+                size="sm"
+                onClick={handleSync}
+                disabled={isSyncing}
+              >
+                <RefreshCw className={`w-4 h-4 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
+                {isSyncing ? "Syncing..." : "Sync Now"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDisconnect}>
+                <Unplug className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button className="w-full" size="sm" onClick={connect} disabled={fitLoading}>
+              Connect Google Fit
+            </Button>
+          )}
+        </Card>
+
+        {/* Today's Progress */}
         <Card className="p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Footprints className="w-6 h-6 text-primary" />
@@ -54,14 +159,24 @@ const Steps = () => {
             <span className="text-lg text-muted-foreground">steps</span>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            {todaySteps >= goal ? "🎉 Goal reached!" : `Take ${(goal - todaySteps).toLocaleString()} more steps today!`}
+            {todaySteps >= goal
+              ? "🎉 Goal reached!"
+              : `Take ${(goal - todaySteps).toLocaleString()} more steps today!`}
           </p>
 
           <div className="relative w-32 h-32 mx-auto mb-4">
             <svg className="w-full h-full -rotate-90">
               <circle cx="64" cy="64" r="56" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
-              <circle cx="64" cy="64" r="56" fill="none" stroke="hsl(var(--primary))" strokeWidth="8"
-                strokeDasharray={`${progressPercent * 3.52} 352`} strokeLinecap="round" />
+              <circle
+                cx="64"
+                cy="64"
+                r="56"
+                fill="none"
+                stroke="hsl(var(--primary))"
+                strokeWidth="8"
+                strokeDasharray={`${progressPercent * 3.52} 352`}
+                strokeLinecap="round"
+              />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-2xl font-bold">{Math.round(progressPercent)}%</span>
@@ -83,7 +198,9 @@ const Steps = () => {
                   try {
                     await logMetric.mutateAsync({ metric_type: "steps", value: steps, unit: "steps" });
                     toast.success(`${steps.toLocaleString()} steps logged!`);
-                  } catch { toast.error("Failed"); }
+                  } catch {
+                    toast.error("Failed");
+                  }
                 }}
                 disabled={logMetric.isPending}
               >
@@ -107,7 +224,16 @@ const Steps = () => {
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Footprints className="w-5 h-5 text-primary" />
                     </div>
-                    <p className="font-semibold text-foreground">{Math.round(Number(item.value)).toLocaleString()} steps</p>
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {Math.round(Number(item.value)).toLocaleString()} steps
+                      </p>
+                      {item.notes === "google_fit_sync" && (
+                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                          Google Fit
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {format(new Date(item.recorded_at), "MMM d, h:mm a")}
@@ -129,7 +255,9 @@ const Steps = () => {
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
             <span>{Math.round(progressPercent)}%</span>
-            <span>{todaySteps.toLocaleString()} / {goal.toLocaleString()}</span>
+            <span>
+              {todaySteps.toLocaleString()} / {goal.toLocaleString()}
+            </span>
           </div>
           <Progress value={progressPercent} className="h-2" />
         </Card>
@@ -138,12 +266,19 @@ const Steps = () => {
         {showLogForm && (
           <Card className="p-4 space-y-3 animate-fade-in">
             <p className="font-semibold text-foreground">Log Custom Steps</p>
-            <Input type="number" placeholder="Enter step count" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} />
+            <Input
+              type="number"
+              placeholder="Enter step count"
+              value={stepsInput}
+              onChange={(e) => setStepsInput(e.target.value)}
+            />
             <div className="flex gap-2">
               <Button className="flex-1" onClick={handleLog} disabled={logMetric.isPending}>
                 {logMetric.isPending ? "Saving..." : "Save"}
               </Button>
-              <Button variant="outline" onClick={() => setShowLogForm(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setShowLogForm(false)}>
+                Cancel
+              </Button>
             </div>
           </Card>
         )}
