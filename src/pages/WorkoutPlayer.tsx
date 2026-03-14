@@ -42,6 +42,7 @@ export default function WorkoutPlayer() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { recordWorkout, newBadges, clearNewBadges } = useStreaksAndBadges();
+  const [pointsEarned, setPointsEarned] = useState(0);
   
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
