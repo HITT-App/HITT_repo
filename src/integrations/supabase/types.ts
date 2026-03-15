@@ -1874,6 +1874,7 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
+          watch_type: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1883,6 +1884,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
+          watch_type?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -1892,6 +1894,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+          watch_type?: string | null
         }
         Relationships: []
       }
@@ -2013,8 +2016,11 @@ export type Database = {
           elevation_gain_m: number | null
           estimated_minutes: number | null
           id: string
+          is_official: boolean
           is_public: boolean
           name: string
+          rating: number | null
+          rating_count: number | null
           surface_type: string | null
           tags: string[] | null
           thumbnail_url: string | null
@@ -2030,8 +2036,11 @@ export type Database = {
           elevation_gain_m?: number | null
           estimated_minutes?: number | null
           id?: string
+          is_official?: boolean
           is_public?: boolean
           name: string
+          rating?: number | null
+          rating_count?: number | null
           surface_type?: string | null
           tags?: string[] | null
           thumbnail_url?: string | null
@@ -2047,8 +2056,11 @@ export type Database = {
           elevation_gain_m?: number | null
           estimated_minutes?: number | null
           id?: string
+          is_official?: boolean
           is_public?: boolean
           name?: string
+          rating?: number | null
+          rating_count?: number | null
           surface_type?: string | null
           tags?: string[] | null
           thumbnail_url?: string | null
@@ -2707,11 +2719,13 @@ export type Database = {
           instructor_avatar: string | null
           instructor_name: string | null
           is_featured: boolean | null
+          met_value: number | null
           rating: number | null
           rating_count: number | null
           thumbnail_url: string | null
           title: string
           video_url: string | null
+          workout_type: string | null
         }
         Insert: {
           body_areas?: string[] | null
@@ -2726,11 +2740,13 @@ export type Database = {
           instructor_avatar?: string | null
           instructor_name?: string | null
           is_featured?: boolean | null
+          met_value?: number | null
           rating?: number | null
           rating_count?: number | null
           thumbnail_url?: string | null
           title: string
           video_url?: string | null
+          workout_type?: string | null
         }
         Update: {
           body_areas?: string[] | null
@@ -2745,11 +2761,13 @@ export type Database = {
           instructor_avatar?: string | null
           instructor_name?: string | null
           is_featured?: boolean | null
+          met_value?: number | null
           rating?: number | null
           rating_count?: number | null
           thumbnail_url?: string | null
           title?: string
           video_url?: string | null
+          workout_type?: string | null
         }
         Relationships: []
       }
