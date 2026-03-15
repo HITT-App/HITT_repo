@@ -8,6 +8,7 @@
         "@capacitor/android": "^8.2.0",
         "@capacitor/core": "^8.2.0",
         "@capacitor/ios": "^8.2.0",
+        "@capgo/capacitor-health": "^8.4.0",
         "@elevenlabs/react": "^0.13.0",
         "@hookform/resolvers": "^3.10.0",
         "@radix-ui/react-accordion": "^1.2.11",
@@ -278,6 +279,8 @@
     "@capacitor/core": ["@capacitor/core@8.2.0", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-oKaoNeNtH2iIZMDFVrb1atoyRECDGHcfLMunJ5KWN8DtvpVBeeA4c41e20NTuhMxw1cSYbpq2PV2hb+/9CJxlQ=="],
 
     "@capacitor/ios": ["@capacitor/ios@8.2.0", "", { "peerDependencies": { "@capacitor/core": "^8.2.0" } }, "sha512-X2/VtM4qP/R1SM0VQ5W/VotEc6PS/KTooD33EijsfAHWBdee+xmBapW8SeNLnu16wJ+tsfWlvtipaJEyfKbRKQ=="],
+
+    "@capgo/capacitor-health": ["@capgo/capacitor-health@8.4.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-RoszHfI0AVi+IUYevs/4IySrX3cp6qiDfmeu3/6pGtuRHL2JZcIrEEVXvQ5zgPKrW7hImVN8giHlO7z8a0QMIQ=="],
 
     "@elevenlabs/client": ["@elevenlabs/client@0.13.0", "", { "dependencies": { "@elevenlabs/types": "0.4.0", "livekit-client": "^2.11.4" } }, "sha512-0UjouSOVK+mECJuYg/DqM9V1NIsabIrlRmw/RjEMS5UmOpsAga3KxMC3et8fKh8G/MI2cZtLr2764wIOZgyrQg=="],
 
