@@ -9,7 +9,16 @@ interface WakeWordListenerProps {
   onWakeWordDetected: () => void;
 }
 
-const WAKE_PHRASES = ['ok hiit', 'okay hiit', 'ok hit', 'okay hit', 'hey hiit', 'hey hit'];
+const WAKE_WORD_REGEX = /\b(?:ok|okay|hey)\s+(?:hiit|hit|heat|he\s*it|h\s*i+\s*i*\s*t)\b/;
+
+function normalizeTranscript(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/["'’`]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListenerProps) {
   const { user } = useAuth();
@@ -31,8 +40,8 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
 
   const handleTranscript = useCallback(
     (text: string) => {
-      const normalized = text.toLowerCase().trim();
-      const detected = WAKE_PHRASES.some((phrase) => normalized.includes(phrase));
+      const normalized = normalizeTranscript(text);
+      const detected = WAKE_WORD_REGEX.test(normalized);
       if (detected) {
         const now = Date.now();
         if (now - lastDetectedRef.current > 3000) {
