@@ -1,22 +1,11 @@
-import { ArrowLeft, Filter, ChevronRight, Droplet, Activity as ActivityIcon, Moon, Check, Sparkles } from "lucide-react";
+import { ArrowLeft, Filter, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { RecommendationCard, type Recommendation } from "@/components/health/RecommendationCard";
 
 type Category = "all" | "completed" | "incomplete";
-type RecommendationType = "hydration" | "activity" | "sleep";
-
-interface Recommendation {
-  id: string;
-  type: RecommendationType;
-  title: string;
-  description: string;
-  metric: string;
-  scoreGain: number;
-  completed: boolean;
-}
 
 const recommendations: Recommendation[] = [
   {
@@ -58,7 +47,6 @@ const HealthRecommendations = () => {
       navigate(-1);
       return;
     }
-
     navigate("/health-metrics");
   };
 
@@ -71,39 +59,6 @@ const HealthRecommendations = () => {
   const filterCategories = ["Blood Pressure", "Hydration", "Sleep", "Activity"];
   const priorities = ["High", "Medium", "Low"];
 
-  const getIcon = (type: RecommendationType) => {
-    switch (type) {
-      case "hydration":
-        return <Droplet className="w-5 h-5 text-blue-500" />;
-      case "activity":
-        return <ActivityIcon className="w-5 h-5 text-orange-500" />;
-      case "sleep":
-        return <Moon className="w-5 h-5 text-purple-500" />;
-    }
-  };
-
-  const getTypeLabel = (type: RecommendationType) => {
-    switch (type) {
-      case "hydration":
-        return "Health Metrics";
-      case "activity":
-        return "Activity";
-      case "sleep":
-        return "Sleep";
-    }
-  };
-
-  const getTypeColor = (type: RecommendationType) => {
-    switch (type) {
-      case "hydration":
-        return "text-blue-500";
-      case "activity":
-        return "text-orange-500";
-      case "sleep":
-        return "text-purple-500";
-    }
-  };
-
   const filteredRecommendations = recommendations.filter((rec) => {
     if (category === "completed") return rec.completed;
     if (category === "incomplete") return !rec.completed;
@@ -112,7 +67,6 @@ const HealthRecommendations = () => {
 
   return (
     <div className="min-h-screen bg-background pb-6">
-      {/* Header */}
       <header className="flex items-center justify-between p-4">
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="w-5 h-5" />
@@ -120,7 +74,6 @@ const HealthRecommendations = () => {
       </header>
 
       <div className="px-4 space-y-6">
-        {/* Title */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">Health Metrics Recommendations</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -128,7 +81,6 @@ const HealthRecommendations = () => {
           </p>
         </div>
 
-        {/* Filter Bar */}
         <div className="flex items-center justify-between">
           <p className="font-medium text-foreground">All Recommendation</p>
           <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
@@ -178,7 +130,6 @@ const HealthRecommendations = () => {
           </Sheet>
         </div>
 
-        {/* Category Tabs */}
         <div className="flex gap-2">
           {categories.map((cat) => (
             <Button
@@ -192,37 +143,9 @@ const HealthRecommendations = () => {
           ))}
         </div>
 
-        {/* Recommendations List */}
         <div className="space-y-4">
           {filteredRecommendations.map((rec) => (
-            <Card 
-              key={rec.id} 
-              className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate(`/health-recommendation/${rec.id}`)}
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  {getIcon(rec.type)}
-                </div>
-                <div className="flex-1">
-                  <p className={`text-xs font-medium ${getTypeColor(rec.type)}`}>
-                    {getTypeLabel(rec.type)}
-                  </p>
-                  <h3 className="font-semibold text-foreground">{rec.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{rec.description}</p>
-                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      📊 {rec.metric}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 mt-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span className="text-sm text-primary font-medium">+{rec.scoreGain} Score Increase</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
-            </Card>
+            <RecommendationCard key={rec.id} rec={rec} />
           ))}
         </div>
       </div>
