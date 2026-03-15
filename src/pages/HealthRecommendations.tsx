@@ -53,6 +53,15 @@ const HealthRecommendations = () => {
   const [category, setCategory] = useState<Category>("all");
   const [filterOpen, setFilterOpen] = useState(false);
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate("/health-metrics");
+  };
+
   const categories: { value: Category; label: string }[] = [
     { value: "all", label: "All" },
     { value: "completed", label: "Completed" },
