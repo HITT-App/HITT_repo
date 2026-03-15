@@ -1,0 +1,240 @@
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { Search, Bookmark, Plus, LocateFixed, Layers, ArrowLeft, Mountain, Ruler, Gauge } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useRoutes, Route } from "@/hooks/useRoutes";
+import { ROUTES } from "@/lib/routes";
+import { cn } from "@/lib/utils";
+
+const DIFFICULTY_COLORS: Record<string, string> = {
+  easy: "#22c55e",
+  moderate: "#f59e0b",
+  hard: "#ef4444",
+};
+
+const FILTER_CHIPS = ["All", "Easy", "Moderate", "Hard", "Short", "Long"] as const;
+
+const RoutesExplorer = () => {
+  const navigate = useNavigate();
+  const { routes, isLoading } = useRoutes();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const polylinesRef = useRef<L.Polyline[]>([]);
+
+  const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState<string>("All");
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  const [showSaved, setShowSaved] = useState(false);
+  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+
+  // Filter routes
+  const filtered = useMemo(() => {
+    let list = routes;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(r => r.name.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q)));
+    }
+    if (activeFilter === "Easy") list = list.filter(r => r.difficulty === "easy");
+    else if (activeFilter === "Moderate") list = list.filter(r => r.difficulty === "moderate");
+    else if (activeFilter === "Hard") list = list.filter(r => r.difficulty === "hard");
+    else if (activeFilter === "Short") list = list.filter(r => r.distance_km <= 5);
+    else if (activeFilter === "Long") list = list.filter(r => r.distance_km > 10);
+    return list;
+  }, [routes, search, activeFilter]);
+
+  // Get user location
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      (p) => setUserPos([p.coords.latitude, p.coords.longitude]),
+      () => setUserPos([25.2048, 55.2708]) // Default Dubai
+    );
+  }, []);
+
+  // Init map
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const center = userPos || [25.2048, 55.2708];
+    const map = L.map(containerRef.current, {
+      center,
+      zoom: 13,
+      zoomControl: false,
+      attributionControl: false,
+    });
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+    }).addTo(map);
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [userPos]);
+
+  // Draw user dot
+  useEffect(() => {
+    if (!mapRef.current || !userPos) return;
+    const pulse = L.circleMarker(userPos, {
+      radius: 14, color: "hsl(210,100%,56%)", fillColor: "hsl(210,100%,56%)", fillOpacity: 0.2, weight: 0,
+      className: "animate-pulse",
+    }).addTo(mapRef.current);
+    const dot = L.circleMarker(userPos, {
+      radius: 6, color: "#fff", fillColor: "hsl(210,100%,56%)", fillOpacity: 1, weight: 2,
+    }).addTo(mapRef.current);
+    return () => { pulse.remove(); dot.remove(); };
+  }, [userPos]);
+
+  // Draw route polylines
+  useEffect(() => {
+    if (!mapRef.current) return;
+    polylinesRef.current.forEach(p => p.remove());
+    polylinesRef.current = [];
+
+    filtered.forEach(route => {
+      if (route.coordinates.length < 2) return;
+      const latlngs = route.coordinates.map(c => [c.lat, c.lng] as [number, number]);
+      const color = DIFFICULTY_COLORS[route.difficulty] || "#f59e0b";
+      const isSelected = selectedRoute?.id === route.id;
+      const polyline = L.polyline(latlngs, {
+        color, weight: isSelected ? 5 : 3, opacity: isSelected ? 1 : 0.6,
+      }).addTo(mapRef.current!);
+      polyline.on("click", () => setSelectedRoute(route));
+      polylinesRef.current.push(polyline);
+    });
+  }, [filtered, selectedRoute]);
+
+  const recenter = () => {
+    if (mapRef.current && userPos) mapRef.current.flyTo(userPos, 13);
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 bg-background">
+      {/* Map */}
+      <div ref={containerRef} className="absolute inset-0" />
+
+      {/* Top bar */}
+      <div className="absolute top-0 left-0 right-0 z-[500] safe-area-top">
+        <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+          <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-md shrink-0" onClick={() => navigate(-1)}>
+            <ArrowLeft size={20} />
+          </Button>
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <Input
+              placeholder="Search routes..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 bg-background/80 backdrop-blur-md border-border/40 h-10"
+            />
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("bg-background/80 backdrop-blur-md shrink-0", showSaved && "text-primary")}
+            onClick={() => setShowSaved(!showSaved)}
+          >
+            <Bookmark size={20} />
+          </Button>
+        </div>
+
+        {/* Filter chips */}
+        <div className="flex gap-2 px-4 pb-2 overflow-x-auto no-scrollbar">
+          {FILTER_CHIPS.map(chip => (
+            <button
+              key={chip}
+              onClick={() => setActiveFilter(chip)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all",
+                activeFilter === chip
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background/70 backdrop-blur-md text-foreground border border-border/40"
+              )}
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Map controls */}
+      <div className="absolute right-4 bottom-56 z-[500] flex flex-col gap-2">
+        <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-md" onClick={recenter}>
+          <LocateFixed size={18} />
+        </Button>
+      </div>
+
+      {/* Create route FAB */}
+      <Button
+        className="absolute left-4 bottom-56 z-[500] shadow-elevated gap-2"
+        onClick={() => navigate(ROUTES.CREATE_ROUTE)}
+      >
+        <Plus size={16} />
+        Create
+      </Button>
+
+      {/* Bottom card */}
+      <div className="absolute bottom-0 left-0 right-0 z-[500]" style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}>
+        <div className="bg-background/95 backdrop-blur-md rounded-t-3xl border-t border-border/40 px-5 pt-4 pb-6">
+          {selectedRoute ? (
+            <button className="w-full text-left" onClick={() => navigate(ROUTES.routeDetail(selectedRoute.id))}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-foreground">{selectedRoute.name}</h3>
+                    <Badge variant="outline" className="text-[10px]" style={{ borderColor: DIFFICULTY_COLORS[selectedRoute.difficulty] }}>
+                      {selectedRoute.difficulty}
+                    </Badge>
+                  </div>
+                  {selectedRoute.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-1">{selectedRoute.description}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-5 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1"><Ruler size={13} />{selectedRoute.distance_km.toFixed(1)} km</span>
+                <span className="flex items-center gap-1"><Mountain size={13} />{Math.round(selectedRoute.elevation_gain_m)} m</span>
+                <span className="flex items-center gap-1"><Gauge size={13} />~{selectedRoute.estimated_minutes} min</span>
+                <span className="ml-auto text-[10px] bg-secondary px-2 py-0.5 rounded-full">{selectedRoute.surface_type}</span>
+              </div>
+            </button>
+          ) : (
+            <div>
+              <h3 className="font-bold text-foreground mb-2">
+                {isLoading ? "Loading routes..." : `${filtered.length} Route${filtered.length !== 1 ? "s" : ""} nearby`}
+              </h3>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {filtered.slice(0, 5).map(route => (
+                  <button
+                    key={route.id}
+                    className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-secondary/50 transition-colors"
+                    onClick={() => {
+                      setSelectedRoute(route);
+                      if (route.coordinates.length > 0 && mapRef.current) {
+                        mapRef.current.flyTo([route.coordinates[0].lat, route.coordinates[0].lng], 14);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full" style={{ background: DIFFICULTY_COLORS[route.difficulty] }} />
+                      <span className="text-sm font-medium text-foreground">{route.name}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{route.distance_km.toFixed(1)} km</span>
+                  </button>
+                ))}
+                {filtered.length === 0 && !isLoading && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No routes found. Create your first one!</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RoutesExplorer;

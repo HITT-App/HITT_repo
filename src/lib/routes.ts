@@ -105,6 +105,11 @@ export const ROUTES = {
   challengeDetail: (id: string) => `/challenge/${id}` as const,
   LEADERBOARD: "/leaderboard",
 
+  // Routes & Trails
+  ROUTES_EXPLORER: "/routes",
+  CREATE_ROUTE: "/routes/create",
+  routeDetail: (id: string) => `/route/${id}` as const,
+
   // Misc
   HIIT_TRIAL: "/hiit-trial",
   NOTIFICATION_DEMO: "/notification-demo",
