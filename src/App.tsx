@@ -106,6 +106,9 @@ const NotificationDemo = lazy(() => import("./pages/NotificationDemo"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const CommunityChatroom = lazy(() => import("./pages/CommunityChatroom"));
+const RoutesExplorer = lazy(() => import("./pages/RoutesExplorer"));
+const RouteDetail = lazy(() => import("./pages/RouteDetail"));
+const CreateRoute = lazy(() => import("./pages/CreateRoute"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
