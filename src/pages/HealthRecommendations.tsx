@@ -114,7 +114,7 @@ const HealthRecommendations = () => {
     <div className="min-h-screen bg-background pb-6">
       {/* Header */}
       <header className="flex items-center justify-between p-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
       </header>
