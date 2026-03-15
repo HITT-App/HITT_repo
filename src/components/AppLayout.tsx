@@ -19,6 +19,8 @@ const HIDDEN_NAV_ROUTES = [
   "/community/post",
   "/community/story",
   "/community/create-story",
+  "/routes",
+  "/route/",
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {

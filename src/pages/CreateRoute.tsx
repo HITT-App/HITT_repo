@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ArrowLeft, Undo2, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Undo2, Save, Trash2, MapPin, CornerDownRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,12 +13,22 @@ import { cn } from "@/lib/utils";
 const DIFFICULTIES = ["easy", "moderate", "hard"] as const;
 const SURFACES = ["road", "trail", "mixed", "gravel", "sand"] as const;
 
+const DIFFICULTY_META: Record<string, { color: string; emoji: string }> = {
+  easy: { color: "#22c55e", emoji: "🟢" },
+  moderate: { color: "#f59e0b", emoji: "🟡" },
+  hard: { color: "#ef4444", emoji: "🔴" },
+};
+
 /** Haversine distance in km */
 function haversine(a: RouteCoordinate, b: RouteCoordinate): number {
   const R = 6371;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
   const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const s = Math.sin(dLat / 2) ** 2 + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
 }
 
@@ -43,6 +53,9 @@ const CreateRoute = () => {
   const [surface, setSurface] = useState("mixed");
   const [showForm, setShowForm] = useState(false);
 
+  const dist = totalDistance(coords);
+  const estMinutes = Math.round((dist / 5) * 60);
+
   // Init map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -58,12 +71,15 @@ const CreateRoute = () => {
         zoomControl: false,
         attributionControl: false,
       });
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 19 }).addTo(map);
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        { maxZoom: 19 }
+      ).addTo(map);
       mapRef.current = map;
 
       map.on("click", (e: L.LeafletMouseEvent) => {
         const newCoord: RouteCoordinate = { lat: e.latlng.lat, lng: e.latlng.lng };
-        setCoords(prev => [...prev, newCoord]);
+        setCoords((prev) => [...prev, newCoord]);
       });
     }
 
@@ -76,7 +92,7 @@ const CreateRoute = () => {
   // Draw markers & polyline
   useEffect(() => {
     if (!mapRef.current) return;
-    markersRef.current.forEach(m => m.remove());
+    markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
     polylineRef.current?.remove();
 
@@ -84,24 +100,37 @@ const CreateRoute = () => {
       const isFirst = i === 0;
       const isLast = i === coords.length - 1 && coords.length > 1;
       const color = isFirst ? "#22c55e" : isLast ? "#ef4444" : "hsl(24,95%,50%)";
+      const radius = isFirst || isLast ? 8 : 5;
+
       const marker = L.circleMarker([c.lat, c.lng], {
-        radius: 6, color, fillColor: color, fillOpacity: 1, weight: 2,
+        radius,
+        color: "#fff",
+        fillColor: color,
+        fillOpacity: 1,
+        weight: 2,
       }).addTo(mapRef.current!);
       markersRef.current.push(marker);
     });
 
     if (coords.length >= 2) {
       polylineRef.current = L.polyline(
-        coords.map(c => [c.lat, c.lng] as [number, number]),
-        { color: "hsl(24,95%,50%)", weight: 3, opacity: 0.8, dashArray: "8 6" }
+        coords.map((c) => [c.lat, c.lng] as [number, number]),
+        {
+          color: "hsl(24,95%,50%)",
+          weight: 4,
+          opacity: 0.9,
+          dashArray: "10 8",
+          lineCap: "round",
+        }
       ).addTo(mapRef.current);
     }
   }, [coords]);
 
-  const undo = () => setCoords(prev => prev.slice(0, -1));
-  const clearAll = () => setCoords([]);
-
-  const dist = totalDistance(coords);
+  const undo = () => setCoords((prev) => prev.slice(0, -1));
+  const clearAll = () => {
+    setCoords([]);
+    setShowForm(false);
+  };
 
   const handleSave = () => {
     if (!name.trim()) return;
@@ -111,7 +140,7 @@ const CreateRoute = () => {
         description: description.trim() || undefined,
         distance_km: Math.round(dist * 100) / 100,
         elevation_gain_m: 0,
-        estimated_minutes: Math.round((dist / 5) * 60), // ~5km/h walking pace
+        estimated_minutes: estMinutes,
         difficulty,
         surface_type: surface,
         coordinates: coords,
@@ -125,86 +154,165 @@ const CreateRoute = () => {
       <div ref={containerRef} className="absolute inset-0" />
 
       {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 z-[500] flex items-center justify-between px-4 pt-3 safe-area-top">
-        <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-md" onClick={() => navigate(-1)}>
-          <ArrowLeft size={20} />
-        </Button>
-        <span className="text-sm font-bold text-foreground bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full">
-          Tap map to add points
-        </span>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-md" onClick={undo} disabled={coords.length === 0}>
-            <Undo2 size={18} />
+      <div className="absolute top-0 left-0 right-0 z-[500] safe-area-top">
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-background/80 backdrop-blur-md border border-border/30 shadow-sm"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft size={20} />
           </Button>
-          <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-md" onClick={clearAll} disabled={coords.length === 0}>
-            <Trash2 size={18} />
-          </Button>
+
+          <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border/30 shadow-sm flex items-center gap-2">
+            <MapPin size={14} className="text-primary" />
+            <span className="text-sm font-semibold text-foreground">
+              {coords.length === 0 ? "Tap to plot" : `${coords.length} point${coords.length !== 1 ? "s" : ""}`}
+            </span>
+          </div>
+
+          <div className="flex gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="bg-background/80 backdrop-blur-md border border-border/30 shadow-sm"
+              onClick={undo}
+              disabled={coords.length === 0}
+            >
+              <Undo2 size={18} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="bg-background/80 backdrop-blur-md border border-border/30 shadow-sm text-destructive"
+              onClick={clearAll}
+              disabled={coords.length === 0}
+            >
+              <Trash2 size={18} />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Distance indicator */}
+      {/* Floating distance pill */}
       {coords.length >= 2 && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[500] bg-primary text-primary-foreground px-4 py-1.5 rounded-full text-sm font-bold">
-          {dist.toFixed(2)} km
+        <div className="absolute top-[72px] left-1/2 -translate-x-1/2 z-[500]">
+          <div className="bg-primary text-primary-foreground px-5 py-2 rounded-full text-sm font-bold shadow-elevated flex items-center gap-2">
+            <CornerDownRight size={14} />
+            {dist.toFixed(2)} km
+            {estMinutes > 0 && <span className="text-primary-foreground/70 font-normal">· ~{estMinutes} min</span>}
+          </div>
         </div>
       )}
 
       {/* Bottom panel */}
-      <div className="absolute bottom-0 left-0 right-0 z-[500]" style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}>
-        <div className="bg-background/95 backdrop-blur-md rounded-t-3xl border-t border-border/40 px-5 pt-4 pb-6">
+      <div
+        className="absolute bottom-0 left-0 right-0 z-[500]"
+        style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}
+      >
+        <div className="bg-background/95 backdrop-blur-xl rounded-t-3xl border-t border-border/40 shadow-elevated">
           {!showForm ? (
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground text-center">
-                {coords.length === 0
-                  ? "Tap on the map to start plotting your route"
-                  : `${coords.length} point${coords.length !== 1 ? "s" : ""} · ${dist.toFixed(2)} km`}
-              </p>
+            <div className="px-5 pt-5 pb-6 space-y-4">
+              {/* Mini stats */}
+              {coords.length >= 2 && (
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-secondary/50 rounded-xl p-2.5 text-center">
+                    <p className="text-xs text-muted-foreground">Distance</p>
+                    <p className="text-sm font-bold text-foreground">{dist.toFixed(2)} km</p>
+                  </div>
+                  <div className="bg-secondary/50 rounded-xl p-2.5 text-center">
+                    <p className="text-xs text-muted-foreground">Points</p>
+                    <p className="text-sm font-bold text-foreground">{coords.length}</p>
+                  </div>
+                  <div className="bg-secondary/50 rounded-xl p-2.5 text-center">
+                    <p className="text-xs text-muted-foreground">Est. Time</p>
+                    <p className="text-sm font-bold text-foreground">{estMinutes} min</p>
+                  </div>
+                </div>
+              )}
+
+              {coords.length === 0 && (
+                <div className="text-center py-2">
+                  <p className="text-sm text-muted-foreground">Tap on the map to start plotting your route</p>
+                </div>
+              )}
+
               <Button
-                className="w-full"
+                className="w-full h-12 font-bold gap-2"
                 disabled={coords.length < 2}
                 onClick={() => setShowForm(true)}
               >
-                <Save size={16} className="mr-2" />
+                <Save size={16} />
                 Continue to Save
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="px-5 pt-5 pb-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              {/* Name */}
               <div>
-                <Label className="text-xs">Route Name</Label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Morning trail run" className="mt-1" />
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Route Name</Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Morning trail run"
+                  className="mt-1.5 h-11"
+                  autoFocus
+                />
               </div>
+
+              {/* Description */}
               <div>
-                <Label className="text-xs">Description (optional)</Label>
-                <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Scenic route through the park" className="mt-1" />
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Description <span className="font-normal">(optional)</span>
+                </Label>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Scenic route through the park"
+                  className="mt-1.5 h-11"
+                />
               </div>
+
+              {/* Difficulty */}
               <div>
-                <Label className="text-xs mb-2 block">Difficulty</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
+                  Difficulty
+                </Label>
                 <div className="flex gap-2">
-                  {DIFFICULTIES.map(d => (
+                  {DIFFICULTIES.map((d) => (
                     <button
                       key={d}
                       onClick={() => setDifficulty(d)}
                       className={cn(
-                        "flex-1 py-2 rounded-xl text-xs font-medium capitalize transition-all border",
-                        difficulty === d ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground border-border/40"
+                        "flex-1 py-2.5 rounded-xl text-xs font-semibold capitalize transition-all border-2",
+                        difficulty === d
+                          ? "border-current bg-current/10"
+                          : "bg-secondary/50 text-foreground border-transparent"
                       )}
+                      style={difficulty === d ? { color: DIFFICULTY_META[d].color, borderColor: DIFFICULTY_META[d].color } : undefined}
                     >
-                      {d}
+                      {DIFFICULTY_META[d].emoji} {d}
                     </button>
                   ))}
                 </div>
               </div>
+
+              {/* Surface */}
               <div>
-                <Label className="text-xs mb-2 block">Surface</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
+                  Surface Type
+                </Label>
                 <div className="flex gap-2 flex-wrap">
-                  {SURFACES.map(s => (
+                  {SURFACES.map((s) => (
                     <button
                       key={s}
                       onClick={() => setSurface(s)}
                       className={cn(
-                        "px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-all border",
-                        surface === s ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground border-border/40"
+                        "px-4 py-2 rounded-full text-xs font-medium capitalize transition-all border",
+                        surface === s
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-secondary/50 text-foreground border-border/40 hover:bg-secondary"
                       )}
                     >
                       {s}
@@ -212,10 +320,14 @@ const CreateRoute = () => {
                   ))}
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setShowForm(false)}>Back</Button>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1 h-12" onClick={() => setShowForm(false)}>
+                  Back
+                </Button>
                 <Button
-                  className="flex-1"
+                  className="flex-1 h-12 font-bold"
                   disabled={!name.trim() || createRoute.isPending}
                   onClick={handleSave}
                 >
