@@ -501,6 +501,9 @@ export default function Profile() {
             </p>
           </div>
 
+          {/* Connected Devices (Watch Sync) */}
+          <WatchSyncSection />
+
           {/* Password */}
           <PasswordChangeSection />
 
