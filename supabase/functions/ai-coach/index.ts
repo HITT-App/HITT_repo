@@ -197,6 +197,10 @@ serve(async (req) => {
       { data: recentSleep },
       { data: recentWorkouts },
       { data: activityGoals },
+      { data: latestWeight },
+      { data: latestHeartRate },
+      { data: latestSteps },
+      { data: userWorkoutPrefs },
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
@@ -207,6 +211,10 @@ serve(async (req) => {
       supabase.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('workout_progress').select('*').eq('user_id', userId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(5),
       supabase.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('health_metrics').select('value').eq('user_id', userId).eq('metric_type', 'steps').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
     ]);
 
     // Build user context string
