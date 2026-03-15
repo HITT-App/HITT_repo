@@ -230,6 +230,9 @@ const App = () => (
             <Route path="/notification-demo" element={<ProtectedRoute><NotificationDemo /></ProtectedRoute>} />
             <Route path="/community/messages/:recipientId" element={<ProtectedRoute><CommunityMessages /></ProtectedRoute>} />
             <Route path="/community/chatroom" element={<ProtectedRoute><CommunityChatroom /></ProtectedRoute>} />
+            <Route path="/routes" element={<ProtectedRoute><RoutesExplorer /></ProtectedRoute>} />
+            <Route path="/route/:id" element={<ProtectedRoute><RouteDetail /></ProtectedRoute>} />
+            <Route path="/routes/create" element={<ProtectedRoute><CreateRoute /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />

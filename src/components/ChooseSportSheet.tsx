@@ -70,12 +70,21 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
 
         <ScrollArea className="h-[70vh]">
           <div className="px-5 pb-8 space-y-6">
-            {/* Banner */}
-            <div className="rounded-2xl border border-border bg-muted/60 p-4">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wide">New</p>
-              <p className="text-sm font-bold text-foreground mt-1">New Sports available!</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Check out the latest additions to your sport list.</p>
-            </div>
+            {/* Routes Banner */}
+            <button
+              onClick={() => { onOpenChange(false); navigate(ROUTES.ROUTES_EXPLORER); }}
+              className="w-full rounded-2xl border border-primary/30 bg-primary/5 p-4 text-left transition-colors hover:bg-primary/10"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Route size={20} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Routes & Trails</p>
+                  <p className="text-xs text-muted-foreground">Discover and create running routes</p>
+                </div>
+              </div>
+            </button>
 
             {/* Top Sports */}
             <div>
