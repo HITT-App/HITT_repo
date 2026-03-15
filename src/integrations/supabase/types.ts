@@ -2025,7 +2025,7 @@ export type Database = {
           tags: string[] | null
           thumbnail_url: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           coordinates?: Json
@@ -2045,7 +2045,7 @@ export type Database = {
           tags?: string[] | null
           thumbnail_url?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           coordinates?: Json
@@ -2065,7 +2065,7 @@ export type Database = {
           tags?: string[] | null
           thumbnail_url?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
