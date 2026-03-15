@@ -2003,6 +2003,60 @@ export type Database = {
         }
         Relationships: []
       }
+      routes: {
+        Row: {
+          coordinates: Json
+          created_at: string
+          description: string | null
+          difficulty: string
+          distance_km: number | null
+          elevation_gain_m: number | null
+          estimated_minutes: number | null
+          id: string
+          is_public: boolean
+          name: string
+          surface_type: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          coordinates?: Json
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          distance_km?: number | null
+          elevation_gain_m?: number | null
+          estimated_minutes?: number | null
+          id?: string
+          is_public?: boolean
+          name: string
+          surface_type?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          coordinates?: Json
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          distance_km?: number | null
+          elevation_gain_m?: number | null
+          estimated_minutes?: number | null
+          id?: string
+          is_public?: boolean
+          name?: string
+          surface_type?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       scheduled_workouts: {
         Row: {
           calories_burned: number | null
