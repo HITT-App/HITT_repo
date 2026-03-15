@@ -297,7 +297,41 @@ serve(async (req) => {
       if (activityGoals.weekly_duration_minutes) userContext += `• Duration: ${activityGoals.weekly_duration_minutes} min/week\n`;
     }
 
+    // Health metrics context
+    if (latestWeight) {
+      userContext += `\nBody Metrics:\n`;
+      userContext += `• Current weight: ${latestWeight.value} ${latestWeight.unit}\n`;
+      const weightKg = latestWeight.unit === 'lbs' ? latestWeight.value * 0.453592 : latestWeight.value;
+      const maintenance = Math.round(weightKg * 32);
+      userContext += `• Estimated maintenance calories: ~${maintenance} kcal/day\n`;
+      userContext += `• Protein target (2g/kg): ~${Math.round(weightKg * 2)}g/day\n`;
+    }
+    if (latestHeartRate) {
+      userContext += `• Resting heart rate: ${Math.round(latestHeartRate.value)} bpm\n`;
+    }
+    if (latestSteps) {
+      userContext += `• Latest step count: ${Math.round(latestSteps.value).toLocaleString()} steps\n`;
+    }
+
+    // Workout type preferences
+    if (userWorkoutPrefs) {
+      userContext += `\nWorkout Type Preferences:\n`;
+      if (userWorkoutPrefs.preferred_workout_types?.length) {
+        userContext += `• Preferred types: ${userWorkoutPrefs.preferred_workout_types.join(', ')}\n`;
+      }
+      if (userWorkoutPrefs.preferred_equipment?.length) {
+        userContext += `• Available equipment: ${userWorkoutPrefs.preferred_equipment.join(', ')}\n`;
+      }
+      if (userWorkoutPrefs.preferred_duration_minutes) {
+        userContext += `• Preferred duration: ${userWorkoutPrefs.preferred_duration_minutes} min\n`;
+      }
+      if (userWorkoutPrefs.preferred_time) {
+        userContext += `• Preferred workout time: ${userWorkoutPrefs.preferred_time}\n`;
+      }
+    }
+
     userContext += "\nUse this context to personalise your responses. Address the user by name when appropriate. Reference their goals, fitness level, and recent activity. If data is missing, ask them about it naturally.\n";
+    userContext += "\n⚠️ WORKOUT CALIBRATION: When recommending workouts, consider the user's weight for calorie calculations (MET × weight_kg × duration_hours). Recommend workout types that match their preferences and fitness level.\n";
 
     const personalizedPrompt = SYSTEM_PROMPT + userContext;
 
