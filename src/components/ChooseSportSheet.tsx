@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { X, Waves, Footprints, Activity, Dumbbell, Mountain, TreePine, Bike, Flame, PersonStanding } from "lucide-react";
+import { X, Waves, Footprints, Activity, Dumbbell, Mountain, TreePine, Bike, Flame, PersonStanding, Route } from "lucide-react";
 import { Drawer, DrawerContent, DrawerClose } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ROUTES } from "@/lib/routes";
 
 interface ChooseSportSheetProps {
   open: boolean;
