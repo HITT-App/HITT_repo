@@ -1,7 +1,7 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import CommunityMessages from "@/pages/CommunityMessages";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -13,106 +13,113 @@ import { VoiceController } from "@/components/coach/VoiceController";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppLayout } from "@/components/AppLayout";
+import { PageLoader } from "@/components/PageLoader";
+
+// Critical pages loaded eagerly
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
-import Assessment from "./pages/Assessment";
-import AICoach from "./pages/AICoach";
-import Profile from "./pages/Profile";
-import ProfileSetup from "./pages/ProfileSetup";
-import AssessmentResults from "./pages/AssessmentResults";
-import Subscription from "./pages/Subscription";
-import HealthMetrics from "./pages/HealthMetrics";
-import ActivityTracker from "./pages/ActivityTracker";
-import ActivityOnboarding from "./pages/ActivityOnboarding";
-import ActivityDashboard from "./pages/ActivityDashboard";
-import ActivityLive from "./pages/ActivityLive";
-import GymTimer from "./pages/GymTimer";
-import ActivityHistory from "./pages/ActivityHistory";
-import ActivityGoals from "./pages/ActivityGoals";
-import LogActivity from "./pages/LogActivity";
-import SleepTracker from "./pages/SleepTracker";
-import SleepOnboarding from "./pages/SleepOnboarding";
-import SleepDashboard from "./pages/SleepDashboard";
-import SleepSchedule from "./pages/SleepSchedule";
-import SleepHistory from "./pages/SleepHistory";
-import StartSleep from "./pages/StartSleep";
-import Sleeping from "./pages/Sleeping";
-import LogSleep from "./pages/LogSleep";
-import Nutrition from "./pages/Nutrition";
-import Workouts from "./pages/Workouts";
-import CoachBooking from "./pages/CoachBooking";
-import CoachOnboarding from "./pages/CoachOnboarding";
-import BrowseCoaches from "./pages/BrowseCoaches";
-import CoachProfile from "./pages/CoachProfile";
-import BookCoach from "./pages/BookCoach";
-import CoachAppointments from "./pages/CoachAppointments";
-import LiveSession from "./pages/LiveSession";
-import Community from "./pages/Community";
-import CommunityOnboarding from "./pages/CommunityOnboarding";
-import CommunityFeed from "./pages/CommunityFeed";
-import CommunitySearch from "./pages/CommunitySearch";
-import CommunityProfile from "./pages/CommunityProfile";
-import CommunityProfileSettings from "./pages/CommunityProfileSettings";
-import CommunityChat from "./pages/CommunityChat";
-
-import CreatePost from "./pages/CreatePost";
-import CreateStory from "./pages/CreateStory";
-import StoryViewer from "./pages/StoryViewer";
-import PostComments from "./pages/PostComments";
-import Resources from "./pages/Resources";
-import HeartRate from "./pages/HeartRate";
-import Steps from "./pages/Steps";
-import Weight from "./pages/Weight";
-import Hydration from "./pages/Hydration";
-import BloodPressure from "./pages/BloodPressure";
-import Mood from "./pages/Mood";
-import HealthRecommendations from "./pages/HealthRecommendations";
-import ChatSettings from "./pages/ChatSettings";
-import MyConversations from "./pages/MyConversations";
-import NutritionOnboarding from "./pages/NutritionOnboarding";
-import NutritionDashboard from "./pages/NutritionDashboard";
-import MealScanner from "./pages/MealScanner";
-import BrowseMeals from "./pages/BrowseMeals";
-import LogMeal from "./pages/LogMeal";
-import WorkoutOnboarding from "./pages/WorkoutOnboarding";
-import WorkoutLibrary from "./pages/WorkoutLibrary";
-import WorkoutDetail from "./pages/WorkoutDetail";
-import WorkoutPlayer from "./pages/WorkoutPlayer";
-import WorkoutSchedule from "./pages/WorkoutSchedule";
 import NotFound from "./pages/NotFound";
-import Notifications from "./pages/Notifications";
-import Search from "./pages/Search";
-import ServerError from "./pages/ServerError";
-import NoInternet from "./pages/NoInternet";
-import Maintenance from "./pages/Maintenance";
-import FeatureLocked from "./pages/FeatureLocked";
-import UpdateRequired from "./pages/UpdateRequired";
-import AchievementsIntro from "./pages/AchievementsIntro";
-import Achievements from "./pages/Achievements";
-import AllAchievements from "./pages/AllAchievements";
-import AchievementDetail from "./pages/AchievementDetail";
-import Challenges from "./pages/Challenges";
-import ChallengeDetail from "./pages/ChallengeDetail";
-import ChallengeLeaderboard from "./pages/ChallengeLeaderboard";
-import HIITTrialWelcome from "./pages/HIITTrialWelcome";
-import MealDetail from "./pages/MealDetail";
-import NotificationDemo from "./pages/NotificationDemo";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminNotifications from "./pages/admin/AdminNotifications";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminWorkouts from "./pages/admin/AdminWorkouts";
-import AdminMeals from "./pages/admin/AdminMeals";
-import AdminCoaches from "./pages/admin/AdminCoaches";
-import AdminBadges from "./pages/admin/AdminBadges";
-import AdminCommunity from "./pages/admin/AdminCommunity";
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
-import AdminHomeLayout from "./pages/admin/AdminHomeLayout";
-import CommunityChatroom from "./pages/CommunityChatroom";
+
+// Lazy-loaded pages
+const Assessment = lazy(() => import("./pages/Assessment"));
+const AICoach = lazy(() => import("./pages/AICoach"));
+const Profile = lazy(() => import("./pages/Profile"));
+const ProfileSetup = lazy(() => import("./pages/ProfileSetup"));
+const AssessmentResults = lazy(() => import("./pages/AssessmentResults"));
+const Subscription = lazy(() => import("./pages/Subscription"));
+const HealthMetrics = lazy(() => import("./pages/HealthMetrics"));
+const ActivityTracker = lazy(() => import("./pages/ActivityTracker"));
+const ActivityOnboarding = lazy(() => import("./pages/ActivityOnboarding"));
+const ActivityDashboard = lazy(() => import("./pages/ActivityDashboard"));
+const ActivityLive = lazy(() => import("./pages/ActivityLive"));
+const GymTimer = lazy(() => import("./pages/GymTimer"));
+const ActivityHistory = lazy(() => import("./pages/ActivityHistory"));
+const ActivityGoals = lazy(() => import("./pages/ActivityGoals"));
+const LogActivity = lazy(() => import("./pages/LogActivity"));
+const SleepTracker = lazy(() => import("./pages/SleepTracker"));
+const SleepOnboarding = lazy(() => import("./pages/SleepOnboarding"));
+const SleepDashboard = lazy(() => import("./pages/SleepDashboard"));
+const SleepSchedule = lazy(() => import("./pages/SleepSchedule"));
+const SleepHistory = lazy(() => import("./pages/SleepHistory"));
+const StartSleep = lazy(() => import("./pages/StartSleep"));
+const Sleeping = lazy(() => import("./pages/Sleeping"));
+const LogSleep = lazy(() => import("./pages/LogSleep"));
+const Nutrition = lazy(() => import("./pages/Nutrition"));
+const Workouts = lazy(() => import("./pages/Workouts"));
+const CoachBooking = lazy(() => import("./pages/CoachBooking"));
+const CoachOnboarding = lazy(() => import("./pages/CoachOnboarding"));
+const BrowseCoaches = lazy(() => import("./pages/BrowseCoaches"));
+const CoachProfile = lazy(() => import("./pages/CoachProfile"));
+const BookCoach = lazy(() => import("./pages/BookCoach"));
+const CoachAppointments = lazy(() => import("./pages/CoachAppointments"));
+const LiveSession = lazy(() => import("./pages/LiveSession"));
+const Community = lazy(() => import("./pages/Community"));
+const CommunityOnboarding = lazy(() => import("./pages/CommunityOnboarding"));
+const CommunityFeed = lazy(() => import("./pages/CommunityFeed"));
+const CommunitySearch = lazy(() => import("./pages/CommunitySearch"));
+const CommunityProfile = lazy(() => import("./pages/CommunityProfile"));
+const CommunityProfileSettings = lazy(() => import("./pages/CommunityProfileSettings"));
+const CommunityChat = lazy(() => import("./pages/CommunityChat"));
+const CommunityMessages = lazy(() => import("./pages/CommunityMessages"));
+const CreatePost = lazy(() => import("./pages/CreatePost"));
+const CreateStory = lazy(() => import("./pages/CreateStory"));
+const StoryViewer = lazy(() => import("./pages/StoryViewer"));
+const PostComments = lazy(() => import("./pages/PostComments"));
+const Resources = lazy(() => import("./pages/Resources"));
+const HeartRate = lazy(() => import("./pages/HeartRate"));
+const Steps = lazy(() => import("./pages/Steps"));
+const Weight = lazy(() => import("./pages/Weight"));
+const Hydration = lazy(() => import("./pages/Hydration"));
+const BloodPressure = lazy(() => import("./pages/BloodPressure"));
+const Mood = lazy(() => import("./pages/Mood"));
+const HealthRecommendations = lazy(() => import("./pages/HealthRecommendations"));
+const ChatSettings = lazy(() => import("./pages/ChatSettings"));
+const MyConversations = lazy(() => import("./pages/MyConversations"));
+const NutritionOnboarding = lazy(() => import("./pages/NutritionOnboarding"));
+const NutritionDashboard = lazy(() => import("./pages/NutritionDashboard"));
+const MealScanner = lazy(() => import("./pages/MealScanner"));
+const BrowseMeals = lazy(() => import("./pages/BrowseMeals"));
+const LogMeal = lazy(() => import("./pages/LogMeal"));
+const WorkoutOnboarding = lazy(() => import("./pages/WorkoutOnboarding"));
+const WorkoutLibrary = lazy(() => import("./pages/WorkoutLibrary"));
+const WorkoutDetail = lazy(() => import("./pages/WorkoutDetail"));
+const WorkoutPlayer = lazy(() => import("./pages/WorkoutPlayer"));
+const WorkoutSchedule = lazy(() => import("./pages/WorkoutSchedule"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Search = lazy(() => import("./pages/Search"));
+const ServerError = lazy(() => import("./pages/ServerError"));
+const NoInternet = lazy(() => import("./pages/NoInternet"));
+const Maintenance = lazy(() => import("./pages/Maintenance"));
+const FeatureLocked = lazy(() => import("./pages/FeatureLocked"));
+const UpdateRequired = lazy(() => import("./pages/UpdateRequired"));
+const AchievementsIntro = lazy(() => import("./pages/AchievementsIntro"));
+const Achievements = lazy(() => import("./pages/Achievements"));
+const AllAchievements = lazy(() => import("./pages/AllAchievements"));
+const AchievementDetail = lazy(() => import("./pages/AchievementDetail"));
+const Challenges = lazy(() => import("./pages/Challenges"));
+const ChallengeDetail = lazy(() => import("./pages/ChallengeDetail"));
+const ChallengeLeaderboard = lazy(() => import("./pages/ChallengeLeaderboard"));
+const HIITTrialWelcome = lazy(() => import("./pages/HIITTrialWelcome"));
+const MealDetail = lazy(() => import("./pages/MealDetail"));
+const NotificationDemo = lazy(() => import("./pages/NotificationDemo"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const CommunityChatroom = lazy(() => import("./pages/CommunityChatroom"));
+
+// Admin pages
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminWorkouts = lazy(() => import("./pages/admin/AdminWorkouts"));
+const AdminMeals = lazy(() => import("./pages/admin/AdminMeals"));
+const AdminCoaches = lazy(() => import("./pages/admin/AdminCoaches"));
+const AdminBadges = lazy(() => import("./pages/admin/AdminBadges"));
+const AdminCommunity = lazy(() => import("./pages/admin/AdminCommunity"));
+const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminSubscriptions = lazy(() => import("./pages/admin/AdminSubscriptions"));
+const AdminHomeLayout = lazy(() => import("./pages/admin/AdminHomeLayout"));
 
 const queryClient = new QueryClient();
 
@@ -129,36 +136,16 @@ const App = () => (
           <VerificationBanner />
           <VoiceController />
           <AppLayout>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/assessment" element={<ProtectedRoute><Assessment /></ProtectedRoute>} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ai-coach"
-              element={
-                <ProtectedRoute>
-                  <AICoach />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/ai-coach" element={<ProtectedRoute><AICoach /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/health-metrics" element={<ProtectedRoute><HealthMetrics /></ProtectedRoute>} />
             <Route path="/activity" element={<ProtectedRoute><ActivityTracker /></ProtectedRoute>} />
             <Route path="/activity-onboarding" element={<ProtectedRoute><ActivityOnboarding /></ProtectedRoute>} />
@@ -192,7 +179,6 @@ const App = () => (
             <Route path="/community/profile" element={<ProtectedRoute><CommunityProfile /></ProtectedRoute>} />
             <Route path="/community/profile/settings" element={<ProtectedRoute><CommunityProfileSettings /></ProtectedRoute>} />
             <Route path="/community/chat/:userId" element={<ProtectedRoute><CommunityChat /></ProtectedRoute>} />
-            {/* Redirect old community notifications route */}
             <Route path="/community/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/community/create" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
             <Route path="/community/create-story" element={<ProtectedRoute><CreateStory /></ProtectedRoute>} />
@@ -224,7 +210,6 @@ const App = () => (
             <Route path="/workout-schedule" element={<ProtectedRoute><WorkoutSchedule /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-            {/* Utility/Error Pages */}
             <Route path="/server-error" element={<ServerError />} />
             <Route path="/no-internet" element={<NoInternet />} />
             <Route path="/maintenance" element={<Maintenance />} />
@@ -258,6 +243,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           </AppLayout>
         </BrowserRouter>
       </TooltipProvider>
