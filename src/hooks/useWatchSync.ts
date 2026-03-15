@@ -4,9 +4,6 @@ import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
 interface SyncState {
   isAvailable: boolean;
   isAuthorized: boolean;
@@ -31,9 +28,6 @@ function setLastSync(ts: string) {
   } catch {}
 }
 
-// ──────────────────────────────────────────────
-// Hook
-// ──────────────────────────────────────────────
 export function useWatchSync() {
   const { user } = useAuth();
   const { logMetric } = useHealthMetrics();
@@ -46,19 +40,17 @@ export function useWatchSync() {
     error: null,
   });
 
-  // Check availability on mount (only works in native context)
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
     (async () => {
       try {
-        const { CapacitorHealth } = await import("@capgo/capacitor-health");
-        const { available } = await CapacitorHealth.isHealthAvailable();
+        const { Health } = await import("@capgo/capacitor-health");
+        const { available } = await Health.isHealthAvailable();
         setState((s) => ({ ...s, isAvailable: available }));
 
         if (available) {
-          // Check existing permissions
-          const perms = await CapacitorHealth.checkHealthPermissions({
+          const perms = await Health.checkHealthPermissions({
             permissions: ["READ_STEPS", "READ_HEART_RATE", "READ_DISTANCE", "READ_CALORIES"],
           });
           const authorized = perms.permissions?.every((p: any) => p.granted) ?? false;
@@ -70,7 +62,6 @@ export function useWatchSync() {
     })();
   }, []);
 
-  // Request permissions
   const requestPermissions = useCallback(async () => {
     if (!Capacitor.isNativePlatform()) {
       toast.error("Watch sync requires the native app");
@@ -78,8 +69,8 @@ export function useWatchSync() {
     }
 
     try {
-      const { CapacitorHealth } = await import("@capgo/capacitor-health");
-      const result = await CapacitorHealth.requestHealthPermissions({
+      const { Health } = await import("@capgo/capacitor-health");
+      const result = await Health.requestHealthPermissions({
         permissions: ["READ_STEPS", "READ_HEART_RATE", "READ_DISTANCE", "READ_CALORIES"],
       });
       const authorized = result.permissions?.every((p: any) => p.granted) ?? false;
@@ -97,22 +88,20 @@ export function useWatchSync() {
     }
   }, []);
 
-  // Sync health data from watch / phone health store
   const syncHealthData = useCallback(async () => {
     if (!user || !Capacitor.isNativePlatform()) return;
 
     setState((s) => ({ ...s, isSyncing: true, error: null }));
 
     try {
-      const { CapacitorHealth } = await import("@capgo/capacitor-health");
+      const { Health } = await import("@capgo/capacitor-health");
 
-      // Sync last 24 hours
       const now = new Date();
       const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-      // ── Steps ──
+      // Steps
       try {
-        const stepsResult = await CapacitorHealth.queryAggregated({
+        const stepsResult = await Health.queryAggregated({
           metric: "steps",
           startDate: startDate.toISOString(),
           endDate: now.toISOString(),
@@ -127,9 +116,9 @@ export function useWatchSync() {
         }
       } catch {}
 
-      // ── Heart Rate ──
+      // Heart Rate
       try {
-        const hrResult = await CapacitorHealth.queryAggregated({
+        const hrResult = await Health.queryAggregated({
           metric: "heartRate",
           startDate: startDate.toISOString(),
           endDate: now.toISOString(),
@@ -139,41 +128,6 @@ export function useWatchSync() {
             metric_type: "heart_rate",
             value: Math.round(hrResult.value),
             unit: "bpm",
-            notes: "health_connect_sync",
-          });
-        }
-      } catch {}
-
-      // ── Distance ──
-      try {
-        const distResult = await CapacitorHealth.queryAggregated({
-          metric: "distance",
-          startDate: startDate.toISOString(),
-          endDate: now.toISOString(),
-        });
-        if (distResult.value && distResult.value > 0) {
-          // distance comes in meters, convert to km for display
-          await logMetric.mutateAsync({
-            metric_type: "distance",
-            value: Math.round(distResult.value) / 1000,
-            unit: "km",
-            notes: "health_connect_sync",
-          });
-        }
-      } catch {}
-
-      // ── Calories ──
-      try {
-        const calResult = await CapacitorHealth.queryAggregated({
-          metric: "calories",
-          startDate: startDate.toISOString(),
-          endDate: now.toISOString(),
-        });
-        if (calResult.value && calResult.value > 0) {
-          await logMetric.mutateAsync({
-            metric_type: "calories",
-            value: Math.round(calResult.value),
-            unit: "kcal",
             notes: "health_connect_sync",
           });
         }

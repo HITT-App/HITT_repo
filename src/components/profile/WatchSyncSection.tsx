@@ -22,7 +22,6 @@ export function WatchSyncSection() {
       </h3>
 
       {!isNative ? (
-        /* ── Web / non-native ── */
         <div className="p-4 bg-secondary rounded-xl space-y-3">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -43,14 +42,12 @@ export function WatchSyncSection() {
           </div>
         </div>
       ) : !isAvailable ? (
-        /* ── Native but health not available ── */
         <div className="p-4 bg-secondary rounded-xl">
           <p className="text-sm text-muted-foreground text-center">
             Health services are not available on this device.
           </p>
         </div>
       ) : !isAuthorized ? (
-        /* ── Available but not authorized ── */
         <div className="p-4 bg-secondary rounded-xl space-y-3">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -69,17 +66,16 @@ export function WatchSyncSection() {
           </Button>
         </div>
       ) : (
-        /* ── Authorized — show sync controls ── */
         <div className="p-4 bg-secondary rounded-xl space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
-                <Watch className="w-5 h-5 text-green-500" />
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Watch className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="font-medium text-sm flex items-center gap-1.5">
                   Watch Connected
-                  <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+                  <span className="inline-block w-2 h-2 rounded-full bg-primary" />
                 </p>
                 {lastSyncedAt && (
                   <p className="text-xs text-muted-foreground">
