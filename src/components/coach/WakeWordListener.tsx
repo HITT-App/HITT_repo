@@ -40,8 +40,8 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
 
   const handleTranscript = useCallback(
     (text: string) => {
-      const normalized = text.toLowerCase().trim();
-      const detected = WAKE_PHRASES.some((phrase) => normalized.includes(phrase));
+      const normalized = normalizeTranscript(text);
+      const detected = WAKE_WORD_REGEX.test(normalized);
       if (detected) {
         const now = Date.now();
         if (now - lastDetectedRef.current > 3000) {
