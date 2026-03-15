@@ -173,7 +173,11 @@ export default function WorkoutPlayer() {
   };
 
   const workoutDurationMin = Math.floor(totalElapsed / 60);
-  const workoutCalories = workout?.calories_burned || Math.round(workoutDurationMin * 7);
+  // MET-based calorie calculation: MET × weight(kg) × duration(hours)
+  // Default to 7 cal/min if no MET value available
+  const metValue = (workout as any)?.met_value ?? 5.0;
+  const userWeightKg = 75; // TODO: fetch from profile/health_metrics
+  const workoutCalories = workout?.calories_burned || Math.round(metValue * userWeightKg * (workoutDurationMin / 60));
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

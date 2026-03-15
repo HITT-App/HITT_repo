@@ -1,7 +1,9 @@
-import { Watch, RefreshCw, ShieldCheck, Smartphone, ArrowRight, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Watch, RefreshCw, ShieldCheck, Smartphone, ArrowRight, Loader2, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useWatchSync } from "@/hooks/useWatchSync";
+import { useWatchSync, WatchType } from "@/hooks/useWatchSync";
 import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export function WatchSyncSection() {
   const {
@@ -10,9 +12,16 @@ export function WatchSyncSection() {
     isAuthorized,
     isSyncing,
     lastSyncedAt,
+    watchType,
+    syncFrequency,
     requestPermissions,
     syncHealthData,
+    setWatchType,
+    setSyncFrequency,
+    watchTypes,
   } = useWatchSync();
+
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <div className="space-y-3">
@@ -60,6 +69,28 @@ export function WatchSyncSection() {
               </p>
             </div>
           </div>
+
+          {/* Device selection before granting permissions */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-foreground">Select your device:</p>
+            <div className="grid grid-cols-2 gap-2">
+              {watchTypes.map((wt) => (
+                <button
+                  key={wt.id}
+                  onClick={() => setWatchType(wt.id)}
+                  className={cn(
+                    "text-left p-2.5 rounded-xl text-xs border transition-all",
+                    watchType === wt.id
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border bg-background text-muted-foreground"
+                  )}
+                >
+                  {wt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Button className="w-full" onClick={requestPermissions}>
             Connect Health Data
             <ArrowRight className="w-4 h-4 ml-2" />
@@ -74,7 +105,7 @@ export function WatchSyncSection() {
               </div>
               <div>
                 <p className="font-medium text-sm flex items-center gap-1.5">
-                  Watch Connected
+                  {watchType ? watchTypes.find(w => w.id === watchType)?.label : "Watch"} Connected
                   <span className="inline-block w-2 h-2 rounded-full bg-primary" />
                 </p>
                 {lastSyncedAt && (
@@ -84,8 +115,12 @@ export function WatchSyncSection() {
                 )}
               </div>
             </div>
+            <button onClick={() => setShowSettings(!showSettings)} className="text-muted-foreground">
+              <Settings2 className="w-4 h-4" />
+            </button>
           </div>
 
+          {/* Synced metrics */}
           <div className="grid grid-cols-4 gap-2">
             {[
               { emoji: "👟", label: "Steps" },
@@ -99,6 +134,54 @@ export function WatchSyncSection() {
               </div>
             ))}
           </div>
+
+          {/* Settings panel */}
+          {showSettings && (
+            <div className="space-y-3 pt-2 border-t border-border/50">
+              <div>
+                <p className="text-xs font-medium text-foreground mb-2">Device Type</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {watchTypes.map((wt) => (
+                    <button
+                      key={wt.id}
+                      onClick={() => setWatchType(wt.id)}
+                      className={cn(
+                        "text-left p-2 rounded-lg text-[11px] border transition-all",
+                        watchType === wt.id
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-transparent bg-muted/50 text-muted-foreground"
+                      )}
+                    >
+                      {wt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-foreground mb-2">Sync Frequency</p>
+                <div className="flex gap-2">
+                  {([
+                    { id: "manual", label: "Manual" },
+                    { id: "on_open", label: "On App Open" },
+                  ] as const).map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => setSyncFrequency(f.id)}
+                      className={cn(
+                        "flex-1 py-2 rounded-lg text-xs font-medium transition-all",
+                        syncFrequency === f.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/50 text-muted-foreground"
+                      )}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <Button
             className="w-full"

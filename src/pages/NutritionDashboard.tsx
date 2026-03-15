@@ -313,7 +313,7 @@ export default function NutritionDashboard() {
                 onClick={() => {
                   if (action.label === "Log Food") navigate("/log-meal");
                   else if (action.label === "Meal Scan") navigate("/meal-scanner");
-                  else if (action.label === "Barcode Scan") navigate("/meal-scanner");
+                  else if (action.label === "Barcode Scan") navigate("/barcode-scanner");
                 }}
                 className="flex flex-col items-center justify-center gap-2.5 bg-card rounded-2xl p-6 active:scale-[0.97] transition-transform touch-manipulation"
               >

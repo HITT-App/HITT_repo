@@ -16,7 +16,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   hard: "#ef4444",
 };
 
-const FILTER_CHIPS = ["All", "Easy", "Moderate", "Hard", "Short", "Long"] as const;
+const FILTER_CHIPS = ["All", "Official", "Easy", "Moderate", "Hard", "Short", "Long"] as const;
 
 const RoutesExplorer = () => {
   const navigate = useNavigate();
@@ -31,6 +31,10 @@ const RoutesExplorer = () => {
   const [showSaved, setShowSaved] = useState(false);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
 
+  // Separate official & user routes
+  const officialRoutes = useMemo(() => routes.filter(r => (r as any).is_official), [routes]);
+  const userRoutes = useMemo(() => routes.filter(r => !(r as any).is_official), [routes]);
+
   // Filter routes
   const filtered = useMemo(() => {
     let list = routes;
@@ -43,6 +47,7 @@ const RoutesExplorer = () => {
     else if (activeFilter === "Hard") list = list.filter(r => r.difficulty === "hard");
     else if (activeFilter === "Short") list = list.filter(r => r.distance_km <= 5);
     else if (activeFilter === "Long") list = list.filter(r => r.distance_km > 10);
+    else if (activeFilter === "Official") list = list.filter(r => (r as any).is_official);
     return list;
   }, [routes, search, activeFilter]);
 

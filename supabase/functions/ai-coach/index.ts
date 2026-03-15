@@ -197,6 +197,10 @@ serve(async (req) => {
       { data: recentSleep },
       { data: recentWorkouts },
       { data: activityGoals },
+      { data: latestWeight },
+      { data: latestHeartRate },
+      { data: latestSteps },
+      { data: userWorkoutPrefs },
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
@@ -207,6 +211,10 @@ serve(async (req) => {
       supabase.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('workout_progress').select('*').eq('user_id', userId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(5),
       supabase.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('health_metrics').select('value').eq('user_id', userId).eq('metric_type', 'steps').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
     ]);
 
     // Build user context string
@@ -289,7 +297,41 @@ serve(async (req) => {
       if (activityGoals.weekly_duration_minutes) userContext += `• Duration: ${activityGoals.weekly_duration_minutes} min/week\n`;
     }
 
+    // Health metrics context
+    if (latestWeight) {
+      userContext += `\nBody Metrics:\n`;
+      userContext += `• Current weight: ${latestWeight.value} ${latestWeight.unit}\n`;
+      const weightKg = latestWeight.unit === 'lbs' ? latestWeight.value * 0.453592 : latestWeight.value;
+      const maintenance = Math.round(weightKg * 32);
+      userContext += `• Estimated maintenance calories: ~${maintenance} kcal/day\n`;
+      userContext += `• Protein target (2g/kg): ~${Math.round(weightKg * 2)}g/day\n`;
+    }
+    if (latestHeartRate) {
+      userContext += `• Resting heart rate: ${Math.round(latestHeartRate.value)} bpm\n`;
+    }
+    if (latestSteps) {
+      userContext += `• Latest step count: ${Math.round(latestSteps.value).toLocaleString()} steps\n`;
+    }
+
+    // Workout type preferences
+    if (userWorkoutPrefs) {
+      userContext += `\nWorkout Type Preferences:\n`;
+      if (userWorkoutPrefs.preferred_workout_types?.length) {
+        userContext += `• Preferred types: ${userWorkoutPrefs.preferred_workout_types.join(', ')}\n`;
+      }
+      if (userWorkoutPrefs.preferred_equipment?.length) {
+        userContext += `• Available equipment: ${userWorkoutPrefs.preferred_equipment.join(', ')}\n`;
+      }
+      if (userWorkoutPrefs.preferred_duration_minutes) {
+        userContext += `• Preferred duration: ${userWorkoutPrefs.preferred_duration_minutes} min\n`;
+      }
+      if (userWorkoutPrefs.preferred_time) {
+        userContext += `• Preferred workout time: ${userWorkoutPrefs.preferred_time}\n`;
+      }
+    }
+
     userContext += "\nUse this context to personalise your responses. Address the user by name when appropriate. Reference their goals, fitness level, and recent activity. If data is missing, ask them about it naturally.\n";
+    userContext += "\n⚠️ WORKOUT CALIBRATION: When recommending workouts, consider the user's weight for calorie calculations (MET × weight_kg × duration_hours). Recommend workout types that match their preferences and fitness level.\n";
 
     const personalizedPrompt = SYSTEM_PROMPT + userContext;
 

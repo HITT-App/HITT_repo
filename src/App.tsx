@@ -109,6 +109,7 @@ const CommunityChatroom = lazy(() => import("./pages/CommunityChatroom"));
 const RoutesExplorer = lazy(() => import("./pages/RoutesExplorer"));
 const RouteDetail = lazy(() => import("./pages/RouteDetail"));
 const CreateRoute = lazy(() => import("./pages/CreateRoute"));
+const BarcodeScanner = lazy(() => import("./pages/BarcodeScanner"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -233,6 +234,7 @@ const App = () => (
             <Route path="/routes" element={<ProtectedRoute><RoutesExplorer /></ProtectedRoute>} />
             <Route path="/route/:id" element={<ProtectedRoute><RouteDetail /></ProtectedRoute>} />
             <Route path="/routes/create" element={<ProtectedRoute><CreateRoute /></ProtectedRoute>} />
+            <Route path="/barcode-scanner" element={<ProtectedRoute><BarcodeScanner /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />
