@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StreakCard } from '@/components/gamification/StreakCard';
 import { BadgesDisplay } from '@/components/gamification/BadgesDisplay';
 import { PasswordChangeSection } from '@/components/profile/PasswordChangeSection';
+import { WatchSyncSection } from '@/components/profile/WatchSyncSection';
 import ImageCropperDialog from '@/components/community/ImageCropperDialog';
 import {
   ArrowLeft, Camera, Loader2, User, Target, Shield, Mic, Sun, Moon,
