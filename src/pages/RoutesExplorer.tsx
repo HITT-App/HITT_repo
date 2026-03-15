@@ -16,7 +16,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   hard: "#ef4444",
 };
 
-const FILTER_CHIPS = ["All", "Easy", "Moderate", "Hard", "Short", "Long"] as const;
+const FILTER_CHIPS = ["All", "Official", "Easy", "Moderate", "Hard", "Short", "Long"] as const;
 
 const RoutesExplorer = () => {
   const navigate = useNavigate();
