@@ -280,7 +280,7 @@
 
     "@capacitor/ios": ["@capacitor/ios@8.2.0", "", { "peerDependencies": { "@capacitor/core": "^8.2.0" } }, "sha512-X2/VtM4qP/R1SM0VQ5W/VotEc6PS/KTooD33EijsfAHWBdee+xmBapW8SeNLnu16wJ+tsfWlvtipaJEyfKbRKQ=="],
 
-    "@capgo/capacitor-health": ["@capgo/capacitor-health@8.4.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-RoszHfI0AVi+IUYevs/4IySrX3cp6qiDfmeu3/6pGtuRHL2JZcIrEEVXvQ5zgPKrW7hImVN8giHlO7z8a0QMIQ=="],
+    "@capgo/capacitor-health": ["@capgo/capacitor-health@8.4.1", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-s+0jwDqqIJ5m55r6WFQD48gzlfBBY39EtW51Y1uo+PkpUN/xbvDE8evYz1dlqhBFvu7fQsBEeE+0b8yKS1MOZg=="],
 
     "@elevenlabs/client": ["@elevenlabs/client@0.13.0", "", { "dependencies": { "@elevenlabs/types": "0.4.0", "livekit-client": "^2.11.4" } }, "sha512-0UjouSOVK+mECJuYg/DqM9V1NIsabIrlRmw/RjEMS5UmOpsAga3KxMC3et8fKh8G/MI2cZtLr2764wIOZgyrQg=="],
 
