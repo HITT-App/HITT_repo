@@ -20,10 +20,13 @@ export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      setTimeout(() => {
+        viewport.scrollTop = viewport.scrollHeight;
+      }, 50);
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const handleImageSelect = (file: File) => {
     const url = URL.createObjectURL(file);
