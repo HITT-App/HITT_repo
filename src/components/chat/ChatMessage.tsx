@@ -116,14 +116,18 @@ export function ChatMessage({
             {isUser ? (
               <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
             ) : (
-              <div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none
-                prose-headings:font-semibold prose-headings:text-foreground prose-headings:mt-3 prose-headings:mb-1.5
-                prose-h4:text-base prose-h5:text-sm
-                prose-p:my-1.5 prose-p:text-foreground/90
-                prose-ul:my-1.5 prose-ul:pl-4 prose-li:my-0.5
+              <div className="text-[13.5px] leading-[1.8] prose prose-sm prose-invert max-w-none
+                prose-headings:font-semibold prose-headings:text-foreground prose-headings:mt-4 prose-headings:mb-2
+                prose-h4:text-[15px] prose-h5:text-[14px]
+                prose-p:my-2.5 prose-p:text-foreground/85 prose-p:leading-[1.8]
+                prose-ul:my-2.5 prose-ul:pl-5 prose-ul:space-y-1.5
+                prose-ol:my-2.5 prose-ol:pl-5 prose-ol:space-y-1.5
+                prose-li:my-0 prose-li:leading-[1.7]
                 prose-strong:text-foreground prose-strong:font-semibold
-                prose-hr:my-3 prose-hr:border-border/40
-                [&>*:first-child]:mt-0">
+                prose-hr:my-4 prose-hr:border-border/30
+                prose-blockquote:border-l-2 prose-blockquote:border-primary/40 prose-blockquote:pl-3 prose-blockquote:italic prose-blockquote:text-foreground/70
+                [&>*:first-child]:mt-0 [&>*:last-child]:mb-0
+                tracking-[0.01em]">
                 <ReactMarkdown>{content}</ReactMarkdown>
               </div>
             )}
