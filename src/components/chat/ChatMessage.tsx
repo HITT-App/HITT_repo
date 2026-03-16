@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Bot, CheckCheck } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { 
   GoalProgressCard, 
   HydrationCard, 
