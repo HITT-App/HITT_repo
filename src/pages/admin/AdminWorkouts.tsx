@@ -195,6 +195,7 @@ export default function AdminWorkouts() {
                 <TableHead className="hidden md:table-cell">Category</TableHead>
                 <TableHead className="hidden md:table-cell">Difficulty</TableHead>
                 <TableHead className="hidden sm:table-cell">Duration</TableHead>
+                <TableHead className="hidden sm:table-cell">Video</TableHead>
                 <TableHead className="hidden sm:table-cell">Featured</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
