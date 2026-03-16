@@ -63,6 +63,14 @@ export default function WorkoutDetail() {
 
   useEffect(() => {
     if (id) {
+      // Validate UUID format before querying
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        setIsLoading(false);
+        toast({ variant: 'destructive', title: 'Invalid Workout', description: 'This workout link is invalid.' });
+        navigate('/workouts', { replace: true });
+        return;
+      }
       fetchWorkoutDetails();
     }
   }, [id]);
@@ -74,9 +82,14 @@ export default function WorkoutDetail() {
         .from('workouts')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (workoutError) throw workoutError;
+      if (!workoutData) {
+        toast({ variant: 'destructive', title: 'Not Found', description: 'This workout does not exist.' });
+        navigate('/workouts', { replace: true });
+        return;
+      }
       setWorkout(workoutData);
 
       const { data: exercisesData, error: exercisesError } = await supabase
