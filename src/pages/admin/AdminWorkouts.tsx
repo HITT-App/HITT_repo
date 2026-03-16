@@ -237,6 +237,16 @@ export default function AdminWorkouts() {
                       {workout.duration_minutes} min
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
+                      {workout.video_url ? (
+                        <a href={workout.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                          <Video className="h-4 w-4" />
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">None</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {workout.is_featured ? "Yes" : "No"}
                     </TableCell>
                     <TableCell>
