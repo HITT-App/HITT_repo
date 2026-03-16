@@ -31,7 +31,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Loader2, Video, ExternalLink } from "lucide-react";
 
 interface Workout {
   id: string;
@@ -41,6 +41,8 @@ interface Workout {
   duration_minutes: number | null;
   category: string | null;
   is_featured: boolean;
+  video_url: string | null;
+  thumbnail_url: string | null;
   created_at: string;
 }
 
@@ -60,6 +62,8 @@ export default function AdminWorkouts() {
     duration_minutes: 30,
     category: "strength",
     is_featured: false,
+    video_url: "",
+    thumbnail_url: "",
   });
 
   const fetchWorkouts = async () => {
@@ -89,6 +93,8 @@ export default function AdminWorkouts() {
       duration_minutes: 30,
       category: "strength",
       is_featured: false,
+      video_url: "",
+      thumbnail_url: "",
     });
     setDialogOpen(true);
   };
@@ -102,6 +108,8 @@ export default function AdminWorkouts() {
       duration_minutes: workout.duration_minutes || 30,
       category: workout.category || "strength",
       is_featured: workout.is_featured,
+      video_url: workout.video_url || "",
+      thumbnail_url: workout.thumbnail_url || "",
     });
     setDialogOpen(true);
   };
@@ -187,6 +195,7 @@ export default function AdminWorkouts() {
                 <TableHead className="hidden md:table-cell">Category</TableHead>
                 <TableHead className="hidden md:table-cell">Difficulty</TableHead>
                 <TableHead className="hidden sm:table-cell">Duration</TableHead>
+                <TableHead className="hidden sm:table-cell">Video</TableHead>
                 <TableHead className="hidden sm:table-cell">Featured</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
@@ -194,13 +203,13 @@ export default function AdminWorkouts() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filteredWorkouts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No workouts found
                   </TableCell>
                 </TableRow>
@@ -226,6 +235,16 @@ export default function AdminWorkouts() {
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {workout.duration_minutes} min
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {workout.video_url ? (
+                        <a href={workout.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                          <Video className="h-4 w-4" />
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">None</span>
+                      )}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {workout.is_featured ? "Yes" : "No"}
@@ -349,6 +368,43 @@ export default function AdminWorkouts() {
                 min={1}
                 max={180}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="video_url">Video URL (YouTube link or direct video URL)</Label>
+              <Input
+                id="video_url"
+                value={formData.video_url}
+                onChange={(e) =>
+                  setFormData({ ...formData, video_url: e.target.value })
+                }
+                placeholder="https://youtube.com/watch?v=... or https://example.com/video.mp4"
+              />
+              {formData.video_url && (
+                <p className="text-xs text-muted-foreground">
+                  {formData.video_url.includes("youtube") || formData.video_url.includes("youtu.be")
+                    ? "✅ YouTube link detected"
+                    : "✅ Direct video URL"}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="thumbnail_url">Thumbnail URL (optional)</Label>
+              <Input
+                id="thumbnail_url"
+                value={formData.thumbnail_url}
+                onChange={(e) =>
+                  setFormData({ ...formData, thumbnail_url: e.target.value })
+                }
+                placeholder="https://example.com/thumbnail.jpg"
+              />
+              {formData.thumbnail_url && (
+                <img
+                  src={formData.thumbnail_url}
+                  alt="Thumbnail preview"
+                  className="h-20 w-32 object-cover rounded-md border"
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                />
+              )}
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="featured">Featured Workout</Label>
