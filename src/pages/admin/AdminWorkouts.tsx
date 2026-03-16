@@ -62,6 +62,8 @@ export default function AdminWorkouts() {
     duration_minutes: 30,
     category: "strength",
     is_featured: false,
+    video_url: "",
+    thumbnail_url: "",
   });
 
   const fetchWorkouts = async () => {
