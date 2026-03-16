@@ -209,7 +209,7 @@ export default function AdminWorkouts() {
                 </TableRow>
               ) : filteredWorkouts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No workouts found
                   </TableCell>
                 </TableRow>
