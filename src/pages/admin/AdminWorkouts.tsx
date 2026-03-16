@@ -108,6 +108,8 @@ export default function AdminWorkouts() {
       duration_minutes: workout.duration_minutes || 30,
       category: workout.category || "strength",
       is_featured: workout.is_featured,
+      video_url: workout.video_url || "",
+      thumbnail_url: workout.thumbnail_url || "",
     });
     setDialogOpen(true);
   };
