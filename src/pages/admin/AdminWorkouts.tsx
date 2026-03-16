@@ -41,6 +41,8 @@ interface Workout {
   duration_minutes: number | null;
   category: string | null;
   is_featured: boolean;
+  video_url: string | null;
+  thumbnail_url: string | null;
   created_at: string;
 }
 
