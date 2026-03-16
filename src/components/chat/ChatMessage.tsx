@@ -110,24 +110,27 @@ export function ChatMessage({
               'rounded-2xl px-4 py-3',
               isUser
                 ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-foreground'
+                : 'bg-secondary/80 text-foreground'
             )}
           >
             {isUser ? (
               <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
             ) : (
-              <div className="text-[13.5px] leading-[1.8] prose prose-sm prose-invert max-w-none
-                prose-headings:font-semibold prose-headings:text-foreground prose-headings:mt-4 prose-headings:mb-2
-                prose-h4:text-[15px] prose-h5:text-[14px]
-                prose-p:my-2.5 prose-p:text-foreground/85 prose-p:leading-[1.8]
-                prose-ul:my-2.5 prose-ul:pl-5 prose-ul:space-y-1.5
-                prose-ol:my-2.5 prose-ol:pl-5 prose-ol:space-y-1.5
-                prose-li:my-0 prose-li:leading-[1.7]
-                prose-strong:text-foreground prose-strong:font-semibold
-                prose-hr:my-4 prose-hr:border-border/30
-                prose-blockquote:border-l-2 prose-blockquote:border-primary/40 prose-blockquote:pl-3 prose-blockquote:italic prose-blockquote:text-foreground/70
-                [&>*:first-child]:mt-0 [&>*:last-child]:mb-0
-                tracking-[0.01em]">
+              <div className="text-[13px] leading-[1.75] max-w-none space-y-3
+                [&>p]:text-foreground/85
+                [&>ul]:pl-1 [&>ul]:space-y-1
+                [&>ol]:pl-1 [&>ol]:space-y-1
+                [&>ul>li]:text-foreground/80
+                [&>ol>li]:text-foreground/80
+                [&>h1]:text-[15px] [&>h1]:font-semibold [&>h1]:text-foreground [&>h1]:mt-3
+                [&>h2]:text-[14px] [&>h2]:font-semibold [&>h2]:text-foreground [&>h2]:mt-3
+                [&>h3]:text-[13.5px] [&>h3]:font-semibold [&>h3]:text-foreground [&>h3]:mt-2
+                [&>h4]:text-[13px] [&>h4]:font-medium [&>h4]:text-foreground [&>h4]:mt-2
+                [&>h5]:text-[13px] [&>h5]:font-medium [&>h5]:text-foreground/90
+                [&>hr]:border-border/20 [&>hr]:my-3
+                [&>blockquote]:border-l-2 [&>blockquote]:border-primary/30 [&>blockquote]:pl-3 [&>blockquote]:text-foreground/70 [&>blockquote]:italic
+                [&_strong]:text-foreground [&_strong]:font-semibold
+                [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
                 <ReactMarkdown>{content}</ReactMarkdown>
               </div>
             )}
