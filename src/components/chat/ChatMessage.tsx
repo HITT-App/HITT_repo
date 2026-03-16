@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Bot, CheckCheck } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { 
   GoalProgressCard, 
   HydrationCard, 
@@ -112,7 +113,20 @@ export function ChatMessage({
                 : 'bg-secondary text-foreground'
             )}
           >
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
+            {isUser ? (
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
+            ) : (
+              <div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none
+                prose-headings:font-semibold prose-headings:text-foreground prose-headings:mt-3 prose-headings:mb-1.5
+                prose-h4:text-base prose-h5:text-sm
+                prose-p:my-1.5 prose-p:text-foreground/90
+                prose-ul:my-1.5 prose-ul:pl-4 prose-li:my-0.5
+                prose-strong:text-foreground prose-strong:font-semibold
+                prose-hr:my-3 prose-hr:border-border/40
+                [&>*:first-child]:mt-0">
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </div>
+            )}
             
             {/* Timestamp and read status for user messages */}
             {isUser && timestamp && (
