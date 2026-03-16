@@ -122,11 +122,11 @@ export function ChatMessage({
                 [&>ol]:pl-1 [&>ol]:space-y-1
                 [&>ul>li]:text-foreground/80
                 [&>ol>li]:text-foreground/80
-                [&>h1]:text-[15px] [&>h1]:font-semibold [&>h1]:text-foreground [&>h1]:mt-3
-                [&>h2]:text-[14px] [&>h2]:font-semibold [&>h2]:text-foreground [&>h2]:mt-3
-                [&>h3]:text-[13.5px] [&>h3]:font-semibold [&>h3]:text-foreground [&>h3]:mt-2
-                [&>h4]:text-[13px] [&>h4]:font-medium [&>h4]:text-foreground [&>h4]:mt-2
-                [&>h5]:text-[13px] [&>h5]:font-medium [&>h5]:text-foreground/90
+                [&>h1]:text-[17px] [&>h1]:font-bold [&>h1]:text-foreground [&>h1]:mt-4 [&>h1]:mb-1.5
+                [&>h2]:text-[16px] [&>h2]:font-bold [&>h2]:text-foreground [&>h2]:mt-4 [&>h2]:mb-1.5
+                [&>h3]:text-[15px] [&>h3]:font-bold [&>h3]:text-foreground [&>h3]:mt-3 [&>h3]:mb-1
+                [&>h4]:text-[14px] [&>h4]:font-semibold [&>h4]:text-foreground [&>h4]:mt-3 [&>h4]:mb-1
+                [&>h5]:text-[13.5px] [&>h5]:font-semibold [&>h5]:text-foreground [&>h5]:mt-2
                 [&>hr]:border-border/20 [&>hr]:my-3
                 [&>blockquote]:border-l-2 [&>blockquote]:border-primary/30 [&>blockquote]:pl-3 [&>blockquote]:text-foreground/70 [&>blockquote]:italic
                 [&_strong]:text-foreground [&_strong]:font-semibold
