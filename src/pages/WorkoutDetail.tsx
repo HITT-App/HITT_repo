@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,9 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
 import { 
-  ArrowLeft, Play, Clock, Flame, Star, Heart, Share2, 
-  ChevronRight, Calendar, Settings, Bookmark, Download, Users
+  ArrowLeft, Play, Clock, Flame, Star, Share2, 
+  ChevronRight, Calendar, Bookmark, Dumbbell, Target, Repeat, Timer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,8 +44,20 @@ type Exercise = {
   sets: number | null;
   body_area: string;
   thumbnail_url: string | null;
+  video_url: string | null;
   order_index: number;
 };
+
+function getYouTubeEmbedUrl(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return `https://www.youtube.com/embed/${match[1]}?rel=0`;
+  }
+  return null;
+}
 
 export default function WorkoutDetail() {
   const navigate = useNavigate();
@@ -56,14 +69,13 @@ export default function WorkoutDetail() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showSchedule, setShowSchedule] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState({ hour: 10, minute: 0 });
   const [isSaved, setIsSaved] = useState(false);
+  const [completionCount, setCompletionCount] = useState(0);
 
   useEffect(() => {
     if (id) {
-      // Validate UUID format before querying
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(id)) {
         setIsLoading(false);
@@ -79,10 +91,7 @@ export default function WorkoutDetail() {
     setIsLoading(true);
     try {
       const { data: workoutData, error: workoutError } = await supabase
-        .from('workouts')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+        .from('workouts').select('*').eq('id', id).maybeSingle();
 
       if (workoutError) throw workoutError;
       if (!workoutData) {
@@ -92,14 +101,20 @@ export default function WorkoutDetail() {
       }
       setWorkout(workoutData);
 
-      const { data: exercisesData, error: exercisesError } = await supabase
-        .from('workout_exercises')
-        .select('*')
-        .eq('workout_id', id)
-        .order('order_index');
-
-      if (exercisesError) throw exercisesError;
+      const { data: exercisesData } = await supabase
+        .from('workout_exercises').select('*').eq('workout_id', id).order('order_index');
       setExercises(exercisesData || []);
+
+      // Fetch completion count for this user
+      if (user) {
+        const { count } = await supabase
+          .from('workout_progress')
+          .select('*', { count: 'exact', head: true })
+          .eq('workout_id', id!)
+          .eq('user_id', user.id)
+          .eq('status', 'completed');
+        setCompletionCount(count || 0);
+      }
     } catch (error) {
       console.error('Error fetching workout:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to load workout' });
@@ -110,30 +125,30 @@ export default function WorkoutDetail() {
 
   const handleSchedule = async () => {
     if (!user || !workout) return;
-
     try {
       const scheduledDate = new Date(selectedDate);
       const { error } = await supabase.from('scheduled_workouts').insert({
-        user_id: user.id,
-        workout_id: workout.id,
+        user_id: user.id, workout_id: workout.id,
         scheduled_date: scheduledDate.toISOString().split('T')[0],
         scheduled_time: `${selectedTime.hour.toString().padStart(2, '0')}:${selectedTime.minute.toString().padStart(2, '0')}:00`,
         status: 'scheduled',
       });
-
       if (error) throw error;
-
       setShowSchedule(false);
       toast({ title: 'Workout Scheduled!', description: `${workout.title} scheduled for ${scheduledDate.toLocaleDateString()}` });
     } catch (error) {
-      console.error('Error scheduling workout:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to schedule workout' });
     }
   };
 
-  const startWorkout = () => {
-    navigate(`/workout-player/${id}`);
-  };
+  const startWorkout = () => navigate(`/workout-player/${id}`);
+
+  const embedUrl = useMemo(() => {
+    if (!workout?.video_url) return null;
+    return getYouTubeEmbedUrl(workout.video_url);
+  }, [workout?.video_url]);
+
+  const isDirectVideo = workout?.video_url && !embedUrl;
 
   if (isLoading || !workout) {
     return (
@@ -149,183 +164,226 @@ export default function WorkoutDetail() {
     return date;
   });
 
+  const totalExerciseDuration = exercises.reduce((sum, e) => sum + (e.duration_seconds || 0), 0);
+  const totalSets = exercises.reduce((sum, e) => sum + (e.sets || 0), 0);
+  const totalReps = exercises.reduce((sum, e) => sum + (e.reps || 0) * (e.sets || 1), 0);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Image */}
-      <div className="relative h-64 bg-gradient-to-br from-primary/30 to-secondary">
-        {workout.thumbnail_url && (
-          <img 
-            src={workout.thumbnail_url} 
-            alt={workout.title}
-            className="w-full h-full object-cover"
-          />
+      {/* Hero / Video Section */}
+      <div className="relative bg-gradient-to-br from-primary/30 to-secondary">
+        {embedUrl ? (
+          <div className="aspect-video w-full">
+            <iframe
+              src={embedUrl}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={workout.title}
+            />
+          </div>
+        ) : isDirectVideo ? (
+          <div className="aspect-video w-full">
+            <video
+              src={workout.video_url!}
+              className="w-full h-full object-cover"
+              controls
+              poster={workout.thumbnail_url || undefined}
+            />
+          </div>
+        ) : (
+          <div className="h-64 relative">
+            {workout.thumbnail_url && (
+              <img src={workout.thumbnail_url} alt={workout.title} className="w-full h-full object-cover" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+          </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
         
         {/* Header */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="bg-background/50 backdrop-blur">
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-10">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="bg-background/50 backdrop-blur rounded-full">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex gap-2">
-            <Button variant="ghost" size="icon" className="bg-background/50 backdrop-blur">
+            <Button variant="ghost" size="icon" className="bg-background/50 backdrop-blur rounded-full">
               <Share2 className="w-5 h-5" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="bg-background/50 backdrop-blur"
-              onClick={() => setIsSaved(!isSaved)}
-            >
+            <Button variant="ghost" size="icon" className="bg-background/50 backdrop-blur rounded-full" onClick={() => setIsSaved(!isSaved)}>
               <Bookmark className={cn("w-5 h-5", isSaved && "fill-primary text-primary")} />
             </Button>
           </div>
         </div>
-
-        {/* Category Badge */}
-        <Badge className="absolute top-4 left-1/2 -translate-x-1/2 bg-primary capitalize">
-          {workout.category}
-        </Badge>
       </div>
 
       <ScrollArea className="h-[calc(100vh-256px)]">
-        <div className="p-4 -mt-16 relative z-10 space-y-6">
-          {/* Title & Stats */}
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-2">{workout.title}</h1>
-            <p className="text-muted-foreground mb-4">{workout.description}</p>
-            
-            <div className="flex items-center justify-center gap-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold">{workout.duration_minutes}</p>
-                <p className="text-xs text-muted-foreground">Minutes</p>
-              </div>
-              <div className="w-px h-8 bg-border" />
-              <div className="text-center">
-                <p className="text-2xl font-bold flex items-center justify-center gap-1">
-                  <Star className="w-5 h-5 fill-primary text-primary" />
-                  {workout.rating}
-                </p>
-                <p className="text-xs text-muted-foreground">Score</p>
-              </div>
-              <div className="w-px h-8 bg-border" />
-              <div className="text-center">
-                <p className="text-2xl font-bold">{exercises.length}</p>
-                <p className="text-xs text-muted-foreground">Tasks</p>
-              </div>
+        <div className="p-4 space-y-5">
+          {/* Title & Badges */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge className="capitalize">{workout.category}</Badge>
+              <Badge variant={workout.difficulty === "advanced" ? "destructive" : workout.difficulty === "intermediate" ? "default" : "secondary"} className="capitalize">
+                {workout.difficulty}
+              </Badge>
+            </div>
+            <h1 className="text-2xl font-bold">{workout.title}</h1>
+            {workout.description && <p className="text-muted-foreground mt-1">{workout.description}</p>}
+          </div>
+
+          {/* Quick Stats Row */}
+          <div className="grid grid-cols-4 gap-2">
+            <div className="text-center p-3 rounded-xl bg-card border border-border">
+              <Clock className="w-4 h-4 mx-auto text-primary mb-1" />
+              <p className="text-lg font-bold">{workout.duration_minutes}</p>
+              <p className="text-[10px] text-muted-foreground">Minutes</p>
+            </div>
+            <div className="text-center p-3 rounded-xl bg-card border border-border">
+              <Flame className="w-4 h-4 mx-auto text-primary mb-1" />
+              <p className="text-lg font-bold">{workout.calories_burned || '—'}</p>
+              <p className="text-[10px] text-muted-foreground">Calories</p>
+            </div>
+            <div className="text-center p-3 rounded-xl bg-card border border-border">
+              <Dumbbell className="w-4 h-4 mx-auto text-primary mb-1" />
+              <p className="text-lg font-bold">{exercises.length}</p>
+              <p className="text-[10px] text-muted-foreground">Exercises</p>
+            </div>
+            <div className="text-center p-3 rounded-xl bg-card border border-border">
+              <Star className="w-4 h-4 mx-auto text-primary mb-1" />
+              <p className="text-lg font-bold">{workout.rating || '—'}</p>
+              <p className="text-[10px] text-muted-foreground">Rating</p>
             </div>
           </div>
+
+          {/* Your Progress */}
+          {user && completionCount > 0 && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-sm">Your Progress</h3>
+                  <Badge variant="secondary">{completionCount}x completed</Badge>
+                </div>
+                <Progress value={Math.min(completionCount * 20, 100)} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {completionCount >= 5 ? "🏆 Mastered!" : `${5 - completionCount} more to master`}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Quick Actions */}
           <div className="flex gap-3">
             <Button onClick={startWorkout} className="flex-1 h-12 rounded-2xl gap-2">
-              <Play className="w-5 h-5" /> Start Program
+              <Play className="w-5 h-5" /> Start Workout
             </Button>
-            <Button 
-              variant="outline" 
-              className="h-12 rounded-2xl gap-2"
-              onClick={() => setShowSchedule(true)}
-            >
+            <Button variant="outline" className="h-12 rounded-2xl gap-2" onClick={() => setShowSchedule(true)}>
               <Calendar className="w-5 h-5" /> Schedule
             </Button>
           </div>
 
-          {/* Overview */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-3">Overview</h3>
-              <p className="text-sm text-muted-foreground">{workout.description}</p>
-              
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-primary" />
-                  </div>
+          {/* Exercise Breakdown Summary */}
+          {exercises.length > 0 && (totalSets > 0 || totalReps > 0) && (
+            <div className="grid grid-cols-3 gap-3">
+              {totalSets > 0 && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border">
+                  <Repeat className="w-4 h-4 text-primary flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium">{workout.duration_minutes} min</p>
-                    <p className="text-xs text-muted-foreground">Duration</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Flame className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{workout.calories_burned} kcal</p>
-                    <p className="text-xs text-muted-foreground">Calories</p>
-                  </div>
-                </div>
-              </div>
-
-              {workout.equipment && workout.equipment.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-sm font-medium mb-2">Equipment Needed</p>
-                  <div className="flex flex-wrap gap-2">
-                    {workout.equipment.map(eq => (
-                      <Badge key={eq} variant="secondary" className="capitalize">
-                        {eq.replace('-', ' ')}
-                      </Badge>
-                    ))}
+                    <p className="font-bold text-sm">{totalSets}</p>
+                    <p className="text-[10px] text-muted-foreground">Total Sets</p>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Body Area Focus */}
-          {workout.body_areas && workout.body_areas.length > 0 && (
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="font-semibold mb-3">Body Area Focus</h3>
-                <div className="flex flex-wrap gap-2">
-                  {workout.body_areas.map(area => (
-                    <Badge key={area} variant="outline" className="capitalize">
-                      {area.replace('-', ' ')}
-                    </Badge>
-                  ))}
+              {totalReps > 0 && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border">
+                  <Target className="w-4 h-4 text-primary flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-sm">{totalReps}</p>
+                    <p className="text-[10px] text-muted-foreground">Total Reps</p>
+                  </div>
                 </div>
+              )}
+              {totalExerciseDuration > 0 && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border">
+                  <Timer className="w-4 h-4 text-primary flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-sm">{Math.ceil(totalExerciseDuration / 60)}m</p>
+                    <p className="text-[10px] text-muted-foreground">Active Time</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Body Areas & Equipment */}
+          {((workout.body_areas?.length > 0) || (workout.equipment?.length > 0)) && (
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                {workout.body_areas?.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Target Muscles</p>
+                    <div className="flex flex-wrap gap-2">
+                      {workout.body_areas.map(area => (
+                        <Badge key={area} variant="outline" className="capitalize">{area.replace('-', ' ')}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {workout.equipment?.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Equipment Needed</p>
+                    <div className="flex flex-wrap gap-2">
+                      {workout.equipment.map(eq => (
+                        <Badge key={eq} variant="secondary" className="capitalize">{eq.replace('-', ' ')}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
 
           {/* Exercises List */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold">Exercises List</h3>
-              <Button variant="link" size="sm" className="text-primary">See All</Button>
-            </div>
-            <div className="space-y-3">
-              {exercises.map((exercise, index) => (
-                <Card key={exercise.id}>
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                      {exercise.thumbnail_url ? (
-                        <img src={exercise.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-2xl font-bold text-muted-foreground">{index + 1}</span>
-                      )}
-                      <Badge className="absolute top-1 left-1 text-[8px] px-1" variant="secondary">
-                        Part {index + 1}
-                      </Badge>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium truncate">{exercise.title}</h4>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{exercise.duration_seconds ? `${Math.floor(exercise.duration_seconds / 60)}min` : 'N/A'}</span>
-                        {exercise.body_area && (
-                          <>
-                            <span>·</span>
-                            <span className="capitalize">{exercise.body_area}</span>
-                          </>
+          {exercises.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-3">Exercises ({exercises.length})</h3>
+              <div className="space-y-2">
+                {exercises.map((exercise, index) => (
+                  <Card key={exercise.id}>
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                        {exercise.thumbnail_url ? (
+                          <img src={exercise.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-lg font-bold text-muted-foreground">{index + 1}</span>
                         )}
                       </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm truncate">{exercise.title}</h4>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          {exercise.sets && exercise.reps && (
+                            <span>{exercise.sets} × {exercise.reps} reps</span>
+                          )}
+                          {exercise.sets && exercise.reps && exercise.duration_seconds && <span>·</span>}
+                          {exercise.duration_seconds && (
+                            <span>{exercise.duration_seconds >= 60 ? `${Math.floor(exercise.duration_seconds / 60)}m ${exercise.duration_seconds % 60}s` : `${exercise.duration_seconds}s`}</span>
+                          )}
+                          {exercise.body_area && (
+                            <>
+                              <span>·</span>
+                              <span className="capitalize">{exercise.body_area.replace('-', ' ')}</span>
+                            </>
+                          )}
+                        </div>
+                        {exercise.description && (
+                          <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{exercise.description}</p>
+                        )}
+                      </div>
+                      {exercise.video_url && <Play className="w-4 h-4 text-primary flex-shrink-0" />}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Instructor */}
           {workout.instructor_name && (
@@ -341,13 +399,12 @@ export default function WorkoutDetail() {
                     <p className="font-medium">{workout.instructor_name}</p>
                     <p className="text-sm text-muted-foreground">Certified Personal Trainer</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-primary">
-                    Learn More
-                  </Button>
                 </div>
               </CardContent>
             </Card>
           )}
+
+          <div className="h-8" />
         </div>
       </ScrollArea>
 
@@ -358,9 +415,7 @@ export default function WorkoutDetail() {
             <SheetTitle>Schedule Workout</SheetTitle>
           </SheetHeader>
           <div className="py-6 space-y-6">
-            <p className="text-sm text-muted-foreground">We'll send reminders before your workout so you can prepare</p>
-            
-            {/* Date Selection */}
+            <p className="text-sm text-muted-foreground">We'll send reminders before your workout</p>
             <div>
               <h4 className="font-medium mb-3">Select Date</h4>
               <div className="flex gap-3">
@@ -370,36 +425,23 @@ export default function WorkoutDetail() {
                     <button
                       key={index}
                       onClick={() => setSelectedDate(date)}
-                      className={cn(
-                        "flex-1 p-3 rounded-xl border-2 text-center transition-all",
-                        isSelected ? "border-primary bg-primary/5" : "border-border"
-                      )}
+                      className={cn("flex-1 p-3 rounded-xl border-2 text-center transition-all", isSelected ? "border-primary bg-primary/5" : "border-border")}
                     >
-                      <p className="text-xs text-muted-foreground">
-                        {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{date.toLocaleDateString('en-US', { weekday: 'short' })}</p>
                       <p className="font-bold">{date.getDate()}</p>
                     </button>
                   );
                 })}
               </div>
             </div>
-
-            {/* Time Selection */}
             <div>
               <h4 className="font-medium mb-3">Select Time</h4>
               <div className="flex items-center justify-center gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="h-32 overflow-hidden relative">
-                    {[8, 9, 10, 11, 12].map(hour => (
-                      <button
-                        key={hour}
-                        onClick={() => setSelectedTime(prev => ({ ...prev, hour }))}
-                        className={cn(
-                          "block py-2 text-lg transition-all",
-                          selectedTime.hour === hour ? "font-bold text-primary" : "text-muted-foreground"
-                        )}
-                      >
+                  <div className="h-32 overflow-hidden">
+                    {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(hour => (
+                      <button key={hour} onClick={() => setSelectedTime(prev => ({ ...prev, hour }))}
+                        className={cn("block py-1.5 text-lg transition-all", selectedTime.hour === hour ? "font-bold text-primary" : "text-muted-foreground")}>
                         {hour.toString().padStart(2, '0')}
                       </button>
                     ))}
@@ -407,16 +449,10 @@ export default function WorkoutDetail() {
                 </div>
                 <span className="text-2xl font-bold">:</span>
                 <div className="flex flex-col items-center">
-                  <div className="h-32 overflow-hidden relative">
+                  <div className="h-32 overflow-hidden">
                     {[0, 15, 30, 45].map(minute => (
-                      <button
-                        key={minute}
-                        onClick={() => setSelectedTime(prev => ({ ...prev, minute }))}
-                        className={cn(
-                          "block py-2 text-lg transition-all",
-                          selectedTime.minute === minute ? "font-bold text-primary" : "text-muted-foreground"
-                        )}
-                      >
+                      <button key={minute} onClick={() => setSelectedTime(prev => ({ ...prev, minute }))}
+                        className={cn("block py-1.5 text-lg transition-all", selectedTime.minute === minute ? "font-bold text-primary" : "text-muted-foreground")}>
                         {minute.toString().padStart(2, '0')}
                       </button>
                     ))}
@@ -424,10 +460,7 @@ export default function WorkoutDetail() {
                 </div>
               </div>
             </div>
-
-            <Button onClick={handleSchedule} className="w-full h-12 rounded-2xl">
-              Confirm
-            </Button>
+            <Button onClick={handleSchedule} className="w-full h-12 rounded-2xl">Confirm</Button>
           </div>
         </SheetContent>
       </Sheet>
