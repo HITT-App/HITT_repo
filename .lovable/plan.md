@@ -1,26 +1,34 @@
 
-# Google Fit Step Sync Integration
 
-## What was built
-Google Fit integration to automatically sync step data from the user's phone into the app.
+## Sport Tracking Classification
 
-### Architecture
-1. **`google_fit_connections` table** — stores OAuth tokens per user (with RLS)
-2. **`google-fit-auth` edge function** — handles OAuth code exchange, token storage, connection status, and disconnect
-3. **`google-fit-sync` edge function** — fetches today's steps from Google Fit REST API, refreshes tokens automatically, upserts into `health_metrics`
-4. **`useGoogleFit` hook** — frontend hook managing OAuth flow, sync, and connection state
-5. **Steps page** — shows Google Fit connection card with connect/sync/disconnect buttons
+Currently the app has two tracking modes: GPS-based (`/activity-live`) for everything not in `INDOOR_SPORTS`, and timer-based (`/gym-timer`) for indoor activities. This means Swim and Surf incorrectly launch the GPS tracker.
 
-### Flow
-1. User taps "Connect Google Fit" → redirected to Google OAuth consent
-2. Google redirects back to `/steps?code=...` → edge function exchanges code for tokens
-3. Tokens stored in `google_fit_connections` table
-4. "Sync Now" button fetches today's steps via Google Fit REST API
-5. Steps saved to `health_metrics` with `notes = "google_fit_sync"` to distinguish from manual entries
-6. Token refresh handled automatically when expired
+### Recommended 3-tier sport classification
 
-### Google Cloud Setup Required
-- Enable Fitness API
-- Create OAuth 2.0 Web Client credentials
-- Add redirect URIs: `https://wgfxtech.lovable.app/steps` and preview URL
-- Secrets stored: `GOOGLE_FIT_CLIENT_ID`, `GOOGLE_FIT_CLIENT_SECRET`
+| Category | Sports | Tracker | Rationale |
+|----------|--------|---------|-----------|
+| **GPS-tracked** | Run, Trail Run, Walk, Hike, Cycling | `/activity-live` | Route/distance matters |
+| **Timer + Sets** | Weight Training, Workout, HIIT | `/gym-timer` | Rep/set counting, no location |
+| **Timer + Laps** | Swim, Surf, Yoga | `/gym-timer` (adapted) | Duration-focused, optional lap/interval counter |
+
+### Changes
+
+**1. `src/components/ChooseSportSheet.tsx`**
+- Replace the binary `INDOOR_SPORTS` set with a sport config map that specifies which tracker each sport uses
+- GPS sports → `/activity-live`, all others → `/gym-timer`
+- Swim and Surf move to the gym-timer flow
+
+**2. `src/pages/GymTimer.tsx`**
+- Adapt the UI to be sport-aware: show "Laps" counter for water sports instead of "Sets"
+- Update the label dynamically (e.g., "Sets" for Weight Training, "Laps" for Swim, "Rounds" for HIIT)
+- Add sport-specific MET values for Swim (7.0) and Surf (3.5) which are currently missing
+- Show a contextual icon matching the selected sport
+
+**3. Sport metadata consolidation**
+- Create a single `sportConfig` map in a shared file (e.g., `src/lib/sports.ts`) defining each sport's: name, icon, MET value, tracker type (`gps` | `timer`), counter label (`Sets` | `Laps` | `Rounds`), and color
+- Both `ChooseSportSheet` and `GymTimer` import from this shared config, eliminating duplicated definitions
+
+### Summary
+Three files touched: new `src/lib/sports.ts` config, updated `ChooseSportSheet.tsx` routing, and enhanced `GymTimer.tsx` with sport-aware labels/counters. No database changes needed.
+
