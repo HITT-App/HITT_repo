@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Flame, Dumbbell, Plus, Minus, Activity, PersonStanding, Settings } from "lucide-react";
+import { ArrowLeft, Pause, Play, Plus, Minus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -10,24 +10,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { CompletionSummary } from "@/components/workout/CompletionSummary";
-
-const MET_VALUES: Record<string, number> = {
-  "weight training": 5.0,
-  workout: 8.0,
-  hiit: 8.0,
-  yoga: 2.5,
-};
-
-function getMET(type: string): number {
-  return MET_VALUES[type.toLowerCase()] ?? 5.0;
-}
-
-const ACTIVITY_ICONS: Record<string, typeof Dumbbell> = {
-  "weight training": Dumbbell,
-  workout: Activity,
-  hiit: Flame,
-  yoga: PersonStanding,
-};
+import { getSportConfig } from "@/lib/sports";
 
 const DEFAULT_WEIGHT_KG = 70;
 
@@ -44,6 +27,7 @@ const GymTimer = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activityType = searchParams.get("sport") || "Workout";
+  const sport = getSportConfig(activityType);
   const { logActivity } = useActivity();
   const { recordWorkout } = useStreaksAndBadges();
 
@@ -53,7 +37,7 @@ const GymTimer = () => {
   const [holdProgress, setHoldProgress] = useState(0);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [sets, setSets] = useState(0);
+  const [counter, setCounter] = useState(0);
   const [settings, setSettings] = useState({ autoVibrate: true, showCalories: true });
   const [pointsEarned, setPointsEarned] = useState(0);
 
@@ -61,9 +45,9 @@ const GymTimer = () => {
   const pausedAtRef = useRef(0);
   const holdTimerRef = useRef<ReturnType<typeof setInterval>>();
 
-  const met = getMET(activityType);
-  const calories = Math.round((met * DEFAULT_WEIGHT_KG * elapsed) / 3600);
-  const IconComp = ACTIVITY_ICONS[activityType.toLowerCase()] || Activity;
+  const calories = Math.round((sport.met * DEFAULT_WEIGHT_KG * elapsed) / 3600);
+  const IconComp = sport.icon;
+  const counterLabel = sport.counterLabel;
 
   // Timer
   useEffect(() => {
@@ -118,14 +102,14 @@ const GymTimer = () => {
         activity_type: activityType,
         duration_seconds: elapsed,
         calories_burned: calories,
-        notes: sets > 0 ? `${sets} sets completed` : undefined,
+        notes: counter > 0 ? `${counter} ${counterLabel.toLowerCase()} completed` : undefined,
       });
       const pts = await recordWorkout();
       setPointsEarned(pts);
     } catch {
       toast.error("Failed to save activity");
     }
-  }, [activityType, elapsed, calories, sets, logActivity, settings.autoVibrate, recordWorkout]);
+  }, [activityType, elapsed, calories, counter, counterLabel, logActivity, settings.autoVibrate, recordWorkout]);
 
   // Heart rate zone visual (decorative)
   const hrZone = elapsed < 300 ? "Warm Up" : elapsed < 1200 ? "Fat Burn" : elapsed < 2400 ? "Cardio" : "Peak";
@@ -135,7 +119,7 @@ const GymTimer = () => {
     const completionStats = [
       { label: "Duration", value: formatTime(elapsed) },
       { label: "Calories", value: calories, unit: "kcal" },
-      ...(sets > 0 ? [{ label: "Sets", value: sets }] : []),
+      ...(counter > 0 ? [{ label: counterLabel, value: counter }] : []),
     ];
     return (
       <CompletionSummary
@@ -150,7 +134,6 @@ const GymTimer = () => {
 
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
-      {/* Subtle radial glow background */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
 
       {/* Header */}
@@ -159,7 +142,7 @@ const GymTimer = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex items-center gap-2">
-          <IconComp className="w-4 h-4 text-primary" />
+          <IconComp className={cn("w-4 h-4", sport.color)} />
           <span className="text-xs font-semibold uppercase tracking-wider text-foreground">{activityType}</span>
         </div>
         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowSettings(true)}>
@@ -177,7 +160,6 @@ const GymTimer = () => {
 
       {/* Main timer area */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6 z-10">
-        {/* Big timer */}
         <div className="flex flex-col items-center">
           <span className={cn(
             "font-mono font-bold tracking-tight text-foreground",
@@ -195,37 +177,36 @@ const GymTimer = () => {
         <div className="flex items-center gap-8">
           <div className="flex flex-col items-center">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <Dumbbell className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[10px] uppercase text-muted-foreground tracking-wider">Sets</span>
+              <IconComp className={cn("w-3.5 h-3.5", sport.color)} />
+              <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{counterLabel}</span>
             </div>
-            <span className="text-2xl font-bold text-foreground font-mono">{sets}</span>
+            <span className="text-2xl font-bold text-foreground font-mono">{counter}</span>
           </div>
           <div className="h-10 w-px bg-border/30" />
           <div className="flex flex-col items-center">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <Flame className="w-3.5 h-3.5 text-primary" />
               <span className="text-[10px] uppercase text-muted-foreground tracking-wider">Calories</span>
             </div>
             <span className="text-2xl font-bold text-foreground font-mono">{calories}</span>
           </div>
         </div>
 
-        {/* Set counter buttons */}
+        {/* Counter buttons */}
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
             size="icon"
             className="w-12 h-12 rounded-full"
-            onClick={() => { setSets((s) => Math.max(0, s - 1)); if (settings.autoVibrate) navigator.vibrate?.(20); }}
+            onClick={() => { setCounter((s) => Math.max(0, s - 1)); if (settings.autoVibrate) navigator.vibrate?.(20); }}
           >
             <Minus className="w-5 h-5" />
           </Button>
-          <span className="text-sm font-medium text-muted-foreground w-16 text-center">Log Set</span>
+          <span className="text-sm font-medium text-muted-foreground w-20 text-center">Log {counterLabel.slice(0, -1)}</span>
           <Button
             variant="outline"
             size="icon"
             className="w-12 h-12 rounded-full border-primary/50 text-primary"
-            onClick={() => { setSets((s) => s + 1); if (settings.autoVibrate) navigator.vibrate?.(50); toast.success(`Set ${sets + 1} logged!`); }}
+            onClick={() => { setCounter((s) => s + 1); if (settings.autoVibrate) navigator.vibrate?.(50); toast.success(`${counterLabel.slice(0, -1)} ${counter + 1} logged!`); }}
           >
             <Plus className="w-5 h-5" />
           </Button>
@@ -239,7 +220,6 @@ const GymTimer = () => {
         "backdrop-blur-xl"
       )}>
         <div className="flex items-center justify-center gap-6">
-          {/* Pause/Play */}
           <Button
             variant="outline"
             size="icon"
@@ -249,7 +229,6 @@ const GymTimer = () => {
             {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
           </Button>
 
-          {/* Hold to Finish */}
           <div className="relative">
             <button
               className={cn(
