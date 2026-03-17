@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Sparkles, RefreshCw, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
