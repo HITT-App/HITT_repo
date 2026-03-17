@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 export function SmartDailyBriefing() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [insight, setInsight] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
