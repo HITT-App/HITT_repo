@@ -282,6 +282,11 @@ export function CompletionSummary({
         </div>
       )}
 
+      {/* AI Insight */}
+      <div className="px-5 mt-3">
+        <PostActivityInsight activityTitle={activityTitle} activityType={activityType} stats={stats} />
+      </div>
+
       {/* Share image section */}
       <div className="px-5 mt-3">
         {isGenerating ? (
