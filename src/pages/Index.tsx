@@ -108,6 +108,7 @@ const Index = () => {
   const sectionComponents: Record<string, ReactNode> = {
     hero: <HomeHero userName={displayName} />,
     header: <HomeHeader userName={displayName} score={61} avatarUrl={profile?.avatar_url} />,
+    daily_briefing: <SmartDailyBriefing />,
     stats_grid: <StatsGrid />,
     fitness_metrics: <FitnessMetricsCard hasData={true} />,
     activity: <ActivitySection />,
