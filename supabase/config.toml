@@ -5,3 +5,6 @@ project_id = "iglwpwdnwztutbaybhfq"
 
 [functions.generate-activity-image]
 verify_jwt = false
+
+[functions.smart-insights]
+verify_jwt = false

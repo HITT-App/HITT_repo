@@ -8,3 +8,4 @@ export { SleepSection } from "./SleepSection";
 export { AICoachSection } from "./AICoachSection";
 export { CoachSessionSection } from "./CoachSessionSection";
 export { ResourcesSection } from "./ResourcesSection";
+export { SmartDailyBriefing } from "./SmartDailyBriefing";

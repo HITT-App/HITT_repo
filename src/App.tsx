@@ -236,6 +236,7 @@ const App = () => (
             <Route path="/route/:id" element={<ProtectedRoute><RouteDetail /></ProtectedRoute>} />
             <Route path="/routes/create" element={<ProtectedRoute><CreateRoute /></ProtectedRoute>} />
             <Route path="/barcode-scanner" element={<ProtectedRoute><BarcodeScanner /></ProtectedRoute>} />
+            <Route path="/weekly-report" element={<ProtectedRoute><WeeklyReport /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />

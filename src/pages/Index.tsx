@@ -127,6 +127,7 @@ const Index = () => {
         <>
           <HomeHero userName={displayName} />
           <HomeHeader userName={displayName} score={61} avatarUrl={profile?.avatar_url} />
+          <SmartDailyBriefing />
           <StatsGrid />
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
           {flags.activity_enabled && <ActivitySection />}
