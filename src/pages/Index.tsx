@@ -92,6 +92,7 @@ const Index = () => {
   const featureFlagMap: Record<string, string | null> = {
     hero: null,
     header: null,
+    daily_briefing: null,
     stats_grid: null,
     fitness_metrics: "health_metrics_enabled",
     activity: "activity_enabled",
