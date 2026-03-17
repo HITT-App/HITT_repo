@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Share2, TrendingUp, Sparkles, Download, X, RefreshCw, Camera, User, Zap, Star } from 'lucide-react';
+import { PostActivityInsight } from './PostActivityInsight';
 import { HIITLogo } from '@/components/HIITLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -280,6 +281,11 @@ export function CompletionSummary({
           </div>
         </div>
       )}
+
+      {/* AI Insight */}
+      <div className="px-5 mt-3">
+        <PostActivityInsight activityTitle={activityTitle} activityType={activityType} stats={stats} />
+      </div>
 
       {/* Share image section */}
       <div className="px-5 mt-3">

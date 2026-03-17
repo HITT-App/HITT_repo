@@ -23,6 +23,7 @@ import {
   SleepSection,
   AICoachSection,
   ResourcesSection,
+  SmartDailyBriefing,
 } from "@/components/home";
 
 const Index = () => {
@@ -91,6 +92,7 @@ const Index = () => {
   const featureFlagMap: Record<string, string | null> = {
     hero: null,
     header: null,
+    daily_briefing: null,
     stats_grid: null,
     fitness_metrics: "health_metrics_enabled",
     activity: "activity_enabled",
@@ -106,6 +108,7 @@ const Index = () => {
   const sectionComponents: Record<string, ReactNode> = {
     hero: <HomeHero userName={displayName} />,
     header: <HomeHeader userName={displayName} score={61} avatarUrl={profile?.avatar_url} />,
+    daily_briefing: <SmartDailyBriefing />,
     stats_grid: <StatsGrid />,
     fitness_metrics: <FitnessMetricsCard hasData={true} />,
     activity: <ActivitySection />,
@@ -124,6 +127,7 @@ const Index = () => {
         <>
           <HomeHero userName={displayName} />
           <HomeHeader userName={displayName} score={61} avatarUrl={profile?.avatar_url} />
+          <SmartDailyBriefing />
           <StatsGrid />
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
           {flags.activity_enabled && <ActivitySection />}
