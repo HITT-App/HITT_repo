@@ -99,6 +99,16 @@ export function SmartDailyBriefing() {
                 {insight}
               </p>
             ) : null}
+
+            {insight && (
+              <button
+                onClick={() => navigate("/weekly-report")}
+                className="flex items-center gap-1 mt-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                View Weekly Report
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            )}
           </div>
         </div>
       </div>
