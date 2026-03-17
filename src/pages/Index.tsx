@@ -23,6 +23,7 @@ import {
   SleepSection,
   AICoachSection,
   ResourcesSection,
+  SmartDailyBriefing,
 } from "@/components/home";
 
 const Index = () => {
