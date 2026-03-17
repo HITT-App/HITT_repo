@@ -15,6 +15,7 @@ export const ROUTES = {
   AI_COACH: "/ai-coach",
   CHAT_SETTINGS: "/chat-settings",
   MY_CONVERSATIONS: "/my-conversations",
+  WEEKLY_REPORT: "/weekly-report",
 
   // Health
   HEALTH_METRICS: "/health-metrics",
