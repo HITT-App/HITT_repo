@@ -1,36 +1,43 @@
 import { useNavigate } from "react-router-dom";
-import { X, Route } from "lucide-react";
+import { X, Route, Search } from "lucide-react";
 import { Drawer, DrawerContent, DrawerClose } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/lib/routes";
-import { SPORT_CONFIG, getTrackerRoute } from "@/lib/sports";
+import { SPORT_CONFIG, SPORT_CATEGORIES, getTrackerRoute } from "@/lib/sports";
+import { useState } from "react";
 
 interface ChooseSportSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const topSportKeys = ["Swim", "Run", "Workout", "Weight Training"];
-
-const categories = [
-  { title: "Foot Sports", sports: ["Run", "Trail Run", "Walk", "Hike"] },
-  { title: "Water Sports", sports: ["Swim", "Surf"] },
-  { title: "Gym", sports: ["Weight Training", "HIIT", "Yoga", "Cycling"] },
-];
+const topSportKeys = ["Run", "HIIT", "Weight Training", "Swim", "Cycling", "Boxing"];
 
 export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) => {
   const navigate = useNavigate();
+  const [search, setSearch] = useState("");
 
   const handleSelect = (sport: string) => {
     onOpenChange(false);
     navigate(`${getTrackerRoute(sport)}?sport=${encodeURIComponent(sport)}`);
   };
 
+  const filteredCategories = search.trim()
+    ? SPORT_CATEGORIES.map((cat) => ({
+        ...cat,
+        sports: cat.sports.filter((s) => {
+          const config = SPORT_CONFIG[s];
+          return config && config.name.toLowerCase().includes(search.toLowerCase());
+        }),
+      })).filter((cat) => cat.sports.length > 0)
+    : SPORT_CATEGORIES;
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[85vh] px-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pb-3">
+        <div className="flex items-center justify-between px-5 pb-2">
           <h2 className="text-lg font-bold text-foreground">Choose a Sport</h2>
           <DrawerClose asChild>
             <button className="p-1.5 rounded-full bg-muted text-muted-foreground">
@@ -39,53 +46,70 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
           </DrawerClose>
         </div>
 
-        <ScrollArea className="h-[70vh]">
-          <div className="px-5 pb-8 space-y-6">
+        {/* Search */}
+        <div className="px-5 pb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search sports…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9 text-sm bg-muted border-0"
+            />
+          </div>
+        </div>
+
+        <ScrollArea className="h-[65vh]">
+          <div className="px-5 pb-8 space-y-5">
             {/* Routes Banner */}
-            <button
-              onClick={() => { onOpenChange(false); navigate(ROUTES.ROUTES_EXPLORER); }}
-              className="w-full rounded-2xl border border-primary/30 bg-primary/5 p-4 text-left transition-colors hover:bg-primary/10"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Route size={20} className="text-primary" />
+            {!search && (
+              <button
+                onClick={() => { onOpenChange(false); navigate(ROUTES.ROUTES_EXPLORER); }}
+                className="w-full rounded-2xl border border-primary/30 bg-primary/5 p-4 text-left transition-colors hover:bg-primary/10"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Route size={20} className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Routes & Trails</p>
+                    <p className="text-xs text-muted-foreground">Discover and create running routes</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-foreground">Routes & Trails</p>
-                  <p className="text-xs text-muted-foreground">Discover and create running routes</p>
+              </button>
+            )}
+
+            {/* Quick picks (no search) */}
+            {!search && (
+              <div>
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Quick Start</h3>
+                <div className="flex gap-3 flex-wrap">
+                  {topSportKeys.map((key) => {
+                    const sport = SPORT_CONFIG[key];
+                    if (!sport) return null;
+                    const Icon = sport.icon;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleSelect(key)}
+                        className="flex flex-col items-center gap-1.5 min-w-[56px] touch-manipulation"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                          <Icon size={20} className={sport.color} />
+                        </div>
+                        <span className="text-[10px] font-medium text-foreground text-center leading-tight max-w-[56px]">{sport.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            </button>
+            )}
 
-            {/* Top Sports */}
-            <div>
-              <h3 className="text-sm font-bold text-foreground mb-3">Your Top Sports</h3>
-              <div className="flex gap-4">
-                {topSportKeys.map((key) => {
-                  const sport = SPORT_CONFIG[key];
-                  if (!sport) return null;
-                  const Icon = sport.icon;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => handleSelect(key)}
-                      className="flex flex-col items-center gap-1.5 min-w-[60px] touch-manipulation"
-                    >
-                      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
-                        <Icon size={24} className={sport.color} />
-                      </div>
-                      <span className="text-[11px] font-medium text-foreground text-center leading-tight">{sport.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Categories */}
-            {categories.map((cat) => (
+            {/* All categories */}
+            {filteredCategories.map((cat) => (
               <div key={cat.title}>
-                <h3 className="text-sm font-bold text-foreground mb-2">{cat.title}</h3>
-                <div className="space-y-1">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{cat.title}</h3>
+                <div className="space-y-0.5">
                   {cat.sports.map((key) => {
                     const sport = SPORT_CONFIG[key];
                     if (!sport) return null;
@@ -96,10 +120,13 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
                         onClick={() => handleSelect(key)}
                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/50 active:bg-muted transition-colors touch-manipulation"
                       >
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                          <Icon size={18} className="text-foreground" />
+                        <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <Icon size={16} className={sport.color} />
                         </div>
-                        <span className="text-sm font-medium text-foreground">{sport.name}</span>
+                        <div className="flex-1 text-left">
+                          <span className="text-sm font-medium text-foreground">{sport.name}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-mono">{sport.met} MET</span>
                       </button>
                     );
                   })}

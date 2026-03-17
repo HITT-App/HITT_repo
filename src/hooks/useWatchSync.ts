@@ -4,6 +4,7 @@ import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
+import { getSportConfig, validateWatchHR, type SportConfig } from "@/lib/sports";
 
 interface SyncState {
   isAvailable: boolean;
@@ -13,17 +14,34 @@ interface SyncState {
   error: string | null;
   watchType: string | null;
   syncFrequency: "manual" | "on_open" | "hourly";
+  lastSyncResults: SyncResults | null;
+}
+
+export interface SyncResults {
+  steps?: number;
+  heartRate?: number;
+  distance?: number;
+  calories?: number;
+  hrAccuracy?: "excellent" | "good" | "low";
+  activeSport?: string;
 }
 
 const LAST_SYNC_KEY = "hiit-watch-last-sync";
 const WATCH_TYPE_KEY = "hiit-watch-type";
 const SYNC_FREQ_KEY = "hiit-sync-frequency";
+const SYNC_RESULTS_KEY = "hiit-watch-last-results";
 
 function getLastSync(): string | null {
   try { return localStorage.getItem(LAST_SYNC_KEY); } catch { return null; }
 }
 function setLastSync(ts: string) {
   try { localStorage.setItem(LAST_SYNC_KEY, ts); } catch {}
+}
+function getSavedResults(): SyncResults | null {
+  try {
+    const s = localStorage.getItem(SYNC_RESULTS_KEY);
+    return s ? JSON.parse(s) : null;
+  } catch { return null; }
 }
 
 const WATCH_TYPES = [
@@ -49,6 +67,7 @@ export function useWatchSync() {
     error: null,
     watchType: localStorage.getItem(WATCH_TYPE_KEY) || null,
     syncFrequency: (localStorage.getItem(SYNC_FREQ_KEY) as SyncState["syncFrequency"]) || "manual",
+    lastSyncResults: getSavedResults(),
   });
 
   useEffect(() => {
@@ -75,7 +94,7 @@ export function useWatchSync() {
   useEffect(() => {
     if (state.syncFrequency === "on_open" && state.isAuthorized && user && Capacitor.isNativePlatform()) {
       const lastSync = getLastSync();
-      const threshold = 5 * 60 * 1000; // 5 min cooldown
+      const threshold = 5 * 60 * 1000;
       if (!lastSync || Date.now() - new Date(lastSync).getTime() > threshold) {
         syncHealthData();
       }
@@ -85,7 +104,6 @@ export function useWatchSync() {
   const setWatchType = useCallback(async (type: WatchType) => {
     localStorage.setItem(WATCH_TYPE_KEY, type);
     setState((s) => ({ ...s, watchType: type }));
-    // Save to profile
     if (user) {
       await supabase.from("profiles").update({ watch_type: type } as any).eq("user_id", user.id);
     }
@@ -117,7 +135,7 @@ export function useWatchSync() {
     }
   }, []);
 
-  const syncHealthData = useCallback(async () => {
+  const syncHealthData = useCallback(async (activeSportName?: string) => {
     if (!user || !Capacitor.isNativePlatform()) return;
     setState((s) => ({ ...s, isSyncing: true, error: null }));
 
@@ -127,7 +145,8 @@ export function useWatchSync() {
       const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const opts = { startDate: startDate.toISOString(), endDate: now.toISOString(), bucket: "day" as const };
 
-      const results: Record<string, number> = {};
+      const results: SyncResults = {};
+      if (activeSportName) results.activeSport = activeSportName;
 
       // Steps
       try {
@@ -143,8 +162,15 @@ export function useWatchSync() {
       try {
         const { samples } = await Health.queryAggregated({ ...opts, dataType: "heartRate", aggregation: "average" });
         if (samples.length > 0 && samples[0].value > 0) {
-          await logMetric.mutateAsync({ metric_type: "heart_rate", value: Math.round(samples[0].value), unit: "bpm", notes: "watch_sync" });
-          results.heartRate = Math.round(samples[0].value);
+          const avgHR = Math.round(samples[0].value);
+          await logMetric.mutateAsync({ metric_type: "heart_rate", value: avgHR, unit: "bpm", notes: "watch_sync" });
+          results.heartRate = avgHR;
+
+          // Validate HR against active sport if provided
+          if (activeSportName) {
+            const validation = validateWatchHR(activeSportName, avgHR);
+            results.hrAccuracy = validation.accuracy;
+          }
         }
       } catch {}
 
@@ -168,10 +194,20 @@ export function useWatchSync() {
 
       const syncTime = now.toISOString();
       setLastSync(syncTime);
-      setState((s) => ({ ...s, isSyncing: false, lastSyncedAt: syncTime }));
+      try { localStorage.setItem(SYNC_RESULTS_KEY, JSON.stringify(results)); } catch {}
+
+      setState((s) => ({ ...s, isSyncing: false, lastSyncedAt: syncTime, lastSyncResults: results }));
       
-      const syncedItems = Object.keys(results).length;
-      toast.success(`Synced ${syncedItems} metric${syncedItems !== 1 ? "s" : ""} from your watch!`);
+      const syncedItems = Object.keys(results).filter(k => k !== "activeSport" && k !== "hrAccuracy").length;
+      
+      if (results.hrAccuracy) {
+        const hrMsg = results.hrAccuracy === "excellent" ? "🎯 HR calibration: perfect"
+          : results.hrAccuracy === "good" ? "✅ HR calibration: good"
+          : "⚠️ HR calibration: check watch fit";
+        toast.success(`Synced ${syncedItems} metrics · ${hrMsg}`);
+      } else {
+        toast.success(`Synced ${syncedItems} metric${syncedItems !== 1 ? "s" : ""} from your watch!`);
+      }
     } catch (e: any) {
       setState((s) => ({ ...s, isSyncing: false, error: e?.message || "Sync failed" }));
       toast.error("Failed to sync health data");
