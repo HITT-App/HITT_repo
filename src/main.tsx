@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initNativePlugins } from "./lib/native";
 
 const SW_REFRESH_FLAG = "sw-refresh-pending";
 const PREVIEW_BUSTER_PARAM = "__preview_ts";
