@@ -170,6 +170,7 @@ async function bootstrap() {
     setupPreviewFreshnessGuards();
   }
 
+  await initNativePlugins();
   createRoot(document.getElementById("root")!).render(<App />);
 }
 
