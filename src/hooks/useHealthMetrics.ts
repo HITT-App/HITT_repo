@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-export type MetricType = "heart_rate" | "blood_pressure" | "steps" | "weight" | "hydration";
+export type MetricType = "heart_rate" | "blood_pressure" | "steps" | "weight" | "hydration" | "body_fat" | "body_chest" | "body_waist" | "body_hips" | "body_bicep_left" | "body_bicep_right" | "body_thigh_left" | "body_thigh_right" | "body_neck";
 
 interface HealthMetricRow {
   id: string;

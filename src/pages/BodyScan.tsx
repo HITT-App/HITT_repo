@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { type MetricType } from "@/hooks/useHealthMetrics";
 import { useAuth } from "@/hooks/useAuth";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 import { supabase } from "@/integrations/supabase/client";
