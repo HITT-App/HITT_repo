@@ -111,6 +111,7 @@ const RouteDetail = lazy(() => import("./pages/RouteDetail"));
 const CreateRoute = lazy(() => import("./pages/CreateRoute"));
 const BarcodeScanner = lazy(() => import("./pages/BarcodeScanner"));
 const WeeklyReport = lazy(() => import("./pages/WeeklyReport"));
+const BodyScan = lazy(() => import("./pages/BodyScan"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
