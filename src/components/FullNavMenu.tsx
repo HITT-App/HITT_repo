@@ -33,7 +33,8 @@ import {
   X,
   Crown,
   Shield,
-  Sun
+  Sun,
+  ScanLine
 } from "lucide-react";
 import {
   Drawer,
@@ -103,6 +104,7 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
         { icon: Footprints, label: "Steps", path: "/steps" },
         { icon: Scale, label: "Weight", path: "/weight" },
         { icon: Droplets, label: "Hydration", path: "/hydration" },
+        { icon: ScanLine, label: "Body Scan", path: "/body-scan" },
         ...(flags.sleep_enabled ? [{ icon: Moon, label: "Sleep", path: "/sleep" }] : []),
         { icon: Smile, label: "Mood", path: "/mood" },
       ]
