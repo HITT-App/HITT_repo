@@ -138,7 +138,7 @@ const BodyScan = () => {
       }
       for (const [key, value] of entries) {
         await logMetric.mutateAsync({
-          metric_type: `body_${key}`,
+          metric_type: `body_${key}` as MetricType,
           value: parseFloat(value),
           unit: "cm",
         });
