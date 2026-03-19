@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart, Activity, Droplets, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, Activity, Droplets, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles, Loader2, ScanLine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
