@@ -144,6 +144,16 @@ const HealthMetrics = () => {
       bgColor: "bg-yellow-100",
       path: "/mood",
     },
+    {
+      label: "Body Scan",
+      value: null,
+      fallback: "Scan Now",
+      unit: "",
+      icon: ScanLine,
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+      path: "/body-scan",
+    },
   ];
 
   return (
