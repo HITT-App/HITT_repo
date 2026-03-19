@@ -80,9 +80,11 @@ serve(async (req) => {
     // Ensure the image data is a proper data URL
     let processedImageData = imageData;
     if (!processedImageData.startsWith("data:")) {
-      // If raw base64, add the data URL prefix
       processedImageData = `data:image/jpeg;base64,${processedImageData}`;
     }
+    
+    console.log("Image data prefix:", processedImageData.substring(0, 50));
+    console.log("Image data length:", processedImageData.length);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
