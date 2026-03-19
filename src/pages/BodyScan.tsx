@@ -267,7 +267,7 @@ const BodyScan = () => {
                   </div>
                   <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 transition-all"
+                      className="h-full rounded-full bg-primary transition-all"
                       style={{ width: `${Math.min(analysis.estimatedBodyFat * 2, 100)}%` }}
                     />
                   </div>
