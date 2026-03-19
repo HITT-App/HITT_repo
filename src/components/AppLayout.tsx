@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
-import { ChooseSportSheet } from "@/components/ChooseSportSheet";
+import { FullNavMenu } from "@/components/FullNavMenu";
 import { useAuth } from "@/hooks/useAuth";
 
 // Pages where the bottom nav should be hidden (full-screen experiences)
@@ -26,7 +26,7 @@ const HIDDEN_NAV_ROUTES = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const location = useLocation();
-  const [sportSheetOpen, setSportSheetOpen] = useState(false);
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
 
   const shouldHideNav = !user || HIDDEN_NAV_ROUTES.some(
     (route) => location.pathname.startsWith(route)
@@ -43,8 +43,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
       {!shouldHideNav && (
         <>
-          <BottomNav onCenterClick={() => setSportSheetOpen(true)} />
-          <ChooseSportSheet open={sportSheetOpen} onOpenChange={setSportSheetOpen} />
+          <BottomNav onCenterClick={() => setNavMenuOpen(true)} />
+          <FullNavMenu open={navMenuOpen} onOpenChange={setNavMenuOpen} />
         </>
       )}
     </>
