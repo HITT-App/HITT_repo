@@ -33,7 +33,8 @@ import {
   X,
   Crown,
   Shield,
-  Sun
+  Sun,
+  ScanLine
 } from "lucide-react";
 import {
   Drawer,
