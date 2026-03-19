@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.smart-insights]
 verify_jwt = false
+
+[functions.analyze-body]
+verify_jwt = false
