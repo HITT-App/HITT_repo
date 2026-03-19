@@ -111,6 +111,7 @@ const RouteDetail = lazy(() => import("./pages/RouteDetail"));
 const CreateRoute = lazy(() => import("./pages/CreateRoute"));
 const BarcodeScanner = lazy(() => import("./pages/BarcodeScanner"));
 const WeeklyReport = lazy(() => import("./pages/WeeklyReport"));
+const BodyScan = lazy(() => import("./pages/BodyScan"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -237,6 +238,7 @@ const App = () => (
             <Route path="/routes/create" element={<ProtectedRoute><CreateRoute /></ProtectedRoute>} />
             <Route path="/barcode-scanner" element={<ProtectedRoute><BarcodeScanner /></ProtectedRoute>} />
             <Route path="/weekly-report" element={<ProtectedRoute><WeeklyReport /></ProtectedRoute>} />
+            <Route path="/body-scan" element={<ProtectedRoute><BodyScan /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />

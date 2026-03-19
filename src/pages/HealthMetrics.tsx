@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart, Activity, Droplets, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, Activity, Droplets, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles, Loader2, ScanLine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -143,6 +143,16 @@ const HealthMetrics = () => {
       color: "text-yellow-500",
       bgColor: "bg-yellow-100",
       path: "/mood",
+    },
+    {
+      label: "Body Scan",
+      value: null,
+      fallback: "Scan Now",
+      unit: "",
+      icon: ScanLine,
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+      path: "/body-scan",
     },
   ];
 
