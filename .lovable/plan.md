@@ -1,26 +1,19 @@
 
-# Google Fit Step Sync Integration
 
-## What was built
-Google Fit integration to automatically sync step data from the user's phone into the app.
+## Make chatroom users clickable to navigate to their profile
 
-### Architecture
-1. **`google_fit_connections` table** — stores OAuth tokens per user (with RLS)
-2. **`google-fit-auth` edge function** — handles OAuth code exchange, token storage, connection status, and disconnect
-3. **`google-fit-sync` edge function** — fetches today's steps from Google Fit REST API, refreshes tokens automatically, upserts into `health_metrics`
-4. **`useGoogleFit` hook** — frontend hook managing OAuth flow, sync, and connection state
-5. **Steps page** — shows Google Fit connection card with connect/sync/disconnect buttons
+### What changes
+Two areas in the chatroom need to become clickable links to user profiles:
 
-### Flow
-1. User taps "Connect Google Fit" → redirected to Google OAuth consent
-2. Google redirects back to `/steps?code=...` → edge function exchanges code for tokens
-3. Tokens stored in `google_fit_connections` table
-4. "Sync Now" button fetches today's steps via Google Fit REST API
-5. Steps saved to `health_metrics` with `notes = "google_fit_sync"` to distinguish from manual entries
-6. Token refresh handled automatically when expired
+1. **Avatar** (lines 808-817): Wrap the `Avatar` component in a clickable element that navigates to `/community/user/{userId}`
+2. **Sender name** (lines 821-833): Wrap the sender name text in a clickable element that navigates to `/community/user/{userId}`
 
-### Google Cloud Setup Required
-- Enable Fitness API
-- Create OAuth 2.0 Web Client credentials
-- Add redirect URIs: `https://wgfxtech.lovable.app/steps` and preview URL
-- Secrets stored: `GOOGLE_FIT_CLIENT_ID`, `GOOGLE_FIT_CLIENT_SECRET`
+### Technical details
+
+**File: `src/pages/CommunityChatroom.tsx`**
+
+- Wrap the `Avatar` (line 810) with an `onClick` handler: `() => navigate(\`/community/user/${msg.user_id}\`)` with `cursor-pointer` styling
+- Wrap the sender name `<p>` tag (line 823) with an `onClick` handler to the same route, adding `cursor-pointer hover:underline` styling
+- For "You" (own messages), clicking navigates to `/profile` instead
+- Use `e.stopPropagation()` on both click handlers to prevent triggering the message tap/reaction actions
+
