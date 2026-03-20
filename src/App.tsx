@@ -130,6 +130,12 @@ const AdminHomeLayout = lazy(() => import("./pages/admin/AdminHomeLayout"));
 
 const queryClient = new QueryClient();
 
+const CacheVersionCheck = () => {
+  useCacheVersion();
+  return null;
+};
+
+
 const App = () => (
   <ErrorBoundary>
     <ThemeProvider>
