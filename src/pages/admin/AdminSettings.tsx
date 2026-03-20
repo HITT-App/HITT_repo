@@ -426,6 +426,62 @@ export default function AdminSettings() {
           </Button>
         </div>
 
+        {/* Cache Purge */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HardDriveDownload className="h-5 w-5" />
+              Cache Management
+            </CardTitle>
+            <CardDescription>
+              Force all users to clear their cached data and load the latest version of the app.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                setPurging(true);
+                try {
+                  const newVersion = Date.now().toString();
+                  const { data: existing } = await supabase
+                    .from("app_settings")
+                    .select("id")
+                    .eq("key", "cache_version")
+                    .maybeSingle();
+
+                  if (existing) {
+                    await supabase
+                      .from("app_settings")
+                      .update({ value: newVersion, updated_at: new Date().toISOString() })
+                      .eq("key", "cache_version");
+                  } else {
+                    await supabase
+                      .from("app_settings")
+                      .insert({ key: "cache_version", value: newVersion } as any);
+                  }
+
+                  setLastPurge(new Date().toISOString());
+                  toast({ title: "✅ Cache purged!", description: "All users will reload with the latest version on their next visit." });
+                } catch {
+                  toast({ variant: "destructive", title: "Failed to purge cache" });
+                } finally {
+                  setPurging(false);
+                }
+              }}
+              disabled={purging}
+            >
+              {purging ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <HardDriveDownload className="h-4 w-4 mr-2" />}
+              Purge All User Caches
+            </Button>
+            {lastPurge && (
+              <p className="text-xs text-muted-foreground">
+                Last purged: {new Date(lastPurge).toLocaleString()}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* System Info */}
         <Card>
           <CardHeader>
