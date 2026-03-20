@@ -97,9 +97,16 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
       items: [
         { icon: Apple, label: "Nutrition", path: "/nutrition" },
         { icon: UtensilsCrossed, label: "Meals", path: "/browse-meals" },
-        ...(flags.food_scanner_enabled ? [{ icon: Camera, label: "Scanner", path: "/meal-scanner" }] : []),
       ]
     }] : []),
+    {
+      title: "Scanners",
+      items: [
+        ...(flags.food_scanner_enabled ? [{ icon: Camera, label: "Meal Scanner", path: "/meal-scanner" }] : []),
+        { icon: ScanLine, label: "Body Scanner", path: "/body-scan" },
+        ...(flags.food_scanner_enabled ? [{ icon: Search, label: "Barcode Scanner", path: "/barcode-scanner" }] : []),
+      ]
+    },
     ...(flags.health_metrics_enabled ? [{
       title: "Health",
       items: [
@@ -108,7 +115,6 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
         { icon: Footprints, label: "Steps", path: "/steps" },
         { icon: Scale, label: "Weight", path: "/weight" },
         { icon: Droplets, label: "Hydration", path: "/hydration" },
-        { icon: ScanLine, label: "Body Scan", path: "/body-scan" },
         ...(flags.sleep_enabled ? [{ icon: Moon, label: "Sleep", path: "/sleep" }] : []),
         { icon: Smile, label: "Mood", path: "/mood" },
       ]
