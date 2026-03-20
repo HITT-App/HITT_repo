@@ -62,10 +62,22 @@ export default function AdminSettings() {
     setSplashBgUrl(data?.value || null);
   };
 
+  const fetchLastPurge = async () => {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value, updated_at")
+      .eq("key", "cache_version")
+      .maybeSingle();
+    if (data?.updated_at) {
+      setLastPurge(data.updated_at);
+    }
+  };
+
   useEffect(() => {
     fetchFlags();
     fetchHeroVideo();
     fetchSplashBg();
+    fetchLastPurge();
   }, []);
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
