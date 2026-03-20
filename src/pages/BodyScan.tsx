@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { format, subDays } from "date-fns";
 
 interface BodyAnalysis {
   estimatedBodyFat: number;
@@ -39,6 +41,12 @@ const MEASUREMENT_FIELDS = [
   { key: "neck", label: "Neck", unit: "cm", icon: "📏" },
 ];
 
+const POSE_GUIDES = [
+  { label: "Front", instruction: "Stand facing the camera, arms slightly away from body" },
+  { label: "Side", instruction: "Stand sideways, arms relaxed at your side" },
+  { label: "Back", instruction: "Stand with back to camera, arms slightly away" },
+];
+
 const BodyScan = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -54,6 +62,37 @@ const BodyScan = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [measurements, setMeasurements] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("scan");
+  const [poseIndex, setPoseIndex] = useState(0);
+
+  // Progress data
+  const [progressData, setProgressData] = useState<any[]>([]);
+  const [previousScans, setPreviousScans] = useState<any[]>([]);
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedCompare, setSelectedCompare] = useState<string | null>(null);
+
+  // Load historical body fat data for trends
+  useEffect(() => {
+    if (!user) return;
+    const loadProgress = async () => {
+      const { data } = await supabase
+        .from("health_metrics")
+        .select("value, recorded_at, notes")
+        .eq("user_id", user.id)
+        .eq("metric_type", "body_fat")
+        .order("recorded_at", { ascending: true })
+        .limit(30);
+      if (data) {
+        setProgressData(data.map(d => ({
+          date: format(new Date(d.recorded_at), "MMM d"),
+          bodyFat: d.value,
+          notes: d.notes,
+        })));
+        setPreviousScans(data);
+      }
+    };
+    loadProgress();
+  }, [user]);
 
   const openCamera = useCallback(async () => {
     try {
@@ -108,14 +147,9 @@ const BodyScan = () => {
     setIsAnalyzing(true);
     setAnalysis(null);
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      if (!token) throw new Error("Not authenticated");
-
       const res = await supabase.functions.invoke("analyze-body", {
         body: { imageBase64: imagePreview },
       });
-
       if (res.error) throw new Error(res.error.message);
       if (res.data?.error) throw new Error(res.data.error);
       setAnalysis(res.data);
@@ -132,8 +166,9 @@ const BodyScan = () => {
     setIsSaving(true);
     try {
       const entries = Object.entries(measurements).filter(([, v]) => v && parseFloat(v) > 0);
-      if (entries.length === 0) {
-        toast.error("Please enter at least one measurement.");
+      if (entries.length === 0 && !analysis?.estimatedBodyFat) {
+        toast.error("Please enter at least one measurement or run a scan.");
+        setIsSaving(false);
         return;
       }
       for (const [key, value] of entries) {
@@ -170,7 +205,6 @@ const BodyScan = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between p-4">
           <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-secondary">
@@ -182,13 +216,16 @@ const BodyScan = () => {
       </div>
 
       <div className="p-4 space-y-6 max-w-lg mx-auto">
-        <Tabs defaultValue="scan" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="scan" className="gap-2">
-              <Camera className="w-4 h-4" /> AI Scan
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="scan" className="gap-1 text-xs">
+              <Camera className="w-3.5 h-3.5" /> AI Scan
             </TabsTrigger>
-            <TabsTrigger value="measurements" className="gap-2">
-              <Ruler className="w-4 h-4" /> Measurements
+            <TabsTrigger value="measurements" className="gap-1 text-xs">
+              <Ruler className="w-3.5 h-3.5" /> Measure
+            </TabsTrigger>
+            <TabsTrigger value="progress" className="gap-1 text-xs">
+              <TrendingUp className="w-3.5 h-3.5" /> Progress
             </TabsTrigger>
           </TabsList>
 
@@ -198,6 +235,32 @@ const BodyScan = () => {
               <Card className="relative overflow-hidden rounded-2xl bg-black">
                 <video ref={videoRef} autoPlay playsInline muted className="w-full aspect-[3/4] object-cover" />
                 <canvas ref={canvasRef} className="hidden" />
+
+                {/* Pose Guide Overlay */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {/* Body silhouette guide */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-40 h-72 border-2 border-dashed border-white/40 rounded-[40%_40%_30%_30%]" />
+                  </div>
+                  {/* Pose instruction */}
+                  <div className="absolute top-4 inset-x-4">
+                    <div className="bg-black/60 backdrop-blur-sm rounded-xl px-3 py-2 text-center">
+                      <p className="text-white text-xs font-medium">{POSE_GUIDES[poseIndex].label} Pose</p>
+                      <p className="text-white/70 text-[10px] mt-0.5">{POSE_GUIDES[poseIndex].instruction}</p>
+                    </div>
+                  </div>
+                  {/* Pose dots */}
+                  <div className="absolute top-20 inset-x-0 flex justify-center gap-2">
+                    {POSE_GUIDES.map((_, i) => (
+                      <button
+                        key={i}
+                        className={`w-2 h-2 rounded-full pointer-events-auto ${i === poseIndex ? 'bg-primary' : 'bg-white/40'}`}
+                        onClick={() => setPoseIndex(i)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
                 <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-4">
                   <Button variant="outline" size="icon" onClick={closeCamera} className="rounded-full bg-white/20 border-white/30 text-white hover:bg-white/30">
                     <X className="w-5 h-5" />
@@ -205,7 +268,7 @@ const BodyScan = () => {
                   <button onClick={capturePhoto} className="w-16 h-16 rounded-full border-4 border-white bg-white/20 hover:bg-white/40 transition-colors flex items-center justify-center">
                     <div className="w-12 h-12 rounded-full bg-white" />
                   </button>
-                  <Button variant="outline" size="icon" onClick={() => {}} className="rounded-full bg-white/20 border-white/30 text-white hover:bg-white/30 opacity-0">
+                  <Button variant="outline" size="icon" onClick={() => setPoseIndex((poseIndex + 1) % POSE_GUIDES.length)} className="rounded-full bg-white/20 border-white/30 text-white hover:bg-white/30">
                     <RotateCcw className="w-5 h-5" />
                   </Button>
                 </div>
@@ -229,10 +292,10 @@ const BodyScan = () => {
                   </div>
                   <div className="flex gap-3 w-full">
                     <Button onClick={openCamera} className="flex-1 gap-2" variant="default">
-                      <Camera className="w-4 h-4" /> Take Photo
+                      <Camera className="w-4 h-4" /> Camera
                     </Button>
                     <Button onClick={() => fileInputRef.current?.click()} className="flex-1 gap-2" variant="outline">
-                      <Upload className="w-4 h-4" /> Upload
+                      <Upload className="w-4 h-4" /> Gallery
                     </Button>
                   </div>
                   <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
@@ -253,7 +316,6 @@ const BodyScan = () => {
             {/* Analysis Results */}
             {analysis && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {/* Body Fat Estimate */}
                 <Card className="p-5 rounded-2xl">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-foreground">Estimated Body Fat</h3>
@@ -266,19 +328,13 @@ const BodyScan = () => {
                     <span className="text-muted-foreground text-sm mb-1">body fat</span>
                   </div>
                   <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${Math.min(analysis.estimatedBodyFat * 2, 100)}%` }}
-                    />
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(analysis.estimatedBodyFat * 2, 100)}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>Athletic</span>
-                    <span>Average</span>
-                    <span>High</span>
+                    <span>Athletic</span><span>Average</span><span>High</span>
                   </div>
                 </Card>
 
-                {/* Body Type & Symmetry */}
                 <div className="grid grid-cols-2 gap-3">
                   <Card className="p-4 rounded-2xl text-center">
                     <p className="text-xs text-muted-foreground mb-1">Body Type</p>
@@ -290,7 +346,6 @@ const BodyScan = () => {
                   </Card>
                 </div>
 
-                {/* Muscle Development */}
                 <Card className="p-5 rounded-2xl">
                   <h3 className="font-semibold text-foreground mb-3">Muscle Development</h3>
                   <div className="space-y-3">
@@ -302,42 +357,41 @@ const BodyScan = () => {
                           level === "developed" ? "bg-blue-500/10 text-blue-600" :
                           level === "average" ? "bg-yellow-500/10 text-yellow-600" :
                           "bg-red-500/10 text-red-600"
-                        }`}>
-                          {devLabel(level)}
-                        </span>
+                        }`}>{devLabel(level)}</span>
                       </div>
                     ))}
                   </div>
                 </Card>
 
-                {/* Key Observations */}
                 <Card className="p-5 rounded-2xl">
-                  <h3 className="font-semibold text-foreground mb-3">Key Observations</h3>
-                  <ul className="space-y-2">
-                    {analysis.keyObservations.map((obs, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-muted-foreground">
-                        <span className="text-primary mt-0.5">•</span>
-                        {obs}
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-
-                {/* Recommendations */}
-                <Card className="p-5 rounded-2xl">
-                  <h3 className="font-semibold text-foreground mb-3">Recommendations</h3>
+                  <h3 className="font-semibold text-foreground mb-3">🎯 AI Recommendations</h3>
                   <ul className="space-y-2">
                     {analysis.recommendations.map((rec, i) => (
                       <li key={i} className="flex gap-2 text-sm text-muted-foreground">
-                        <TrendingUp className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                        <ChevronRight className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                         {rec}
                       </li>
                     ))}
                   </ul>
                 </Card>
 
+                <Card className="p-5 rounded-2xl">
+                  <h3 className="font-semibold text-foreground mb-3">Key Observations</h3>
+                  <ul className="space-y-2">
+                    {analysis.keyObservations.map((obs, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-muted-foreground">
+                        <span className="text-primary mt-0.5">•</span>{obs}
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+
+                <Button onClick={saveMeasurements} disabled={isSaving} className="w-full gap-2 h-12">
+                  {isSaving ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</> : "Save Scan Results"}
+                </Button>
+
                 <p className="text-xs text-center text-muted-foreground">
-                  ⚠️ AI estimates are approximations, not medical assessments. For accurate body composition, consult a professional.
+                  ⚠️ AI estimates are approximations, not medical assessments.
                 </p>
               </div>
             )}
@@ -347,7 +401,7 @@ const BodyScan = () => {
           <TabsContent value="measurements" className="space-y-4 mt-4">
             <Card className="p-5 rounded-2xl">
               <h3 className="font-semibold text-foreground mb-1">Body Measurements</h3>
-              <p className="text-sm text-muted-foreground mb-4">Track your measurements over time to see progress</p>
+              <p className="text-sm text-muted-foreground mb-4">Track your measurements over time</p>
               <div className="grid grid-cols-2 gap-4">
                 {MEASUREMENT_FIELDS.map(field => (
                   <div key={field.key}>
@@ -366,14 +420,100 @@ const BodyScan = () => {
                 ))}
               </div>
             </Card>
-
             <Button onClick={saveMeasurements} disabled={isSaving} className="w-full gap-2 h-12 text-base">
-              {isSaving ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</>
-              ) : (
-                "Save Measurements"
-              )}
+              {isSaving ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</> : "Save Measurements"}
             </Button>
+          </TabsContent>
+
+          {/* Progress Tab */}
+          <TabsContent value="progress" className="space-y-4 mt-4">
+            {/* Body Fat Trend Chart */}
+            <Card className="p-5 rounded-2xl">
+              <h3 className="font-semibold text-foreground mb-1">Body Fat % Trend</h3>
+              <p className="text-xs text-muted-foreground mb-4">Your body fat over time</p>
+              {progressData.length > 1 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={progressData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                    <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip
+                      contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', fontSize: '12px' }}
+                    />
+                    <Line type="monotone" dataKey="bodyFat" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center py-8 text-center">
+                  <TrendingUp className="w-10 h-10 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground">Complete at least 2 scans to see trends</p>
+                  <Button variant="link" className="mt-2" onClick={() => setActiveTab("scan")}>
+                    Start a scan →
+                  </Button>
+                </div>
+              )}
+            </Card>
+
+            {/* Before/After Comparison */}
+            <Card className="p-5 rounded-2xl">
+              <h3 className="font-semibold text-foreground mb-1">Progress Comparison</h3>
+              <p className="text-xs text-muted-foreground mb-4">Compare your scans side by side</p>
+              {previousScans.length >= 2 ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground mb-1">First Scan</p>
+                      <div className="bg-secondary rounded-xl p-3">
+                        <p className="text-2xl font-bold text-foreground">{previousScans[0].value}%</p>
+                        <p className="text-[10px] text-muted-foreground">{format(new Date(previousScans[0].recorded_at), "MMM d, yyyy")}</p>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Latest Scan</p>
+                      <div className="bg-primary/10 rounded-xl p-3">
+                        <p className="text-2xl font-bold text-foreground">{previousScans[previousScans.length - 1].value}%</p>
+                        <p className="text-[10px] text-muted-foreground">{format(new Date(previousScans[previousScans.length - 1].recorded_at), "MMM d, yyyy")}</p>
+                      </div>
+                    </div>
+                  </div>
+                  {(() => {
+                    const diff = previousScans[previousScans.length - 1].value - previousScans[0].value;
+                    return (
+                      <div className={`text-center p-2 rounded-xl ${diff < 0 ? 'bg-green-500/10' : diff > 0 ? 'bg-red-500/10' : 'bg-secondary'}`}>
+                        <p className={`text-sm font-semibold ${diff < 0 ? 'text-green-600' : diff > 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                          {diff < 0 ? `↓ ${Math.abs(diff).toFixed(1)}% decrease` : diff > 0 ? `↑ ${diff.toFixed(1)}% increase` : 'No change'}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center py-6 text-center">
+                  <User className="w-10 h-10 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground">Need at least 2 scans to compare</p>
+                </div>
+              )}
+            </Card>
+
+            {/* Scan History */}
+            {previousScans.length > 0 && (
+              <Card className="p-5 rounded-2xl">
+                <h3 className="font-semibold text-foreground mb-3">Scan History</h3>
+                <div className="space-y-2">
+                  {[...previousScans].reverse().slice(0, 10).map((scan, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-secondary/50">
+                      <div>
+                        <p className="text-sm font-medium">{scan.value}% body fat</p>
+                        <p className="text-[10px] text-muted-foreground">{format(new Date(scan.recorded_at), "MMM d, yyyy 'at' h:mm a")}</p>
+                      </div>
+                      {scan.notes && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{scan.notes.includes('AI') ? 'AI' : 'Manual'}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
