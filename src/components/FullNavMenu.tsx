@@ -293,5 +293,7 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
         </ScrollArea>
       </DrawerContent>
     </Drawer>
+    <ChooseSportSheet open={showSportSheet} onOpenChange={setShowSportSheet} />
+    </>
   );
 };
