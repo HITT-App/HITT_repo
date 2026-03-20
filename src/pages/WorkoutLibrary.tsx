@@ -381,7 +381,7 @@ export default function WorkoutLibrary() {
             </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Filter Sheet */}
       <Sheet open={showFilters} onOpenChange={setShowFilters}>
