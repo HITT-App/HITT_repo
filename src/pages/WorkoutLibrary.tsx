@@ -153,7 +153,7 @@ export default function WorkoutLibrary() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs sm:text-sm">
-                    Ok Makise, Here is a good workout exercise for you to get started with! 💪
+                    Hey {displayName}, here's a great workout to get you started! 💪
                   </p>
                 </div>
               </div>
