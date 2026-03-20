@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { 
@@ -34,7 +35,8 @@ import {
   Crown,
   Shield,
   Sun,
-  ScanLine
+  ScanLine,
+  Crosshair
 } from "lucide-react";
 import {
   Drawer,
@@ -50,6 +52,7 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ChooseSportSheet } from "@/components/ChooseSportSheet";
 
 interface FullNavMenuProps {
   open: boolean;
@@ -64,6 +67,7 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
   const { flags } = useFeatureFlags();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const [showSportSheet, setShowSportSheet] = useState(false);
 
   const menuSections = [
     {
@@ -158,6 +162,7 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
   };
 
   return (
+    <>
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent 
         className="bg-background h-[85vh] max-h-[85vh]"
@@ -200,6 +205,27 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
         
         <ScrollArea className="flex-1 h-full">
           <div className="px-4 py-5 space-y-6">
+            {/* Choose a Sport — primary action */}
+            <button
+              onClick={() => {
+                onOpenChange(false);
+                setTimeout(() => setShowSportSheet(true), 300);
+              }}
+              className={cn(
+                "w-full flex items-center gap-3 p-4 rounded-2xl",
+                "bg-primary/10 border border-primary/30 active:bg-primary/20 transition-colors",
+                "touch-manipulation"
+              )}
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Crosshair size={22} className="text-primary" />
+              </div>
+              <div className="text-left">
+                <span className="font-semibold text-foreground text-[15px]">Choose a Sport</span>
+                <p className="text-xs text-muted-foreground">Start tracking an activity</p>
+              </div>
+            </button>
+
             {/* Admin Section */}
             {isAdmin && (
               <div className="space-y-2">
@@ -268,5 +294,7 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
         </ScrollArea>
       </DrawerContent>
     </Drawer>
+    <ChooseSportSheet open={showSportSheet} onOpenChange={setShowSportSheet} />
+    </>
   );
 };
