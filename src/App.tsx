@@ -140,6 +140,7 @@ const App = () => (
         <Sonner />
         <PushPermissionBanner />
         <BrowserRouter>
+          <CacheVersionCheck />
           <VerificationBanner />
           <VoiceController />
           <AppLayout>
