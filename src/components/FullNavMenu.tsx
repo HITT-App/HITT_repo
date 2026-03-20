@@ -204,6 +204,27 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
         
         <ScrollArea className="flex-1 h-full">
           <div className="px-4 py-5 space-y-6">
+            {/* Choose a Sport — primary action */}
+            <button
+              onClick={() => {
+                onOpenChange(false);
+                setTimeout(() => setShowSportSheet(true), 300);
+              }}
+              className={cn(
+                "w-full flex items-center gap-3 p-4 rounded-2xl",
+                "bg-primary/10 border border-primary/30 active:bg-primary/20 transition-colors",
+                "touch-manipulation"
+              )}
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Crosshair size={22} className="text-primary" />
+              </div>
+              <div className="text-left">
+                <span className="font-semibold text-foreground text-[15px]">Choose a Sport</span>
+                <p className="text-xs text-muted-foreground">Start tracking an activity</p>
+              </div>
+            </button>
+
             {/* Admin Section */}
             {isAdmin && (
               <div className="space-y-2">
