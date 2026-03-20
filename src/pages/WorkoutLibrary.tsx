@@ -151,7 +151,7 @@ export default function WorkoutLibrary() {
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <HIITLogo size="sm" />
                 </div>
-                <p className="text-xs leading-relaxed flex-1 min-w-0 break-words">
+                <p className="text-xs leading-relaxed flex-1 min-w-0 break-words pr-1">
                   Hey {displayName}, here's a great workout to get you started! 💪
                 </p>
               </div>
