@@ -6,32 +6,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const FOOD_ANALYSIS_PROMPT = `You are a nutrition analysis AI. Analyze the food in this image and provide nutritional estimates.
+const FOOD_ANALYSIS_PROMPT = `You are a nutrition analysis AI. Analyze ALL food items visible in this image and provide nutritional estimates for EACH item separately.
 
 Return your response in this exact JSON format:
 {
   "success": true,
-  "food_name": "Name of the food/meal",
-  "description": "Brief description of what you see",
-  "serving_size": "Estimated serving size (e.g., '1 cup', '200g')",
-  "calories": <number>,
-  "protein_grams": <number>,
-  "carbs_grams": <number>,
-  "fat_grams": <number>,
-  "fiber_grams": <number>,
-  "confidence": "high" | "medium" | "low",
-  "ingredients": ["list", "of", "visible", "ingredients"],
-  "health_notes": "Brief health notes about this food",
+  "items": [
+    {
+      "food_name": "Name of the food item",
+      "description": "Brief description",
+      "serving_size": "Estimated serving size (e.g., '1 cup', '200g')",
+      "calories": <number>,
+      "protein_grams": <number>,
+      "carbs_grams": <number>,
+      "fat_grams": <number>,
+      "fiber_grams": <number>,
+      "confidence": "high" | "medium" | "low"
+    }
+  ],
+  "total_calories": <number>,
+  "total_protein_grams": <number>,
+  "total_carbs_grams": <number>,
+  "total_fat_grams": <number>,
+  "total_fiber_grams": <number>,
+  "health_notes": "Brief health notes about this meal",
   "suggestions": "Any suggestions for making this meal healthier"
 }
 
-If you cannot identify the food or the image doesn't contain food, return:
+If you cannot identify any food or the image doesn't contain food, return:
 {
   "success": false,
   "error": "Description of the issue"
 }
 
-Be accurate but realistic with nutritional estimates. Round numbers appropriately.`;
+Detect ALL separate food items. Be accurate but realistic with nutritional estimates. Round numbers appropriately.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -39,7 +47,6 @@ serve(async (req) => {
   }
 
   try {
-    // Require authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -48,7 +55,6 @@ serve(async (req) => {
       );
     }
 
-    // Verify the user token
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -77,14 +83,10 @@ serve(async (req) => {
       );
     }
 
-    // Ensure the image data is a proper data URL
     let processedImageData = imageData;
     if (!processedImageData.startsWith("data:")) {
       processedImageData = `data:image/jpeg;base64,${processedImageData}`;
     }
-    
-    console.log("Image data prefix:", processedImageData.substring(0, 50));
-    console.log("Image data length:", processedImageData.length);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -100,9 +102,7 @@ serve(async (req) => {
             content: [
               {
                 type: "image_url",
-                image_url: {
-                  url: processedImageData,
-                },
+                image_url: { url: processedImageData },
               },
               {
                 type: "text",
@@ -145,9 +145,10 @@ serve(async (req) => {
       );
     }
 
-    // Parse the JSON response
     try {
-      const analysis = JSON.parse(content);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found");
+      const analysis = JSON.parse(jsonMatch[0]);
       return new Response(
         JSON.stringify(analysis), 
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }

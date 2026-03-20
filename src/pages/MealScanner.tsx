@@ -5,22 +5,42 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Camera, Scan, Flame, Droplets, Wheat, Check, X, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ArrowLeft, Camera, Scan, Flame, Droplets, Wheat, Check, X, RefreshCw, Image, Plus, Minus, ChevronDown } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ScanState = 'requirements' | 'scanning' | 'processing' | 'result' | 'error';
 
-type DetectedFood = {
-  name: string;
+type DetectedFoodItem = {
+  food_name: string;
   description: string;
+  serving_size: string;
   calories: number;
-  fat_grams: number;
   protein_grams: number;
-  fiber_grams?: number;
-  vitamin_b?: number;
-  vitamin_a?: number;
+  carbs_grams: number;
+  fat_grams: number;
+  fiber_grams: number;
+  confidence: string;
   servings: number;
+  selected: boolean;
 };
+
+type AnalysisResult = {
+  items: DetectedFoodItem[];
+  total_calories: number;
+  total_protein_grams: number;
+  total_carbs_grams: number;
+  total_fat_grams: number;
+  total_fiber_grams: number;
+  health_notes: string;
+  suggestions: string;
+};
+
+const MEAL_CATEGORIES = [
+  { value: 'breakfast', label: '🌅 Breakfast' },
+  { value: 'lunch', label: '☀️ Lunch' },
+  { value: 'dinner', label: '🌙 Dinner' },
+  { value: 'snack', label: '🍿 Snack' },
+];
 
 export default function MealScanner() {
   const navigate = useNavigate();
@@ -28,12 +48,15 @@ export default function MealScanner() {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [scanState, setScanState] = useState<ScanState>('requirements');
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [detectedFood, setDetectedFood] = useState<DetectedFood | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [mealCategory, setMealCategory] = useState('snack');
+  const [isSaving, setIsSaving] = useState(false);
 
   const requirements = [
     { label: 'Camera Quality', value: '720p', ok: true },
@@ -43,9 +66,7 @@ export default function MealScanner() {
 
   useEffect(() => {
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      if (stream) stream.getTracks().forEach(track => track.stop());
     };
   }, [stream]);
 
@@ -55,75 +76,81 @@ export default function MealScanner() {
         video: { facingMode: 'environment', width: 1280, height: 720 }
       });
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
+      if (videoRef.current) videoRef.current.srcObject = mediaStream;
       setScanState('scanning');
-    } catch (error) {
-      console.error('Camera error:', error);
+    } catch {
       toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access camera' });
     }
   };
 
+  const handleGalleryUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setCapturedImage(dataUrl);
+      analyzeImage(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const captureAndAnalyze = async () => {
     if (!videoRef.current || !canvasRef.current) return;
-
     const video = videoRef.current;
     const canvas = canvasRef.current;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx?.drawImage(video, 0, 0);
-
+    canvas.getContext('2d')?.drawImage(video, 0, 0);
     const imageData = canvas.toDataURL('image/jpeg', 0.8);
     setCapturedImage(imageData);
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    analyzeImage(imageData);
+  };
+
+  const analyzeImage = async (imageData: string) => {
     setScanState('processing');
     setIsAnalyzing(true);
-
-    // Stop camera
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-
     try {
-      // Get user's auth token for authenticated API call
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
-      
       if (!accessToken) {
-        toast({ variant: 'destructive', title: 'Authentication Error', description: 'Please sign in to use food scanner' });
+        toast({ variant: 'destructive', title: 'Auth Error', description: 'Please sign in first' });
         setScanState('error');
         setIsAnalyzing(false);
         return;
       }
 
-      // Call AI to analyze the food with authenticated request
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-food`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
         body: JSON.stringify({ imageData }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to analyze food');
-      }
-
+      if (!response.ok) throw new Error('Failed to analyze food');
       const result = await response.json();
-      
+
       if (!result.success || result.error) {
         setScanState('error');
       } else {
-        setDetectedFood({
-          name: result.food_name,
-          description: result.description,
-          calories: result.calories,
-          fat_grams: result.fat_grams,
-          protein_grams: result.protein_grams,
-          fiber_grams: result.fiber_grams,
+        const items: DetectedFoodItem[] = (result.items || []).map((item: any) => ({
+          ...item,
           servings: 1,
+          selected: true,
+        }));
+        setAnalysisResult({
+          items,
+          total_calories: result.total_calories || 0,
+          total_protein_grams: result.total_protein_grams || 0,
+          total_carbs_grams: result.total_carbs_grams || 0,
+          total_fat_grams: result.total_fat_grams || 0,
+          total_fiber_grams: result.total_fiber_grams || 0,
+          health_notes: result.health_notes || '',
+          suggestions: result.suggestions || '',
         });
         setScanState('result');
       }
@@ -135,42 +162,82 @@ export default function MealScanner() {
     }
   };
 
+  const updateServings = (index: number, delta: number) => {
+    if (!analysisResult) return;
+    setAnalysisResult(prev => {
+      if (!prev) return prev;
+      const items = [...prev.items];
+      items[index] = { ...items[index], servings: Math.max(0.5, items[index].servings + delta) };
+      return { ...prev, items };
+    });
+  };
+
+  const toggleItem = (index: number) => {
+    if (!analysisResult) return;
+    setAnalysisResult(prev => {
+      if (!prev) return prev;
+      const items = [...prev.items];
+      items[index] = { ...items[index], selected: !items[index].selected };
+      return { ...prev, items };
+    });
+  };
+
+  const getSelectedTotals = () => {
+    if (!analysisResult) return { calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 };
+    return analysisResult.items
+      .filter(i => i.selected)
+      .reduce((acc, i) => ({
+        calories: acc.calories + Math.round(i.calories * i.servings),
+        protein: acc.protein + Math.round(i.protein_grams * i.servings),
+        fat: acc.fat + Math.round(i.fat_grams * i.servings),
+        carbs: acc.carbs + Math.round(i.carbs_grams * i.servings),
+        fiber: acc.fiber + Math.round(i.fiber_grams * i.servings),
+      }), { calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 });
+  };
+
   const handleAddFood = async () => {
-    if (!user || !detectedFood) return;
-
+    if (!user || !analysisResult) return;
+    const selected = analysisResult.items.filter(i => i.selected);
+    if (selected.length === 0) {
+      toast({ variant: 'destructive', title: 'No items selected' });
+      return;
+    }
+    setIsSaving(true);
     try {
-      const { error } = await supabase.from('meal_logs').insert({
-        user_id: user.id,
-        custom_name: detectedFood.name,
-        category: 'snack',
-        calories: detectedFood.calories,
-        protein_grams: detectedFood.protein_grams,
-        fat_grams: detectedFood.fat_grams,
-        carbs_grams: 0,
-        fiber_grams: detectedFood.fiber_grams || 0,
-        servings: detectedFood.servings,
-        image_url: capturedImage,
-      });
-
-      if (error) throw error;
-
-      toast({ title: 'Food added!', description: `${detectedFood.name} has been logged.` });
+      for (const item of selected) {
+        const { error } = await supabase.from('meal_logs').insert({
+          user_id: user.id,
+          custom_name: item.food_name,
+          category: mealCategory,
+          calories: Math.round(item.calories * item.servings),
+          protein_grams: Math.round(item.protein_grams * item.servings),
+          fat_grams: Math.round(item.fat_grams * item.servings),
+          carbs_grams: Math.round(item.carbs_grams * item.servings),
+          fiber_grams: Math.round(item.fiber_grams * item.servings),
+          servings: item.servings,
+          image_url: capturedImage,
+        });
+        if (error) throw error;
+      }
+      toast({ title: 'Food logged!', description: `${selected.length} item(s) added to ${mealCategory}.` });
       navigate('/nutrition');
-    } catch (error) {
-      console.error('Error adding food:', error);
+    } catch {
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to add food' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleRetry = () => {
     setCapturedImage(null);
-    setDetectedFood(null);
+    setAnalysisResult(null);
     setScanState('requirements');
   };
 
+  const totals = getSelectedTotals();
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="flex items-center gap-3 px-4 py-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
@@ -180,6 +247,8 @@ export default function MealScanner() {
         </h1>
       </header>
 
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileSelected} className="hidden" />
+
       <div className="flex-1 flex flex-col p-4">
         {/* Requirements State */}
         {scanState === 'requirements' && (
@@ -188,7 +257,7 @@ export default function MealScanner() {
               <Scan className="w-8 h-8 text-primary" />
             </div>
             <h2 className="text-xl font-bold mb-2">Scan Meal with AI</h2>
-            <p className="text-muted-foreground text-center mb-8">Please ensure to following</p>
+            <p className="text-muted-foreground text-center mb-8">AI detects multiple food items automatically</p>
 
             <div className="w-full space-y-4 mb-auto">
               {requirements.map((req, idx) => (
@@ -206,7 +275,10 @@ export default function MealScanner() {
 
             <div className="w-full space-y-3 mt-6">
               <Button onClick={startCamera} className="w-full h-12 rounded-2xl gap-2">
-                Got it, let's scan! <Scan className="w-4 h-4" />
+                <Camera className="w-4 h-4" /> Take a Photo
+              </Button>
+              <Button onClick={handleGalleryUpload} variant="outline" className="w-full h-12 rounded-2xl gap-2">
+                <Image className="w-4 h-4" /> Upload from Gallery
               </Button>
               <Button variant="link" className="w-full text-primary" onClick={() => navigate('/log-meal')}>
                 Log food manually
@@ -218,15 +290,8 @@ export default function MealScanner() {
         {/* Scanning State */}
         {scanState === 'scanning' && (
           <div className="flex-1 flex flex-col relative">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover rounded-2xl"
-            />
+            <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover rounded-2xl" />
             <canvas ref={canvasRef} className="hidden" />
-            
-            {/* Scanning overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-64 h-64 border-2 border-primary rounded-2xl relative">
                 <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-2xl" />
@@ -235,20 +300,14 @@ export default function MealScanner() {
                 <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-2xl" />
               </div>
             </div>
-
             <div className="absolute bottom-8 left-0 right-0 flex justify-center">
-              <Button
-                size="lg"
-                className="rounded-full w-16 h-16 bg-primary"
-                onClick={captureAndAnalyze}
-              >
+              <Button size="lg" className="rounded-full w-16 h-16 bg-primary" onClick={captureAndAnalyze}>
                 <Camera className="w-6 h-6" />
               </Button>
             </div>
-
             <div className="absolute bottom-24 left-0 right-0 text-center">
               <p className="text-sm bg-foreground/80 text-background px-4 py-2 rounded-full inline-flex items-center gap-2">
-                <Scan className="w-4 h-4" /> Tap below to start scanning
+                <Scan className="w-4 h-4" /> Tap to capture your meal
               </p>
             </div>
           </div>
@@ -260,72 +319,150 @@ export default function MealScanner() {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-pulse">
               <Scan className="w-8 h-8 text-primary animate-spin" />
             </div>
-            <p className="text-muted-foreground">Getting our AI LLMs ready...</p>
+            <p className="text-muted-foreground">Detecting food items...</p>
+            <p className="text-xs text-muted-foreground mt-1">This may take a few seconds</p>
           </div>
         )}
 
         {/* Result State */}
-        {scanState === 'result' && detectedFood && (
-          <div className="flex-1 flex flex-col">
-            {/* Food Image */}
-            <div className="aspect-square rounded-2xl overflow-hidden mb-6 bg-secondary">
-              {capturedImage && (
-                <img src={capturedImage} alt="Captured food" className="w-full h-full object-cover" />
-              )}
+        {scanState === 'result' && analysisResult && (
+          <div className="flex-1 flex flex-col gap-4">
+            {/* Captured image */}
+            <div className="aspect-video rounded-2xl overflow-hidden bg-secondary">
+              {capturedImage && <img src={capturedImage} alt="Captured food" className="w-full h-full object-cover" />}
             </div>
 
-            {/* Food Info */}
-            <h2 className="text-xl font-bold text-center mb-1">{detectedFood.name}</h2>
-            <p className="text-sm text-muted-foreground text-center mb-6">{detectedFood.description}</p>
-
-            {/* Macros */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="text-center">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                  <Flame className="w-5 h-5 text-primary" />
-                </div>
-                <p className="font-bold">{detectedFood.calories}</p>
-                <p className="text-xs text-muted-foreground">kcal</p>
-              </div>
-              <div className="text-center">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mx-auto mb-2">
-                  <Droplets className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <p className="font-bold">{detectedFood.fat_grams}g</p>
-                <p className="text-xs text-muted-foreground">fat</p>
-              </div>
-              <div className="text-center">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mx-auto mb-2">
-                  <Wheat className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <p className="font-bold">{detectedFood.protein_grams}g</p>
-                <p className="text-xs text-muted-foreground">protein</p>
-              </div>
+            {/* Meal Category Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Log as:</span>
+              <Select value={mealCategory} onValueChange={setMealCategory}>
+                <SelectTrigger className="w-40 h-9 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MEAL_CATEGORIES.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Additional Info */}
-            <Card className="border-border/50 mb-6">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Serving</span>
-                  <span>{detectedFood.servings} Plate</span>
-                </div>
-                {detectedFood.fiber_grams && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Fiber</span>
-                    <span>{detectedFood.fiber_grams}g</span>
+            {/* Detected Food Items */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Detected Items ({analysisResult.items.length})
+              </h3>
+              {analysisResult.items.map((item, index) => (
+                <Card key={index} className={`rounded-2xl transition-opacity ${!item.selected ? 'opacity-50' : ''}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <button
+                        onClick={() => toggleItem(index)}
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                          item.selected ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                        }`}
+                      >
+                        {item.selected && <Check className="w-3 h-3 text-primary-foreground" />}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-sm truncate">{item.food_name}</h4>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary ml-2">
+                            {item.confidence}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{item.serving_size}</p>
+
+                        {/* Portion Size Selector */}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-muted-foreground">Servings:</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => updateServings(index, -0.5)}
+                              className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="text-sm font-medium w-8 text-center">{item.servings}</span>
+                            <button
+                              onClick={() => updateServings(index, 0.5)}
+                              className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Macros row */}
+                        <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
+                          <span className="text-primary font-medium">{Math.round(item.calories * item.servings)} kcal</span>
+                          <span>{Math.round(item.protein_grams * item.servings)}g P</span>
+                          <span>{Math.round(item.carbs_grams * item.servings)}g C</span>
+                          <span>{Math.round(item.fat_grams * item.servings)}g F</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Totals Summary */}
+            <Card className="rounded-2xl bg-primary/5 border-primary/20">
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold mb-3">Selected Total</h3>
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  <div>
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-1">
+                      <Flame className="w-4 h-4 text-primary" />
+                    </div>
+                    <p className="font-bold text-sm">{totals.calories}</p>
+                    <p className="text-[10px] text-muted-foreground">kcal</p>
                   </div>
-                )}
+                  <div>
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center mx-auto mb-1">
+                      <Wheat className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="font-bold text-sm">{totals.protein}g</p>
+                    <p className="text-[10px] text-muted-foreground">protein</p>
+                  </div>
+                  <div>
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center mx-auto mb-1">
+                      <Droplets className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="font-bold text-sm">{totals.carbs}g</p>
+                    <p className="text-[10px] text-muted-foreground">carbs</p>
+                  </div>
+                  <div>
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center mx-auto mb-1">
+                      <Droplets className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="font-bold text-sm">{totals.fat}g</p>
+                    <p className="text-[10px] text-muted-foreground">fat</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
+            {/* Health notes */}
+            {analysisResult.health_notes && (
+              <Card className="rounded-2xl">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">{analysisResult.health_notes}</p>
+                  {analysisResult.suggestions && (
+                    <p className="text-xs text-primary mt-2">💡 {analysisResult.suggestions}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Actions */}
-            <div className="space-y-3 mt-auto">
-              <Button variant="outline" className="w-full h-12 rounded-2xl">
-                See Details
+            <div className="space-y-3 mt-auto pb-2">
+              <Button onClick={handleAddFood} disabled={isSaving} className="w-full h-12 rounded-2xl gap-2">
+                {isSaving ? 'Saving...' : `Log ${analysisResult.items.filter(i => i.selected).length} Item(s)`}
               </Button>
-              <Button onClick={handleAddFood} className="w-full h-12 rounded-2xl gap-2">
-                Add Food +
+              <Button variant="outline" onClick={handleRetry} className="w-full h-12 rounded-2xl gap-2">
+                <RefreshCw className="w-4 h-4" /> Scan Again
               </Button>
             </div>
           </div>
@@ -342,9 +479,9 @@ export default function MealScanner() {
                 </div>
               </div>
             )}
-            <h2 className="text-xl font-bold mb-2">Whoops! We couldn't detect the food.</h2>
+            <h2 className="text-xl font-bold mb-2">Couldn't detect the food</h2>
             <p className="text-sm text-muted-foreground text-center mb-8">
-              Please make sure your room is well-lit and have a hi-quality camera. Or try again later
+              Make sure your room is well-lit and the food is clearly visible. Or try again.
             </p>
             <div className="w-full space-y-3">
               <Button onClick={handleRetry} className="w-full h-12 rounded-2xl gap-2">
