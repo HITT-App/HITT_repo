@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ChevronUp } from "lucide-react";
 import { HIITLogo } from "./HIITLogo";
+import { supabase } from "@/integrations/supabase/client";
 import welcomeBg from "@/assets/welcome-bg.jpg";
 
 interface PostLoginWelcomeProps {
