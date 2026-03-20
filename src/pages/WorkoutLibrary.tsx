@@ -136,8 +136,8 @@ export default function WorkoutLibrary() {
 
   return (
     <div className="min-h-screen bg-background pb-24 flex justify-center overflow-x-hidden">
-      <ScrollArea className="w-full max-w-md h-[calc(100vh-96px)]">
-        <div className="px-4 py-3 space-y-4 overflow-hidden">
+      <div className="w-full max-w-md h-[calc(100vh-96px)] overflow-y-auto overflow-x-hidden">
+        <div className="px-4 py-3 pr-5 space-y-4 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between">
             <HIITLogo size="sm" />
@@ -151,7 +151,7 @@ export default function WorkoutLibrary() {
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <HIITLogo size="sm" />
                 </div>
-                <p className="text-xs leading-relaxed flex-1 min-w-0 break-words">
+                <p className="text-xs leading-relaxed flex-1 min-w-0 break-words pr-1">
                   Hey {displayName}, here's a great workout to get you started! 💪
                 </p>
               </div>
@@ -179,22 +179,23 @@ export default function WorkoutLibrary() {
                 <Badge className="absolute top-3 left-3 bg-primary text-[11px]">Featured</Badge>
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
                   <h3 className="font-bold text-base">{featuredWorkouts[0].title}</h3>
-                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
-                    <span className="flex items-center gap-1">
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1 flex-wrap pr-1">
+                    <span className="flex items-center gap-1 whitespace-nowrap">
                       <Clock className="w-3 h-3" /> {featuredWorkouts[0].duration_minutes}min
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 whitespace-nowrap">
                       <Flame className="w-3 h-3" /> {featuredWorkouts[0].calories_burned}kcal
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 whitespace-nowrap">
                       <Star className="w-3 h-3 fill-primary text-primary" /> {featuredWorkouts[0].rating}
                     </span>
                   </div>
                 </div>
               </div>
               <CardContent className="p-3">
-                <Button className="w-full gap-2 h-10 text-sm touch-manipulation">
-                  Go to dashboard <ArrowRight className="w-4 h-4" />
+                <Button className="w-full h-10 text-sm touch-manipulation justify-between px-4 min-w-0">
+                  <span className="truncate">Go to dashboard</span>
+                  <ArrowRight className="w-4 h-4 flex-shrink-0" />
                 </Button>
               </CardContent>
             </Card>
@@ -227,7 +228,7 @@ export default function WorkoutLibrary() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-1 pr-1 scrollbar-hide">
             {CATEGORIES.map(cat => (
               <Button
                 key={cat.id}
@@ -300,7 +301,7 @@ export default function WorkoutLibrary() {
               <h2 className="font-semibold text-sm">Browse By Body Area</h2>
               <Button variant="link" size="sm" className="text-primary text-xs h-auto p-0">See all</Button>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            <div className="flex gap-3 overflow-x-auto pb-2 pr-1 scrollbar-hide">
               {BODY_AREAS.slice(0, 5).map(area => (
                 <button
                   key={area.id}
@@ -325,7 +326,7 @@ export default function WorkoutLibrary() {
               <h2 className="font-semibold text-sm">Short Workouts</h2>
               <Button variant="link" size="sm" className="text-primary text-xs h-auto p-0">See all</Button>
             </div>
-            <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            <div className="flex gap-2.5 overflow-x-auto pb-2 pr-1 scrollbar-hide">
               {filteredWorkouts.filter(w => w.duration_minutes <= 20).slice(0, 4).map(workout => (
                 <Card 
                   key={workout.id} 
@@ -380,7 +381,7 @@ export default function WorkoutLibrary() {
             </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Filter Sheet */}
       <Sheet open={showFilters} onOpenChange={setShowFilters}>
