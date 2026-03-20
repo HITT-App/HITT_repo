@@ -162,6 +162,7 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
   };
 
   return (
+    <>
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent 
         className="bg-background h-[85vh] max-h-[85vh]"
