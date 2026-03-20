@@ -228,7 +228,7 @@ export default function WorkoutLibrary() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-1 pr-1 scrollbar-hide">
             {CATEGORIES.map(cat => (
               <Button
                 key={cat.id}
