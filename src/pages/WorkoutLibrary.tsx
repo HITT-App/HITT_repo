@@ -326,7 +326,7 @@ export default function WorkoutLibrary() {
               <h2 className="font-semibold text-sm">Short Workouts</h2>
               <Button variant="link" size="sm" className="text-primary text-xs h-auto p-0">See all</Button>
             </div>
-            <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            <div className="flex gap-2.5 overflow-x-auto pb-2 pr-1 scrollbar-hide">
               {filteredWorkouts.filter(w => w.duration_minutes <= 20).slice(0, 4).map(workout => (
                 <Card 
                   key={workout.id} 
