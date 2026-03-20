@@ -807,7 +807,10 @@ export default function CommunityChatroom() {
                     {/* Avatar */}
                     <div className="w-9 shrink-0 self-end">
                       {!isConsecutive && (
-                        <Avatar className="h-9 w-9 ring-2 ring-border/30">
+                        <Avatar 
+                          className="h-9 w-9 ring-2 ring-border/30 cursor-pointer" 
+                          onClick={(e) => { e.stopPropagation(); navigate(isOwn ? "/profile" : `/community/user/${msg.user_id}`); }}
+                        >
                           {senderAvatar && <AvatarImage src={senderAvatar} alt={senderName} />}
                           <AvatarFallback className="text-[11px] font-bold bg-primary/10 text-primary">
                             {initials}
