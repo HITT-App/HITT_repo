@@ -179,22 +179,23 @@ export default function WorkoutLibrary() {
                 <Badge className="absolute top-3 left-3 bg-primary text-[11px]">Featured</Badge>
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
                   <h3 className="font-bold text-base">{featuredWorkouts[0].title}</h3>
-                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
-                    <span className="flex items-center gap-1">
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1 flex-wrap pr-1">
+                    <span className="flex items-center gap-1 whitespace-nowrap">
                       <Clock className="w-3 h-3" /> {featuredWorkouts[0].duration_minutes}min
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 whitespace-nowrap">
                       <Flame className="w-3 h-3" /> {featuredWorkouts[0].calories_burned}kcal
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 whitespace-nowrap">
                       <Star className="w-3 h-3 fill-primary text-primary" /> {featuredWorkouts[0].rating}
                     </span>
                   </div>
                 </div>
               </div>
               <CardContent className="p-3">
-                <Button className="w-full gap-2 h-10 text-sm touch-manipulation">
-                  Go to dashboard <ArrowRight className="w-4 h-4" />
+                <Button className="w-full h-10 text-sm touch-manipulation justify-between px-4 min-w-0">
+                  <span className="truncate">Go to dashboard</span>
+                  <ArrowRight className="w-4 h-4 flex-shrink-0" />
                 </Button>
               </CardContent>
             </Card>
