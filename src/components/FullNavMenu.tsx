@@ -52,6 +52,7 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ChooseSportSheet } from "@/components/ChooseSportSheet";
 
 interface FullNavMenuProps {
   open: boolean;
