@@ -53,8 +53,16 @@ export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps)
       onClick={dismiss}
       onTouchEnd={dismiss}
     >
-      {/* Dark overlay with video-like background */}
-      <img src={welcomeBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      {/* Background */}
+      {customBg?.startsWith("video:") ? (
+        <video
+          autoPlay loop muted playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          src={customBg.replace("video:", "")}
+        />
+      ) : (
+        <img src={customBg || welcomeBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      )}
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/80" />
 
       {/* Content */}
