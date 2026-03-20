@@ -135,9 +135,9 @@ export default function WorkoutLibrary() {
   const activeFilterCount = selectedBodyAreas.length + selectedEquipment.length + (selectedDifficulty ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <ScrollArea className="h-[calc(100vh-96px)]">
-        <div className="px-4 py-3 space-y-4">
+    <div className="min-h-screen bg-background pb-24 flex justify-center overflow-x-hidden">
+      <ScrollArea className="w-full max-w-md h-[calc(100vh-96px)]">
+        <div className="px-4 py-3 space-y-4 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between">
             <HIITLogo size="sm" />
