@@ -823,7 +823,10 @@ export default function CommunityChatroom() {
                       {/* Sender name + admin badge */}
                       {!isConsecutive && (
                         <div className="flex items-center gap-1.5 mb-1 px-1.5">
-                          <p className="text-[12px] font-semibold text-foreground/80">
+                          <p 
+                            className="text-[12px] font-semibold text-foreground/80 cursor-pointer hover:underline"
+                            onClick={(e) => { e.stopPropagation(); navigate(isOwn ? "/profile" : `/community/user/${msg.user_id}`); }}
+                          >
                             {isOwn ? "You" : senderName}
                           </p>
                           {isSenderAdmin && (
