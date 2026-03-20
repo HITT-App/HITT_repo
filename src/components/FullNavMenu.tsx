@@ -67,6 +67,7 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
   const { flags } = useFeatureFlags();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const [showSportSheet, setShowSportSheet] = useState(false);
 
   const menuSections = [
     {
