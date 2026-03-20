@@ -14,6 +14,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppLayout } from "@/components/AppLayout";
 import { PageLoader } from "@/components/PageLoader";
+import { useCacheVersion } from "@/hooks/useCacheVersion";
 
 // Critical pages loaded eagerly
 import Index from "./pages/Index";
