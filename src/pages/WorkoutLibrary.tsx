@@ -137,25 +137,23 @@ export default function WorkoutLibrary() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <ScrollArea className="h-[calc(100vh-96px)]">
-        <div className="p-3 sm:p-4 space-y-4 sm:space-y-6">
+        <div className="px-4 py-3 space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between">
             <HIITLogo size="sm" />
-            <p className="text-xs sm:text-sm text-muted-foreground">Workouts</p>
+            <p className="text-xs text-muted-foreground">Workouts</p>
           </div>
 
           {/* AI Greeting */}
           <Card className="bg-card border-border/50">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <CardContent className="p-3">
+              <div className="flex gap-2.5 items-center">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <HIITLogo size="sm" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm">
-                    Hey {displayName}, here's a great workout to get you started! 💪
-                  </p>
-                </div>
+                <p className="text-xs leading-relaxed flex-1 min-w-0 break-words">
+                  Hey {displayName}, here's a great workout to get you started! 💪
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -163,10 +161,10 @@ export default function WorkoutLibrary() {
           {/* Featured Workout */}
           {featuredWorkouts[0] && (
             <Card 
-              className="overflow-hidden cursor-pointer touch-manipulation active:scale-[0.99] transition-transform"
+              className="overflow-hidden cursor-pointer touch-manipulation active:scale-[0.98] transition-transform"
               onClick={() => navigate(`/workout/${featuredWorkouts[0].id}`)}
             >
-              <div className="relative h-36 sm:h-40 bg-gradient-to-br from-primary/20 to-primary/5">
+              <div className="relative h-40 bg-gradient-to-br from-primary/20 to-primary/5">
                 {featuredWorkouts[0].thumbnail_url ? (
                   <img 
                     src={featuredWorkouts[0].thumbnail_url} 
@@ -175,13 +173,13 @@ export default function WorkoutLibrary() {
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <Dumbbell className="w-12 h-12 sm:w-16 sm:h-16 text-primary/30" />
+                    <Dumbbell className="w-14 h-14 text-primary/30" />
                   </div>
                 )}
-                <Badge className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-primary text-xs">Featured</Badge>
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3 sm:p-4">
-                  <h3 className="font-bold text-base sm:text-lg">{featuredWorkouts[0].title}</h3>
-                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground mt-1">
+                <Badge className="absolute top-3 left-3 bg-primary text-[11px]">Featured</Badge>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
+                  <h3 className="font-bold text-base">{featuredWorkouts[0].title}</h3>
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {featuredWorkouts[0].duration_minutes}min
                     </span>
@@ -194,8 +192,8 @@ export default function WorkoutLibrary() {
                   </div>
                 </div>
               </div>
-              <CardContent className="p-3 sm:p-4">
-                <Button className="w-full gap-2 h-10 sm:h-11 touch-manipulation">
+              <CardContent className="p-3">
+                <Button className="w-full gap-2 h-10 text-sm touch-manipulation">
                   Go to dashboard <ArrowRight className="w-4 h-4" />
                 </Button>
               </CardContent>
