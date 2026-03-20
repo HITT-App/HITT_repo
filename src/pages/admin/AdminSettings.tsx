@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, RefreshCw, Upload, Trash2, Video, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, RefreshCw, Upload, Trash2, Video, Image as ImageIcon, HardDriveDownload } from "lucide-react";
 
 interface FeatureFlag {
   id: string;
@@ -25,6 +25,8 @@ export default function AdminSettings() {
   const [splashBgUrl, setSplashBgUrl] = useState<string | null>(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadingSplash, setUploadingSplash] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const [lastPurge, setLastPurge] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const splashInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,10 +62,22 @@ export default function AdminSettings() {
     setSplashBgUrl(data?.value || null);
   };
 
+  const fetchLastPurge = async () => {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value, updated_at")
+      .eq("key", "cache_version")
+      .maybeSingle();
+    if (data?.updated_at) {
+      setLastPurge(data.updated_at);
+    }
+  };
+
   useEffect(() => {
     fetchFlags();
     fetchHeroVideo();
     fetchSplashBg();
+    fetchLastPurge();
   }, []);
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -411,6 +425,62 @@ export default function AdminSettings() {
             Reset
           </Button>
         </div>
+
+        {/* Cache Purge */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HardDriveDownload className="h-5 w-5" />
+              Cache Management
+            </CardTitle>
+            <CardDescription>
+              Force all users to clear their cached data and load the latest version of the app.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                setPurging(true);
+                try {
+                  const newVersion = Date.now().toString();
+                  const { data: existing } = await supabase
+                    .from("app_settings")
+                    .select("id")
+                    .eq("key", "cache_version")
+                    .maybeSingle();
+
+                  if (existing) {
+                    await supabase
+                      .from("app_settings")
+                      .update({ value: newVersion, updated_at: new Date().toISOString() })
+                      .eq("key", "cache_version");
+                  } else {
+                    await supabase
+                      .from("app_settings")
+                      .insert({ key: "cache_version", value: newVersion } as any);
+                  }
+
+                  setLastPurge(new Date().toISOString());
+                  toast({ title: "✅ Cache purged!", description: "All users will reload with the latest version on their next visit." });
+                } catch {
+                  toast({ variant: "destructive", title: "Failed to purge cache" });
+                } finally {
+                  setPurging(false);
+                }
+              }}
+              disabled={purging}
+            >
+              {purging ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <HardDriveDownload className="h-4 w-4 mr-2" />}
+              Purge All User Caches
+            </Button>
+            {lastPurge && (
+              <p className="text-xs text-muted-foreground">
+                Last purged: {new Date(lastPurge).toLocaleString()}
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* System Info */}
         <Card>
