@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, RefreshCw, Upload, Trash2, Video, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, RefreshCw, Upload, Trash2, Video, Image as ImageIcon, HardDriveDownload } from "lucide-react";
 
 interface FeatureFlag {
   id: string;
