@@ -301,7 +301,7 @@ export default function WorkoutLibrary() {
               <h2 className="font-semibold text-sm">Browse By Body Area</h2>
               <Button variant="link" size="sm" className="text-primary text-xs h-auto p-0">See all</Button>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            <div className="flex gap-3 overflow-x-auto pb-2 pr-1 scrollbar-hide">
               {BODY_AREAS.slice(0, 5).map(area => (
                 <button
                   key={area.id}
