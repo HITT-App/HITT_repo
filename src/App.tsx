@@ -130,10 +130,10 @@ const AdminHomeLayout = lazy(() => import("./pages/admin/AdminHomeLayout"));
 
 const queryClient = new QueryClient();
 
-const CacheVersionCheck = () => {
+function CacheVersionCheck() {
   useCacheVersion();
   return null;
-};
+}
 
 
 const App = () => (
