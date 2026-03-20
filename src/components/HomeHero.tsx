@@ -26,15 +26,19 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "hero_video_url")
-      .single()
-      .then(({ data }) => {
+    const load = async () => {
+      try {
+        const { data } = await supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", "hero_video_url")
+          .single();
         setCustomVideoUrl(data?.value || null);
-      })
-      .catch(() => setCustomVideoUrl(null));
+      } catch {
+        setCustomVideoUrl(null);
+      }
+    };
+    load();
   }, []);
 
   const playVoiceGreeting = async () => {
