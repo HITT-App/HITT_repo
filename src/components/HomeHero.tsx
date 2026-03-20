@@ -22,18 +22,23 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(() => sessionStorage.getItem('voice_greeting_played') === 'true');
   const [isMuted, setIsMuted] = useState(false);
-  const [customVideoUrl, setCustomVideoUrl] = useState<string | null>(null);
+  const [customVideoUrl, setCustomVideoUrl] = useState<string | undefined>(undefined);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "hero_video_url")
-      .single()
-      .then(({ data }) => {
-        if (data?.value) setCustomVideoUrl(data.value);
-      });
+    const load = async () => {
+      try {
+        const { data } = await supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", "hero_video_url")
+          .single();
+        setCustomVideoUrl(data?.value || null);
+      } catch {
+        setCustomVideoUrl(null);
+      }
+    };
+    load();
   }, []);
 
   const playVoiceGreeting = async () => {
@@ -137,16 +142,18 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
       className="relative h-[65vh] min-h-[440px] sm:h-[70vh] sm:min-h-[500px] w-full overflow-hidden"
       style={{ paddingTop: "var(--safe-area-inset-top, 0px)" }}
     >
-      {/* Background Video */}
-      <video
-        key={customVideoUrl || 'default'}
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover scale-105"
-        src={customVideoUrl || heroVideo}
-      />
+      {/* Background Video — only render after URL is resolved */}
+      {customVideoUrl !== undefined && (
+        <video
+          key={customVideoUrl || 'default'}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover scale-105"
+          src={customVideoUrl || heroVideo}
+        />
+      )}
       
       {/* Gradient Overlay — cinematic bottom-heavy fade */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
