@@ -12,7 +12,7 @@ interface HomeHeaderProps {
   avatarUrl?: string | null;
 }
 
-export function HomeHeader({ userName = "Makise", score = 61, avatarUrl }: HomeHeaderProps) {
+export function HomeHeader({ userName = "Athlete", score = 61, avatarUrl }: HomeHeaderProps) {
   const navigate = useNavigate();
 
   const getTimeGreeting = (): string => {

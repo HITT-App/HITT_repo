@@ -17,7 +17,7 @@ const getTimeGreeting = (): string => {
   return "Welcome back";
 };
 
-export const HomeHero = ({ userName = "Makise" }: HomeHeroProps) => {
+export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
   const greeting = getTimeGreeting();
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(() => sessionStorage.getItem('voice_greeting_played') === 'true');

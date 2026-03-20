@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { HIITLogo } from '@/components/HIITLogo';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
 
 import { 
   Search, Filter, Clock, Flame, Star, ChevronRight, 
@@ -61,6 +63,9 @@ const EQUIPMENT_LIST = [
 ];
 
 export default function WorkoutLibrary() {
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const displayName = profile?.display_name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Athlete";
   const navigate = useNavigate();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -148,7 +153,7 @@ export default function WorkoutLibrary() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs sm:text-sm">
-                    Ok Makise, Here is a good workout exercise for you to get started with! 💪
+                    Hey {displayName}, here's a great workout to get you started! 💪
                   </p>
                 </div>
               </div>
