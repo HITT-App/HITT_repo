@@ -57,31 +57,33 @@ export default function WorkoutPlayer() {
   const [showFormAnalysis, setShowFormAnalysis] = useState(false);
   const [rating, setRating] = useState(0);
   
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (id) {
       fetchWorkoutData();
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (countdownRef.current) clearTimeout(countdownRef.current);
+      if (playTimerRef.current) clearTimeout(playTimerRef.current);
     };
   }, [id]);
 
   useEffect(() => {
     if (playerState === 'countdown' && countdown > 0) {
-      timerRef.current = setTimeout(() => setCountdown(c => c - 1), 1000);
+      countdownRef.current = setTimeout(() => setCountdown(c => c - 1), 1000);
     } else if (playerState === 'countdown' && countdown === 0) {
       startExercise();
     }
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (countdownRef.current) clearTimeout(countdownRef.current);
     };
   }, [countdown, playerState]);
 
   useEffect(() => {
     if (playerState === 'playing' && timeRemaining > 0) {
-      timerRef.current = setTimeout(() => {
+      playTimerRef.current = setTimeout(() => {
         setTimeRemaining(t => t - 1);
         setTotalElapsed(t => t + 1);
       }, 1000);
@@ -89,7 +91,7 @@ export default function WorkoutPlayer() {
       nextExercise();
     }
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (playTimerRef.current) clearTimeout(playTimerRef.current);
     };
   }, [timeRemaining, playerState]);
 
