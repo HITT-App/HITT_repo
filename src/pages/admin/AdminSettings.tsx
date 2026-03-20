@@ -25,6 +25,8 @@ export default function AdminSettings() {
   const [splashBgUrl, setSplashBgUrl] = useState<string | null>(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadingSplash, setUploadingSplash] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const [lastPurge, setLastPurge] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const splashInputRef = useRef<HTMLInputElement>(null);
 
