@@ -35,7 +35,8 @@ import {
   Crown,
   Shield,
   Sun,
-  ScanLine
+  ScanLine,
+  Crosshair
 } from "lucide-react";
 import {
   Drawer,
