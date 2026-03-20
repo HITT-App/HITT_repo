@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ChevronUp } from "lucide-react";
 import { HIITLogo } from "./HIITLogo";
+import { supabase } from "@/integrations/supabase/client";
 import welcomeBg from "@/assets/welcome-bg.jpg";
 
 interface PostLoginWelcomeProps {
@@ -10,6 +11,19 @@ interface PostLoginWelcomeProps {
 
 export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps) => {
   const [isDismissing, setIsDismissing] = useState(false);
+  const [customBg, setCustomBg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadBg = async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "splash_background_url")
+        .maybeSingle();
+      if (data?.value) setCustomBg(data.value);
+    };
+    loadBg();
+  }, []);
 
   const dismiss = () => {
     if (isDismissing) return;
@@ -39,8 +53,16 @@ export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps)
       onClick={dismiss}
       onTouchEnd={dismiss}
     >
-      {/* Dark overlay with video-like background */}
-      <img src={welcomeBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      {/* Background */}
+      {customBg?.startsWith("video:") ? (
+        <video
+          autoPlay loop muted playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          src={customBg.replace("video:", "")}
+        />
+      ) : (
+        <img src={customBg || welcomeBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      )}
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/80" />
 
       {/* Content */}
