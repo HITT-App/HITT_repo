@@ -136,8 +136,8 @@ export default function WorkoutLibrary() {
 
   return (
     <div className="min-h-screen bg-background pb-24 flex justify-center overflow-x-hidden">
-      <ScrollArea className="w-full max-w-md h-[calc(100vh-96px)]">
-        <div className="px-4 py-3 space-y-4 overflow-hidden">
+      <div className="w-full max-w-md h-[calc(100vh-96px)] overflow-y-auto overflow-x-hidden">
+        <div className="px-4 py-3 pr-5 space-y-4 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between">
             <HIITLogo size="sm" />
