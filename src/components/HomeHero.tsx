@@ -22,7 +22,7 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(() => sessionStorage.getItem('voice_greeting_played') === 'true');
   const [isMuted, setIsMuted] = useState(false);
-  const [customVideoUrl, setCustomVideoUrl] = useState<string | null>(null);
+  const [customVideoUrl, setCustomVideoUrl] = useState<string | undefined>(undefined);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -32,8 +32,9 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
       .eq("key", "hero_video_url")
       .single()
       .then(({ data }) => {
-        if (data?.value) setCustomVideoUrl(data.value);
-      });
+        setCustomVideoUrl(data?.value || null);
+      })
+      .catch(() => setCustomVideoUrl(null));
   }, []);
 
   const playVoiceGreeting = async () => {
