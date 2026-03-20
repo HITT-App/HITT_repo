@@ -11,6 +11,19 @@ interface PostLoginWelcomeProps {
 
 export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps) => {
   const [isDismissing, setIsDismissing] = useState(false);
+  const [customBg, setCustomBg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadBg = async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "splash_background_url")
+        .maybeSingle();
+      if (data?.value) setCustomBg(data.value);
+    };
+    loadBg();
+  }, []);
 
   const dismiss = () => {
     if (isDismissing) return;
