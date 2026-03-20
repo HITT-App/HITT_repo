@@ -63,6 +63,9 @@ const EQUIPMENT_LIST = [
 ];
 
 export default function WorkoutLibrary() {
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const displayName = profile?.display_name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Athlete";
   const navigate = useNavigate();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
