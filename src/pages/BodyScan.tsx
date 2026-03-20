@@ -137,9 +137,16 @@ const BodyScan = () => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result as string);
+    reader.onerror = () => toast.error("Failed to read image file.");
     reader.readAsDataURL(file);
+    // Reset so the same file can be re-selected
+    e.target.value = "";
   };
 
   const analyzeBody = async () => {
