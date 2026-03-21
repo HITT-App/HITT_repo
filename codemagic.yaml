@@ -1,78 +1,165 @@
 workflows:
   android-build:
-    name: Android Build
+    name: Android Production Build
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       java: 17
       node: 20
+      android_signing:
+        - keystore_reference: hiit_keystore  # Set up in Codemagic UI → Code signing
       groups:
-        - android_signing # Add your keystore secrets in Codemagic UI
+        - google_play  # PLAY_STORE_CREDENTIALS (service account JSON)
     triggering:
       events:
         - push
+        - tag
       branch_patterns:
         - pattern: main
+          include: true
+      tag_patterns:
+        - pattern: "v*"
           include: true
     scripts:
       - name: Install dependencies
         script: npm install
+
       - name: Build web assets
         script: npm run build
+
       - name: Add Android platform
         script: npx cap add android || true
+
       - name: Sync Capacitor
         script: npx cap sync android
-      - name: Set Android SDK
+
+      - name: Set min SDK and Health Connect permissions
         script: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-      - name: Build APK
+          # Set minSdkVersion to 26 for Health Connect
+          sed -i '' 's/minSdkVersion = .*/minSdkVersion = 26/' android/variables.gradle 2>/dev/null || \
+          sed -i 's/minSdkVersion = .*/minSdkVersion = 26/' android/variables.gradle
+
+          # Add Health Connect permissions to AndroidManifest
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "health.connect" "$MANIFEST"; then
+            sed -i.bak '/<\/manifest>/i \
+            <uses-permission android:name="android.permission.health.READ_STEPS" \/>\
+            <uses-permission android:name="android.permission.health.READ_HEART_RATE" \/>\
+            <uses-permission android:name="android.permission.health.READ_DISTANCE" \/>\
+            <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" \/>\
+            <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" \/>\
+            <uses-permission android:name="android.permission.FOREGROUND_SERVICE" \/>\
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" \/>' "$MANIFEST"
+          fi
+
+      - name: Set Android SDK
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
+      - name: Build signed AAB (for Play Store)
         script: |
           cd android
           chmod +x gradlew
+          ./gradlew bundleRelease
+
+      - name: Build APK (for testing)
+        script: |
+          cd android
           ./gradlew assembleRelease
+
     artifacts:
       - android/app/build/outputs/**/*.apk
       - android/app/build/outputs/**/*.aab
 
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal  # Start with internal testing track
+        submit_as_draft: true
+
   ios-build:
-    name: iOS Build
-    max_build_duration: 60
+    name: iOS Production Build
+    max_build_duration: 90
     instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: HIIT_Fitness_ASC  # Set up in Codemagic UI
     environment:
       node: 20
       xcode: latest
       cocoapods: default
-      groups:
-        - ios_signing # Add your certificates in Codemagic UI
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.lovable.hiitfitness
     triggering:
       events:
         - push
+        - tag
       branch_patterns:
         - pattern: main
+          include: true
+      tag_patterns:
+        - pattern: "v*"
           include: true
     scripts:
       - name: Install dependencies
         script: npm install
+
       - name: Build web assets
         script: npm run build
+
       - name: Add iOS platform
         script: npx cap add ios || true
+
       - name: Sync Capacitor
         script: npx cap sync ios
+
+      - name: Add HealthKit capability
+        script: |
+          # Add HealthKit entitlement
+          ENTITLEMENTS="ios/App/App/App.entitlements"
+          if [ ! -f "$ENTITLEMENTS" ]; then
+            cat > "$ENTITLEMENTS" << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.developer.healthkit</key>
+            <true/>
+            <key>com.apple.developer.healthkit.access</key>
+            <array>
+              <string>health-records</string>
+            </array>
+          </dict>
+          </plist>
+          EOF
+          fi
+
+          # Add HealthKit usage descriptions to Info.plist
+          PLIST="ios/App/App/Info.plist"
+          if ! grep -q "NSHealthShareUsageDescription" "$PLIST"; then
+            /usr/libexec/PlistBuddy -c "Add :NSHealthShareUsageDescription string 'HIIT Fitness reads your health data to track workouts, steps, heart rate and calories.'" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Add :NSHealthUpdateUsageDescription string 'HIIT Fitness saves workout data to Apple Health.'" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Add :NSMotionUsageDescription string 'HIIT Fitness uses motion data to count your steps and track activity.'" "$PLIST"
+          fi
+
       - name: Install CocoaPods
+        script: cd ios/App && pod install
+
+      - name: Set up code signing
+        script: xcode-project use-profiles
+
+      - name: Build IPA
         script: |
           cd ios/App
-          pod install
-      - name: Build iOS
-        script: |
-          cd ios/App
-          xcodebuild -workspace App.xcworkspace \
-            -scheme App \
-            -sdk iphoneos \
-            -configuration Release \
-            -archivePath build/App.xcarchive \
-            archive
+          xcode-project build-ipa \
+            --workspace App.xcworkspace \
+            --scheme App
+
     artifacts:
-      - ios/App/build/**/*.ipa
-      - ios/App/build/**/*.xcarchive
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false  # Manual review before production
