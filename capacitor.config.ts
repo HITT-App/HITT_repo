@@ -1,13 +1,19 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const isDevMode = process.env.CAPACITOR_DEV === 'true';
+
 const config: CapacitorConfig = {
   appId: 'app.lovable.hiitfitness',
   appName: 'HIIT Fitness',
   webDir: 'dist',
-  server: {
-    url: 'https://48e3358b-68c7-4450-9b1d-2cd07f287edd.lovableproject.com?forceHideBadge=true',
-    cleartext: true,
-  },
+  ...(isDevMode
+    ? {
+        server: {
+          url: 'https://48e3358b-68c7-4450-9b1d-2cd07f287edd.lovableproject.com?forceHideBadge=true',
+          cleartext: true,
+        },
+      }
+    : {}),
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
