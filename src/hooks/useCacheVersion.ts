@@ -2,9 +2,23 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const CACHE_VERSION_KEY = "app_cache_version";
+const isEmbeddedPreview =
+  typeof window !== "undefined" && window.self !== window.top;
+
+const isLovablePreviewHost =
+  typeof window !== "undefined" &&
+  (window.location.hostname.includes("preview--") ||
+    window.location.hostname === "lovableproject.com" ||
+    window.location.hostname.endsWith(".lovableproject.com") ||
+    (window.location.hostname.endsWith(".lovable.app") && isEmbeddedPreview));
 
 export const useCacheVersion = () => {
   useEffect(() => {
+    if (isLovablePreviewHost) {
+      localStorage.removeItem(CACHE_VERSION_KEY);
+      return;
+    }
+
     const checkCacheVersion = async () => {
       try {
         const { data } = await supabase
