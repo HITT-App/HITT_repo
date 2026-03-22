@@ -7,6 +7,9 @@ const SW_REFRESH_FLAG = "sw-refresh-pending";
 const PREVIEW_BUSTER_PARAM = "__preview_ts";
 const PREVIEW_LAST_HIDDEN_AT = "preview-last-hidden-at";
 const PREVIEW_SW_RESET_FLAG = "preview-sw-reset-done";
+const CACHE_VERSION_KEY = "app_cache_version";
+const PREVIEW_BOOT_ATTR = "data-preview-boot";
+const PREVIEW_BOOT_STYLE_ID = "preview-boot-guard";
 const PREVIEW_MAX_AGE_MS = 45_000;
 
 const isEmbeddedPreview =
@@ -23,6 +26,35 @@ function buildPreviewBustedUrl() {
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.set(PREVIEW_BUSTER_PARAM, `${Date.now()}`);
   return nextUrl.toString();
+}
+
+function installPreviewBootGuard() {
+  if (!isLovablePreviewHost || typeof document === "undefined") return;
+
+  document.documentElement.setAttribute(PREVIEW_BOOT_ATTR, "pending");
+
+  if (!document.getElementById(PREVIEW_BOOT_STYLE_ID)) {
+    const style = document.createElement("style");
+    style.id = PREVIEW_BOOT_STYLE_ID;
+    style.textContent = `
+      html[${PREVIEW_BOOT_ATTR}="pending"],
+      html[${PREVIEW_BOOT_ATTR}="pending"] body {
+        background: #0a0a0a !important;
+      }
+
+      html[${PREVIEW_BOOT_ATTR}="pending"] #root {
+        opacity: 0 !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.getElementById("root")?.replaceChildren();
+}
+
+function releasePreviewBootGuard() {
+  if (!isLovablePreviewHost || typeof document === "undefined") return;
+  document.documentElement.removeAttribute(PREVIEW_BOOT_ATTR);
 }
 
 function shouldRefreshPreviewOnLoad() {
@@ -126,6 +158,8 @@ async function resetPreviewCacheIfNeeded() {
   if (!isLovablePreviewHost) return false;
 
   sessionStorage.removeItem(SW_REFRESH_FLAG);
+  sessionStorage.removeItem(PREVIEW_LAST_HIDDEN_AT);
+  localStorage.removeItem(CACHE_VERSION_KEY);
 
   const alreadyResetInSession = sessionStorage.getItem(PREVIEW_SW_RESET_FLAG) === "1";
   let hadActiveController = false;
@@ -156,6 +190,8 @@ async function resetPreviewCacheIfNeeded() {
 }
 
 async function bootstrap() {
+  installPreviewBootGuard();
+
   if (shouldRefreshPreviewOnLoad()) {
     refreshPreviewNow();
     return;
@@ -172,6 +208,12 @@ async function bootstrap() {
 
   await initNativePlugins();
   createRoot(document.getElementById("root")!).render(<App />);
+
+  if (isLovablePreviewHost) {
+    window.requestAnimationFrame(() => {
+      releasePreviewBootGuard();
+    });
+  }
 }
 
 void bootstrap();
