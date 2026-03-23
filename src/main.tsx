@@ -1,82 +1,26 @@
+import "./lib/preview-bootstrap";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initNativePlugins } from "./lib/native";
-
-const SW_REFRESH_FLAG = "sw-refresh-pending";
-const PREVIEW_BUSTER_PARAM = "__preview_ts";
-const PREVIEW_LAST_HIDDEN_AT = "preview-last-hidden-at";
-const PREVIEW_SW_RESET_FLAG = "preview-sw-reset-done";
-const CACHE_VERSION_KEY = "app_cache_version";
-const PREVIEW_BOOT_ATTR = "data-preview-boot";
-const PREVIEW_BOOT_STYLE_ID = "preview-boot-guard";
-const PREVIEW_MAX_AGE_MS = 45_000;
-
-const isEmbeddedPreview =
-  typeof window !== "undefined" && window.self !== window.top;
-
-const isLovablePreviewHost =
-  typeof window !== "undefined" &&
-  (window.location.hostname.includes("preview--") ||
-    window.location.hostname === "lovableproject.com" ||
-    window.location.hostname.endsWith(".lovableproject.com") ||
-    (window.location.hostname.endsWith(".lovable.app") && isEmbeddedPreview));
-
-function buildPreviewBustedUrl() {
-  const nextUrl = new URL(window.location.href);
-  nextUrl.searchParams.set(PREVIEW_BUSTER_PARAM, `${Date.now()}`);
-  return nextUrl.toString();
-}
-
-function installPreviewBootGuard() {
-  if (!isLovablePreviewHost || typeof document === "undefined") return;
-
-  document.documentElement.setAttribute(PREVIEW_BOOT_ATTR, "pending");
-
-  if (!document.getElementById(PREVIEW_BOOT_STYLE_ID)) {
-    const style = document.createElement("style");
-    style.id = PREVIEW_BOOT_STYLE_ID;
-    style.textContent = `
-      html[${PREVIEW_BOOT_ATTR}="pending"],
-      html[${PREVIEW_BOOT_ATTR}="pending"] body {
-        background: #0a0a0a !important;
-      }
-
-      html[${PREVIEW_BOOT_ATTR}="pending"] #root {
-        opacity: 0 !important;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  document.getElementById("root")?.replaceChildren();
-}
-
-function releasePreviewBootGuard() {
-  if (!isLovablePreviewHost || typeof document === "undefined") return;
-  document.documentElement.removeAttribute(PREVIEW_BOOT_ATTR);
-}
-
-function shouldRefreshPreviewOnLoad() {
-  if (!isLovablePreviewHost) return false;
-
-  const url = new URL(window.location.href);
-  const rawTimestamp = url.searchParams.get(PREVIEW_BUSTER_PARAM);
-  const timestamp = rawTimestamp ? Number(rawTimestamp) : Number.NaN;
-
-  if (!Number.isFinite(timestamp)) return true;
-  return Date.now() - timestamp > PREVIEW_MAX_AGE_MS;
-}
-
-function refreshPreviewNow() {
-  window.location.replace(buildPreviewBustedUrl());
-}
+import {
+  CACHE_VERSION_KEY,
+  PREVIEW_LAST_HIDDEN_AT,
+  PREVIEW_SW_RESET_FLAG,
+  SW_REFRESH_FLAG,
+  freezePreviewSnapshot,
+  isLovablePreviewHost,
+  refreshPreviewNow,
+  releasePreviewBootGuard,
+  shouldRefreshPreviewOnLoad,
+} from "./lib/preview";
 
 function setupPreviewFreshnessGuards() {
   if (!isLovablePreviewHost) return;
 
   const onVisibilityChange = () => {
     if (document.visibilityState === "hidden") {
+      freezePreviewSnapshot();
       sessionStorage.setItem(PREVIEW_LAST_HIDDEN_AT, `${Date.now()}`);
       return;
     }
@@ -100,6 +44,7 @@ function setupPreviewFreshnessGuards() {
 
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) {
+      freezePreviewSnapshot();
       refreshPreviewNow();
     }
   });
@@ -190,8 +135,6 @@ async function resetPreviewCacheIfNeeded() {
 }
 
 async function bootstrap() {
-  installPreviewBootGuard();
-
   if (shouldRefreshPreviewOnLoad()) {
     refreshPreviewNow();
     return;
