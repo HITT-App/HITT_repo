@@ -84,30 +84,45 @@ export const StatsGrid = () => {
               className={cn(
                 "relative overflow-hidden",
                 "rounded-2xl p-4",
-                "bg-gradient-to-br",
-                stat.gradient,
-                "shadow-lg",
+                "border border-white/20",
+                "shadow-xl",
                 stat.glow,
                 "opacity-0 animate-fade-up",
-                "active:scale-[0.96] transition-all duration-200 touch-manipulation"
+                "active:scale-[0.96] transition-all duration-200 touch-manipulation",
+                "backdrop-blur-xl"
               )}
               style={{ 
                 animationDelay: `${0.3 + index * 0.05}s`, 
-                animationFillMode: "forwards" 
+                animationFillMode: "forwards",
+                background: `linear-gradient(135deg, ${stat.glassBg})`,
               }}
             >
-              {/* Subtle pattern overlay */}
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.2)_0%,_transparent_60%)]" />
+              {/* Glass highlight at top */}
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
               
+              {/* Inner glow */}
+              <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-30 blur-2xl" 
+                style={{ background: stat.glowColor }} />
+              
+              {/* Radial shimmer */}
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,255,255,0.15)_0%,_transparent_50%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(255,255,255,0.08)_0%,_transparent_50%)]" />
+              
+              {/* Noise texture overlay */}
+              <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")' }} />
+
               <div className="relative flex items-start justify-between">
                 <div>
-                  <p className="text-3xl font-extrabold text-white tracking-tight tabular-nums drop-shadow-sm">{stat.value}</p>
-                  <p className="text-[11px] text-white/80 mt-1 font-semibold uppercase tracking-widest">{stat.label}</p>
+                  <p className="text-3xl font-extrabold text-white tracking-tight tabular-nums drop-shadow-md">{stat.value}</p>
+                  <p className="text-[11px] text-white/70 mt-1 font-semibold uppercase tracking-widest">{stat.label}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <Icon size={20} className="text-white" strokeWidth={2} />
+                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
+                  <Icon size={20} className="text-white/90" strokeWidth={2} />
                 </div>
               </div>
+              
+              {/* Bottom highlight line */}
+              <div className="absolute inset-x-4 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             </div>
           );
         })}
