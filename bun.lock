@@ -290,7 +290,7 @@
 
     "@capacitor/status-bar": ["@capacitor/status-bar@8.0.1", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-OR59dlbwvmrV5dKsC9lvwv48QaGbqcbSTBpk+9/WXWxXYSdXXdzJZU9p8oyNPAkuJhCdnSa3XmU43fZRPBJJ5w=="],
 
-    "@capgo/capacitor-health": ["@capgo/capacitor-health@8.4.1", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-s+0jwDqqIJ5m55r6WFQD48gzlfBBY39EtW51Y1uo+PkpUN/xbvDE8evYz1dlqhBFvu7fQsBEeE+0b8yKS1MOZg=="],
+    "@capgo/capacitor-health": ["@capgo/capacitor-health@8.4.2", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-Z04zPNBGvRe/v++/SfFVxFBkrueMDPAsgwf3WdQlVzP/y/82PSjWC7v8l0yCyzS6f+vt85P21xIfrcEo+nfKYg=="],
 
     "@elevenlabs/client": ["@elevenlabs/client@0.13.0", "", { "dependencies": { "@elevenlabs/types": "0.4.0", "livekit-client": "^2.11.4" } }, "sha512-0UjouSOVK+mECJuYg/DqM9V1NIsabIrlRmw/RjEMS5UmOpsAga3KxMC3et8fKh8G/MI2cZtLr2764wIOZgyrQg=="],
 

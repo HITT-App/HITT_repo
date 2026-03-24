@@ -2,6 +2,68 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <style id="preview-boot-style">
+      html[data-preview-boot="pending"],
+      html[data-preview-boot="pending"] body {
+        background: hsl(0 0% 4%) !important;
+      }
+
+      html[data-preview-boot="pending"] #root {
+        opacity: 0 !important;
+        visibility: hidden !important;
+      }
+    </style>
+    <script>
+      (() => {
+        try {
+          const previewBusterParam = "__preview_ts";
+          const previewMaxAgeMs = 45_000;
+          const { hostname } = window.location;
+          const isEmbeddedPreview = window.self !== window.top;
+          const isLovablePreviewHost =
+            hostname.includes("preview--") ||
+            hostname === "lovableproject.com" ||
+            hostname.endsWith(".lovableproject.com") ||
+            (hostname.endsWith(".lovable.app") &&
+              (hostname.includes("preview--") || isEmbeddedPreview));
+
+          if (!isLovablePreviewHost) return;
+
+          document.documentElement.setAttribute("data-preview-boot", "pending");
+
+          const nextUrl = new URL(window.location.href);
+          const rawTimestamp = nextUrl.searchParams.get(previewBusterParam);
+          const timestamp = rawTimestamp ? Number(rawTimestamp) : Number.NaN;
+          const needsRefresh =
+            !Number.isFinite(timestamp) || Date.now() - timestamp > previewMaxAgeMs;
+
+          if (needsRefresh) {
+            nextUrl.searchParams.set(previewBusterParam, `${Date.now()}`);
+            window.location.replace(nextUrl.toString());
+            return;
+          }
+
+          const freezePreview = () => {
+            document.documentElement.setAttribute("data-preview-boot", "pending");
+            document.getElementById("root")?.replaceChildren();
+          };
+
+          document.addEventListener(
+            "visibilitychange",
+            () => {
+              if (document.visibilityState === "hidden") {
+                freezePreview();
+              }
+            },
+            { capture: true }
+          );
+
+          window.addEventListener("pagehide", freezePreview, { capture: true });
+        } catch {
+          // best-effort preview guard
+        }
+      })();
+    </script>
     <!-- Prevent stale cached HTML in preview/dev -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
