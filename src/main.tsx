@@ -5,11 +5,12 @@ import "./index.css";
 import { initNativePlugins } from "./lib/native";
 import {
   CACHE_VERSION_KEY,
-  PREVIEW_LAST_HIDDEN_AT,
-  PREVIEW_SW_RESET_FLAG,
-  SW_REFRESH_FLAG,
+  consumePreviewRefreshOnResume,
   freezePreviewSnapshot,
   isLovablePreviewHost,
+  markPreviewForRefreshOnResume,
+  PREVIEW_SW_RESET_FLAG,
+  SW_REFRESH_FLAG,
   refreshPreviewNow,
   releasePreviewBootGuard,
   shouldRefreshPreviewOnLoad,
@@ -20,27 +21,29 @@ function setupPreviewFreshnessGuards() {
 
   const onVisibilityChange = () => {
     if (document.visibilityState === "hidden") {
-      freezePreviewSnapshot();
-      sessionStorage.setItem(PREVIEW_LAST_HIDDEN_AT, `${Date.now()}`);
+      markPreviewForRefreshOnResume();
       return;
     }
 
-    // Always refresh when returning to a preview tab
-    const hiddenAtRaw = sessionStorage.getItem(PREVIEW_LAST_HIDDEN_AT);
-    if (hiddenAtRaw) {
-      sessionStorage.removeItem(PREVIEW_LAST_HIDDEN_AT);
+    if (consumePreviewRefreshOnResume()) {
       refreshPreviewNow();
     }
   };
 
   const onWindowFocus = () => {
-    if (shouldRefreshPreviewOnLoad()) {
+    if (consumePreviewRefreshOnResume() || shouldRefreshPreviewOnLoad()) {
       refreshPreviewNow();
     }
   };
 
+  const onPageHide = () => {
+    markPreviewForRefreshOnResume();
+    freezePreviewSnapshot();
+  };
+
   document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("focus", onWindowFocus);
+  window.addEventListener("pagehide", onPageHide, { capture: true });
 
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) {
@@ -103,7 +106,7 @@ async function resetPreviewCacheIfNeeded() {
   if (!isLovablePreviewHost) return false;
 
   sessionStorage.removeItem(SW_REFRESH_FLAG);
-  sessionStorage.removeItem(PREVIEW_LAST_HIDDEN_AT);
+  sessionStorage.removeItem("preview-resume-refresh");
   localStorage.removeItem(CACHE_VERSION_KEY);
 
   const alreadyResetInSession = sessionStorage.getItem(PREVIEW_SW_RESET_FLAG) === "1";
