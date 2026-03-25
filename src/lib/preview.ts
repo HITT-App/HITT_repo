@@ -1,6 +1,7 @@
 export const SW_REFRESH_FLAG = "sw-refresh-pending";
 export const PREVIEW_LAST_HIDDEN_AT = "preview-last-hidden-at";
 export const PREVIEW_SW_RESET_FLAG = "preview-sw-reset-done";
+export const PREVIEW_RESUME_REFRESH_FLAG = "preview-resume-refresh";
 export const CACHE_VERSION_KEY = "app_cache_version";
 
 const PREVIEW_BUSTER_PARAM = "__preview_ts";
@@ -86,6 +87,22 @@ export function refreshPreviewNow() {
   window.location.replace(buildPreviewBustedUrl());
 }
 
+export function markPreviewForRefreshOnResume() {
+  if (!isLovablePreviewHost) return;
+  sessionStorage.setItem(PREVIEW_RESUME_REFRESH_FLAG, "1");
+}
+
+export function consumePreviewRefreshOnResume() {
+  if (!isLovablePreviewHost) return false;
+
+  const shouldRefresh = sessionStorage.getItem(PREVIEW_RESUME_REFRESH_FLAG) === "1";
+  if (shouldRefresh) {
+    sessionStorage.removeItem(PREVIEW_RESUME_REFRESH_FLAG);
+  }
+
+  return shouldRefresh;
+}
+
 let previewBootPrimed = false;
 
 export function primePreviewBoot() {
@@ -93,17 +110,4 @@ export function primePreviewBoot() {
 
   previewBootPrimed = true;
   installPreviewBootGuard();
-
-  document.addEventListener(
-    "visibilitychange",
-    () => {
-      if (document.visibilityState === "hidden") {
-        freezePreviewSnapshot();
-      }
-    },
-    { capture: true }
-  );
-
-  window.addEventListener("pagehide", freezePreviewSnapshot, { capture: true });
-  window.addEventListener("unload", () => undefined);
 }

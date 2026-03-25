@@ -17,6 +17,7 @@
       (() => {
         try {
           const previewBusterParam = "__preview_ts";
+            const previewResumeRefreshFlag = "preview-resume-refresh";
           const previewMaxAgeMs = 45_000;
           const { hostname } = window.location;
           const isEmbeddedPreview = window.self !== window.top;
@@ -48,17 +49,28 @@
             document.getElementById("root")?.replaceChildren();
           };
 
+          const markPreviewRefresh = () => {
+            sessionStorage.setItem(previewResumeRefreshFlag, "1");
+          };
+
           document.addEventListener(
             "visibilitychange",
             () => {
               if (document.visibilityState === "hidden") {
-                freezePreview();
+                markPreviewRefresh();
               }
             },
             { capture: true }
           );
 
-          window.addEventListener("pagehide", freezePreview, { capture: true });
+          window.addEventListener(
+            "pagehide",
+            () => {
+              markPreviewRefresh();
+              freezePreview();
+            },
+            { capture: true }
+          );
         } catch {
           // best-effort preview guard
         }
