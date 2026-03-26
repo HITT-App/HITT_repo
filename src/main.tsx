@@ -5,6 +5,7 @@ import "./index.css";
 import { initNativePlugins } from "./lib/native";
 import {
   CACHE_VERSION_KEY,
+  coverPreviewSnapshot,
   consumePreviewRefreshOnResume,
   freezePreviewSnapshot,
   isLovablePreviewHost,
@@ -14,6 +15,7 @@ import {
   refreshPreviewNow,
   releasePreviewBootGuard,
   shouldRefreshPreviewOnLoad,
+  uncoverPreviewSnapshot,
 } from "./lib/preview";
 
 function setupPreviewFreshnessGuards() {
@@ -22,8 +24,11 @@ function setupPreviewFreshnessGuards() {
   const onVisibilityChange = () => {
     if (document.visibilityState === "hidden") {
       markPreviewForRefreshOnResume();
+      coverPreviewSnapshot();
       return;
     }
+
+    uncoverPreviewSnapshot();
 
     if (consumePreviewRefreshOnResume()) {
       refreshPreviewNow();
@@ -41,15 +46,23 @@ function setupPreviewFreshnessGuards() {
     freezePreviewSnapshot();
   };
 
+  const onBeforeUnload = () => {
+    coverPreviewSnapshot();
+  };
+
   document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("focus", onWindowFocus);
   window.addEventListener("pagehide", onPageHide, { capture: true });
+  window.addEventListener("beforeunload", onBeforeUnload, { capture: true });
 
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) {
       freezePreviewSnapshot();
       refreshPreviewNow();
+      return;
     }
+
+    uncoverPreviewSnapshot();
   });
 }
 

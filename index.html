@@ -8,6 +8,22 @@
         background: hsl(0 0% 4%) !important;
       }
 
+      #preview-boot-mask {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        background: hsl(0 0% 4%);
+      }
+
+      html[data-preview-boot="pending"] #preview-boot-mask,
+      html[data-preview-cover="visible"] #preview-boot-mask {
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+
       html[data-preview-boot="pending"] #root {
         opacity: 0 !important;
         visibility: hidden !important;
@@ -31,6 +47,17 @@
           if (!isLovablePreviewHost) return;
 
           document.documentElement.setAttribute("data-preview-boot", "pending");
+          document.documentElement.setAttribute("data-preview-cover", "visible");
+
+          const ensurePreviewMask = () => {
+            if (document.getElementById("preview-boot-mask")) return;
+            const mask = document.createElement("div");
+            mask.id = "preview-boot-mask";
+            mask.setAttribute("aria-hidden", "true");
+            (document.body || document.documentElement).prepend(mask);
+          };
+
+          ensurePreviewMask();
 
           const nextUrl = new URL(window.location.href);
           const rawTimestamp = nextUrl.searchParams.get(previewBusterParam);
@@ -46,6 +73,8 @@
 
           const freezePreview = () => {
             document.documentElement.setAttribute("data-preview-boot", "pending");
+            document.documentElement.setAttribute("data-preview-cover", "visible");
+            ensurePreviewMask();
             document.getElementById("root")?.replaceChildren();
           };
 
@@ -58,7 +87,18 @@
             () => {
               if (document.visibilityState === "hidden") {
                 markPreviewRefresh();
+                freezePreview();
+              } else {
+                document.documentElement.removeAttribute("data-preview-cover");
               }
+            },
+            { capture: true }
+          );
+
+          window.addEventListener(
+            "beforeunload",
+            () => {
+              freezePreview();
             },
             { capture: true }
           );
@@ -117,6 +157,7 @@
   </head>
 
   <body>
+    <div id="preview-boot-mask" aria-hidden="true"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

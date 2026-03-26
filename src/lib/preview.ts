@@ -6,7 +6,9 @@ export const CACHE_VERSION_KEY = "app_cache_version";
 
 const PREVIEW_BUSTER_PARAM = "__preview_ts";
 const PREVIEW_BOOT_ATTR = "data-preview-boot";
+const PREVIEW_COVER_ATTR = "data-preview-cover";
 const PREVIEW_BOOT_STYLE_ID = "preview-boot-guard";
+const PREVIEW_BOOT_MASK_ID = "preview-boot-mask";
 const PREVIEW_MAX_AGE_MS = 45_000;
 
 export const isEmbeddedPreview =
@@ -38,6 +40,22 @@ function ensurePreviewBootStyle() {
       background: hsl(0 0% 4%) !important;
     }
 
+    #${PREVIEW_BOOT_MASK_ID} {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      background: hsl(0 0% 4%);
+    }
+
+    html[${PREVIEW_BOOT_ATTR}="pending"] #${PREVIEW_BOOT_MASK_ID},
+    html[${PREVIEW_COVER_ATTR}="visible"] #${PREVIEW_BOOT_MASK_ID} {
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+
     html[${PREVIEW_BOOT_ATTR}="pending"] #root {
       opacity: 0 !important;
       visibility: hidden !important;
@@ -47,10 +65,39 @@ function ensurePreviewBootStyle() {
   document.head.appendChild(style);
 }
 
+function ensurePreviewBootMask() {
+  if (!isLovablePreviewHost || typeof document === "undefined") return null;
+
+  let mask = document.getElementById(PREVIEW_BOOT_MASK_ID) as HTMLDivElement | null;
+  if (mask) return mask;
+
+  if (!document.body) return null;
+
+  mask = document.createElement("div");
+  mask.id = PREVIEW_BOOT_MASK_ID;
+  mask.setAttribute("aria-hidden", "true");
+  document.body.prepend(mask);
+
+  return mask;
+}
+
+function showPreviewCover() {
+  if (!isLovablePreviewHost || typeof document === "undefined") return;
+  ensurePreviewBootMask();
+  document.documentElement.setAttribute(PREVIEW_COVER_ATTR, "visible");
+}
+
+function hidePreviewCover() {
+  if (!isLovablePreviewHost || typeof document === "undefined") return;
+  document.documentElement.removeAttribute(PREVIEW_COVER_ATTR);
+}
+
 export function installPreviewBootGuard() {
   if (!isLovablePreviewHost || typeof document === "undefined") return;
 
   ensurePreviewBootStyle();
+  ensurePreviewBootMask();
+  showPreviewCover();
   document.documentElement.setAttribute(PREVIEW_BOOT_ATTR, "pending");
   document.getElementById("root")?.replaceChildren();
 }
@@ -58,6 +105,21 @@ export function installPreviewBootGuard() {
 export function releasePreviewBootGuard() {
   if (!isLovablePreviewHost || typeof document === "undefined") return;
   document.documentElement.removeAttribute(PREVIEW_BOOT_ATTR);
+  hidePreviewCover();
+}
+
+export function coverPreviewSnapshot() {
+  if (!isLovablePreviewHost || typeof document === "undefined") return;
+  ensurePreviewBootStyle();
+  ensurePreviewBootMask();
+  showPreviewCover();
+  document.documentElement.setAttribute(PREVIEW_BOOT_ATTR, "pending");
+}
+
+export function uncoverPreviewSnapshot() {
+  if (!isLovablePreviewHost || typeof document === "undefined") return;
+  document.documentElement.removeAttribute(PREVIEW_BOOT_ATTR);
+  hidePreviewCover();
 }
 
 export function freezePreviewSnapshot() {
