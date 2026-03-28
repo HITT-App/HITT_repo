@@ -85,6 +85,10 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
 
   // ═══ Endurance / Multi-Sport ═══
   "Triathlon":      { name: "Triathlon",        icon: Trophy,         color: "text-yellow-500",  met: 8.5,  tracker: "gps",   counterLabel: "Laps",   expectedHRZone: 4, watchMetrics: ["heartRate", "distance", "calories", "steps"] },
+  "Hyrox":          { name: "Hyrox",            icon: Flame,          color: "text-orange-500",  met: 9.5,  tracker: "timer", counterLabel: "Rounds", expectedHRZone: 5, watchMetrics: ["heartRate", "calories", "steps"] },
+
+  // ═══ Paddle Sports ═══
+  "Paddle":         { name: "Paddle",           icon: Waves,          color: "text-teal-400",    met: 4.0,  tracker: "timer", counterLabel: "Sets",   expectedHRZone: 2, watchMetrics: ["heartRate", "calories"] },
 };
 
 export function getSportConfig(name: string): SportConfig {
@@ -137,11 +141,11 @@ export const SPORT_CATEGORIES = [
   { title: "Cycling", sports: ["Cycling", "Mountain Bike"] },
   { title: "Strength", sports: ["Weight Training", "Bodyweight", "Functional", "CrossFit"] },
   { title: "HIIT & Cardio", sports: ["HIIT", "Tabata", "Circuit", "Jump Rope", "Stair Climber", "Rowing", "Elliptical"] },
-  { title: "Water Sports", sports: ["Swim", "Surf", "Kayak", "Paddleboard"] },
+  { title: "Water Sports", sports: ["Swim", "Surf", "Kayak", "Paddleboard", "Paddle"] },
   { title: "Mind & Body", sports: ["Yoga", "Pilates", "Stretching", "Meditation", "Tai Chi"] },
   { title: "Combat", sports: ["Boxing", "Kickboxing", "MMA", "Jiu-Jitsu"] },
   { title: "Dance", sports: ["Dance", "Zumba"] },
   { title: "Ball Sports", sports: ["Tennis", "Basketball", "Football", "Badminton"] },
   { title: "Winter", sports: ["Skiing", "Snowboarding"] },
-  { title: "Endurance", sports: ["Triathlon"] },
+  { title: "Endurance", sports: ["Triathlon", "Hyrox"] },
 ];
