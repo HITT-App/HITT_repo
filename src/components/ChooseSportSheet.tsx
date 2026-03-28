@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { X, Route, Search } from "lucide-react";
+import { X, Route, Search, Trophy } from "lucide-react";
 import { Drawer, DrawerContent, DrawerClose } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,32 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
 
         <ScrollArea className="h-[65vh]">
           <div className="px-5 pb-8 space-y-5">
+            {/* Triathlon Flagship Banner */}
+            {!search && (
+              <button
+                onClick={() => { onOpenChange(false); navigate(ROUTES.TRIATHLON); }}
+                className="w-full rounded-2xl p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden border border-yellow-500/30"
+                style={{
+                  background: "linear-gradient(135deg, rgba(234,179,8,0.15) 0%, rgba(245,158,11,0.1) 50%, rgba(217,119,6,0.15) 100%)",
+                  backdropFilter: "blur(20px)",
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-amber-500/5" />
+                <div className="relative flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center shadow-lg shadow-yellow-500/25">
+                    <Trophy size={22} className="text-black" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-foreground">Ironman / Triathlon</p>
+                      <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 border border-yellow-500/30">FLAGSHIP</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Swim → Bike → Run • Multi-stage tracker</p>
+                  </div>
+                </div>
+              </button>
+            )}
+
             {/* Routes Banner */}
             {!search && (
               <button

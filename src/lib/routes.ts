@@ -111,6 +111,9 @@ export const ROUTES = {
   CREATE_ROUTE: "/routes/create",
   routeDetail: (id: string) => `/route/${id}` as const,
 
+  // Endurance
+  TRIATHLON: "/triathlon",
+
   // Misc
   HIIT_TRIAL: "/hiit-trial",
   NOTIFICATION_DEMO: "/notification-demo",
