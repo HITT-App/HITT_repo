@@ -82,6 +82,9 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
   // ═══ Winter ═══
   "Skiing":         { name: "Skiing",           icon: Snowflake,      color: "text-blue-300",    met: 7.0,  tracker: "gps",   counterLabel: "Laps",   expectedHRZone: 3, watchMetrics: ["heartRate", "distance", "calories"] },
   "Snowboarding":   { name: "Snowboarding",     icon: Snowflake,      color: "text-blue-400",    met: 5.3,  tracker: "gps",   counterLabel: "Laps",   expectedHRZone: 3, watchMetrics: ["heartRate", "distance", "calories"] },
+
+  // ═══ Endurance / Multi-Sport ═══
+  "Triathlon":      { name: "Triathlon",        icon: Trophy,         color: "text-yellow-500",  met: 8.5,  tracker: "gps",   counterLabel: "Laps",   expectedHRZone: 4, watchMetrics: ["heartRate", "distance", "calories", "steps"] },
 };
 
 export function getSportConfig(name: string): SportConfig {
@@ -89,6 +92,7 @@ export function getSportConfig(name: string): SportConfig {
 }
 
 export function getTrackerRoute(sportName: string): string {
+  if (sportName === "Triathlon") return "/triathlon";
   const config = getSportConfig(sportName);
   return config.tracker === "gps" ? "/activity-live" : "/gym-timer";
 }
@@ -139,4 +143,5 @@ export const SPORT_CATEGORIES = [
   { title: "Dance", sports: ["Dance", "Zumba"] },
   { title: "Ball Sports", sports: ["Tennis", "Basketball", "Football", "Badminton"] },
   { title: "Winter", sports: ["Skiing", "Snowboarding"] },
+  { title: "Endurance", sports: ["Triathlon"] },
 ];
