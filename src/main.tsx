@@ -66,6 +66,36 @@ function setupPreviewFreshnessGuards() {
   });
 }
 
+function setupPreviewHMRGuards() {
+  if (!isLovablePreviewHost || !import.meta.hot) return;
+
+  let releaseFrame = 0;
+
+  const coverForHotUpdate = () => {
+    coverPreviewSnapshot();
+  };
+
+  const releaseAfterHotUpdate = () => {
+    if (releaseFrame) {
+      window.cancelAnimationFrame(releaseFrame);
+    }
+
+    window.requestAnimationFrame(() => {
+      releaseFrame = window.requestAnimationFrame(() => {
+        releasePreviewBootGuard();
+        releaseFrame = 0;
+      });
+    });
+  };
+
+  import.meta.hot.on("vite:beforeUpdate", coverForHotUpdate);
+  import.meta.hot.on("vite:beforeFullReload", coverForHotUpdate);
+  import.meta.hot.on("vite:ws:disconnect", coverForHotUpdate);
+  import.meta.hot.on("vite:afterUpdate", releaseAfterHotUpdate);
+  import.meta.hot.on("vite:error", releaseAfterHotUpdate);
+  import.meta.hot.on("vite:ws:connect", releaseAfterHotUpdate);
+}
+
 // Only register SW when the PWA plugin is active (not in Lovable preview)
 async function initSW() {
   try {
@@ -169,6 +199,7 @@ async function bootstrap() {
   createRoot(document.getElementById("root")!).render(<App />);
 
   if (isLovablePreviewHost) {
+    setupPreviewHMRGuards();
     window.requestAnimationFrame(() => {
       releasePreviewBootGuard();
     });
