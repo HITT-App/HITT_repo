@@ -56,8 +56,8 @@ function ensurePreviewBootStyle() {
       visibility: visible !important;
     }
 
-     html[${PREVIEW_COVER_ATTR}="visible"] #root,
-    html[${PREVIEW_BOOT_ATTR}="pending"] #root {
+     html[${PREVIEW_COVER_ATTR}="visible"] body > *:not(#${PREVIEW_BOOT_MASK_ID}):not(script),
+    html[${PREVIEW_BOOT_ATTR}="pending"] body > *:not(#${PREVIEW_BOOT_MASK_ID}):not(script) {
       opacity: 0 !important;
       visibility: hidden !important;
     }

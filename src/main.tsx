@@ -191,6 +191,7 @@ async function resetPreviewCacheIfNeeded() {
 
 async function bootstrap() {
   if (shouldRefreshPreviewOnLoad()) {
+    coverPreviewSnapshot();
     refreshPreviewNow();
     return;
   }
@@ -210,7 +211,9 @@ async function bootstrap() {
   if (isLovablePreviewHost) {
     setupPreviewHMRGuards();
     window.requestAnimationFrame(() => {
-      releasePreviewBootGuard();
+      window.requestAnimationFrame(() => {
+        releasePreviewBootGuard();
+      });
     });
   }
 }
