@@ -11,6 +11,8 @@ const PREVIEW_BOOT_STYLE_ID = "preview-boot-guard";
 const PREVIEW_BOOT_MASK_ID = "preview-boot-mask";
 const PREVIEW_MAX_AGE_MS = 45_000;
 
+let previewBFCacheBlocked = false;
+
 export const isEmbeddedPreview =
   typeof window !== "undefined" && window.self !== window.top;
 
@@ -150,6 +152,16 @@ export function refreshPreviewNow() {
   window.location.replace(buildPreviewBustedUrl());
 }
 
+function blockPreviewBFCache() {
+  if (!isLovablePreviewHost || typeof window === "undefined" || previewBFCacheBlocked) return;
+
+  previewBFCacheBlocked = true;
+  window.addEventListener("unload", () => {
+    // Intentionally empty: keeping an unload listener prevents stale BFCache restores
+    // in preview environments where the iframe can briefly replay an old frame.
+  }, { capture: true });
+}
+
 export function markPreviewForRefreshOnResume() {
   if (!isLovablePreviewHost) return;
   sessionStorage.setItem(PREVIEW_RESUME_REFRESH_FLAG, "1");
@@ -172,5 +184,6 @@ export function primePreviewBoot() {
   if (!isLovablePreviewHost || previewBootPrimed) return;
 
   previewBootPrimed = true;
+   blockPreviewBFCache();
   installPreviewBootGuard();
 }
