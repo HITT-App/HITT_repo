@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Send, Loader2, ChevronDown, MessageCircle, Users,
@@ -170,6 +170,7 @@ export default function CommunityChatroom() {
   const [noticeDismissed, setNoticeDismissed] = useState(false);
   const [uploadingBg, setUploadingBg] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messagesContentRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
@@ -196,6 +197,14 @@ export default function CommunityChatroom() {
       setTimeout(() => el.classList.remove("ring-2", "ring-primary/50"), 2000);
     }
   }, []);
+
+  const handleInitialLayoutShift = useCallback(() => {
+    if (initialScrollDoneRef.current) return;
+
+    requestAnimationFrame(() => {
+      scrollToBottom(false);
+    });
+  }, [scrollToBottom]);
 
   // Load chatroom background from app_settings
   useEffect(() => {
@@ -352,16 +361,59 @@ export default function CommunityChatroom() {
     return () => { supabase.removeChannel(presenceChannel); };
   }, [user, displayName, profile?.avatar_url]);
 
-  // Scroll to bottom after initial load
-  useEffect(() => {
+  // Snap to bottom before first paint after messages arrive
+  useLayoutEffect(() => {
     if (!loading && messages.length > 0 && !initialScrollDoneRef.current) {
-      initialScrollDoneRef.current = true;
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          scrollToBottom(false);
-        });
-      });
+      scrollToBottom(false);
     }
+  }, [loading, messages.length, scrollToBottom]);
+
+  // Keep the first load anchored while images / gifs finish affecting layout
+  useEffect(() => {
+    if (loading || messages.length === 0 || initialScrollDoneRef.current) return;
+
+    const contentEl = messagesContentRef.current;
+    if (!contentEl) return;
+
+    let resizeObserver: ResizeObserver | null = null;
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    let animationFrameId: number | null = null;
+
+    const queueBottomScroll = () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(() => {
+        scrollToBottom(false);
+      });
+    };
+
+    const markSettled = () => {
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => {
+        queueBottomScroll();
+        initialScrollDoneRef.current = true;
+        isNearBottomRef.current = true;
+        setShowScrollBtn(false);
+        setUnreadCount(0);
+        resizeObserver?.disconnect();
+      }, 180);
+    };
+
+    queueBottomScroll();
+    markSettled();
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        queueBottomScroll();
+        markSettled();
+      });
+      resizeObserver.observe(contentEl);
+    }
+
+    return () => {
+      resizeObserver?.disconnect();
+      if (settleTimer) clearTimeout(settleTimer);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    };
   }, [loading, messages.length, scrollToBottom]);
 
   // Auto-scroll on new messages if near bottom
@@ -629,11 +681,11 @@ export default function CommunityChatroom() {
       case "image":
         return (
           <button onClick={() => setLightboxSrc(msg.media_url || "")} className="block">
-            <img src={msg.media_url} alt="Shared image" className="rounded-xl max-w-[220px] max-h-[220px] object-cover" loading="lazy" />
+            <img src={msg.media_url} alt="Shared image" className="rounded-xl max-w-[220px] max-h-[220px] object-cover" loading="lazy" onLoad={handleInitialLayoutShift} />
           </button>
         );
       case "gif":
-        return <img src={msg.media_url} alt="GIF" className="rounded-xl max-w-[220px] max-h-[200px] object-cover" loading="lazy" />;
+        return <img src={msg.media_url} alt="GIF" className="rounded-xl max-w-[220px] max-h-[200px] object-cover" loading="lazy" onLoad={handleInitialLayoutShift} />;
       case "voice":
         return <VoicePlayer src={msg.media_url || ""} />;
       default:
@@ -786,7 +838,7 @@ export default function CommunityChatroom() {
             </div>
           </div>
         ) : (
-          <div className="space-y-0.5">
+          <div ref={messagesContentRef} className="space-y-0.5">
             {messages.map((msg, i) => {
               const prevMsg = i > 0 ? messages[i - 1] : null;
               const isOwn = msg.user_id === user?.id;
