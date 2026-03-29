@@ -56,6 +56,7 @@ function ensurePreviewBootStyle() {
       visibility: visible !important;
     }
 
+     html[${PREVIEW_COVER_ATTR}="visible"] #root,
     html[${PREVIEW_BOOT_ATTR}="pending"] #root {
       opacity: 0 !important;
       visibility: hidden !important;
