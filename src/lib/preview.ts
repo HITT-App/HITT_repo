@@ -9,7 +9,7 @@ const PREVIEW_BOOT_ATTR = "data-preview-boot";
 const PREVIEW_COVER_ATTR = "data-preview-cover";
 const PREVIEW_BOOT_STYLE_ID = "preview-boot-guard";
 const PREVIEW_BOOT_MASK_ID = "preview-boot-mask";
-const PREVIEW_MAX_AGE_MS = 45_000;
+export const PREVIEW_MAX_AGE_MS = 45_000;
 
 let previewBFCacheBlocked = false;
 

@@ -10,6 +10,7 @@ import {
   freezePreviewSnapshot,
   isLovablePreviewHost,
   markPreviewForRefreshOnResume,
+  PREVIEW_MAX_AGE_MS,
   PREVIEW_SW_RESET_FLAG,
   SW_REFRESH_FLAG,
   refreshPreviewNow,
@@ -21,16 +22,51 @@ import {
 function setupPreviewFreshnessGuards() {
   if (!isLovablePreviewHost) return;
 
+  let resumeWatchFrame = 0;
+  let lastPaintAt = window.performance.now();
+
+  const refreshPreview = () => {
+    coverPreviewSnapshot();
+    refreshPreviewNow();
+  };
+
+  const resumeIfNeeded = () => {
+    if (!consumePreviewRefreshOnResume()) return false;
+    refreshPreview();
+    return true;
+  };
+
+  const syncPaintWatch = (timestamp: number) => {
+    if (timestamp - lastPaintAt > PREVIEW_MAX_AGE_MS) {
+      refreshPreview();
+      return;
+    }
+
+    lastPaintAt = timestamp;
+    resumeWatchFrame = window.requestAnimationFrame(syncPaintWatch);
+  };
+
+  const startResumeWatchdog = () => {
+    if (resumeWatchFrame) return;
+    resumeWatchFrame = window.requestAnimationFrame(syncPaintWatch);
+  };
+
+  const resetPaintClock = () => {
+    lastPaintAt = window.performance.now();
+  };
+
   const onVisibilityChange = () => {
     if (document.visibilityState === "hidden") {
+      resetPaintClock();
       markPreviewForRefreshOnResume();
       coverPreviewSnapshot();
       return;
     }
 
-    if (consumePreviewRefreshOnResume() || shouldRefreshPreviewOnLoad()) {
-      coverPreviewSnapshot();
-      refreshPreviewNow();
+    startResumeWatchdog();
+
+    if (resumeIfNeeded() || shouldRefreshPreviewOnLoad()) {
+      refreshPreview();
       return;
     }
 
@@ -38,13 +74,17 @@ function setupPreviewFreshnessGuards() {
   };
 
   const onWindowFocus = () => {
-    if (consumePreviewRefreshOnResume() || shouldRefreshPreviewOnLoad()) {
-      coverPreviewSnapshot();
-      refreshPreviewNow();
+    resetPaintClock();
+
+    if (resumeIfNeeded()) {
+      return;
     }
+
+    uncoverPreviewSnapshot();
   };
 
   const onPageHide = () => {
+    resetPaintClock();
     markPreviewForRefreshOnResume();
     freezePreviewSnapshot();
   };
@@ -57,8 +97,14 @@ function setupPreviewFreshnessGuards() {
     freezePreviewSnapshot();
   };
 
+  const onResumeInteraction = () => {
+    resetPaintClock();
+    resumeIfNeeded();
+  };
+
   document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("focus", onWindowFocus);
+  window.addEventListener("pointerdown", onResumeInteraction, { capture: true, passive: true });
   window.addEventListener("pagehide", onPageHide, { capture: true });
   window.addEventListener("beforeunload", onBeforeUnload, { capture: true });
   window.addEventListener("unload", onUnload, { capture: true });
@@ -66,18 +112,21 @@ function setupPreviewFreshnessGuards() {
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) {
       freezePreviewSnapshot();
-      refreshPreviewNow();
+      refreshPreview();
       return;
     }
 
-    if (shouldRefreshPreviewOnLoad()) {
-      coverPreviewSnapshot();
-      refreshPreviewNow();
+    startResumeWatchdog();
+
+    if (resumeIfNeeded() || shouldRefreshPreviewOnLoad()) {
+      refreshPreview();
       return;
     }
 
     uncoverPreviewSnapshot();
   });
+
+  startResumeWatchdog();
 }
 
 function setupPreviewHMRGuards() {
