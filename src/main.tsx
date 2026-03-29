@@ -28,15 +28,18 @@ function setupPreviewFreshnessGuards() {
       return;
     }
 
-    uncoverPreviewSnapshot();
-
-    if (consumePreviewRefreshOnResume()) {
+    if (consumePreviewRefreshOnResume() || shouldRefreshPreviewOnLoad()) {
+      coverPreviewSnapshot();
       refreshPreviewNow();
+      return;
     }
+
+    uncoverPreviewSnapshot();
   };
 
   const onWindowFocus = () => {
     if (consumePreviewRefreshOnResume() || shouldRefreshPreviewOnLoad()) {
+      coverPreviewSnapshot();
       refreshPreviewNow();
     }
   };
@@ -58,6 +61,12 @@ function setupPreviewFreshnessGuards() {
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) {
       freezePreviewSnapshot();
+      refreshPreviewNow();
+      return;
+    }
+
+    if (shouldRefreshPreviewOnLoad()) {
+      coverPreviewSnapshot();
       refreshPreviewNow();
       return;
     }

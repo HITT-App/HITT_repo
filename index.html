@@ -24,6 +24,7 @@
         visibility: visible !important;
       }
 
+      html[data-preview-cover="visible"] #root,
       html[data-preview-boot="pending"] #root {
         opacity: 0 !important;
         visibility: hidden !important;
@@ -88,8 +89,6 @@
               if (document.visibilityState === "hidden") {
                 markPreviewRefresh();
                 freezePreview();
-              } else {
-                document.documentElement.removeAttribute("data-preview-cover");
               }
             },
             { capture: true }
