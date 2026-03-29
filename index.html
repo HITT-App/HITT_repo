@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-preview-boot="pending" data-preview-cover="visible">
   <head>
     <meta charset="UTF-8" />
     <style id="preview-boot-style">
@@ -24,8 +24,8 @@
         visibility: visible !important;
       }
 
-      html[data-preview-cover="visible"] #root,
-      html[data-preview-boot="pending"] #root {
+      html[data-preview-cover="visible"] body > *:not(#preview-boot-mask):not(script),
+      html[data-preview-boot="pending"] body > *:not(#preview-boot-mask):not(script) {
         opacity: 0 !important;
         visibility: hidden !important;
       }
@@ -45,7 +45,11 @@
             (hostname.endsWith(".lovable.app") &&
               (hostname.includes("preview--") || isEmbeddedPreview));
 
-          if (!isLovablePreviewHost) return;
+          if (!isLovablePreviewHost) {
+            document.documentElement.removeAttribute("data-preview-boot");
+            document.documentElement.removeAttribute("data-preview-cover");
+            return;
+          }
 
           document.documentElement.setAttribute("data-preview-boot", "pending");
           document.documentElement.setAttribute("data-preview-cover", "visible");
