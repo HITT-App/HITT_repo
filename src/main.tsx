@@ -53,10 +53,15 @@ function setupPreviewFreshnessGuards() {
     coverPreviewSnapshot();
   };
 
+  const onUnload = () => {
+    freezePreviewSnapshot();
+  };
+
   document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("focus", onWindowFocus);
   window.addEventListener("pagehide", onPageHide, { capture: true });
   window.addEventListener("beforeunload", onBeforeUnload, { capture: true });
+  window.addEventListener("unload", onUnload, { capture: true });
 
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) {
@@ -212,7 +217,9 @@ async function bootstrap() {
     setupPreviewHMRGuards();
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
-        releasePreviewBootGuard();
+        window.requestAnimationFrame(() => {
+          releasePreviewBootGuard();
+        });
       });
     });
   }
