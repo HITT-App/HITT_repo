@@ -44,6 +44,17 @@ export function SocialShareButtons({ imageUrl, activityTitle, statsText }: Socia
   const shareText = `Just completed "${activityTitle}"! 💪 ${statsText} #HIIT #Fitness`;
 
   const handleNativeShare = async () => {
+    if (!navigator.share) {
+      // Fallback: copy text to clipboard
+      try {
+        await navigator.clipboard.writeText(shareText);
+        toast.success('Share text copied to clipboard! 📋');
+      } catch {
+        toast.info('Copy this text to share: ' + shareText);
+      }
+      return;
+    }
+
     try {
       const shareData: ShareData = { title: activityTitle, text: shareText };
 
@@ -63,12 +74,16 @@ export function SocialShareButtons({ imageUrl, activityTitle, statsText }: Socia
         }
       }
 
-      if (navigator.share) {
-        await navigator.share(shareData);
-      }
+      await navigator.share(shareData);
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
-        toast.error('Could not open share sheet');
+        // Fallback to clipboard
+        try {
+          await navigator.clipboard.writeText(shareText);
+          toast.success('Share text copied to clipboard! 📋');
+        } catch {
+          toast.error('Could not share');
+        }
       }
     }
   };
