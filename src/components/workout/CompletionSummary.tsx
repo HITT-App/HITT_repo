@@ -84,8 +84,8 @@ export function CompletionSummary({
       setIsGenerating(true);
       try {
         let dataUrl: string;
-        if (mapContainerRef?.current) {
-          dataUrl = await generateMapCard(mapContainerRef.current, activityTitle, stats);
+        if (effectiveMapRef.current) {
+          dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
         } else {
           dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
         }
@@ -97,10 +97,10 @@ export function CompletionSummary({
       }
     };
 
-    // Small delay to let the map render first if present
-    const timer = setTimeout(generate, mapContainerRef?.current ? 800 : 100);
+    // Longer delay to let the map fully render with tiles
+    const timer = setTimeout(generate, effectiveMapRef.current ? 2000 : 100);
     return () => clearTimeout(timer);
-  }, [activityTitle, activityType, stats, mapContainerRef]);
+  }, [activityTitle, activityType, stats, effectiveMapRef]);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
