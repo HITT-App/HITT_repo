@@ -86,10 +86,10 @@ export function CompletionSummary({
       setGenProgress(0);
       progressInterval = setInterval(() => {
         setGenProgress(prev => {
-          if (prev >= 90) { clearInterval(progressInterval); return 90; }
-          return prev + Math.random() * 8 + 2;
+          if (prev >= 92) { clearInterval(progressInterval); return 92; }
+          return prev + Math.random() * 12 + 3;
         });
-      }, 500);
+      }, 400);
     };
 
     const generate = async () => {
