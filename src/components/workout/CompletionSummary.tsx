@@ -365,19 +365,33 @@ export function CompletionSummary({
       {/* Share image section */}
       <div className="px-5 mt-3">
         {isGenerating ? (
-          <div className="rounded-2xl border border-border overflow-hidden">
-            <div className="relative aspect-square bg-card">
-              <Skeleton className="absolute inset-0 rounded-none" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+          <div className="rounded-2xl border border-border bg-card overflow-hidden p-6">
+            <div className="flex flex-col items-center gap-5 py-8">
+              {/* Animated icon */}
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
+                  <Sparkles className="w-7 h-7 text-primary animate-pulse" />
                 </div>
-                <p className="text-sm text-foreground font-medium">Creating your share image…</p>
-                <div className="flex gap-1.5">
-                  {[0, 150, 300].map((d) => (
-                    <div key={d} className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                  ))}
+                <div className="absolute -inset-2 rounded-full border border-primary/10 animate-ping opacity-30" />
+              </div>
+
+              {/* Title */}
+              <div className="text-center space-y-1">
+                <p className="text-base font-semibold text-foreground">Generating your epic summary</p>
+                <p className="text-xs text-muted-foreground">AI is crafting a cinematic image…</p>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full max-w-[240px] space-y-2">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500 ease-out"
+                    style={{ width: `${Math.min(genProgress, 100)}%` }}
+                  />
                 </div>
+                <p className="text-[11px] text-muted-foreground text-center font-medium">
+                  {genProgress < 30 ? 'Setting the scene…' : genProgress < 60 ? 'Adding cinematic effects…' : genProgress < 90 ? 'Almost there…' : 'Finishing up ✨'}
+                </p>
               </div>
             </div>
           </div>
