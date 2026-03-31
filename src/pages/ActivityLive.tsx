@@ -331,6 +331,8 @@ const ActivityLive = () => {
       { label: 'Avg Pace', value: pace, unit: 'min/km' },
     ];
 
+    const hasRoute = positions.length > 1;
+
     return (
       <CompletionSummary
         activityTitle={activityType.charAt(0).toUpperCase() + activityType.slice(1)}
@@ -338,7 +340,7 @@ const ActivityLive = () => {
         stats={completionStats}
         pointsEarned={pointsEarned}
         mapComponent={
-          positions.length > 1 ? (
+          hasRoute ? (
             <LiveActivityMap positions={positions} gpsStatus="active" />
           ) : undefined
         }
