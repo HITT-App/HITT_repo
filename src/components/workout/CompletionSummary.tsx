@@ -370,33 +370,37 @@ export function CompletionSummary({
       {/* Share image section */}
       <div className="px-5 mt-3">
         {isGenerating ? (
-          <div className="rounded-2xl border border-border bg-card overflow-hidden p-6">
-            <div className="flex flex-col items-center gap-5 py-8">
-              {/* Animated icon */}
-              <div className="relative">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
-                  <Sparkles className="w-7 h-7 text-primary animate-pulse" />
+          <div className="rounded-2xl border border-border bg-gradient-to-b from-card to-card/80 overflow-hidden p-5">
+            <div className="flex flex-col items-center gap-4 py-4">
+              {/* Pulsing ring + icon */}
+              <div className="relative w-14 h-14">
+                <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-20" />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/25 to-primary/5 flex items-center justify-center shadow-[0_0_24px_hsl(var(--primary)/0.25)]">
+                  <Sparkles className="w-6 h-6 text-primary animate-pulse" />
                 </div>
-                <div className="absolute -inset-2 rounded-full border border-primary/10 animate-ping opacity-30" />
               </div>
 
-              {/* Title */}
-              <div className="text-center space-y-1">
-                <p className="text-base font-semibold text-foreground">Generating your epic summary</p>
-                <p className="text-xs text-muted-foreground">AI is crafting a cinematic image…</p>
-              </div>
-
-              {/* Progress bar */}
-              <div className="w-full max-w-[240px] space-y-2">
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500 ease-out"
-                    style={{ width: `${Math.min(genProgress, 100)}%` }}
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground text-center font-medium">
-                  {genProgress < 30 ? 'Setting the scene…' : genProgress < 60 ? 'Adding cinematic effects…' : genProgress < 90 ? 'Almost there…' : 'Finishing up ✨'}
+              {/* Title + percentage */}
+              <div className="text-center space-y-0.5">
+                <p className="text-sm font-semibold text-foreground">
+                  Generating your epic summary
+                  <span className="ml-1.5 text-primary">{Math.round(Math.min(genProgress, 100))}%</span>
                 </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {genProgress < 25 ? 'Setting the scene…' : genProgress < 50 ? 'Composing your card…' : genProgress < 75 ? 'Adding cinematic effects…' : genProgress < 95 ? 'Final touches…' : 'Finishing up ✨'}
+                </p>
+              </div>
+
+              {/* Shimmer progress bar */}
+              <div className="w-full max-w-[220px]">
+                <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden relative">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-primary via-primary/80 to-primary transition-all duration-700 ease-out relative"
+                    style={{ width: `${Math.min(genProgress, 100)}%` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[shimmer_1.5s_infinite] rounded-full" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
