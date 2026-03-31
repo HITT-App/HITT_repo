@@ -8,7 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShareOptionsGrid, type ShareStyle } from './ShareOptionsGrid';
 import { SocialShareButtons } from './SocialShareButtons';
