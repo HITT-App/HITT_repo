@@ -159,6 +159,10 @@ export function CompletionSummary({
     if (!user) { toast.error('Please log in'); return; }
     setShowAIOptions(false);
     setIsGenerating(true);
+    setGenProgress(0);
+    const progressInterval = setInterval(() => {
+      setGenProgress(prev => prev >= 90 ? (clearInterval(progressInterval), 90) : prev + Math.random() * 8 + 2);
+    }, 500);
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
