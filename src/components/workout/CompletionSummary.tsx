@@ -188,8 +188,8 @@ export function CompletionSummary({
         return;
       }
       const data = await res.json();
-      if (data.imageUrl) { setGeneratedImageUrl(data.imageUrl); toast.success('Share image generated! ✨'); }
-    } catch { toast.error('Failed to generate image.'); } finally { setIsGenerating(false); }
+      if (data.imageUrl) { setGenProgress(100); setGeneratedImageUrl(data.imageUrl); toast.success('Share image generated! ✨'); }
+    } catch { toast.error('Failed to generate image.'); } finally { clearInterval(progressInterval); setIsGenerating(false); }
   }, [user, activityType, activityTitle, stats, profileAvatarUrl]);
 
   const handleAISelfieUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
