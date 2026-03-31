@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShareOptionsGrid, type ShareStyle } from './ShareOptionsGrid';
+import { SocialShareButtons } from './SocialShareButtons';
 import { generateStatsCard, generatePhotoCard, generateMapCard } from './ShareCardCanvas';
 
 import type { Json } from '@/integrations/supabase/types';
