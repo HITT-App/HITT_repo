@@ -161,15 +161,15 @@ export function CompletionSummary({
     setIsGenerating(true);
     try {
       let dataUrl: string;
-      if (style === 'map' && mapContainerRef?.current) {
-        dataUrl = await generateMapCard(mapContainerRef.current, activityTitle, stats);
+      if (style === 'map' && effectiveMapRef.current) {
+        dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
       } else {
-        dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, mapContainerRef?.current);
+        dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, effectiveMapRef.current);
       }
       setGeneratedImageUrl(dataUrl);
       toast.success('Share card created! 🎨');
     } catch { toast.error('Failed to create card'); } finally { setIsGenerating(false); }
-  }, [activityTitle, activityType, stats, mapContainerRef]);
+  }, [activityTitle, activityType, stats, effectiveMapRef]);
 
   const handleQuickPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
