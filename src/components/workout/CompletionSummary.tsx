@@ -401,6 +401,15 @@ export function CompletionSummary({
         )}
       </div>
 
+      {/* Social sharing */}
+      <div className="px-5 mt-3">
+        <SocialShareButtons
+          imageUrl={generatedImageUrl}
+          activityTitle={activityTitle}
+          statsText={stats.map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ''} ${s.label.toLowerCase()}`).join(' · ')}
+        />
+      </div>
+
       {/* Rating section */}
       {ratingSection && <div className="px-5 mt-3">{ratingSection}</div>}
 
