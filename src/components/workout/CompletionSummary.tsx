@@ -307,7 +307,7 @@ export function CompletionSummary({
       {/* Map snapshot */}
       {mapComponent && (
         <div className="px-5 mt-3">
-          <div ref={mapContainerRef} className="rounded-2xl overflow-hidden border border-border h-[180px]">
+          <div ref={effectiveMapRef} className="rounded-2xl overflow-hidden border border-border h-[200px]">
             {mapComponent}
           </div>
         </div>
