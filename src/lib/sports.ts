@@ -88,7 +88,7 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
   "Hyrox":          { name: "Hyrox",            icon: Flame,          color: "text-orange-500",  met: 9.5,  tracker: "timer", counterLabel: "Rounds", expectedHRZone: 5, watchMetrics: ["heartRate", "calories", "steps"] },
 
   // ═══ Paddle Sports ═══
-  "Paddle":         { name: "Paddle",           icon: Waves,          color: "text-teal-400",    met: 4.0,  tracker: "timer", counterLabel: "Sets",   expectedHRZone: 2, watchMetrics: ["heartRate", "calories"] },
+  "Paddle":         { name: "Paddle",           icon: Target,         color: "text-teal-400",    met: 4.0,  tracker: "timer", counterLabel: "Sets",   expectedHRZone: 2, watchMetrics: ["heartRate", "calories"] },
 };
 
 export function getSportConfig(name: string): SportConfig {
