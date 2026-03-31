@@ -52,7 +52,8 @@ export function CompletionSummary({
   const { user } = useAuth();
   const [shareToFeed, setShareToFeed] = useState(true);
   const [isPosting, setIsPosting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(true);
+  const [genProgress, setGenProgress] = useState(0);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [showLightbox, setShowLightbox] = useState(false);
   const [showAIOptions, setShowAIOptions] = useState(false);
