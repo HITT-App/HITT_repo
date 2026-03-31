@@ -141,11 +141,11 @@ export const SPORT_CATEGORIES = [
   { title: "Cycling", sports: ["Cycling", "Mountain Bike"] },
   { title: "Strength", sports: ["Weight Training", "Bodyweight", "Functional", "CrossFit"] },
   { title: "HIIT & Cardio", sports: ["HIIT", "Tabata", "Circuit", "Jump Rope", "Stair Climber", "Rowing", "Elliptical"] },
-  { title: "Water Sports", sports: ["Swim", "Surf", "Kayak", "Paddleboard", "Paddle"] },
+  { title: "Water Sports", sports: ["Swim", "Surf", "Kayak", "Paddleboard"] },
   { title: "Mind & Body", sports: ["Yoga", "Pilates", "Stretching", "Meditation", "Tai Chi"] },
   { title: "Combat", sports: ["Boxing", "Kickboxing", "MMA", "Jiu-Jitsu"] },
   { title: "Dance", sports: ["Dance", "Zumba"] },
-  { title: "Ball Sports", sports: ["Tennis", "Basketball", "Football", "Badminton"] },
+  { title: "Ball Sports", sports: ["Tennis", "Basketball", "Football", "Badminton", "Paddle"] },
   { title: "Winter", sports: ["Skiing", "Snowboarding"] },
   { title: "Endurance", sports: ["Triathlon", "Hyrox"] },
 ];
