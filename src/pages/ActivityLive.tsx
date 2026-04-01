@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { CompletionSummary } from "@/components/workout/CompletionSummary";
 
-import { GpsFilter, haversineDistance } from "@/lib/gps-filter";
+import { GpsFilter, haversineDistance, type GpsPoint } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
 
 // --- MET values ---
