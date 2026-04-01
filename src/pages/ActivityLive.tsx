@@ -44,9 +44,6 @@ interface GpsPoint {
 type GpsStatus = "searching" | "active" | "unavailable" | "denied";
 
 const DEFAULT_WEIGHT_KG = 70;
-const GPS_ACCURACY_THRESHOLD = 50;
-const GPS_INITIAL_ACCURACY = 100;
-const GPS_MIN_MOVE = 2;
 const AUTO_PAUSE_IDLE_MS = 10_000;
 
 const ActivityLive = () => {
