@@ -47,7 +47,8 @@ const Triathlon = () => {
   const [gpsStatus, setGpsStatus] = useState<"searching" | "active" | "unavailable" | "denied">("searching");
   const [transitioning, setTransitioning] = useState(false);
 
-  const watchIdRef = useRef<number | null>(null);
+  const gpsWatchRef = useRef<{ stop: () => void } | null>(null);
+  const gpsFilterRef = useRef(new GpsFilter());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<string>(new Date().toISOString());
   const weightKg = 75; // fallback
