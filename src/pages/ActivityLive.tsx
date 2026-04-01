@@ -107,17 +107,6 @@ const ActivityLive = () => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // --- Calculate speed from recent GPS points ---
-  const calculateSpeed = useCallback((pts: GpsPoint[]) => {
-    if (pts.length < 3) return 0;
-    const recent = pts.slice(-5);
-    const first = recent[0];
-    const last = recent[recent.length - 1];
-    const dist = haversineDistance(first.lat, first.lng, last.lat, last.lng);
-    const timeDiff = (last.ts - first.ts) / 1000;
-    if (timeDiff <= 0) return 0;
-    return (dist / timeDiff) * 3.6; // m/s to km/h
-  }, []);
 
   // --- Timer ---
   useEffect(() => {
