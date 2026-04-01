@@ -408,11 +408,14 @@ export function CompletionSummary({
               {/* Title + percentage */}
               <div className="text-center space-y-0.5">
                 <p className="text-sm font-semibold text-foreground">
-                  Generating your epic summary
+386:                   {hasMapData ? 'Creating your route card' : 'Generating your epic summary'}
                   <span className="ml-1.5 text-primary">{Math.round(Math.min(genProgress, 100))}%</span>
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {genProgress < 25 ? 'Setting the scene…' : genProgress < 50 ? 'Composing your card…' : genProgress < 75 ? 'Adding cinematic effects…' : genProgress < 95 ? 'Final touches…' : 'Finishing up ✨'}
+                  {hasMapData
+                    ? (genProgress < 40 ? 'Capturing your route…' : genProgress < 75 ? 'Overlaying stats…' : 'Finishing up ✨')
+                    : (genProgress < 25 ? 'Setting the scene…' : genProgress < 50 ? 'Composing your card…' : genProgress < 75 ? 'Adding cinematic effects…' : genProgress < 95 ? 'Final touches…' : 'Finishing up ✨')
+                  }
                 </p>
               </div>
 
