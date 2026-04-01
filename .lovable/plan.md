@@ -1,42 +1,31 @@
 
+## GPS System Upgrade Plan
 
-## Add Triathlon / Ironman as a Flagship Sport
+### 1. Kalman Filter Smoothing (`src/lib/gps-filter.ts`)
+- Implement a 1D Kalman filter for lat/lng that reduces jitter and produces clean route lines
+- Process noise dynamically adjusted based on estimated speed
+- Applied before distance calculation and position rendering
 
-### Overview
-Add a dedicated **Triathlon** mode that chains three GPS-tracked disciplines (Swim → Bike → Run) into a single multi-stage activity session. This goes beyond a normal sport entry — it gets a premium featured banner in the sport picker and a custom multi-leg tracker page.
+### 2. Tighter Accuracy & Faster Polling
+- Reduce `maximumAge` from 3000ms → 1000ms for more responsive updates
+- Reduce accuracy threshold from 50m → 30m (active) and 100m → 60m (initial lock)
+- Reduce `timeout` from 15000ms → 10000ms
 
-### What changes
+### 3. Speed-Adaptive Filtering
+- Walking (<6 km/h): tight 1.5m min-move filter, strict accuracy
+- Running (6-20 km/h): moderate 3m min-move, standard accuracy
+- Cycling (>20 km/h): relaxed 5m min-move, wider accuracy tolerance
+- Jump protection scales with speed tier (200m walk, 500m run, 1000m cycling)
 
-**1. Sport config (`src/lib/sports.ts`)**
-- Add `"Triathlon"` entry with a `Trophy` icon, distinctive gold color (`text-yellow-500`), combined MET of ~8.5, tracker type `"gps"`, and a new category
-- Add a new category `"Endurance"` to `SPORT_CATEGORIES` containing `["Triathlon"]`
-- Override `getTrackerRoute` to return a dedicated `/triathlon` route for the Triathlon key
+### 4. Capacitor Native GPS Preparation (`src/lib/native-gps.ts`)
+- Create a GPS provider abstraction that auto-detects native vs web
+- On native: use `@capacitor/geolocation` plugin for better accuracy, background tracking, and battery optimization
+- On web: falls back to current browser Geolocation API
+- Both feed into the same Kalman filter pipeline
 
-**2. Featured banner in sport picker (`src/components/ChooseSportSheet.tsx`)**
-- Add a premium "Ironman / Triathlon" banner card at the top (above Routes), styled with a gold/orange gradient, Trophy icon, and "FLAGSHIP" badge
-- Clicking it navigates to `/triathlon`
-
-**3. New Triathlon tracker page (`src/pages/Triathlon.tsx`)**
-- A dedicated multi-leg activity page with 3 sequential stages: **Swim → Bike → Run**
-- Each leg has its own timer, distance, and calorie tracking
-- Top progress bar shows the 3 legs with the active one highlighted (swim=blue, bike=cyan, run=green)
-- "Next Leg" button transitions between stages with a brief transition animation
-- Uses the existing `LiveActivityMap` for GPS tracking on Bike and Run legs
-- Swim leg uses timer mode (no GPS in water)
-- On completion, shows `CompletionSummary` with combined totals and per-leg breakdown
-- Premium dark UI with gold accent theming to feel "special"
-
-**4. Route registration (`src/App.tsx`)**
-- Add `/triathlon` route pointing to the new `Triathlon` page
-
-**5. Route constant (`src/lib/routes.ts`)**
-- Add `TRIATHLON: "/triathlon"` to `ROUTES`
-
-### Technical details
-
-- The Triathlon page manages an internal `leg` state (0=swim, 1=bike, 2=run) with separate elapsed/distance/calorie accumulators per leg
-- GPS watch starts on leg 1 (bike), continues through leg 2 (run); leg 0 (swim) is timer-only
-- Calorie calculation uses leg-specific MET values: Swim 8.0, Cycling 7.5, Run 9.8
-- Completion saves a single activity log with `activity_type: "triathlon"` and combined totals
-- The sport picker banner uses `backdrop-blur-xl` glass effect with gold gradient to match the app's premium aesthetic
-
+### Files changed
+- **New**: `src/lib/gps-filter.ts` — Kalman filter + speed-adaptive logic
+- **New**: `src/lib/native-gps.ts` — GPS provider abstraction (web + native)
+- **Modified**: `src/pages/ActivityLive.tsx` — use new GPS system
+- **Modified**: `src/pages/Triathlon.tsx` — use new GPS system
+- **Package**: Add `@capacitor/geolocation`
