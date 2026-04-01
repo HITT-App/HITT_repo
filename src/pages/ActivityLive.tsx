@@ -141,41 +141,30 @@ const ActivityLive = () => {
     return () => { wakeLockRef.current?.release(); };
   }, []);
 
-  // --- GPS ---
+  // --- GPS (Kalman-filtered, speed-adaptive, native-capable) ---
   useEffect(() => {
     if (!settings.gpsTracking) {
       setGpsStatus("unavailable");
       return;
     }
-    if (!navigator.geolocation) {
-      setGpsStatus("unavailable");
-      toast.error("GPS not available on this device");
-      return;
-    }
 
     setGpsStatus("searching");
-    hasInitialLockRef.current = false;
+    gpsFilterRef.current.reset();
+    let cancelled = false;
 
-    const id = navigator.geolocation.watchPosition(
-      (pos) => {
-        const acc = pos.coords.accuracy;
-        const threshold = hasInitialLockRef.current ? GPS_ACCURACY_THRESHOLD : GPS_INITIAL_ACCURACY;
-        if (acc > threshold) return;
+    startGpsWatch({
+      onPosition: (pos) => {
+        if (cancelled) return;
+        const result = gpsFilterRef.current.process(
+          pos.lat, pos.lng, pos.timestamp, pos.accuracy, pos.altitude,
+        );
 
-        const point: GpsPoint = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          ts: Date.now(),
-          alt: pos.coords.altitude,
-        };
+        if (!result.accepted) return;
+
         const positions = positionsRef.current;
 
-        if (positions.length > 0) {
-          const last = positions[positions.length - 1];
-          const d = haversineDistance(last.lat, last.lng, point.lat, point.lng);
-          if (d < GPS_MIN_MOVE) return;
-          if (d > 500) return;
-          setTotalDistance((prev) => prev + d);
+        if (result.distanceDelta > 0) {
+          setTotalDistance((prev) => prev + result.distanceDelta);
           lastMoveTimeRef.current = Date.now();
 
           if (autoPausedRef.current) {
@@ -185,30 +174,35 @@ const ActivityLive = () => {
           }
         }
 
-        positions.push(point);
+        positions.push(result.point);
         setPositions([...positions]);
-        setCurrentSpeed(calculateSpeed(positions));
-        if (point.alt !== null && point.alt !== undefined) {
-          setElevation(Math.round(point.alt));
+        setCurrentSpeed(result.speed);
+        if (result.point.alt !== null && result.point.alt !== undefined) {
+          setElevation(Math.round(result.point.alt));
         }
-        hasInitialLockRef.current = true;
         setGpsStatus("active");
       },
-      (err) => {
-        console.error("GPS error:", err.code, err.message);
-        if (err.code === err.PERMISSION_DENIED) {
+      onError: (code) => {
+        if (cancelled) return;
+        console.error("GPS error:", code);
+        if (code === "permission_denied") {
           setGpsStatus("denied");
           toast.error("GPS permission denied");
         } else {
           setGpsStatus("unavailable");
         }
       },
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
-    );
+    }).then((handle) => {
+      if (cancelled) { handle.stop(); return; }
+      gpsWatchRef.current = handle;
+    });
 
-    watchIdRef.current = id;
-    return () => navigator.geolocation.clearWatch(id);
-  }, [settings.gpsTracking, calculateSpeed]);
+    return () => {
+      cancelled = true;
+      gpsWatchRef.current?.stop();
+      gpsWatchRef.current = null;
+    };
+  }, [settings.gpsTracking]);
 
   // --- Auto-pause ---
   useEffect(() => {
