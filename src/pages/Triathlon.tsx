@@ -117,7 +117,7 @@ const Triathlon = () => {
   const handleNextLeg = useCallback(() => {
     if (activeLeg >= 2) return;
     setRunning(false);
-    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    gpsWatchRef.current?.stop();
     setTransitioning(true);
     setTimeout(() => {
       setActiveLeg((l) => l + 1);
