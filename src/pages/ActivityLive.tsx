@@ -70,7 +70,8 @@ const ActivityLive = () => {
   const [currentSpeed, setCurrentSpeed] = useState(0); // km/h
   const [elevation, setElevation] = useState<number | null>(null);
   const positionsRef = useRef<GpsPoint[]>([]);
-  const watchIdRef = useRef<number | null>(null);
+  const gpsWatchRef = useRef<{ stop: () => void } | null>(null);
+  const gpsFilterRef = useRef(new GpsFilter());
   const lastMoveTimeRef = useRef(Date.now());
 
   // Settings
