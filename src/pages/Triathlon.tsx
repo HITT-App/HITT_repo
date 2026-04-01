@@ -129,7 +129,7 @@ const Triathlon = () => {
   const handleFinish = useCallback(async () => {
     setRunning(false);
     setFinished(true);
-    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    gpsWatchRef.current?.stop();
 
     if (!user) return;
     const totals = legData.reduce(
