@@ -6,8 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import LiveActivityMap from "@/components/activity/LiveActivityMap";
-
-interface GpsPoint { lat: number; lng: number; ts: number }
+import { GpsFilter } from "@/lib/gps-filter";
+import { startGpsWatch } from "@/lib/native-gps";
+import type { GpsPoint } from "@/lib/gps-filter";
 
 interface LegData {
   elapsed: number;
