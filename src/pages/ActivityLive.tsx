@@ -34,12 +34,6 @@ function getMET(activityType: string): number {
   return MET_VALUES[activityType.toLowerCase()] ?? 5.0;
 }
 
-interface GpsPoint {
-  lat: number;
-  lng: number;
-  ts: number;
-  alt?: number | null;
-}
 
 type GpsStatus = "searching" | "active" | "unavailable" | "denied";
 
