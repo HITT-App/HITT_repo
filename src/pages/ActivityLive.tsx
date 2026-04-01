@@ -250,7 +250,7 @@ const ActivityLive = () => {
 
   const handleFinish = async () => {
     if (settings.autoVibrate) navigator.vibrate?.([100, 100, 200]);
-    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    gpsWatchRef.current?.stop();
     wakeLockRef.current?.release();
 
     try {
