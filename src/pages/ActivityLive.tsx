@@ -18,20 +18,8 @@ import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { CompletionSummary } from "@/components/workout/CompletionSummary";
 
-// --- Haversine ---
-function haversineDistance(
-  lat1: number, lng1: number,
-  lat2: number, lng2: number
-): number {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+import { GpsFilter, haversineDistance, type GpsPoint } from "@/lib/gps-filter";
+import { startGpsWatch } from "@/lib/native-gps";
 
 // --- MET values ---
 const MET_VALUES: Record<string, number> = {
@@ -46,19 +34,10 @@ function getMET(activityType: string): number {
   return MET_VALUES[activityType.toLowerCase()] ?? 5.0;
 }
 
-interface GpsPoint {
-  lat: number;
-  lng: number;
-  ts: number;
-  alt?: number | null;
-}
 
 type GpsStatus = "searching" | "active" | "unavailable" | "denied";
 
 const DEFAULT_WEIGHT_KG = 70;
-const GPS_ACCURACY_THRESHOLD = 50;
-const GPS_INITIAL_ACCURACY = 100;
-const GPS_MIN_MOVE = 2;
 const AUTO_PAUSE_IDLE_MS = 10_000;
 
 const ActivityLive = () => {
@@ -85,7 +64,8 @@ const ActivityLive = () => {
   const [currentSpeed, setCurrentSpeed] = useState(0); // km/h
   const [elevation, setElevation] = useState<number | null>(null);
   const positionsRef = useRef<GpsPoint[]>([]);
-  const watchIdRef = useRef<number | null>(null);
+  const gpsWatchRef = useRef<{ stop: () => void } | null>(null);
+  const gpsFilterRef = useRef(new GpsFilter());
   const lastMoveTimeRef = useRef(Date.now());
 
   // Settings
@@ -103,7 +83,7 @@ const ActivityLive = () => {
   const autoPausedRef = useRef(false);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
-  const hasInitialLockRef = useRef(false);
+  
 
   // --- Derived stats ---
   const distanceKm = totalDistance / 1000;
@@ -121,17 +101,6 @@ const ActivityLive = () => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // --- Calculate speed from recent GPS points ---
-  const calculateSpeed = useCallback((pts: GpsPoint[]) => {
-    if (pts.length < 3) return 0;
-    const recent = pts.slice(-5);
-    const first = recent[0];
-    const last = recent[recent.length - 1];
-    const dist = haversineDistance(first.lat, first.lng, last.lat, last.lng);
-    const timeDiff = (last.ts - first.ts) / 1000;
-    if (timeDiff <= 0) return 0;
-    return (dist / timeDiff) * 3.6; // m/s to km/h
-  }, []);
 
   // --- Timer ---
   useEffect(() => {
@@ -155,41 +124,30 @@ const ActivityLive = () => {
     return () => { wakeLockRef.current?.release(); };
   }, []);
 
-  // --- GPS ---
+  // --- GPS (Kalman-filtered, speed-adaptive, native-capable) ---
   useEffect(() => {
     if (!settings.gpsTracking) {
       setGpsStatus("unavailable");
       return;
     }
-    if (!navigator.geolocation) {
-      setGpsStatus("unavailable");
-      toast.error("GPS not available on this device");
-      return;
-    }
 
     setGpsStatus("searching");
-    hasInitialLockRef.current = false;
+    gpsFilterRef.current.reset();
+    let cancelled = false;
 
-    const id = navigator.geolocation.watchPosition(
-      (pos) => {
-        const acc = pos.coords.accuracy;
-        const threshold = hasInitialLockRef.current ? GPS_ACCURACY_THRESHOLD : GPS_INITIAL_ACCURACY;
-        if (acc > threshold) return;
+    startGpsWatch({
+      onPosition: (pos) => {
+        if (cancelled) return;
+        const result = gpsFilterRef.current.process(
+          pos.lat, pos.lng, pos.timestamp, pos.accuracy, pos.altitude,
+        );
 
-        const point: GpsPoint = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          ts: Date.now(),
-          alt: pos.coords.altitude,
-        };
+        if (!result.accepted) return;
+
         const positions = positionsRef.current;
 
-        if (positions.length > 0) {
-          const last = positions[positions.length - 1];
-          const d = haversineDistance(last.lat, last.lng, point.lat, point.lng);
-          if (d < GPS_MIN_MOVE) return;
-          if (d > 500) return;
-          setTotalDistance((prev) => prev + d);
+        if (result.distanceDelta > 0) {
+          setTotalDistance((prev) => prev + result.distanceDelta);
           lastMoveTimeRef.current = Date.now();
 
           if (autoPausedRef.current) {
@@ -199,30 +157,35 @@ const ActivityLive = () => {
           }
         }
 
-        positions.push(point);
+        positions.push(result.point);
         setPositions([...positions]);
-        setCurrentSpeed(calculateSpeed(positions));
-        if (point.alt !== null && point.alt !== undefined) {
-          setElevation(Math.round(point.alt));
+        setCurrentSpeed(result.speed);
+        if (result.point.alt !== null && result.point.alt !== undefined) {
+          setElevation(Math.round(result.point.alt));
         }
-        hasInitialLockRef.current = true;
         setGpsStatus("active");
       },
-      (err) => {
-        console.error("GPS error:", err.code, err.message);
-        if (err.code === err.PERMISSION_DENIED) {
+      onError: (code) => {
+        if (cancelled) return;
+        console.error("GPS error:", code);
+        if (code === "permission_denied") {
           setGpsStatus("denied");
           toast.error("GPS permission denied");
         } else {
           setGpsStatus("unavailable");
         }
       },
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
-    );
+    }).then((handle) => {
+      if (cancelled) { handle.stop(); return; }
+      gpsWatchRef.current = handle;
+    });
 
-    watchIdRef.current = id;
-    return () => navigator.geolocation.clearWatch(id);
-  }, [settings.gpsTracking, calculateSpeed]);
+    return () => {
+      cancelled = true;
+      gpsWatchRef.current?.stop();
+      gpsWatchRef.current = null;
+    };
+  }, [settings.gpsTracking]);
 
   // --- Auto-pause ---
   useEffect(() => {
@@ -270,7 +233,7 @@ const ActivityLive = () => {
 
   const handleFinish = async () => {
     if (settings.autoVibrate) navigator.vibrate?.([100, 100, 200]);
-    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    gpsWatchRef.current?.stop();
     wakeLockRef.current?.release();
 
     try {

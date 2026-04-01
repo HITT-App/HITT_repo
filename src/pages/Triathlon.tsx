@@ -6,8 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import LiveActivityMap from "@/components/activity/LiveActivityMap";
-
-interface GpsPoint { lat: number; lng: number; ts: number }
+import { GpsFilter } from "@/lib/gps-filter";
+import { startGpsWatch } from "@/lib/native-gps";
+import type { GpsPoint } from "@/lib/gps-filter";
 
 interface LegData {
   elapsed: number;
@@ -46,7 +47,8 @@ const Triathlon = () => {
   const [gpsStatus, setGpsStatus] = useState<"searching" | "active" | "unavailable" | "denied">("searching");
   const [transitioning, setTransitioning] = useState(false);
 
-  const watchIdRef = useRef<number | null>(null);
+  const gpsWatchRef = useRef<{ stop: () => void } | null>(null);
+  const gpsFilterRef = useRef(new GpsFilter());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<string>(new Date().toISOString());
   const weightKg = 75; // fallback
@@ -68,49 +70,54 @@ const Triathlon = () => {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [running, activeLeg, finished]);
 
-  // GPS for bike & run legs
+  // GPS for bike & run legs (Kalman-filtered, native-capable)
   useEffect(() => {
     if (!running || !LEGS[activeLeg].gps) return;
-    if (!navigator.geolocation) { setGpsStatus("unavailable"); return; }
 
     setGpsStatus("searching");
-    const id = navigator.geolocation.watchPosition(
-      (pos) => {
+    gpsFilterRef.current.reset();
+    let cancelled = false;
+
+    startGpsWatch({
+      onPosition: (pos) => {
+        if (cancelled) return;
+        const result = gpsFilterRef.current.process(
+          pos.lat, pos.lng, pos.timestamp, pos.accuracy, pos.altitude,
+        );
+        if (!result.accepted) return;
+
         setGpsStatus("active");
-        const point: GpsPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
         setLegData((prev) => {
           const next = [...prev];
           const leg = { ...next[activeLeg] };
-          const positions = [...leg.positions, point];
-
-          // Haversine distance
-          if (positions.length >= 2) {
-            const p1 = positions[positions.length - 2];
-            const p2 = positions[positions.length - 1];
-            const R = 6371;
-            const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
-            const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
-            const a = Math.sin(dLat / 2) ** 2 + Math.cos((p1.lat * Math.PI) / 180) * Math.cos((p2.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-            const d = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            if (d > 0.002 && d < 0.5) leg.distance += d;
+          leg.positions = [...leg.positions, result.point];
+          if (result.distanceDelta > 0) {
+            leg.distance += result.distanceDelta / 1000; // convert m to km
           }
-
-          leg.positions = positions;
           next[activeLeg] = leg;
           return next;
         });
       },
-      (err) => setGpsStatus(err.code === 1 ? "denied" : "unavailable"),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 }
-    );
-    watchIdRef.current = id;
-    return () => navigator.geolocation.clearWatch(id);
+      onError: (code) => {
+        if (cancelled) return;
+        setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
+      },
+    }).then((handle) => {
+      if (cancelled) { handle.stop(); return; }
+      gpsWatchRef.current = handle;
+    });
+
+    return () => {
+      cancelled = true;
+      gpsWatchRef.current?.stop();
+      gpsWatchRef.current = null;
+    };
   }, [running, activeLeg]);
 
   const handleNextLeg = useCallback(() => {
     if (activeLeg >= 2) return;
     setRunning(false);
-    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    gpsWatchRef.current?.stop();
     setTransitioning(true);
     setTimeout(() => {
       setActiveLeg((l) => l + 1);
@@ -122,7 +129,7 @@ const Triathlon = () => {
   const handleFinish = useCallback(async () => {
     setRunning(false);
     setFinished(true);
-    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    gpsWatchRef.current?.stop();
 
     if (!user) return;
     const totals = legData.reduce(
