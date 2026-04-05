@@ -2329,6 +2329,7 @@ export type Database = {
       subscription_plans: {
         Row: {
           created_at: string
+          description: string | null
           features: string[]
           icon: string
           id: string
@@ -2339,10 +2340,12 @@ export type Database = {
           period: string
           price_amount: number
           sort_order: number
+          trial_days: number
           updated_at: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           features?: string[]
           icon?: string
           id?: string
@@ -2353,10 +2356,12 @@ export type Database = {
           period?: string
           price_amount?: number
           sort_order?: number
+          trial_days?: number
           updated_at?: string
         }
         Update: {
           created_at?: string
+          description?: string | null
           features?: string[]
           icon?: string
           id?: string
@@ -2367,6 +2372,7 @@ export type Database = {
           period?: string
           price_amount?: number
           sort_order?: number
+          trial_days?: number
           updated_at?: string
         }
         Relationships: []
