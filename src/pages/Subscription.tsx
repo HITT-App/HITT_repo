@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, Crown, Zap, Star, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, Crown, Zap, Star, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,6 +15,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 interface Plan {
   id: string;
   name: string;
+  description: string | null;
   price_amount: number;
   period: string;
   icon: string;
@@ -22,6 +23,7 @@ interface Plan {
   features: string[];
   limitations: string[];
   sort_order: number;
+  trial_days: number;
 }
 
 export default function Subscription() {
@@ -56,6 +58,8 @@ export default function Subscription() {
     if (amount === 0) return 'Free';
     return `£${amount.toFixed(2)}`;
   };
+
+  const selectedPlanData = plans.find((p) => p.id === selectedPlan);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -101,7 +105,7 @@ export default function Subscription() {
                     </div>
                   )}
 
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "w-12 h-12 rounded-xl flex items-center justify-center",
@@ -131,6 +135,17 @@ export default function Subscription() {
                     </div>
                   </div>
 
+                  {plan.trial_days > 0 && (
+                    <div className="mb-3 flex items-center gap-2 text-sm text-blue-400 bg-blue-500/10 rounded-lg px-3 py-1.5 w-fit">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>{plan.trial_days}-day free trial included</span>
+                    </div>
+                  )}
+
+                  {plan.description && (
+                    <p className="text-sm text-muted-foreground mb-3">{plan.description}</p>
+                  )}
+
                   <div className="space-y-2">
                     {plan.features.map((feature, index) => (
                       <div key={index} className="flex items-center gap-2 text-sm">
@@ -156,10 +171,18 @@ export default function Subscription() {
           className="w-full h-14 rounded-2xl text-lg font-semibold"
           disabled={loading || !selectedPlan}
         >
-          {plans.find((p) => p.id === selectedPlan)?.price_amount === 0
+          {selectedPlanData?.price_amount === 0
             ? "Continue with Basic"
-            : "Subscribe Now"}
+            : selectedPlanData?.trial_days && selectedPlanData.trial_days > 0
+              ? `Start ${selectedPlanData.trial_days}-Day Free Trial`
+              : "Subscribe Now"}
         </Button>
+
+        {selectedPlanData?.trial_days && selectedPlanData.trial_days > 0 && (
+          <p className="text-xs text-center text-muted-foreground">
+            Your free trial lasts {selectedPlanData.trial_days} days. You won't be charged until it ends. Cancel anytime.
+          </p>
+        )}
 
         <p className="text-xs text-center text-muted-foreground">
           By subscribing, you agree to our Terms of Service and Privacy Policy.
