@@ -112,33 +112,45 @@ workflows:
       - name: Sync Capacitor
         script: npx cap sync ios
 
-      - name: Add HealthKit capability
+      - name: Add HealthKit capability and permissions
         script: |
           # Add HealthKit entitlement
           ENTITLEMENTS="ios/App/App/App.entitlements"
           if [ ! -f "$ENTITLEMENTS" ]; then
-            cat > "$ENTITLEMENTS" << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>com.apple.developer.healthkit</key>
-            <true/>
-            <key>com.apple.developer.healthkit.access</key>
-            <array>
-              <string>health-records</string>
-            </array>
-          </dict>
-          </plist>
-          EOF
+            cat > "$ENTITLEMENTS" << 'ENTEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>com.apple.developer.healthkit</key>
+  <true/>
+  <key>com.apple.developer.healthkit.access</key>
+  <array>
+    <string>health-records</string>
+  </array>
+</dict>
+</plist>
+ENTEOF
           fi
 
-          # Add HealthKit usage descriptions to Info.plist
+          # Add usage descriptions to Info.plist
           PLIST="ios/App/App/Info.plist"
           if ! grep -q "NSHealthShareUsageDescription" "$PLIST"; then
             /usr/libexec/PlistBuddy -c "Add :NSHealthShareUsageDescription string 'HIIT Fitness reads your health data to track workouts, steps, heart rate and calories.'" "$PLIST"
             /usr/libexec/PlistBuddy -c "Add :NSHealthUpdateUsageDescription string 'HIIT Fitness saves workout data to Apple Health.'" "$PLIST"
+          fi
+          if ! grep -q "NSMotionUsageDescription" "$PLIST"; then
             /usr/libexec/PlistBuddy -c "Add :NSMotionUsageDescription string 'HIIT Fitness uses motion data to count your steps and track activity.'" "$PLIST"
+          fi
+          if ! grep -q "NSLocationWhenInUseUsageDescription" "$PLIST"; then
+            /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'HIIT Fitness uses your location to track your workout route and calculate distance.'" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Add :NSLocationAlwaysAndWhenInUseUsageDescription string 'HIIT Fitness uses background location to keep tracking your workout even when the screen is off.'" "$PLIST"
+          fi
+
+          # Add background modes for location updates
+          if ! grep -q "UIBackgroundModes" "$PLIST"; then
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string location" "$PLIST"
           fi
 
       - name: Install CocoaPods
