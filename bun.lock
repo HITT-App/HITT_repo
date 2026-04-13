@@ -295,7 +295,7 @@
 
     "@capacitor/synapse": ["@capacitor/synapse@1.0.4", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/synapse/-/synapse-1.0.4.tgz", {}, "sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw=="],
 
-    "@capgo/capacitor-health": ["@capgo/capacitor-health@8.4.5", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capgo/capacitor-health/-/capacitor-health-8.4.5.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-+5b+q4zfuAbstSp6sWt/QBuO9qtbrBQkQ60gCVXNf25ZwENILw8Y/71PlWDQShLriQvEBxSMuMDz3yQ6bnl74w=="],
+    "@capgo/capacitor-health": ["@capgo/capacitor-health@8.4.6", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capgo/capacitor-health/-/capacitor-health-8.4.6.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-8lCiaGhrBvgoyo3Qre3gX3sJ97EuZfc/DOfGOYBZ7RbGq19VqntkV+JsLTClZBMq7XEkBlOInSrm27aG+rZuEQ=="],
 
     "@elevenlabs/client": ["@elevenlabs/client@0.13.0", "", { "dependencies": { "@elevenlabs/types": "0.4.0", "livekit-client": "^2.11.4" } }, "sha512-0UjouSOVK+mECJuYg/DqM9V1NIsabIrlRmw/RjEMS5UmOpsAga3KxMC3et8fKh8G/MI2cZtLr2764wIOZgyrQg=="],
 
