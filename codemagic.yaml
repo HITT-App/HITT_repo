@@ -114,23 +114,26 @@ workflows:
 
       - name: Add HealthKit capability and permissions
         script: |
-          # Add HealthKit entitlement
           ENTITLEMENTS="ios/App/App/App.entitlements"
           if [ ! -f "$ENTITLEMENTS" ]; then
-            cat > "$ENTITLEMENTS" << 'ENTEOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>com.apple.developer.healthkit</key>
-  <true/>
-  <key>com.apple.developer.healthkit.access</key>
-  <array>
-    <string>health-records</string>
-  </array>
-</dict>
-</plist>
-ENTEOF
+            /usr/bin/python3 -c "
+          import os
+          content = '''<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+          <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+          <plist version=\"1.0\">
+          <dict>
+            <key>com.apple.developer.healthkit</key>
+            <true/>
+            <key>com.apple.developer.healthkit.access</key>
+            <array>
+              <string>health-records</string>
+            </array>
+          </dict>
+          </plist>'''
+          import textwrap
+          with open('$ENTITLEMENTS', 'w') as f:
+              f.write(textwrap.dedent(content))
+          "
           fi
 
           # Add usage descriptions to Info.plist
