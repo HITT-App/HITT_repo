@@ -7,7 +7,7 @@ workflows:
       java: 17
       node: 20
       android_signing:
-        - keystore_reference: hiit_keystore  # Set up in Codemagic UI → Code signing
+        - keystore: hiit_keystore  # Set up in Codemagic UI → Code signing
       groups:
         - google_play  # PLAY_STORE_CREDENTIALS (service account JSON)
     triggering:
