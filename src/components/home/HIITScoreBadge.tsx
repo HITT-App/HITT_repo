@@ -11,12 +11,14 @@ interface HIITScoreBadgeProps {
 }
 
 export function HIITScoreBadge({
-  score = 61,
+  score,
   label = "Average Fitness",
   size = "md",
   showArrow = true,
   onClick,
 }: HIITScoreBadgeProps) {
+  const hasScore = typeof score === "number";
+  const displayScore = hasScore ? score : 0;
   const navigate = useNavigate();
 
   const sizeClasses = {
@@ -33,10 +35,10 @@ export function HIITScoreBadge({
     }
   };
 
-  // Calculate color based on score
   const getScoreColor = () => {
-    if (score >= 75) return "text-green-500";
-    if (score >= 40) return "text-primary";
+    if (!hasScore) return "text-muted-foreground";
+    if (displayScore >= 75) return "text-green-500";
+    if (displayScore >= 40) return "text-primary";
     return "text-red-500";
   };
 
@@ -63,11 +65,11 @@ export function HIITScoreBadge({
             stroke="currentColor"
             strokeWidth="3"
             strokeLinecap="round"
-            strokeDasharray={`${(score / 100) * 283} 283`}
+            strokeDasharray={`${(displayScore / 100) * 283} 283`}
             className="opacity-80"
           />
         </svg>
-        <span className="relative z-10">{score}</span>
+        <span className="relative z-10">{hasScore ? displayScore : "—"}</span>
       </div>
 
       {/* Label */}
