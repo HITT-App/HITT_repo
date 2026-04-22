@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { decode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { aiChatCompletion } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -128,26 +129,10 @@ STYLE:
       ];
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI service not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Call Gemini image generation
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview",
-        messages: [{ role: "user", content: messageContent }],
-        modalities: ["image", "text"],
-      }),
+    const aiResponse = await aiChatCompletion({
+      model: "google/gemini-3.1-flash-image-preview",
+      messages: [{ role: "user", content: messageContent }],
+      modalities: ["image", "text"],
     });
 
     if (!aiResponse.ok) {

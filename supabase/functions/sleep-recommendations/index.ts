@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiChatCompletion } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,28 +96,13 @@ Based on this data, provide 3-4 actionable sleep improvement recommendations. Co
 4. Common sleep issues and solutions
 5. Sleep hygiene best practices`;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
-      return new Response(JSON.stringify({ error: "AI service not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: prompt },
-          { role: "user", content: "Generate personalized sleep recommendations for me." },
-        ],
-        tools: [
+    const aiResponse = await aiChatCompletion({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: "Generate personalized sleep recommendations for me." },
+      ],
+      tools: [
           {
             type: "function",
             function: {
@@ -164,9 +150,8 @@ Based on this data, provide 3-4 actionable sleep improvement recommendations. Co
               },
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_sleep_recommendations" } },
-      }),
+      ],
+      tool_choice: { type: "function", function: { name: "generate_sleep_recommendations" } },
     });
 
     if (!aiResponse.ok) {

@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { aiChatCompletion } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -124,31 +125,23 @@ serve(async (req) => {
       .slice(0, 6);
 
     // Generate AI message based on recommendations
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     let aiMessage = "Here are some personalized workout recommendations based on your preferences and history.";
 
-    if (lovableApiKey && preferences) {
+    if (preferences) {
       try {
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${lovableApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              {
-                role: "system",
-                content: "You are a friendly fitness coach. Generate a short, encouraging message (max 2 sentences) recommending workouts based on user preferences."
-              },
-              {
-                role: "user",
-                content: `User preferences: Goal: ${preferences.workout_goal}, Fitness level: ${preferences.fitness_level}, Days per week: ${preferences.days_per_week}. Top recommended workout: ${recommendations[0]?.title}. Generate an encouraging message.`
-              }
-            ],
-            max_tokens: 100
-          })
+        const aiResponse = await aiChatCompletion({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content: "You are a friendly fitness coach. Generate a short, encouraging message (max 2 sentences) recommending workouts based on user preferences."
+            },
+            {
+              role: "user",
+              content: `User preferences: Goal: ${preferences.workout_goal}, Fitness level: ${preferences.fitness_level}, Days per week: ${preferences.days_per_week}. Top recommended workout: ${recommendations[0]?.title}. Generate an encouraging message.`
+            }
+          ],
+          max_tokens: 100,
         });
 
         if (aiResponse.ok) {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiChatCompletion } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,11 +71,6 @@ serve(async (req) => {
     }
 
     const { imageData } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
 
     if (!imageData) {
       return new Response(
@@ -88,30 +84,23 @@ serve(async (req) => {
       processedImageData = `data:image/jpeg;base64,${processedImageData}`;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: { url: processedImageData },
-              },
-              {
-                type: "text",
-                text: FOOD_ANALYSIS_PROMPT,
-              },
-            ],
-          },
-        ],
-      }),
+    const response = await aiChatCompletion({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: processedImageData },
+            },
+            {
+              type: "text",
+              text: FOOD_ANALYSIS_PROMPT,
+            },
+          ],
+        },
+      ],
     });
 
     if (!response.ok) {

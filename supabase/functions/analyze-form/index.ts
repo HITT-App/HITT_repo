@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiChatCompletion } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -107,44 +108,28 @@ serve(async (req) => {
       throw new Error('No image provided');
     }
 
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      logEvent("error", "Missing LOVABLE_API_KEY configuration", {
-        correlationId,
-        eventType: "config_error",
-      });
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
-
     const exerciseContext = exerciseName ? `The person is performing: ${exerciseName}. ` : '';
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `${exerciseContext}${FORM_ANALYSIS_PROMPT}`
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
-                }
+    const response = await aiChatCompletion({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `${exerciseContext}${FORM_ANALYSIS_PROMPT}`
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
               }
-            ]
-          }
-        ],
-        max_tokens: 1000
-      })
+            }
+          ]
+        }
+      ],
+      max_tokens: 1000,
     });
 
     if (!response.ok) {
