@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -173,10 +174,12 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const token = authHeader.replace('Bearer ', '');
     const { data: claimsData, error: claimsError } = await supabase.auth.getUser(token);
@@ -190,6 +193,21 @@ serve(async (req) => {
 
     const userId = claimsData.user.id;
     console.log(`AI Coach request from authenticated user: ${userId}`);
+
+    const quota = await checkAIQuota(supabaseAdmin, userId, {
+      dailyCap: DEFAULT_QUOTAS.ai_coach,
+      generationType: "ai_coach",
+    });
+    if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
+
+    // Log the call so it counts against the next quota check. We don't store
+    // the full conversation here — prompts can contain PII.
+    await supabaseAdmin.from("ai_generation_log").insert({
+      user_id: userId,
+      generation_type: "ai_coach",
+      model: "google/gemini-2.5-flash",
+      prompt: { redacted: true },
+    });
 
     // ─── Fetch user context for personalisation ───
     const [

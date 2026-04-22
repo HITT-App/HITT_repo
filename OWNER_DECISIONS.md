@@ -44,6 +44,60 @@ Additional actions to reward (owner to confirm values):
 
 **Decision needed:** point values for each, and whether any are one-time vs repeatable (e.g. "first post" bonus vs "every post").
 
+### Account deletion flow (App Store blocker)
+
+Apple App Store Guideline 5.1.1(v) requires in-app account deletion for any app with account creation. **The current app has none — submission will be rejected.**
+
+Needs:
+- A "Delete my account" destructive button in the Profile page
+- A confirmation modal with friction (typed confirmation, plus an explainer of what happens)
+- An edge function that cascades delete across: `auth.users`, and every user-scoped table (profiles, meal_logs, sleep_logs, workouts completed, subscriptions, community posts, etc.)
+- Revocation of the session
+- Optional: grace period (30-day soft delete) before hard purge — gives users a window to undo an accidental delete and is also a light retention lever
+
+**Decision needed:**
+- Hard delete immediately, or 30-day soft delete with restore option?
+- Copy for the confirmation modal — this is a last-touch moment with the user
+- Anything beyond the core tables that should be wiped (e.g. ai_generation_log, error_logs, push subscriptions)?
+
+Pure engineering is ready to go once these are answered.
+
+### Privacy policy rewrite (ICO exposure)
+
+Current `src/pages/Privacy.tsx` is a generic template. For a UK fitness app handling **Article 9 special-category health data** (heart rate, sleep, body composition), we need a real policy documenting:
+
+- Named subprocessors (Supabase, the AI provider after swap, ElevenLabs if voice stays, Apple Health, Google Health Connect)
+- Specific data categories collected and the legal basis for each (explicit consent for health data)
+- Data retention periods — how long we hold `health_metrics`, `ai_generation_log`, `error_logs`, deleted accounts
+- UK/EU data residency (Supabase project region: West EU London — confirm with Supabase plan)
+- DPO / data-protection contact email
+- Right to access / delete / export (Art. 15 / 17 / 20)
+- International transfers (the AI provider may be in the US — SCCs needed)
+
+**Decision needed:**
+- Do you want to write this yourself / hire a template (e.g. Termly, Iubenda ~£100), or should I draft a first pass from the codebase facts for you to review?
+- DPO contact — use your email, or set up a dedicated `privacy@hiitfitness.app` once the domain exists?
+- Retention periods per category
+
+### Error monitoring upgrade path
+
+We've shipped a Supabase-native error log (`error_logs` table, `log-error` edge function, `ErrorBoundary` wired up). That's enough for MVP debugging — new errors land in a queryable table visible to admins.
+
+**Decision needed:** upgrade to Sentry (or equivalent like Bugsnag, Rollbar) before TestFlight, or stay on the native log until real volume requires it?
+
+Sentry's free tier covers 5K events/month — easily enough for TestFlight. If yes, you create the Sentry project and give me the DSN; I wire it up in ~1 hour and keep the native log as a backup.
+
+### Analytics provider
+
+We don't have product analytics yet. The architect flagged this as important before a £150K investor TestFlight — can't show D1/D7/D30 retention, feature adoption, funnel dropoffs without it.
+
+Options in order of fit:
+- **PostHog** (free tier: 1M events/mo, open source, self-hostable later)
+- **Mixpanel** (fitness apps use it a lot, free tier: 20M events/mo but limited features)
+- **Amplitude** (most polished for investor-facing dashboards, free: 10M events/mo)
+
+**Decision needed:** which one, and what events should we instrument? Baseline events I'd suggest: user_signed_up, workout_started, workout_completed, meal_logged, plan_generated, subscription_checkout_started, premium_feature_viewed.
+
 ### Health-data sync — scope and defaults
 
 HealthKit (iOS) and Health Connect (Android) wiring is live. The first iOS build after the founder opens the project in Xcode will prompt the user for permission to read heart rate, steps, resting heart rate, sleep, weight, body fat, oxygen saturation, calories, and workouts — and to write workouts back.

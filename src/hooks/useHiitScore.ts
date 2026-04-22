@@ -31,14 +31,19 @@ export function useHiitScore() {
 
   const fetchLatest = useCallback(async (): Promise<HiitScoreRow | null> => {
     if (!user) return null;
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from("hiit_score_history")
       .select("score, components, computed_at")
       .eq("user_id", user.id)
       .order("computed_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    return data ?? null;
+    if (!data) return null;
+    return {
+      score: data.score,
+      components: data.components as unknown as HiitScoreComponents,
+      computed_at: data.computed_at,
+    };
   }, [user]);
 
   const recompute = useCallback(async () => {

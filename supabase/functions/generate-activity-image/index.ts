@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { decode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,6 +39,23 @@ serve(async (req) => {
       });
     }
 
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const quota = await checkAIQuota(supabaseAdmin, user.id, {
+      dailyCap: DEFAULT_QUOTAS.activity_image,
+      generationType: "activity_image",
+    });
+    if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
+
+    await supabaseAdmin.from("ai_generation_log").insert({
+      user_id: user.id,
+      generation_type: "activity_image",
+      model: "google/gemini-3.1-flash-image-preview",
+      prompt: { redacted: true },
+    });
+
     const { activityType, stats, userPhotoUrl, userPhotoBase64 } = await req.json();
 
     // Build stats overlay text
@@ -66,8 +84,9 @@ serve(async (req) => {
 
     const scene = sceneMap[activityName] || sceneMap["workout"];
 
-    // Logo watermark URL stored in activity-images bucket
-    const logoUrl = `${Deno.env.get("SUPABASE_URL")!}/storage/v1/object/public/activity-images/branding/hiit-watermark.png`;
+    // Branding lives in the public app-assets bucket (activity-images is now
+    // private for user-generated content).
+    const logoUrl = `${Deno.env.get("SUPABASE_URL")!}/storage/v1/object/public/app-assets/branding/hiit-watermark.png`;
 
     let prompt: string;
     let messageContent: any;
@@ -194,11 +213,21 @@ STYLE:
       });
     }
 
-    const { data: { publicUrl } } = adminClient.storage
+    // Signed URL (1 week) because the bucket is private. Clients should
+    // refresh the URL from storage on expiry.
+    const { data: signed, error: signedError } = await adminClient.storage
       .from("activity-images")
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 7 * 24 * 3600);
 
-    return new Response(JSON.stringify({ imageUrl: publicUrl }), {
+    if (signedError || !signed) {
+      console.error("Signed URL error:", signedError);
+      return new Response(JSON.stringify({ error: "Failed to sign image URL" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ imageUrl: signed.signedUrl, path: fileName }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

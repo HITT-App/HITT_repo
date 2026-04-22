@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +25,24 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const quota = await checkAIQuota(supabaseAdmin, user.id, {
+      dailyCap: DEFAULT_QUOTAS.smart_insights,
+      generationType: "smart_insights",
+    });
+    if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
+
+    await supabaseAdmin.from("ai_generation_log").insert({
+      user_id: user.id,
+      generation_type: "smart_insights",
+      model: "google/gemini-2.5-flash",
+      prompt: { redacted: true },
+    });
 
     const { type, activityData } = await req.json();
 

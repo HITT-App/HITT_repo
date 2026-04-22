@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,6 +50,12 @@ serve(async (req) => {
     if (authError || !user) return json({ error: "Unauthorized" }, 401);
 
     const admin: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const quota = await checkAIQuota(admin, user.id, {
+      dailyCap: DEFAULT_QUOTAS.workout_plan,
+      generationType: "workout_plan",
+    });
+    if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
 
     const body = (await req.json().catch(() => ({}))) as GenerateRequest;
 

@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   children: ReactNode;
@@ -14,37 +15,39 @@ interface State {
   correlationId: string;
 }
 
-// Structured error logging for monitoring
 function logError(error: Error, errorInfo: ErrorInfo, correlationId: string) {
-  const errorLog = {
-    timestamp: new Date().toISOString(),
-    level: "error",
-    service: "frontend",
-    correlationId,
-    message: error.message,
-    stack: error.stack,
-    componentStack: errorInfo.componentStack,
-    url: window.location.href,
-    userAgent: navigator.userAgent,
-    eventType: "unhandled_error",
-  };
-  
-  // Log to console in structured format
-  console.error(JSON.stringify(errorLog));
-  
-  // In production, this would send to monitoring service
-  // For now, we log to localStorage for debugging
-  try {
-    const existingLogs = JSON.parse(localStorage.getItem("errorLogs") || "[]");
-    existingLogs.push(errorLog);
-    // Keep only last 50 errors
-    if (existingLogs.length > 50) {
-      existingLogs.shift();
-    }
-    localStorage.setItem("errorLogs", JSON.stringify(existingLogs));
-  } catch {
-    // Silently fail if localStorage is not available
-  }
+  console.error(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: "error",
+      service: "frontend",
+      correlationId,
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      eventType: "unhandled_error",
+    })
+  );
+
+  // Send to the log-error edge function. Fire-and-forget — we don't want a
+  // failing log request to mask the original error.
+  supabase.functions
+    .invoke("log-error", {
+      body: {
+        source: "frontend:error-boundary",
+        message: error.message,
+        stack: error.stack,
+        url: window.location.href,
+        user_agent: navigator.userAgent,
+        metadata: {
+          correlation_id: correlationId,
+          component_stack: errorInfo.componentStack,
+        },
+      },
+    })
+    .catch(() => {});
 }
 
 export class ErrorBoundary extends Component<Props, State> {

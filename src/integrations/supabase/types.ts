@@ -10,7 +10,32 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -261,6 +286,48 @@ export type Database = {
           suggested_duration_minutes?: number | null
           suggested_time?: string | null
           title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_generation_log: {
+        Row: {
+          created_at: string
+          error: string | null
+          generation_type: string
+          id: string
+          input_tokens: number | null
+          latency_ms: number | null
+          model: string | null
+          output_tokens: number | null
+          prompt: Json
+          response: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          generation_type: string
+          id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          prompt: Json
+          response?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          generation_type?: string
+          id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          prompt?: Json
+          response?: Json | null
           user_id?: string
         }
         Relationships: []
@@ -1464,6 +1531,8 @@ export type Database = {
           notes: string | null
           recorded_at: string
           secondary_value: number | null
+          source_platform: string | null
+          source_platform_id: string | null
           unit: string
           user_id: string
           value: number
@@ -1475,6 +1544,8 @@ export type Database = {
           notes?: string | null
           recorded_at?: string
           secondary_value?: number | null
+          source_platform?: string | null
+          source_platform_id?: string | null
           unit?: string
           user_id: string
           value: number
@@ -1486,9 +1557,35 @@ export type Database = {
           notes?: string | null
           recorded_at?: string
           secondary_value?: number | null
+          source_platform?: string | null
+          source_platform_id?: string | null
           unit?: string
           user_id?: string
           value?: number
+        }
+        Relationships: []
+      }
+      hiit_score_history: {
+        Row: {
+          components: Json
+          computed_at: string
+          id: string
+          score: number
+          user_id: string
+        }
+        Insert: {
+          components?: Json
+          computed_at?: string
+          id?: string
+          score: number
+          user_id: string
+        }
+        Update: {
+          components?: Json
+          computed_at?: string
+          id?: string
+          score?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -2172,6 +2269,8 @@ export type Database = {
           score_impact: number | null
           sleep_date: string
           sleep_quality: number | null
+          source_platform: string | null
+          source_platform_id: string | null
           user_id: string
           wake_time: string
         }
@@ -2188,6 +2287,8 @@ export type Database = {
           score_impact?: number | null
           sleep_date: string
           sleep_quality?: number | null
+          source_platform?: string | null
+          source_platform_id?: string | null
           user_id: string
           wake_time: string
         }
@@ -2204,6 +2305,8 @@ export type Database = {
           score_impact?: number | null
           sleep_date?: string
           sleep_quality?: number | null
+          source_platform?: string | null
+          source_platform_id?: string | null
           user_id?: string
           wake_time?: string
         }
@@ -2460,6 +2563,124 @@ export type Database = {
         }
         Relationships: []
       }
+      user_meal_plan_items: {
+        Row: {
+          calories: number | null
+          carbs_grams: number | null
+          category: string
+          description: string | null
+          fat_grams: number | null
+          id: string
+          logged_at: string | null
+          meal_id: string | null
+          plan_id: string
+          protein_grams: number | null
+          scheduled_date: string
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_grams?: number | null
+          category: string
+          description?: string | null
+          fat_grams?: number | null
+          id?: string
+          logged_at?: string | null
+          meal_id?: string | null
+          plan_id: string
+          protein_grams?: number | null
+          scheduled_date: string
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_grams?: number | null
+          category?: string
+          description?: string | null
+          fat_grams?: number | null
+          id?: string
+          logged_at?: string | null
+          meal_id?: string | null
+          plan_id?: string
+          protein_grams?: number | null
+          scheduled_date?: string
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_meal_plan_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "user_meal_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_meal_plans: {
+        Row: {
+          allergens: string[] | null
+          created_at: string
+          dietary_restrictions: string[] | null
+          end_date: string
+          generation_log_id: string | null
+          goal: string | null
+          id: string
+          start_date: string
+          status: string
+          target_daily_calories: number | null
+          target_daily_protein_grams: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allergens?: string[] | null
+          created_at?: string
+          dietary_restrictions?: string[] | null
+          end_date: string
+          generation_log_id?: string | null
+          goal?: string | null
+          id?: string
+          start_date: string
+          status?: string
+          target_daily_calories?: number | null
+          target_daily_protein_grams?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allergens?: string[] | null
+          created_at?: string
+          dietary_restrictions?: string[] | null
+          end_date?: string
+          generation_log_id?: string | null
+          goal?: string | null
+          id?: string
+          start_date?: string
+          status?: string
+          target_daily_calories?: number | null
+          target_daily_protein_grams?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_meal_plans_generation_log_id_fkey"
+            columns: ["generation_log_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generation_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -2513,6 +2734,113 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_workout_plan_items: {
+        Row: {
+          completed_at: string | null
+          day_index: number
+          id: string
+          notes: string | null
+          plan_id: string
+          scheduled_date: string
+          sequence_in_day: number
+          status: string
+          user_id: string
+          workout_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          day_index: number
+          id?: string
+          notes?: string | null
+          plan_id: string
+          scheduled_date: string
+          sequence_in_day?: number
+          status?: string
+          user_id: string
+          workout_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          day_index?: number
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          scheduled_date?: string
+          sequence_in_day?: number
+          status?: string
+          user_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_workout_plan_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "user_workout_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_workout_plan_items_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_workout_plans: {
+        Row: {
+          created_at: string
+          end_date: string
+          generation_log_id: string | null
+          goal: string | null
+          id: string
+          sessions_per_week: number | null
+          start_date: string
+          status: string
+          target_duration_minutes: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          generation_log_id?: string | null
+          goal?: string | null
+          id?: string
+          sessions_per_week?: number | null
+          start_date: string
+          status?: string
+          target_duration_minutes?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          generation_log_id?: string | null
+          goal?: string | null
+          id?: string
+          sessions_per_week?: number | null
+          start_date?: string
+          status?: string
+          target_duration_minutes?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_workout_plans_generation_log_id_fkey"
+            columns: ["generation_log_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generation_log"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_workout_preferences: {
         Row: {
@@ -3036,6 +3364,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],

@@ -110,28 +110,26 @@ export function useHealthSync() {
 
         if (!result.samples?.length) continue;
 
-        const rows = result.samples.map((s) => ({
-          user_id: user.id,
-          metric_type: mapping.metric_type,
-          value: s.value,
-          unit: mapping.unit,
-          recorded_at: s.startDate,
-          source_platform: platform,
-          source_platform_id: s.platformId ?? null,
-        }));
+        const rows = result.samples
+          .filter((s) => s.platformId)
+          .map((s) => ({
+            user_id: user.id,
+            metric_type: mapping.metric_type,
+            value: s.value,
+            unit: mapping.unit,
+            recorded_at: s.startDate,
+            source_platform: platform,
+            source_platform_id: s.platformId!,
+          }));
 
-        // Clear then insert the sync window to avoid duplicates on re-sync.
-        // Scoped by source_platform so manual entries are preserved.
+        if (rows.length === 0) continue;
+
         await supabase
           .from("health_metrics")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("metric_type", mapping.metric_type)
-          .eq("source_platform", platform)
-          .gte("recorded_at", startISO)
-          .lte("recorded_at", endISO);
-
-        await supabase.from("health_metrics").insert(rows);
+          .upsert(rows, {
+            onConflict: "user_id,source_platform,source_platform_id",
+            ignoreDuplicates: false,
+          });
       }
 
       // Sleep — aggregate per night from stage-by-stage samples
@@ -178,28 +176,25 @@ export function useHealthSync() {
         }
       }
 
-      const sleepRows = Array.from(byDate.entries()).map(([dateKey, v]) => ({
-        user_id: user.id,
-        sleep_date: dateKey,
-        bedtime: v.bedtime.toISOString(),
-        wake_time: v.wakeTime.toISOString(),
-        duration_minutes: Math.round(v.asleepMinutes),
-        deep_sleep_minutes: Math.round(v.deepMinutes),
-        rem_sleep_minutes: Math.round(v.remMinutes),
-        source_platform: platform,
-        source_platform_id: v.platformId,
-      }));
+      const sleepRows = Array.from(byDate.entries())
+        .filter(([, v]) => v.platformId)
+        .map(([dateKey, v]) => ({
+          user_id: user.id,
+          sleep_date: dateKey,
+          bedtime: v.bedtime.toISOString(),
+          wake_time: v.wakeTime.toISOString(),
+          duration_minutes: Math.round(v.asleepMinutes),
+          deep_sleep_minutes: Math.round(v.deepMinutes),
+          rem_sleep_minutes: Math.round(v.remMinutes),
+          source_platform: platform,
+          source_platform_id: v.platformId!,
+        }));
 
       if (sleepRows.length) {
-        const dates = sleepRows.map((r) => r.sleep_date);
-        await supabase
-          .from("sleep_logs")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("source_platform", platform)
-          .in("sleep_date", dates);
-
-        await supabase.from("sleep_logs").insert(sleepRows);
+        await supabase.from("sleep_logs").upsert(sleepRows, {
+          onConflict: "user_id,source_platform,source_platform_id",
+          ignoreDuplicates: false,
+        });
       }
 
       setLastSyncAt(new Date());

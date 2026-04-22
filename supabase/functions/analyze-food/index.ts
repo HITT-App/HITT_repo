@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -65,10 +66,24 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return new Response(
-        JSON.stringify({ success: false, error: "Invalid token" }), 
+        JSON.stringify({ success: false, error: "Invalid token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const supabaseAdmin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const quota = await checkAIQuota(supabaseAdmin, user.id, {
+      dailyCap: DEFAULT_QUOTAS.analyze_food,
+      generationType: "analyze_food",
+    });
+    if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
+
+    await supabaseAdmin.from("ai_generation_log").insert({
+      user_id: user.id,
+      generation_type: "analyze_food",
+      model: "google/gemini-2.5-flash",
+      prompt: { redacted: true },
+    });
 
     const { imageData } = await req.json();
 
