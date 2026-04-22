@@ -25,6 +25,7 @@ import {
   AICoachSection,
   ResourcesSection,
   SmartDailyBriefing,
+  HealthSyncPrompt,
 } from "@/components/home";
 
 const Index = () => {
@@ -129,6 +130,7 @@ const Index = () => {
         <>
           <HomeHero userName={displayName} />
           <HomeHeader userName={displayName} score={hiitScore ?? undefined} scoreComponents={hiitComponents} avatarUrl={profile?.avatar_url} />
+          <HealthSyncPrompt />
           <SmartDailyBriefing />
           <StatsGrid />
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}

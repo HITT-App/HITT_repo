@@ -9,3 +9,4 @@ export { AICoachSection } from "./AICoachSection";
 export { CoachSessionSection } from "./CoachSessionSection";
 export { ResourcesSection } from "./ResourcesSection";
 export { SmartDailyBriefing } from "./SmartDailyBriefing";
+export { HealthSyncPrompt } from "./HealthSyncPrompt";

@@ -47,5 +47,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>HIIT uses your Apple Health data (heart rate, steps, sleep, workouts) to calculate your HIIT Score and personalise your workout and meal plans.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>HIIT saves the workouts you complete in the app to Apple Health so they count toward your Activity rings.</string>
 </dict>
 </plist>
