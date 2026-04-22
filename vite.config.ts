@@ -81,4 +81,37 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Split vendor code out of the main bundle so a first-time mobile
+    // visitor doesn't download Recharts, Radix, and Supabase just to see
+    // the home screen. Route chunks are already split via React.lazy.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-vendor": ["react", "react-dom", "react-router-dom"],
+          "supabase": ["@supabase/supabase-js"],
+          "charts": ["recharts"],
+          "ui-vendor": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-toast",
+          ],
+          "forms": ["react-hook-form", "zod", "@hookform/resolvers"],
+          "icons": ["lucide-react"],
+          "query": ["@tanstack/react-query"],
+          "date": ["date-fns"],
+          "capacitor": [
+            "@capacitor/core",
+            "@capacitor/geolocation",
+            "@capacitor/keyboard",
+            "@capacitor/splash-screen",
+            "@capacitor/status-bar",
+          ],
+        },
+      },
+    },
+  },
 }));
