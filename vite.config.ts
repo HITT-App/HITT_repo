@@ -1,13 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-const isLovablePreview = process.env.SANDPACK === "true" || process.env.LOVABLE === "true";
-
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
@@ -20,7 +17,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    !isLovablePreview && VitePWA({
+    VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png"],
       manifest: {
@@ -74,8 +71,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
     }),
-    mode === "development" && componentTagger(),
-  ].filter(Boolean),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
