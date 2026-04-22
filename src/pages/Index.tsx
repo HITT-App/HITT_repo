@@ -42,7 +42,7 @@ const Index = () => {
   const { addXP, previousLevel } = useUserLevel();
   const { flags } = useFeatureFlags();
   const { sections, loading: layoutLoading } = useHomeLayout();
-  const { score: hiitScore } = useHiitScore();
+  const { score: hiitScore, components: hiitComponents } = useHiitScore();
   
   const displayName = profile?.display_name || 
                       user?.user_metadata?.display_name || 
@@ -109,7 +109,7 @@ const Index = () => {
   // Map section keys to components
   const sectionComponents: Record<string, ReactNode> = {
     hero: <HomeHero userName={displayName} />,
-    header: <HomeHeader userName={displayName} score={hiitScore ?? undefined} avatarUrl={profile?.avatar_url} />,
+    header: <HomeHeader userName={displayName} score={hiitScore ?? undefined} scoreComponents={hiitComponents} avatarUrl={profile?.avatar_url} />,
     daily_briefing: <SmartDailyBriefing />,
     stats_grid: <StatsGrid />,
     fitness_metrics: <FitnessMetricsCard hasData={true} />,
@@ -128,7 +128,7 @@ const Index = () => {
       return (
         <>
           <HomeHero userName={displayName} />
-          <HomeHeader userName={displayName} score={hiitScore ?? undefined} avatarUrl={profile?.avatar_url} />
+          <HomeHeader userName={displayName} score={hiitScore ?? undefined} scoreComponents={hiitComponents} avatarUrl={profile?.avatar_url} />
           <SmartDailyBriefing />
           <StatsGrid />
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}

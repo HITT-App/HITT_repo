@@ -6,13 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import hiitLogo from "@/assets/hiit-logo.jpg";
 
+interface HIITScoreComponents {
+  workouts: number;
+  streak: number;
+  nutrition: number;
+  sleep: number;
+  intensity: number;
+  inputs?: {
+    workoutCount: number;
+    streakDays: number;
+    nutritionDaysHit: number;
+    sleepDaysGood: number;
+    avgDurationMinutes: number;
+  };
+}
+
 interface HomeHeaderProps {
   userName?: string;
   score?: number;
+  scoreComponents?: HIITScoreComponents | null;
   avatarUrl?: string | null;
 }
 
-export function HomeHeader({ userName = "Athlete", score, avatarUrl }: HomeHeaderProps) {
+export function HomeHeader({ userName = "Athlete", score, scoreComponents, avatarUrl }: HomeHeaderProps) {
   const navigate = useNavigate();
 
   const getTimeGreeting = (): string => {
@@ -61,7 +77,7 @@ export function HomeHeader({ userName = "Athlete", score, avatarUrl }: HomeHeade
 
       {/* HIIT Score Badge */}
       <div className="bg-card border border-border/60 rounded-xl p-3">
-        <HIITScoreBadge score={score} label="Average Fitness" />
+        <HIITScoreBadge score={score} components={scoreComponents} label="Average Fitness" />
       </div>
 
       {/* Search Bar */}

@@ -22,23 +22,53 @@ Total clamped to `[0, 100]`. Truly inactive user → 50. Maxed → 100.
 
 **Decision needed:** accept as-is, or adjust weights / thresholds / signal sources?
 
-### Explainable score breakdown
-Should tapping the HIIT Score badge open a popover showing "you scored 72: +12 workouts, +5 streak, +8 nutrition, …"? The `components` jsonb column is already storing the breakdown — it's a ~2-hour frontend task to surface it.
+### Broader engagement points system
 
-**Decision needed:** yes / no / later.
+Owner has asked that the points system extend beyond workouts/nutrition/sleep to reward **any meaningful app engagement**. Current `useStreaksAndBadges` hook defines:
 
-### Mental-health signal
-The proposal's framing ("Master Your Mind") suggests mood should count toward the score. We already collect `daily_checkins.mood` and `daily_checkins.energy (1–5)`. Folding in, e.g., +5 for "days with self-reported energy ≥ 4" would reduce room in the existing categories.
+```
+WORKOUT_COMPLETE: 50
+STREAK_DAY_BONUS: 10
+BADGE_EARNED:    25
+DAILY_CHECKIN:    5
+MEAL_LOGGED:      5
+```
 
-**Decision needed:** include a mindfulness component from day one, or wait for user data first?
+Additional actions to reward (owner to confirm values):
+- Sharing a workout externally (Instagram, TikTok, etc.)
+- Posting to the community feed
+- Commenting on / reacting to another user's post
+- Uploading a progress photo
+- Inviting a friend who signs up
+- Completing a full AI-generated plan
 
-### Nightly cron
-The app currently recomputes scores client-side on home load (for active users only). For inactive users the trend chart will gap during their absence. A pg_cron nightly job would close that gap — SQL is in `supabase/manual_setup/pg_cron_hiit_score.sql`, ready to run in the Supabase SQL editor when the owner wants it enabled.
+**Decision needed:** point values for each, and whether any are one-time vs repeatable (e.g. "first post" bonus vs "every post").
 
-**Decision needed:** enable cron now, or wait until retention/trend analysis matters?
+### Leaderboard prizes and reward structure
+
+Owner wants the leaderboard to be a real incentive: "prizes for best user / best workouts / sticking to goals". The current leaderboard ranks by accumulated points but has no tangible reward.
+
+Open questions:
+- What categories? (Top overall / Top HIIT / Longest streak / Best transformation / Most community engagement?)
+- What prizes? (Premium subscription credits / branded merch / physical products / cash? This also has App Store policy implications — contests and sweepstakes have specific rules.)
+- What cadence? (Weekly / monthly / quarterly?)
+- Who runs it operationally? (Automated vs manual selection?)
+
+**Decision needed:** prize structure and cadence before I can build the UI + automation.
 
 ---
 
 ## Resolved
 
-_(none yet)_
+### ✅ Explainable score breakdown
+**Decided:** Yes — tapping the HIIT Score badge opens a bottom sheet showing the breakdown (workouts, streak, nutrition, sleep, intensity), raw input counts, and a "how is this calculated?" explainer.
+
+**Rationale from owner:** "the more they are tracking the better."
+
+**Implementation:** `src/components/home/HIITScoreBreakdownSheet.tsx`. Ships in commit TBD.
+
+### ⏸ Mental-health / mindfulness signal
+**Decided:** Defer. Owner likes the *concept* of rewarding good mood / frame of mind via the points system, but wants to wait for real user data to see whether mindfulness tracking is something users actually engage with before baking it into the HIIT Score formula. Revisit once there's retention and daily-check-in data to analyse.
+
+### ⏸ Nightly pg_cron job
+**Decided:** Defer. Owner wants to wait for trend-analysis data before deciding whether covering dormant users is worth the infrastructure cost. Client-side recompute remains sufficient while the active-user base is the focus. SQL remains ready in `supabase/manual_setup/pg_cron_hiit_score.sql` for future enablement.

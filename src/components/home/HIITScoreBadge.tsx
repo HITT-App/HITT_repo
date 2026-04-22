@@ -1,9 +1,26 @@
+import { useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { HIITScoreBreakdownSheet } from "./HIITScoreBreakdownSheet";
+
+interface HIITScoreComponents {
+  workouts: number;
+  streak: number;
+  nutrition: number;
+  sleep: number;
+  intensity: number;
+  inputs?: {
+    workoutCount: number;
+    streakDays: number;
+    nutritionDaysHit: number;
+    sleepDaysGood: number;
+    avgDurationMinutes: number;
+  };
+}
 
 interface HIITScoreBadgeProps {
   score?: number;
+  components?: HIITScoreComponents | null;
   label?: string;
   size?: "sm" | "md" | "lg";
   showArrow?: boolean;
@@ -12,6 +29,7 @@ interface HIITScoreBadgeProps {
 
 export function HIITScoreBadge({
   score,
+  components,
   label = "Average Fitness",
   size = "md",
   showArrow = true,
@@ -19,7 +37,7 @@ export function HIITScoreBadge({
 }: HIITScoreBadgeProps) {
   const hasScore = typeof score === "number";
   const displayScore = hasScore ? score : 0;
-  const navigate = useNavigate();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const sizeClasses = {
     sm: "w-10 h-10 text-sm",
@@ -31,7 +49,7 @@ export function HIITScoreBadge({
     if (onClick) {
       onClick();
     } else {
-      navigate("/health-metrics");
+      setSheetOpen(true);
     }
   };
 
@@ -43,6 +61,7 @@ export function HIITScoreBadge({
   };
 
   return (
+    <>
     <button
       onClick={handleClick}
       className="flex items-center gap-3 touch-manipulation group"
@@ -89,5 +108,13 @@ export function HIITScoreBadge({
         <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
       )}
     </button>
+
+    <HIITScoreBreakdownSheet
+      open={sheetOpen}
+      onOpenChange={setSheetOpen}
+      score={hasScore ? (score as number) : null}
+      components={components ?? null}
+    />
+    </>
   );
 }
