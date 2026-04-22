@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { computeHiitScore } from "./score.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -111,32 +112,13 @@ async function computeAndStore(admin: SupabaseClient, userId: string) {
   const sleepDaysGood = (sleepRes.data ?? [])
     .filter((s) => (s.duration_minutes ?? 0) >= 420).length;
 
-  const intensityRatio = workoutCount > 0 ? Math.min(avgDuration / 20, 1) : 0;
-
-  const workoutsScore = Math.min(workoutCount * 3, 15);
-  const streakScore = Math.min(streakDays, 5);
-  const nutritionScore = Math.min(nutritionDaysHit * 2, 10);
-  const sleepScore = Math.min(sleepDaysGood * 2, 10);
-  const intensityScore = Math.round(intensityRatio * 10);
-
-  const score = Math.max(0, Math.min(100,
-    50 + workoutsScore + streakScore + nutritionScore + sleepScore + intensityScore
-  ));
-
-  const components = {
-    workouts: workoutsScore,
-    streak: streakScore,
-    nutrition: nutritionScore,
-    sleep: sleepScore,
-    intensity: intensityScore,
-    inputs: {
-      workoutCount,
-      streakDays,
-      nutritionDaysHit,
-      sleepDaysGood,
-      avgDurationMinutes: Math.round(avgDuration),
-    },
-  };
+  const { score, components } = computeHiitScore({
+    workoutCount,
+    streakDays,
+    nutritionDaysHit,
+    sleepDaysGood,
+    avgDurationMinutes: avgDuration,
+  });
 
   const { error: insertError } = await admin.from("hiit_score_history").insert({
     user_id: userId,

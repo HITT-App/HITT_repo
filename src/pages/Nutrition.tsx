@@ -1,11 +1,25 @@
-import { ArrowLeft, Apple, Droplet, Flame, Plus } from "lucide-react";
+import { ArrowLeft, Droplet, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useDailyNutrition } from "@/hooks/useDailyNutrition";
+
+function pct(consumed: number, target: number): number {
+  if (target <= 0) return 0;
+  return Math.min(100, Math.round((consumed / target) * 100));
+}
+
+function round(n: number): number {
+  return Math.round(n);
+}
 
 const Nutrition = () => {
   const navigate = useNavigate();
+  const { calories, protein, carbs, fat, waterMl, loading } = useDailyNutrition();
+
+  const waterGlassesConsumed = Math.round(waterMl.consumed / 250);
+  const waterGlassesTarget = Math.round(waterMl.target / 250);
 
   return (
     <div className="min-h-screen bg-background">
@@ -20,22 +34,27 @@ const Nutrition = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-muted-foreground">Daily Calories</span>
-            <span className="text-sm font-medium">1,450 / 2,000</span>
+            <span className="text-sm font-medium tabular-nums">
+              {loading ? "—" : `${round(calories.consumed).toLocaleString()} / ${calories.target.toLocaleString()}`}
+            </span>
           </div>
-          <Progress value={72} className="h-3 mb-4" />
-          
+          <Progress value={loading ? 0 : pct(calories.consumed, calories.target)} className="h-3 mb-4" />
+
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-lg font-bold text-foreground">65g</p>
+              <p className="text-lg font-bold text-foreground tabular-nums">{loading ? "—" : `${round(protein.consumed)}g`}</p>
               <p className="text-xs text-muted-foreground">Protein</p>
+              <p className="text-xs text-muted-foreground mt-0.5">of {protein.target}g</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-foreground">180g</p>
+              <p className="text-lg font-bold text-foreground tabular-nums">{loading ? "—" : `${round(carbs.consumed)}g`}</p>
               <p className="text-xs text-muted-foreground">Carbs</p>
+              <p className="text-xs text-muted-foreground mt-0.5">of {carbs.target}g</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-foreground">45g</p>
+              <p className="text-lg font-bold text-foreground tabular-nums">{loading ? "—" : `${round(fat.consumed)}g`}</p>
               <p className="text-xs text-muted-foreground">Fat</p>
+              <p className="text-xs text-muted-foreground mt-0.5">of {fat.target}g</p>
             </div>
           </div>
         </Card>
@@ -45,15 +64,22 @@ const Nutrition = () => {
             <Droplet className="w-6 h-6 text-blue-400" />
             <div className="flex-1">
               <p className="text-sm text-muted-foreground">Water Intake</p>
-              <p className="font-semibold text-foreground">6 / 8 glasses</p>
+              <p className="font-semibold text-foreground tabular-nums">
+                {loading ? "—" : `${waterGlassesConsumed} / ${waterGlassesTarget} glasses`}
+              </p>
             </div>
-            <Button size="icon" variant="ghost">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => navigate("/health-metrics")}
+              aria-label="Log water"
+            >
               <Plus className="w-5 h-5" />
             </Button>
           </div>
         </Card>
 
-        <Button className="w-full btn-primary">
+        <Button className="w-full btn-primary" onClick={() => navigate("/log-meal")}>
           <Plus className="w-4 h-4 mr-2" />
           Log Meal
         </Button>
