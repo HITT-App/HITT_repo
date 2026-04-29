@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -63,73 +63,107 @@ export interface CommunityProfile {
   is_following?: boolean;
 }
 
+const PAGE_SIZE = 50;
+
+/**
+ * Fetch a page of posts joined with community_profiles, plus the current user's
+ * liked-post IDs.  Returns raw enriched rows so both the initial load and
+ * loadMore() can share the same logic.
+ */
+async function fetchPostsPage(
+  userId: string | undefined,
+  olderThan?: string, // cursor: created_at of the oldest already-loaded post
+): Promise<{ enriched: CommunityPost[]; hasMore: boolean }> {
+  // Single query: posts + community_profile join (left join so posts without
+  // a community_profile still appear).
+  let query = supabase
+    .from('community_posts')
+    .select('*, community_profiles(display_name, username, avatar_url)')
+    .order('created_at', { ascending: false })
+    .limit(PAGE_SIZE);
+
+  if (olderThan) {
+    query = query.lt('created_at', olderThan);
+  }
+
+  const { data: postsData, error } = await query;
+  if (error) throw error;
+
+  // Parallel: fetch main-profile fallbacks and user likes at the same time.
+  const userIds = [...new Set((postsData || []).map(p => p.user_id))];
+
+  const [mainProfilesResult, likesResult] = await Promise.all([
+    userIds.length > 0
+      ? supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', userIds)
+      : Promise.resolve({ data: [] as { user_id: string; display_name: string | null; avatar_url: string | null }[] | null }),
+    userId
+      ? supabase
+          .from('community_likes')
+          .select('post_id')
+          .eq('user_id', userId)
+          .not('post_id', 'is', null)
+      : Promise.resolve({ data: [] as { post_id: string | null }[] | null }),
+  ]);
+
+  const mainProfileMap = new Map(
+    (mainProfilesResult.data || []).map(p => [p.user_id, p])
+  );
+  const userLikedSet = new Set(
+    (likesResult.data || []).map(l => l.post_id as string)
+  );
+
+  const enriched: CommunityPost[] = (postsData || []).map(post => {
+    // community_profiles comes back as an object (or null) from the join
+    const cp = post.community_profiles as {
+      display_name: string | null;
+      username: string | null;
+      avatar_url: string | null;
+    } | null;
+    const mp = mainProfileMap.get(post.user_id);
+
+    return {
+      ...post,
+      post_type: post.post_type as CommunityPost['post_type'],
+      tags: post.tags || [],
+      poll_options: post.poll_options as CommunityPost['poll_options'],
+      workout_data: post.workout_data as CommunityPost['workout_data'],
+      // Drop the raw join column so it doesn't bleed into the typed shape
+      community_profiles: undefined,
+      profile: {
+        display_name: cp?.display_name || mp?.display_name || null,
+        username: cp?.username || null,
+        avatar_url: cp?.avatar_url || mp?.avatar_url || null,
+      },
+      is_liked: userLikedSet.has(post.id),
+    };
+  });
+
+  return { enriched, hasMore: enriched.length === PAGE_SIZE };
+}
+
 export const useCommunityPosts = () => {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  // cursor = created_at of the oldest post currently in state
+  const cursorRef = useRef<string | undefined>(undefined);
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Initial / full refresh — replaces the entire posts array
   const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: postsData, error } = await supabase
-        .from('community_posts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      // Get profiles for posts
-      const userIds = [...new Set(postsData?.map(p => p.user_id) || [])];
-      const { data: communityProfiles } = await supabase
-        .from('community_profiles')
-        .select('user_id, display_name, username, avatar_url')
-        .in('user_id', userIds);
-
-      // Fallback to main profiles table for users without community profiles
-      const { data: mainProfiles } = await supabase
-        .from('profiles')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
-
-      // Get user's likes
-      let userLikes: string[] = [];
-      if (user) {
-        const { data: likes } = await supabase
-          .from('community_likes')
-          .select('post_id')
-          .eq('user_id', user.id)
-          .not('post_id', 'is', null);
-        userLikes = likes?.map(l => l.post_id as string) || [];
-      }
-
-      const communityProfileMap = new Map(communityProfiles?.map(p => [p.user_id, p]) || []);
-      const mainProfileMap = new Map(mainProfiles?.map(p => [p.user_id, p]) || []);
-
-      // Merge: prefer community profile, fall back to main profile
-      const profileMap = new Map<string, { display_name: string | null; username: string | null; avatar_url: string | null }>();
-      for (const uid of userIds) {
-        const cp = communityProfileMap.get(uid);
-        const mp = mainProfileMap.get(uid);
-        profileMap.set(uid, {
-          display_name: cp?.display_name || mp?.display_name || null,
-          username: cp?.username || null,
-          avatar_url: cp?.avatar_url || mp?.avatar_url || null,
-        });
-      }
-
-      const enrichedPosts: CommunityPost[] = (postsData || []).map(post => ({
-        ...post,
-        post_type: post.post_type as CommunityPost['post_type'],
-        tags: post.tags || [],
-        poll_options: post.poll_options as CommunityPost['poll_options'],
-        workout_data: post.workout_data as CommunityPost['workout_data'],
-        profile: profileMap.get(post.user_id) || undefined,
-        is_liked: userLikes.includes(post.id),
-      }));
-
-      setPosts(enrichedPosts);
+      const { enriched, hasMore: more } = await fetchPostsPage(user?.id);
+      cursorRef.current = enriched.length > 0
+        ? enriched[enriched.length - 1].created_at
+        : undefined;
+      setHasMore(more);
+      setPosts(enriched);
     } catch (error) {
       console.error('Error fetching posts:', error);
       toast({
@@ -142,24 +176,142 @@ export const useCommunityPosts = () => {
     }
   }, [user, toast]);
 
+  // Append the next page older than the current cursor
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    try {
+      setLoadingMore(true);
+      const { enriched, hasMore: more } = await fetchPostsPage(user?.id, cursorRef.current);
+      if (enriched.length > 0) {
+        cursorRef.current = enriched[enriched.length - 1].created_at;
+        setPosts(prev => [...prev, ...enriched]);
+      }
+      setHasMore(more);
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [user, loadingMore, hasMore]);
+
   useEffect(() => {
     fetchPosts();
 
-    // Subscribe to realtime updates
+    // Realtime: targeted local-state updates instead of full re-fetches
     const channel = supabase
       .channel('community_posts_changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'community_posts' },
-        () => {
-          fetchPosts();
+        { event: 'INSERT', schema: 'public', table: 'community_posts' },
+        async (payload) => {
+          // Fetch the single new post with its joined profile so we can prepend it
+          const newRow = payload.new as { id: string; user_id: string; created_at: string };
+          try {
+            const { data, error } = await supabase
+              .from('community_posts')
+              .select('*, community_profiles(display_name, username, avatar_url)')
+              .eq('id', newRow.id)
+              .single();
+            if (error || !data) return;
+
+            const cp = data.community_profiles as {
+              display_name: string | null;
+              username: string | null;
+              avatar_url: string | null;
+            } | null;
+
+            // Fallback profile fetch only if community profile is missing
+            let mp: { display_name: string | null; avatar_url: string | null } | undefined;
+            if (!cp) {
+              const { data: mpData } = await supabase
+                .from('profiles')
+                .select('display_name, avatar_url')
+                .eq('user_id', newRow.user_id)
+                .single();
+              mp = mpData ?? undefined;
+            }
+
+            const newPost: CommunityPost = {
+              ...data,
+              post_type: data.post_type as CommunityPost['post_type'],
+              tags: data.tags || [],
+              poll_options: data.poll_options as CommunityPost['poll_options'],
+              workout_data: data.workout_data as CommunityPost['workout_data'],
+              community_profiles: undefined,
+              profile: {
+                display_name: cp?.display_name || mp?.display_name || null,
+                username: cp?.username || null,
+                avatar_url: cp?.avatar_url || mp?.avatar_url || null,
+              },
+              is_liked: false,
+            };
+            setPosts(prev => [newPost, ...prev]);
+          } catch (e) {
+            console.error('Realtime INSERT error:', e);
+          }
         }
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'community_likes' },
-        () => {
-          fetchPosts();
+        { event: 'UPDATE', schema: 'public', table: 'community_posts' },
+        (payload) => {
+          const updated = payload.new as { id: string } & Partial<CommunityPost>;
+          setPosts(prev =>
+            prev.map(p =>
+              p.id === updated.id
+                ? {
+                    ...p,
+                    ...updated,
+                    post_type: (updated.post_type ?? p.post_type) as CommunityPost['post_type'],
+                    tags: updated.tags ?? p.tags,
+                    poll_options: (updated.poll_options ?? p.poll_options) as CommunityPost['poll_options'],
+                    workout_data: (updated.workout_data ?? p.workout_data) as CommunityPost['workout_data'],
+                    // Preserve joined/derived fields that aren't in the raw DB row
+                    profile: p.profile,
+                    is_liked: p.is_liked,
+                  }
+                : p
+            )
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'community_posts' },
+        (payload) => {
+          const deleted = payload.old as { id: string };
+          setPosts(prev => prev.filter(p => p.id !== deleted.id));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'community_likes' },
+        (payload) => {
+          // The DB trigger maintains likes_count; reflect the new count locally.
+          const like = payload.new as { post_id: string | null; likes_count?: number };
+          if (!like.post_id) return;
+          setPosts(prev =>
+            prev.map(p =>
+              p.id === like.post_id
+                ? { ...p, likes_count: p.likes_count + 1 }
+                : p
+            )
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'community_likes' },
+        (payload) => {
+          const like = payload.old as { post_id: string | null };
+          if (!like.post_id) return;
+          setPosts(prev =>
+            prev.map(p =>
+              p.id === like.post_id
+                ? { ...p, likes_count: Math.max(0, p.likes_count - 1) }
+                : p
+            )
+          );
         }
       )
       .subscribe();
@@ -169,7 +321,7 @@ export const useCommunityPosts = () => {
     };
   }, [fetchPosts]);
 
-  return { posts, loading, refetch: fetchPosts };
+  return { posts, loading, loadingMore, hasMore, loadMore, refetch: fetchPosts };
 };
 
 export const useCommunityProfile = (userId?: string) => {

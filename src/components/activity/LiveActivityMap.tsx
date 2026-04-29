@@ -11,16 +11,12 @@ interface GpsPoint {
 interface LiveActivityMapProps {
   positions: GpsPoint[];
   gpsStatus: "searching" | "active" | "unavailable" | "denied";
-}
-
-interface LiveActivityMapProps {
-  positions: GpsPoint[];
-  gpsStatus: "searching" | "active" | "unavailable" | "denied";
   onZoomIn?: () => void;
   onZoomOut?: () => void;
+  fitBoundsOnMount?: boolean;
 }
 
-const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
+const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount }: LiveActivityMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const polylineRef = useRef<L.Polyline | null>(null);
@@ -120,9 +116,16 @@ const LiveActivityMap = ({ positions, gpsStatus }: LiveActivityMapProps) => {
         }).addTo(map);
       }
 
-      map.setView(latlng, map.getZoom(), { animate: true });
+      if (!fitBoundsOnMount) {
+        map.setView(latlng, map.getZoom(), { animate: true });
+      }
     }
-  }, [positions]);
+
+    // In static (completion) mode, fit the full route into view
+    if (fitBoundsOnMount && trail.length >= 2) {
+      map.fitBounds(trail as [number, number][], { padding: [24, 24], animate: false });
+    }
+  }, [positions, fitBoundsOnMount]);
 
   // Resize handling
   useEffect(() => {

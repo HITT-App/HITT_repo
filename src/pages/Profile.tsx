@@ -21,10 +21,14 @@ import { PasswordChangeSection } from '@/components/profile/PasswordChangeSectio
 import { WatchSyncSection } from '@/components/profile/WatchSyncSection';
 import ImageCropperDialog from '@/components/community/ImageCropperDialog';
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import {
   ArrowLeft, Camera, Loader2, User, Target, Shield, Mic, Sun, Moon,
-  Pencil, Check, X, Calendar, Lock, Globe,
+  Pencil, Check, X, Calendar, Lock, Globe, Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 const FITNESS_GOALS = [
@@ -57,6 +61,29 @@ export default function Profile() {
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
+
+  // Account deletion
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return;
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke('delete-account', {
+        body: { confirmation: 'DELETE' },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (res.error) throw res.error;
+      await signOut();
+      navigate('/login');
+    } catch {
+      toast({ title: 'Something went wrong', description: 'Please try again or contact support.', variant: 'destructive' });
+      setDeleting(false);
+    }
+  };
 
   // Inline editing state
   const [editingField, setEditingField] = useState<'name' | 'username' | 'bio' | null>(null);
@@ -558,8 +585,67 @@ export default function Profile() {
               Sign Out
             </Button>
           </div>
+
+          {/* Danger zone */}
+          <div className="pt-2 pb-6">
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteModalOpen(true)}
+              className="w-full text-destructive/70 hover:text-destructive hover:bg-destructive/10 text-sm"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete my account
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
+
+      {/* Account deletion modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={(open) => { setDeleteModalOpen(open); setDeleteConfirmText(''); }}>
+        <DialogContent className="mx-4 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Delete your account</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground space-y-3 pt-1">
+              <span className="block">
+                This will delete your profile, workouts, nutrition logs, sleep data, health metrics,
+                community posts, and all other personal data.
+              </span>
+              <span className="block">
+                You have <strong>30 days to change your mind</strong> — log back in within that window
+                and we'll restore everything. After 30 days, deletion is permanent and cannot be undone.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <p className="text-sm font-medium">To confirm, type <strong>DELETE</strong> below</p>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="font-mono"
+              autoCapitalize="characters"
+            />
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmText !== 'DELETE' || deleting}
+              className="w-full"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Delete my account
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setDeleteModalOpen(false); setDeleteConfirmText(''); }}
+              className="w-full"
+            >
+              Keep my account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Image Cropper Dialog */}
       <ImageCropperDialog

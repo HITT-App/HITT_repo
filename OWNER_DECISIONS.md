@@ -6,7 +6,25 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
-### HIIT Score — formula weighting
+### RevenueCat account — subscription wiring
+
+RevenueCat does not appear anywhere in the codebase. The subscription UI and admin panel are built, but no real IAP purchase can be made. The investor demo has no end-to-end monetisation flow without it.
+
+**Decision needed:** create a RevenueCat account at revenuecat.com and supply the API key. Engineering (~2 days) can proceed immediately once the key exists.
+
+### AI provider swap — action needed
+
+The app currently runs on Lovable's Gemini gateway, which is a shared sandbox — not a production service. The architect recommends swapping to **OpenRouter with Anthropic Claude** as the primary model. This is a half-day engineering task requiring no code changes (only updating two Supabase secrets: `AI_GATEWAY_URL` and `AI_API_KEY`).
+
+**Decision needed:** confirm OpenRouter + Anthropic, or nominate a different provider. Engineering is ready to proceed on confirmation.
+
+### Community feed — pre-App Store refactor (engineering risk)
+
+The current realtime subscription means any like from any user triggers a full re-fetch for every user viewing the feed simultaneously. Fine for a small investor demo; a reliability problem at 200+ concurrent users.
+
+**No owner decision needed** — this is pure engineering work, logged here for visibility. Will be addressed before App Store submission.
+
+### ✅ HIIT Score — formula weighting
 Current V1 (in `supabase/functions/compute-hiit-score/index.ts`):
 
 | Component | Max | Signal |
@@ -20,7 +38,7 @@ Current V1 (in `supabase/functions/compute-hiit-score/index.ts`):
 
 Total clamped to `[0, 100]`. Truly inactive user → 50. Maxed → 100.
 
-**Decision needed:** accept as-is, or adjust weights / thresholds / signal sources?
+**Decided 2026-04-29:** Accept as-is. No changes to weights, thresholds, or signal sources.
 
 ### Broader engagement points system
 
@@ -53,14 +71,13 @@ Needs:
 - A confirmation modal with friction (typed confirmation, plus an explainer of what happens)
 - An edge function that cascades delete across: `auth.users`, and every user-scoped table (profiles, meal_logs, sleep_logs, workouts completed, subscriptions, community posts, etc.)
 - Revocation of the session
-- Optional: grace period (30-day soft delete) before hard purge — gives users a window to undo an accidental delete and is also a light retention lever
+- **30-day soft delete** with restore option (decided 2026-04-29)
 
-**Decision needed:**
-- Hard delete immediately, or 30-day soft delete with restore option?
+**Still needed:**
 - Copy for the confirmation modal — this is a last-touch moment with the user
 - Anything beyond the core tables that should be wiped (e.g. ai_generation_log, error_logs, push subscriptions)?
 
-Pure engineering is ready to go once these are answered.
+Pure engineering is ready to go once modal copy is supplied.
 
 ### Privacy policy rewrite (ICO exposure)
 
@@ -79,24 +96,13 @@ Current `src/pages/Privacy.tsx` is a generic template. For a UK fitness app hand
 - DPO contact — use your email, or set up a dedicated `privacy@hiitfitness.app` once the domain exists?
 - Retention periods per category
 
-### Error monitoring upgrade path
+### ✅ Error monitoring — Sentry wired up (2026-04-29)
 
-We've shipped a Supabase-native error log (`error_logs` table, `log-error` edge function, `ErrorBoundary` wired up). That's enough for MVP debugging — new errors land in a queryable table visible to admins.
+`@sentry/react` installed. `Sentry.init()` in `main.tsx` with browser tracing (20% sample rate, production only). App wrapped in `Sentry.ErrorBoundary`. DSN stored in `.env` as `VITE_SENTRY_DSN` (EU ingest endpoint — GDPR compliant).
 
-**Decision needed:** upgrade to Sentry (or equivalent like Bugsnag, Rollbar) before TestFlight, or stay on the native log until real volume requires it?
+### ✅ Analytics — PostHog wired (2026-04-29)
 
-Sentry's free tier covers 5K events/month — easily enough for TestFlight. If yes, you create the Sentry project and give me the DSN; I wire it up in ~1 hour and keep the native log as a backup.
-
-### Analytics provider
-
-We don't have product analytics yet. The architect flagged this as important before a £150K investor TestFlight — can't show D1/D7/D30 retention, feature adoption, funnel dropoffs without it.
-
-Options in order of fit:
-- **PostHog** (free tier: 1M events/mo, open source, self-hostable later)
-- **Mixpanel** (fitness apps use it a lot, free tier: 20M events/mo but limited features)
-- **Amplitude** (most polished for investor-facing dashboards, free: 10M events/mo)
-
-**Decision needed:** which one, and what events should we instrument? Baseline events I'd suggest: user_signed_up, workout_started, workout_completed, meal_logged, plan_generated, subscription_checkout_started, premium_feature_viewed.
+`posthog-js` installed. EU endpoint (`eu.i.posthog.com`). Events live: `user_signed_up`, `workout_started`, `workout_completed` (with duration/distance/calories), `meal_logged` (source: manual/barcode/scanner), `plan_generated`, `premium_feature_viewed`, `subscription_checkout_started`. Users identified by Supabase UID on sign-in; reset on sign-out.
 
 ### Health-data sync — scope and defaults
 

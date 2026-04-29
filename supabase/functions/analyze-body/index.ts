@@ -9,7 +9,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BODY_ANALYSIS_PROMPT = `You are an expert fitness and body composition analyst. Analyze the person's body from this photo.
+const buildBodyAnalysisPrompt = (workoutSummary: string) =>
+  `You are an expert fitness and body composition analyst. Analyze the person's body from this photo.
+
+User's recent workout history (last 30 days): ${workoutSummary}
+
+Cross-reference this workout history when writing the recommendations section. For example, if the user does no strength training, suggest adding it; if they run frequently, comment on how their lower-body development reflects that; if the data is absent, give general guidance.
 
 Provide your analysis in this exact JSON format:
 {
@@ -29,7 +34,7 @@ Provide your analysis in this exact JSON format:
     "<observation 3>"
   ],
   "recommendations": [
-    "<actionable recommendation 1>",
+    "<actionable recommendation 1 — reference workout patterns where relevant>",
     "<actionable recommendation 2>",
     "<actionable recommendation 3>"
   ],
@@ -75,23 +80,29 @@ serve(async (req) => {
     await supabaseAdmin.from("ai_generation_log").insert({
       user_id: userData.user.id,
       generation_type: "analyze_body",
-      model: "google/gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       prompt: { redacted: true },
     });
 
-    const { imageBase64 } = await req.json();
+    const { imageBase64, workoutSummary } = await req.json();
     if (!imageBase64) {
       return new Response(JSON.stringify({ error: "No image provided" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
+    const prompt = buildBodyAnalysisPrompt(
+      typeof workoutSummary === "string" && workoutSummary.trim()
+        ? workoutSummary.trim()
+        : "No workout data available."
+    );
+
     const response = await aiChatCompletion({
-      model: "google/gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       messages: [{
         role: "user",
         content: [
-          { type: "text", text: BODY_ANALYSIS_PROMPT },
+          { type: "text", text: prompt },
           {
             type: "image_url",
             image_url: {

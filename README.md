@@ -4,6 +4,45 @@ AI-powered fitness app covering workouts, nutrition, sleep, health metrics, comm
 
 ---
 
+## Current state (2026-04-25)
+
+**Engineering at ~60–65% of a shippable app. Paused 2026-04-23 pending owner content and decisions.**
+
+The critical path now is **content + owner decisions, not engineering.** Owner needs to supply:
+
+- 20 workout videos (ideally founder-filmed)
+- 30 recipes with images + allergen tags
+- App Store screenshots / copy
+- Privacy policy content
+- Apple Developer + RevenueCat accounts
+- Decisions on ~10 design questions in [`OWNER_DECISIONS.md`](./OWNER_DECISIONS.md)
+
+What's already deployed: real HIIT Score compute (with 12 unit tests + breakdown sheet on Home), `generate-workout-plan` edge function, provider-neutral AI gateway wrapper, AI quota enforcement, HealthKit + Health Connect sync, 6 storage buckets with private signed URLs, VAPID push keys, error logs infrastructure, iOS app icon, Lovable cut entirely, seed migration with 15 badges + 20 workout placeholders, live Nutrition page.
+
+After content arrives, ~2 weeks → TestFlight-ready. That clock isn't running yet.
+
+### Resuming this project
+
+Read in this order:
+
+1. **[`OWNER_DECISIONS.md`](./OWNER_DECISIONS.md)** — live tracker for everything pending.
+2. **[`docs/content-production-checklist.md`](./docs/content-production-checklist.md)** — simplified deliverables map for the owner (20 workouts × video, 30 recipes × image, 20 badges × icon, etc.).
+3. **[`docs/content-strategy.md`](./docs/content-strategy.md)** — strategic thinking behind the content plan + AI-on-demand workflow.
+4. **[`docs/admin-guide.md`](./docs/admin-guide.md)** — `/admin/*` route map + how to grant admin role.
+
+### Working with Vanessa
+
+- **Discord-first comms** when not at the terminal — every reply through the Discord MCP `reply` tool.
+- **Push authority is hers** — never `git push` without explicit approval.
+- **Honest assessments** preferred over reassurance.
+- **First-time Mac user** — explain Mac-specific tooling when non-obvious.
+
+### Supabase project
+
+`pbrqdlkjoxvglcdlixbi` — Vanessa's own account. Set up from scratch (handover from old dev had nothing usable). Supabase CLI is linked; auth persists across sessions via `~/.supabase`.
+
+---
+
 ## Tech stack
 
 - **Frontend:** Vite + React 18 + TypeScript + Tailwind + shadcn-ui + React Router

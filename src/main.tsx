@@ -1,4 +1,6 @@
 import "./lib/preview-bootstrap";
+import * as Sentry from "@sentry/react";
+import { initAnalytics } from "./lib/analytics";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
@@ -18,6 +20,18 @@ import {
   shouldRefreshPreviewOnLoad,
   uncoverPreviewSnapshot,
 } from "./lib/preview";
+
+initAnalytics();
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  environment: import.meta.env.MODE,
+  integrations: [
+    Sentry.browserTracingIntegration(),
+  ],
+  tracesSampleRate: 0.2,
+  enabled: import.meta.env.PROD,
+});
 
 function setupPreviewFreshnessGuards() {
   if (!isLovablePreviewHost) return;
@@ -260,7 +274,11 @@ async function bootstrap() {
   }
 
   await initNativePlugins();
-  createRoot(document.getElementById("root")!).render(<App />);
+  createRoot(document.getElementById("root")!).render(
+    <Sentry.ErrorBoundary fallback={<p style={{ padding: 24, color: '#fff', background: '#0d0d0d', minHeight: '100dvh' }}>Something went wrong. Please restart the app.</p>}>
+      <App />
+    </Sentry.ErrorBoundary>
+  );
 
   if (isLovablePreviewHost) {
     setupPreviewHMRGuards();

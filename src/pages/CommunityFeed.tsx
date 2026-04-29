@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
@@ -29,7 +29,7 @@ const CommunityFeed = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("popular");
-  const { posts, loading, refetch } = useCommunityPosts();
+  const { posts, loading, loadingMore, hasMore, loadMore, refetch } = useCommunityPosts();
   const { likePost, unlikePost, deletePost } = useCommunityActions();
   const { user } = useAuth();
   const { profile } = useProfile();
@@ -44,6 +44,7 @@ const CommunityFeed = () => {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { is_liked: boolean; likes_count: number }>>({});
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Reactions hook
   const postIds = useMemo(() => posts.map(p => p.id), [posts]);
@@ -61,6 +62,22 @@ const CommunityFeed = () => {
     };
     fetchFollowing();
   }, [user]);
+
+  // Infinite scroll: trigger loadMore when the sentinel enters the viewport
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMore();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMore]);
 
   // Tab filtering
   const filteredPosts = useMemo(() => {
@@ -594,6 +611,19 @@ const CommunityFeed = () => {
           );
         })}
       </div>
+
+      {/* Infinite scroll sentinel */}
+      <div ref={loadMoreSentinelRef} className="h-1" />
+      {loadingMore && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {!hasMore && posts.length > 0 && (
+        <p className="text-center text-xs text-muted-foreground py-4">
+          You've reached the end
+        </p>
+      )}
 
       {/* Floating create button */}
       <button

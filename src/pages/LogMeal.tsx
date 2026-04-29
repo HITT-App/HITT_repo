@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { Analytics } from '@/lib/analytics';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -88,6 +89,7 @@ export default function LogMeal() {
 
       if (error) throw error;
 
+      Analytics.mealLogged('manual');
       setShowSuccess(true);
       setTimeout(() => {
         navigate('/nutrition');

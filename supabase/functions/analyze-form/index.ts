@@ -112,7 +112,7 @@ serve(async (req) => {
     await supabaseAdmin.from("ai_generation_log").insert({
       user_id: userId,
       generation_type: "analyze_form",
-      model: "google/gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       prompt: { redacted: true },
     });
 
@@ -129,7 +129,7 @@ serve(async (req) => {
     const exerciseContext = exerciseName ? `The person is performing: ${exerciseName}. ` : '';
 
     const response = await aiChatCompletion({
-      model: "google/gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       messages: [
         {
           role: "user",

@@ -51,5 +51,15 @@
 	<string>HIIT uses your Apple Health data (heart rate, steps, sleep, workouts) to calculate your HIIT Score and personalise your workout and meal plans.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>HIIT saves the workouts you complete in the app to Apple Health so they count toward your Activity rings.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>HIIT uses your camera to scan meals and food packaging so you can log nutrition instantly.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>HIIT accesses your photo library so you can set a profile picture and upload progress photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>HIIT saves your workout share cards to your photo library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>HIIT uses your location to track your outdoor workouts and map your routes.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>HIIT uses your microphone for voice commands with your AI coach.</string>
 </dict>
 </plist>

@@ -130,7 +130,7 @@ serve(async (req) => {
     if (preferences) {
       try {
         const aiResponse = await aiChatCompletion({
-          model: "google/gemini-2.5-flash",
+          model: "gemini-2.0-flash",
           messages: [
             {
               role: "system",

@@ -130,7 +130,7 @@ Based on this data, provide 3-4 personalized activity recommendations. Consider:
 5. Motivation and engagement`;
 
     const aiResponse = await aiChatCompletion({
-      model: "google/gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       messages: [
         { role: "system", content: prompt },
         { role: "user", content: "Generate personalized activity recommendations for me." },

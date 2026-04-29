@@ -97,7 +97,7 @@ Based on this data, provide 3-4 actionable sleep improvement recommendations. Co
 5. Sleep hygiene best practices`;
 
     const aiResponse = await aiChatCompletion({
-      model: "google/gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       messages: [
         { role: "system", content: prompt },
         { role: "user", content: "Generate personalized sleep recommendations for me." },

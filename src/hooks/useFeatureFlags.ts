@@ -26,13 +26,13 @@ const DEFAULT_FLAGS: FeatureFlags = {
   community_enabled: true,
   leaderboard_enabled: true,
   ai_coach_enabled: true,
-  activity_enabled: false,
-  sleep_enabled: false,
-  health_metrics_enabled: false,
+  activity_enabled: true,
+  sleep_enabled: true,
+  health_metrics_enabled: true,
   coaching_enabled: false,
   resources_enabled: false,
   challenges_enabled: false,
-  achievements_enabled: false,
+  achievements_enabled: true,
   gamification_enabled: false,
 };
 

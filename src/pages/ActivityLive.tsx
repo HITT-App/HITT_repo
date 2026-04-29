@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { CompletionSummary } from "@/components/workout/CompletionSummary";
+import { Analytics } from "@/lib/analytics";
 
 import { GpsFilter, haversineDistance, type GpsPoint } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
@@ -123,6 +124,11 @@ const ActivityLive = () => {
     requestWakeLock();
     return () => { wakeLockRef.current?.release(); };
   }, []);
+
+  // Fire workout_started once on mount
+  useEffect(() => {
+    Analytics.workoutStarted(activityType);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- GPS (Kalman-filtered, speed-adaptive, native-capable) ---
   useEffect(() => {
@@ -246,6 +252,12 @@ const ActivityLive = () => {
       });
       const pts = await recordWorkout();
       setPointsEarned(pts);
+      Analytics.workoutCompleted({
+        type: activityType,
+        durationSecs: elapsed,
+        distanceKm: distanceKm > 0 ? Number(distanceKm.toFixed(2)) : undefined,
+        calories,
+      });
       setShowCompleted(true);
       confetti({
         particleCount: 120,
@@ -302,9 +314,10 @@ const ActivityLive = () => {
         activityType={activityType}
         stats={completionStats}
         pointsEarned={pointsEarned}
+        routePositions={hasRoute ? positions : undefined}
         mapComponent={
           hasRoute ? (
-            <LiveActivityMap positions={positions} gpsStatus="active" />
+            <LiveActivityMap positions={positions} gpsStatus="active" fitBoundsOnMount />
           ) : undefined
         }
         onDone={() => navigate("/activity")}

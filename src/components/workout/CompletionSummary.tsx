@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShareOptionsGrid, type ShareStyle } from './ShareOptionsGrid';
 import { SocialShareButtons } from './SocialShareButtons';
-import { generateStatsCard, generatePhotoCard, generateMapCard } from './ShareCardCanvas';
+import { generateStatsCard, generatePhotoCard, generateMapCard, generateRouteCard, type RoutePoint } from './ShareCardCanvas';
 
 import type { Json } from '@/integrations/supabase/types';
 
@@ -28,6 +28,7 @@ interface CompletionSummaryProps {
   achievementMessage?: string;
   badges?: Array<{ name: string; icon: string }>;
   mapComponent?: React.ReactNode;
+  routePositions?: RoutePoint[];
   onDone: () => void;
   postData?: Json;
   ratingSection?: React.ReactNode;
@@ -42,6 +43,7 @@ export function CompletionSummary({
   achievementMessage,
   badges = [],
   mapComponent,
+  routePositions,
   onDone,
   postData,
   ratingSection,
@@ -97,20 +99,21 @@ export function CompletionSummary({
     const generateMapImage = async () => {
       setIsGenerating(true);
       startProgress(true);
-      // Wait for map to render
-      await new Promise(r => setTimeout(r, 800));
       try {
-        if (effectiveMapRef.current) {
-          const dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
-          setGenProgress(100);
-          await new Promise(r => setTimeout(r, 300));
-          setGeneratedImageUrl(dataUrl);
+        let dataUrl: string;
+        if (routePositions && routePositions.length >= 2) {
+          // Native canvas — instant, no CORS, Strava-style
+          dataUrl = await generateRouteCard(routePositions, activityTitle, stats);
+        } else if (effectiveMapRef.current) {
+          // html2canvas fallback for rendered map element
+          await new Promise(r => setTimeout(r, 800));
+          dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
         } else {
-          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
-          setGenProgress(100);
-          await new Promise(r => setTimeout(r, 300));
-          setGeneratedImageUrl(dataUrl);
+          dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
         }
+        setGenProgress(100);
+        await new Promise(r => setTimeout(r, 200));
+        setGeneratedImageUrl(dataUrl);
       } catch {
         try {
           const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
@@ -233,8 +236,14 @@ export function CompletionSummary({
     setIsGenerating(true);
     try {
       let dataUrl: string;
-      if (style === 'map' && effectiveMapRef.current) {
-        dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
+      if (style === 'map') {
+        if (routePositions && routePositions.length >= 2) {
+          dataUrl = await generateRouteCard(routePositions, activityTitle, stats);
+        } else if (effectiveMapRef.current) {
+          dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
+        } else {
+          dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
+        }
       } else {
         dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, effectiveMapRef.current);
       }

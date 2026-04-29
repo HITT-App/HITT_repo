@@ -38,12 +38,19 @@ export async function aiChatCompletion(
   options: AIChatCompletionOptions
 ): Promise<Response> {
   const { url, apiKey } = getConfig();
-  return fetch(`${url}/v1/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(options),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  try {
+    return await fetch(`${url}/chat/completions`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(options),
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

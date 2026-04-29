@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { Analytics } from '@/lib/analytics';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +47,7 @@ export function WorkoutRecommendations({ limit = 3, showMessage = true }: Workou
       
       setRecommendations(data.recommendations?.slice(0, limit) || []);
       setMessage(data.message || '');
+      Analytics.planGenerated('workout');
     } catch (error) {
       console.error('Error fetching recommendations:', error);
       // Fallback to fetching top-rated workouts

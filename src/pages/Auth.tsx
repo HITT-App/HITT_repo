@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { Analytics } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -143,6 +144,7 @@ const Auth = () => {
             setApiError(error.message);
           }
         } else {
+          Analytics.userSignedUp('email');
           toast({
             title: "Account created!",
             description: "Welcome to HIIT Fitness. Let's get started!",

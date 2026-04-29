@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Analytics } from '@/lib/analytics';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -219,6 +220,7 @@ export default function MealScanner() {
         });
         if (error) throw error;
       }
+      Analytics.mealLogged('scanner');
       toast({ title: 'Food logged!', description: `${selected.length} item(s) added to ${mealCategory}.` });
       navigate('/nutrition');
     } catch {

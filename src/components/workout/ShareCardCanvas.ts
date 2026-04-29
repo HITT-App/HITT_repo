@@ -2,6 +2,11 @@ import hiitWatermark from '@/assets/hiit-watermark.png';
 
 const SIZE = 1080;
 
+export interface RoutePoint {
+  lat: number;
+  lng: number;
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -158,6 +163,117 @@ export async function generatePhotoCard(
   await stampWatermark(ctx);
   drawStatsBar(ctx, activityTitle, stats);
 
+  return canvas.toDataURL('image/png');
+}
+
+/** Route card — draws GPS track directly on canvas (Strava-style, no external deps) */
+export async function generateRouteCard(
+  positions: RoutePoint[],
+  activityTitle: string,
+  stats: Array<{ label: string; value: string | number; unit?: string }>,
+): Promise<string> {
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d')!;
+
+  // Dark background
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  const mapH = SIZE - 260; // route area height (stats bar takes bottom 260)
+
+  if (positions.length >= 2) {
+    const lats = positions.map((p) => p.lat);
+    const lngs = positions.map((p) => p.lng);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+
+    const latSpan = maxLat - minLat || 0.001;
+    const lngSpan = maxLng - minLng || 0.001;
+
+    // Mercator Y so route isn't distorted at high latitudes
+    const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+    const minMerc = mercY(minLat);
+    const maxMerc = mercY(maxLat);
+    const mercSpan = maxMerc - minMerc || 0.001;
+
+    const pad = 90;
+    const scaleX = (SIZE - pad * 2) / lngSpan;
+    const scaleY = (mapH - pad * 2) / mercSpan;
+    const scale = Math.min(scaleX, scaleY);
+
+    const projW = lngSpan * scale;
+    const projH = mercSpan * scale;
+    const originX = (SIZE - projW) / 2;
+    const originY = (mapH - projH) / 2;
+
+    const toXY = (lat: number, lng: number): [number, number] => [
+      originX + (lng - minLng) * scale,
+      mapH - (originY + (mercY(lat) - minMerc) * scale),
+    ];
+
+    // Subtle grid
+    ctx.globalAlpha = 0.035;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 7; i++) {
+      ctx.beginPath(); ctx.moveTo((SIZE * i) / 7, 0); ctx.lineTo((SIZE * i) / 7, mapH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, (mapH * i) / 7); ctx.lineTo(SIZE, (mapH * i) / 7); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // Outer glow
+    ctx.strokeStyle = 'hsl(24,90%,55%)';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = 0.1;
+    ctx.lineWidth = 22;
+    ctx.beginPath();
+    positions.forEach((p, i) => { const [x, y] = toXY(p.lat, p.lng); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+    ctx.stroke();
+
+    // Mid glow
+    ctx.globalAlpha = 0.22;
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    positions.forEach((p, i) => { const [x, y] = toXY(p.lat, p.lng); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+    ctx.stroke();
+
+    // Main line
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    positions.forEach((p, i) => { const [x, y] = toXY(p.lat, p.lng); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+    ctx.stroke();
+
+    // Start dot (green)
+    const [sx, sy] = toXY(positions[0].lat, positions[0].lng);
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(sx, sy, 11, 0, Math.PI * 2);
+    ctx.fillStyle = '#22c55e'; ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke();
+
+    // Finish dot (orange with white ring)
+    const last = positions[positions.length - 1];
+    const [ex, ey] = toXY(last.lat, last.lng);
+    ctx.beginPath(); ctx.arc(ex, ey, 14, 0, Math.PI * 2);
+    ctx.fillStyle = 'hsl(24,90%,55%)'; ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+  } else {
+    // No route — placeholder
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.font = '140px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('🗺️', SIZE / 2, mapH / 2 + 50);
+  }
+
+  await stampWatermark(ctx);
+  drawStatsBar(ctx, activityTitle, stats);
   return canvas.toDataURL('image/png');
 }
 

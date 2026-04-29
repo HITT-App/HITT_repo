@@ -154,8 +154,29 @@ const BodyScan = () => {
     setIsAnalyzing(true);
     setAnalysis(null);
     try {
+      // Fetch last 30 days of scheduled workouts and summarise by category
+      const since = subDays(new Date(), 30).toISOString();
+      const { data: workoutRows } = await supabase
+        .from("scheduled_workouts")
+        .select("workout_category")
+        .eq("user_id", user.id)
+        .gte("scheduled_date", since);
+
+      let workoutSummary = "No workout data available.";
+      if (workoutRows && workoutRows.length > 0) {
+        const counts: Record<string, number> = {};
+        for (const row of workoutRows) {
+          const cat = (row.workout_category || "uncategorised").toLowerCase();
+          counts[cat] = (counts[cat] ?? 0) + 1;
+        }
+        const parts = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .map(([cat, n]) => `${n} ${cat} session${n !== 1 ? "s" : ""}`);
+        workoutSummary = `In the last 30 days: ${parts.join(", ")}.`;
+      }
+
       const res = await supabase.functions.invoke("analyze-body", {
-        body: { imageBase64: imagePreview },
+        body: { imageBase64: imagePreview, workoutSummary },
       });
       if (res.error) throw new Error(res.error.message);
       if (res.data?.error) throw new Error(res.data.error);

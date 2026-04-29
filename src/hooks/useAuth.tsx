@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { log, logSecurityEvent, SecurityEventTypes, generateCorrelationId } from "@/lib/security-logger";
+import { identifyUser, resetAnalyticsUser } from "@/lib/analytics";
 
 interface AuthContextType {
   user: User | null;
@@ -35,12 +36,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Log security events for auth state changes
         if (event === "SIGNED_IN" && session?.user) {
+          identifyUser(session.user.id, { email: session.user.email });
           logSecurityEvent(SecurityEventTypes.AUTH_SUCCESS, {
             correlationId,
             userId: session.user.id,
             eventType: "sign_in",
           });
         } else if (event === "SIGNED_OUT") {
+          resetAnalyticsUser();
           logSecurityEvent(SecurityEventTypes.AUTH_LOGOUT, {
             correlationId,
             eventType: "sign_out",

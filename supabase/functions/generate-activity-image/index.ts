@@ -52,7 +52,7 @@ serve(async (req) => {
     await supabaseAdmin.from("ai_generation_log").insert({
       user_id: user.id,
       generation_type: "activity_image",
-      model: "google/gemini-3.1-flash-image-preview",
+      model: "gemini-2.0-flash",
       prompt: { redacted: true },
     });
 
@@ -149,7 +149,7 @@ STYLE:
     }
 
     const aiResponse = await aiChatCompletion({
-      model: "google/gemini-3.1-flash-image-preview",
+      model: "gemini-2.0-flash",
       messages: [{ role: "user", content: messageContent }],
       modalities: ["image", "text"],
     });

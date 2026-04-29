@@ -1,9 +1,13 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Lock, Sparkles, ArrowLeft } from "lucide-react";
+import { Analytics } from "@/lib/analytics";
 
 const FeatureLocked = () => {
   const navigate = useNavigate();
+
+  useEffect(() => { Analytics.premiumFeatureViewed(); }, []);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -55,7 +59,7 @@ const FeatureLocked = () => {
         <div className="flex flex-col gap-3">
           <Button
             className="w-full rounded-xl py-6 gap-2"
-            onClick={() => navigate("/subscription")}
+            onClick={() => { Analytics.subscriptionCheckoutStarted(); navigate("/subscription"); }}
           >
             <Sparkles className="w-5 h-5" />
             Upgrade to HIIT Plus

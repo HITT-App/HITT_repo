@@ -205,7 +205,7 @@ serve(async (req) => {
     await supabaseAdmin.from("ai_generation_log").insert({
       user_id: userId,
       generation_type: "ai_coach",
-      model: "google/gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       prompt: { redacted: true },
     });
 
@@ -395,7 +395,7 @@ serve(async (req) => {
     }
 
     const response = await aiChatCompletion({
-      model: "google/gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       messages: apiMessages,
       stream: true,
     });
