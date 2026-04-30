@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 import { supabase } from "@/integrations/supabase/client";
 import { log, logSecurityEvent, SecurityEventTypes, generateCorrelationId } from "@/lib/security-logger";
 import { identifyUser, resetAnalyticsUser } from "@/lib/analytics";
@@ -73,6 +74,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (Capacitor.isNativePlatform()) {
       App.addListener('appUrlOpen', async ({ url }) => {
         if (!url.startsWith('hiitfitness://')) return;
+        // Close the in-app browser before processing — this also triggers browserFinished
+        try { await Browser.close(); } catch { /* ignore if already closed */ }
         try {
           if (url.includes('code=')) {
             await supabase.auth.exchangeCodeForSession(url);
@@ -95,6 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (e) {
           console.error('OAuth deep link error:', e);
+          setLoading(false);
         }
       }).then(listener => { appUrlListener = listener; });
     }
@@ -143,13 +147,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
+    if (Capacitor.isNativePlatform()) {
+      // Use skipBrowserRedirect so the WebView stays mounted (preserving the PKCE
+      // code verifier in sessionStorage). We open the OAuth URL in a native
+      // SFSafariViewController via @capacitor/browser instead.
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'hiitfitness://auth-callback',
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) return { error: error as Error | null };
+      if (data?.url) await Browser.open({ url: data.url });
+      return { error: null };
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: getOAuthRedirectUrl(),
+        redirectTo: `${window.location.origin}/`,
       },
     });
-    
     return { error: error as Error | null };
   };
 

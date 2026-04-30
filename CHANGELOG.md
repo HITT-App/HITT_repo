@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-04-30] — Build 9: Google sign-in fixed — opens native Safari sheet to preserve auth session
+
+- **Google sign-in root cause fixed** — previous builds lost the PKCE security token because the app's WebView was navigating away to Google, clearing session storage; sign-in now opens in a native Safari sheet instead so the app stays mounted and the auth handshake completes correctly
+- **Cancelled sign-in no longer freezes the button** — if you dismiss the Google sheet without completing sign-in, the spinner now clears properly
+- **Sign-in failure no longer leaves the app stuck** — error state is now reset correctly if the OAuth callback fails for any reason
+
 ## [2026-04-30] — Build 8: Google sign-in spinner fixed — app navigates correctly after OAuth completes
 
 - **Google sign-in now lands on the home screen** — after returning from Google authentication, the app was getting stuck on the sign-in spinner even though the account was successfully created; fixed by explicitly refreshing the session state rather than waiting for an event that wasn't reliably firing on iOS

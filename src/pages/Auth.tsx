@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { Analytics } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
@@ -182,14 +184,24 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setApiError(null);
-    
+
     const { error } = await signInWithGoogle();
-    
+
     if (error) {
       setApiError(error.message);
       setIsLoading(false);
+      return;
     }
-    // Note: OAuth redirects, so we don't need to handle success here
+
+    if (Capacitor.isNativePlatform()) {
+      // The in-app browser is now open. If the user cancels without completing
+      // auth, browserFinished fires and we clear the spinner.
+      const listener = await Browser.addListener('browserFinished', () => {
+        setIsLoading(false);
+        listener.remove();
+      });
+    }
+    // On web, OAuth redirects the page — nothing more to do here.
   };
 
   const renderSignIn = () => (
