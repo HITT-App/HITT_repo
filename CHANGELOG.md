@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-04-30] — Build 13: Swift files added to Xcode project — app loads again
+
+- **App now loads** — `OAuthPlugin.swift` and `ViewController.swift` were written to disk but never registered in `project.pbxproj`, so Xcode never compiled them; the storyboard referenced a `ViewController` class that didn't exist at runtime, causing an immediate black screen; both files are now properly added to the build
+
 ## [2026-04-30] — Build 12: Auth architecture fixes from code review
 
 - **Google sign-in callback now reliable** — the native plugin was releasing the call reference before ASWebAuthenticationSession could complete; added `call.keepAlive = true` so the bridge holds the reference through the async flow
