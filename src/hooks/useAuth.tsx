@@ -2,15 +2,10 @@ import { useState, useEffect, createContext, useContext, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
-import { Browser } from "@capacitor/browser";
 import { supabase } from "@/integrations/supabase/client";
+import { OAuthPlugin } from "@/plugins/oauth";
 import { log, logSecurityEvent, SecurityEventTypes, generateCorrelationId } from "@/lib/security-logger";
 import { identifyUser, resetAnalyticsUser } from "@/lib/analytics";
-
-const getOAuthRedirectUrl = () =>
-  Capacitor.isNativePlatform()
-    ? 'hiitfitness://auth-callback'
-    : `${window.location.origin}/`;
 
 interface AuthContextType {
   user: User | null;
@@ -74,8 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (Capacitor.isNativePlatform()) {
       App.addListener('appUrlOpen', async ({ url }) => {
         if (!url.startsWith('hiitfitness://')) return;
-        // Close the in-app browser before processing — this also triggers browserFinished
-        try { await Browser.close(); } catch { /* ignore if already closed */ }
         try {
           if (url.includes('code=')) {
             await supabase.auth.exchangeCodeForSession(url);
@@ -88,8 +81,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
             }
           }
-          // onAuthStateChange may not fire reliably from a native bridge callback —
-          // explicitly pull the session and update React state to guarantee navigation.
           const { data: { session: newSession } } = await supabase.auth.getSession();
           if (newSession) {
             setSession(newSession);
@@ -110,19 +101,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
+        emailRedirectTo: Capacitor.isNativePlatform()
+          ? 'hiitfitness://auth-callback'
+          : `${window.location.origin}/`,
         data: {
           display_name: displayName,
         },
       },
     });
-    
     return { error: error as Error | null };
   };
 
@@ -148,9 +138,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async () => {
     if (Capacitor.isNativePlatform()) {
-      // Use skipBrowserRedirect so the WebView stays mounted (preserving the PKCE
-      // code verifier in sessionStorage). We open the OAuth URL in a native
-      // SFSafariViewController via @capacitor/browser instead.
+      // Get the OAuth URL without navigating (skipBrowserRedirect preserves the
+      // PKCE code verifier in localStorage).
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -159,7 +148,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       });
       if (error) return { error: error as Error | null };
-      if (data?.url) await Browser.open({ url: data.url });
+      if (!data?.url) return { error: new Error('No OAuth URL returned') };
+
+      // Use ASWebAuthenticationSession — the only iOS mechanism that reliably
+      // forwards custom URL scheme redirects from an auth flow back to the app.
+      // SFSafariViewController (@capacitor/browser) cannot do this on iOS 11+.
+      const { url: callbackUrl } = await OAuthPlugin.authenticate({
+        url: data.url,
+        callbackScheme: 'hiitfitness',
+      });
+
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(callbackUrl);
+      if (exchangeError) return { error: exchangeError as Error | null };
+
+      // Explicitly push session into React state — onAuthStateChange can be
+      // unreliable immediately after a native bridge callback.
+      const { data: { session: newSession } } = await supabase.auth.getSession();
+      if (newSession) {
+        setSession(newSession);
+        setUser(newSession.user);
+        setLoading(false);
+      }
       return { error: null };
     }
 

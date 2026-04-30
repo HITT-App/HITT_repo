@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { Analytics } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
@@ -133,7 +131,11 @@ const Auth = () => {
       if (view === "signin") {
         const { error } = await signIn(email, password);
         if (error) {
-          setApiError("Incorrect email or password.");
+          if (error.message.toLowerCase().includes("email not confirmed")) {
+            setApiError("Please confirm your email address before signing in. Check your inbox.");
+          } else {
+            setApiError("Incorrect email or password.");
+          }
         } else {
           toast({
             title: "Welcome back!",
@@ -150,9 +152,11 @@ const Auth = () => {
           }
         } else {
           Analytics.userSignedUp('email');
+          // If onAuthStateChange fires immediately, the useEffect navigates away.
+          // If email confirmation is required, session stays null and we show a message.
           toast({
             title: "Account created!",
-            description: "Welcome to HIIT Fitness. Let's get started!",
+            description: "Check your email to confirm your account, then sign in.",
           });
         }
       } else if (view === "forgot-password") {
@@ -187,21 +191,13 @@ const Auth = () => {
 
     const { error } = await signInWithGoogle();
 
-    if (error) {
-      setApiError(error.message);
-      setIsLoading(false);
-      return;
-    }
+    setIsLoading(false);
 
-    if (Capacitor.isNativePlatform()) {
-      // The in-app browser is now open. If the user cancels without completing
-      // auth, browserFinished fires and we clear the spinner.
-      const listener = await Browser.addListener('browserFinished', () => {
-        setIsLoading(false);
-        listener.remove();
-      });
+    if (error && (error as Error).message !== 'USER_CANCELLED') {
+      setApiError('Google sign-in failed. Please try again.');
     }
-    // On web, OAuth redirects the page — nothing more to do here.
+    // Success: navigation is handled by the useEffect watching user above.
+    // Web: OAuth redirects the page — nothing more to do here.
   };
 
   const renderSignIn = () => (
