@@ -17,8 +17,15 @@ public class OAuthPlugin: CAPPlugin, ASWebAuthenticationPresentationContextProvi
             return
         }
 
+        // keepAlive prevents Capacitor from releasing this call reference
+        // before ASWebAuthenticationSession completes (it's async/modal).
+        call.keepAlive = true
+
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
+            guard let self = self else {
+                call.reject("Plugin deallocated before OAuth could start")
+                return
+            }
 
             self.authSession = ASWebAuthenticationSession(
                 url: url,
@@ -41,12 +48,26 @@ public class OAuthPlugin: CAPPlugin, ASWebAuthenticationPresentationContextProvi
             }
 
             self.authSession?.presentationContextProvider = self
+            // false = share cookies with Safari so users already signed into
+            // Google on device don't need to re-enter credentials.
             self.authSession?.prefersEphemeralWebBrowserSession = false
             self.authSession?.start()
         }
     }
 
     public func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        return self.bridge?.viewController?.view.window ?? UIWindow()
+        // Prefer the live window; fall back to first connected scene window.
+        // Never return a bare UIWindow() — it has no windowScene on iOS 13+
+        // and causes ASWebAuthenticationSession to crash at presentation.
+        if let window = self.bridge?.viewController?.view.window {
+            return window
+        }
+        if #available(iOS 15, *) {
+            return UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow } ?? UIWindow()
+        }
+        return UIApplication.shared.windows.first(where: { $0.isKeyWindow }) ?? UIWindow()
     }
 }

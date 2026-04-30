@@ -152,12 +152,14 @@ const Auth = () => {
           }
         } else {
           Analytics.userSignedUp('email');
-          // If onAuthStateChange fires immediately, the useEffect navigates away.
-          // If email confirmation is required, session stays null and we show a message.
+          // If onAuthStateChange fires immediately (email confirmation off),
+          // the useEffect watching user navigates away automatically.
+          // If email confirmation is required, show the right message and stop the spinner.
           toast({
             title: "Account created!",
             description: "Check your email to confirm your account, then sign in.",
           });
+          setIsLoading(false);
         }
       } else if (view === "forgot-password") {
         const { error } = await resetPassword(email);

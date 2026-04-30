@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-04-30] — Build 12: Auth architecture fixes from code review
+
+- **Google sign-in callback now reliable** — the native plugin was releasing the call reference before ASWebAuthenticationSession could complete; added `call.keepAlive = true` so the bridge holds the reference through the async flow
+- **Email sign-up spinner now clears** — when email confirmation is required, the "Account created" toast appeared but the loading spinner never stopped; fixed
+- **Sign-out now fully clears state** — both user and session are cleared on sign-out, not just user
+- **Password reset email opens HIIT app on iOS** — the reset link was pointing to an internal Capacitor URL; it now uses the `hiitfitness://` deep link scheme so it opens the app correctly
+- **Resend verification email fixed the same way** — same URL issue corrected
+- **Presentation anchor crash fixed** — the native OAuth sheet now uses the correct window reference on iOS 13+ instead of a bare `UIWindow()` which caused a crash at presentation
+
 ## [2026-04-30] — Build 11: Native OAuth plugin properly registered; Google sign-in errors now visible
 
 - **Google sign-in opens the authentication page** — the native OAuth plugin (`OAuthPlugin`) is now correctly registered with Capacitor via a `ViewController` subclass; in Build 10 the plugin was compiled but not wired up, so tapping Google just spun

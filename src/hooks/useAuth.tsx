@@ -29,15 +29,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const correlationId = generateCorrelationId();
-    
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-        
-        // Log security events for auth state changes
+
         if (event === "SIGNED_IN" && session?.user) {
           identifyUser(session.user.id, { email: session.user.email });
           logSecurityEvent(SecurityEventTypes.AUTH_SUCCESS, {
@@ -64,7 +63,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    // Handle OAuth deep link callback on iOS
+    // On iOS, handle deep links for email confirmation / password reset.
+    // Google OAuth is handled directly by OAuthPlugin (ASWebAuthenticationSession)
+    // and never comes through appUrlOpen, so this listener is only for email flows.
     let appUrlListener: { remove: () => void } | null = null;
     if (Capacitor.isNativePlatform()) {
       App.addListener('appUrlOpen', async ({ url }) => {
@@ -88,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
           }
         } catch (e) {
-          console.error('OAuth deep link error:', e);
+          console.error('Deep link auth error:', e);
           setLoading(false);
         }
       }).then(listener => { appUrlListener = listener; });
@@ -108,9 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         emailRedirectTo: Capacitor.isNativePlatform()
           ? 'hiitfitness://auth-callback'
           : `${window.location.origin}/`,
-        data: {
-          display_name: displayName,
-        },
+        data: { display_name: displayName },
       },
     });
     return { error: error as Error | null };
@@ -118,28 +117,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     const correlationId = generateCorrelationId();
-    
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       logSecurityEvent(SecurityEventTypes.AUTH_FAILURE, {
         correlationId,
         endpoint: "/auth/sign-in",
         eventType: "password_auth_failure",
-        // Never log the actual email, just note that there was a failure
       });
     }
-    
     return { error: error as Error | null };
   };
 
   const signInWithGoogle = async () => {
     if (Capacitor.isNativePlatform()) {
-      // Get the OAuth URL without navigating (skipBrowserRedirect preserves the
-      // PKCE code verifier in localStorage).
+      // Get the OAuth URL without navigating — skipBrowserRedirect preserves
+      // the PKCE code verifier in localStorage while ASWebAuthenticationSession
+      // handles the browser interaction natively.
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -150,9 +143,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) return { error: error as Error | null };
       if (!data?.url) return { error: new Error('No OAuth URL returned') };
 
-      // Use ASWebAuthenticationSession — the only iOS mechanism that reliably
-      // forwards custom URL scheme redirects from an auth flow back to the app.
-      // SFSafariViewController (@capacitor/browser) cannot do this on iOS 11+.
       let callbackUrl: string;
       try {
         const result = await OAuthPlugin.authenticate({
@@ -182,9 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
+      options: { redirectTo: `${window.location.origin}/` },
     });
     return { error: error as Error | null };
   };
@@ -195,54 +183,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       // Even if signOut fails (e.g. expired session), clear local state
     }
-    // Force clear user state so UI redirects to auth
     setUser(null);
+    setSession(null);
   };
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth?view=update-password`,
-    });
-    
+    const redirectTo = Capacitor.isNativePlatform()
+      ? 'hiitfitness://auth-callback?view=update-password'
+      : `${window.location.origin}/auth?view=update-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     return { error: error as Error | null };
   };
 
   const updatePassword = async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-    
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
     return { error: error as Error | null };
   };
 
   const resendVerificationEmail = async () => {
-    if (!user?.email) {
-      return { error: new Error("No email found") };
-    }
-    
+    if (!user?.email) return { error: new Error("No email found") };
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: user.email,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: Capacitor.isNativePlatform()
+          ? 'hiitfitness://auth-callback'
+          : `${window.location.origin}/`,
       },
     });
-    
     return { error: error as Error | null };
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      loading, 
-      signUp, 
-      signIn, 
-      signInWithGoogle,
-      signOut,
-      resetPassword,
-      updatePassword,
-      resendVerificationEmail,
+    <AuthContext.Provider value={{
+      user, session, loading,
+      signUp, signIn, signInWithGoogle,
+      signOut, resetPassword, updatePassword, resendVerificationEmail,
     }}>
       {children}
     </AuthContext.Provider>
