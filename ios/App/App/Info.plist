@@ -63,5 +63,7 @@
 	<string>HIIT uses your location to track your outdoor workouts and map your routes.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>HIIT uses your microphone for voice commands with your AI coach.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
