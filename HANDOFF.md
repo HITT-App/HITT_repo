@@ -30,6 +30,18 @@ These live in Supabase edge function secrets (Settings → Edge Functions → Se
 
 ---
 
+## Supabase Configuration to Preserve
+
+These settings are in the Supabase dashboard and must not be accidentally removed after handoff.
+
+| Setting | Location | Value | Why it matters |
+|---|---|---|---|
+| OAuth redirect URL | Authentication → URL Configuration → Redirect URLs | `hiitfitness://auth-callback` | Required for Google sign-in on iOS. Remove this and Google sign-in breaks. |
+| Google OAuth provider | Authentication → Providers → Google | Client ID + Secret configured | Required for Google sign-in. |
+| Edge function secrets | Edge Functions → Secrets | `AI_API_KEY`, `AI_GATEWAY_URL`, `SUPABASE_SERVICE_ROLE_KEY` etc. | Power all AI features. Transfer with Supabase ownership. |
+
+---
+
 ## Owner Must Set Up Themselves
 
 These cannot be set up in advance — they are intrinsically tied to the owner's Apple developer account or business.
@@ -76,4 +88,4 @@ Do these in order to avoid breaking the live app mid-transfer:
 
 ---
 
-*Last updated: 2026-04-29*
+*Last updated: 2026-04-30*

@@ -12,17 +12,13 @@ RevenueCat does not appear anywhere in the codebase. The subscription UI and adm
 
 **Decision needed:** create a RevenueCat account at revenuecat.com and supply the API key. Engineering (~2 days) can proceed immediately once the key exists.
 
-### AI provider swap — action needed
+### ✅ AI provider — Gemini direct (2026-04-29)
 
-The app currently runs on Lovable's Gemini gateway, which is a shared sandbox — not a production service. The architect recommends swapping to **OpenRouter with Anthropic Claude** as the primary model. This is a half-day engineering task requiring no code changes (only updating two Supabase secrets: `AI_GATEWAY_URL` and `AI_API_KEY`).
+Switched all 10 edge functions from Lovable's shared Gemini gateway to the **Gemini API direct endpoint** (`generativelanguage.googleapis.com/v1beta/openai/`). Model: `gemini-2.0-flash`. API key stored in Supabase secret `AI_API_KEY` — currently under Vanessa's Google account, needs replacing at handoff (see HANDOFF.md).
 
-**Decision needed:** confirm OpenRouter + Anthropic, or nominate a different provider. Engineering is ready to proceed on confirmation.
+### ✅ Community feed refactor (2026-04-29)
 
-### Community feed — pre-App Store refactor (engineering risk)
-
-The current realtime subscription means any like from any user triggers a full re-fetch for every user viewing the feed simultaneously. Fine for a small investor demo; a reliability problem at 200+ concurrent users.
-
-**No owner decision needed** — this is pure engineering work, logged here for visibility. Will be addressed before App Store submission.
+Realtime subscription now uses targeted state updates (INSERT/UPDATE/DELETE handled individually) instead of full re-fetch on every event. Cursor-based pagination with IntersectionObserver infinite scroll. Ready for App Store submission.
 
 ### ✅ HIIT Score — formula weighting
 Current V1 (in `supabase/functions/compute-hiit-score/index.ts`):
@@ -128,6 +124,25 @@ Open questions:
 - Who runs it operationally? (Automated vs manual selection?)
 
 **Decision needed:** prize structure and cadence before I can build the UI + automation.
+
+---
+
+### ✅ TestFlight — live as of 2026-04-30
+
+App is on TestFlight. Current build: **5** (version 1.0). Add testers via App Store Connect → TestFlight → Internal Testing.
+
+**Builds shipped:**
+- Build 3: first build — monitoring, analytics, account deletion, GPS share cards, push notifications
+- Build 4: uploaded during session gap
+- Build 5: Google sign-in fix, keyboard navigation on signup, location permission string
+
+### ✅ Google OAuth on iOS — fixed (2026-04-30)
+
+Google sign-in now works on TestFlight. Uses `hiitfitness://` deep link scheme to route back into the app after Google authenticates. Supabase Auth redirect URL `hiitfitness://auth-callback` has been added to the allowed list. **Important:** this redirect URL must be kept in Supabase Auth → URL Configuration → Redirect URLs. Do not remove it.
+
+### ✅ iOS permissions — all strings in place (2026-04-30)
+
+Info.plist contains all required Apple privacy usage strings: camera, photo library, photo library save, location (when in use + always), microphone, HealthKit read + write. Push notifications entitlement set to `production`.
 
 ---
 
