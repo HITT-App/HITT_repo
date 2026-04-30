@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-04-30] — Build 11: Native OAuth plugin properly registered; Google sign-in errors now visible
+
+- **Google sign-in opens the authentication page** — the native OAuth plugin (`OAuthPlugin`) is now correctly registered with Capacitor via a `ViewController` subclass; in Build 10 the plugin was compiled but not wired up, so tapping Google just spun
+- **Sign-in failures now show an error message** — any failure in the OAuth flow (plugin error, code exchange failure, etc.) is now caught and displayed instead of leaving the spinner stuck
+
 ## [2026-04-30] — Build 10: Google sign-in fixed with native OAuth handler; email sign-up error messaging improved
 
 - **Google sign-in finally fixed** — replaced the in-app browser approach with Apple's dedicated OAuth handler (`ASWebAuthenticationSession`), which is the only iOS mechanism that reliably handles the redirect back to the app after Google authentication; previous builds used `SFSafariViewController` which cannot forward custom URL scheme redirects on iOS 11+

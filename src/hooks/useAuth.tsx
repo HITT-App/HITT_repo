@@ -153,10 +153,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Use ASWebAuthenticationSession — the only iOS mechanism that reliably
       // forwards custom URL scheme redirects from an auth flow back to the app.
       // SFSafariViewController (@capacitor/browser) cannot do this on iOS 11+.
-      const { url: callbackUrl } = await OAuthPlugin.authenticate({
-        url: data.url,
-        callbackScheme: 'hiitfitness',
-      });
+      let callbackUrl: string;
+      try {
+        const result = await OAuthPlugin.authenticate({
+          url: data.url,
+          callbackScheme: 'hiitfitness',
+        });
+        callbackUrl = result.url;
+      } catch (e: unknown) {
+        const msg = (e as Error)?.message ?? String(e);
+        if (msg === 'USER_CANCELLED') return { error: new Error('USER_CANCELLED') };
+        return { error: new Error(`Google sign-in failed: ${msg}`) };
+      }
 
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(callbackUrl);
       if (exchangeError) return { error: exchangeError as Error | null };
