@@ -1,8 +1,9 @@
 # HITT App Changelog
 
-## [2026-04-30] — Build 13: Swift files added to Xcode project — app loads again
+## [2026-04-30] — Build 13: OAuthPlugin compiled into project — app loads, Google sign-in wired
 
-- **App now loads** — `OAuthPlugin.swift` and `ViewController.swift` were written to disk but never registered in `project.pbxproj`, so Xcode never compiled them; the storyboard referenced a `ViewController` class that didn't exist at runtime, causing an immediate black screen; both files are now properly added to the build
+- **App now loads** — `OAuthPlugin.swift` was written to disk but never added to `project.pbxproj`, so Xcode never compiled it; the plugin didn't exist at runtime and (from Build 11) the storyboard referenced a `ViewController` class that also didn't exist, causing a black screen; fixed by properly registering `OAuthPlugin.swift` in the build and reverting to the standard `CAPBridgeViewController` storyboard entry
+- **Google OAuth plugin auto-discovered** — Capacitor finds the plugin via the ObjC runtime from the `@objc(OAuthPlugin)` annotation once the file is compiled into the binary; no explicit registration needed
 
 ## [2026-04-30] — Build 12: Auth architecture fixes from code review
 
