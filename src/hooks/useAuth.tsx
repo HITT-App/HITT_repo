@@ -75,19 +75,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!url.startsWith('hiitfitness://')) return;
         try {
           if (url.includes('code=')) {
-            // PKCE flow — exchange code for session
-            const { error } = await supabase.auth.exchangeCodeForSession(url);
-            if (error) console.error('OAuth PKCE exchange error:', error.message);
+            await supabase.auth.exchangeCodeForSession(url);
           } else if (url.includes('access_token=')) {
-            // Implicit flow — parse tokens from hash or query
             const fragment = url.includes('#') ? url.split('#')[1] : url.split('?')[1] ?? '';
             const params = new URLSearchParams(fragment);
             const accessToken = params.get('access_token');
             const refreshToken = params.get('refresh_token');
             if (accessToken && refreshToken) {
-              const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-              if (error) console.error('OAuth implicit session error:', error.message);
+              await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
             }
+          }
+          // onAuthStateChange may not fire reliably from a native bridge callback —
+          // explicitly pull the session and update React state to guarantee navigation.
+          const { data: { session: newSession } } = await supabase.auth.getSession();
+          if (newSession) {
+            setSession(newSession);
+            setUser(newSession.user);
+            setLoading(false);
           }
         } catch (e) {
           console.error('OAuth deep link error:', e);

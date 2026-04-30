@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-04-30] — Build 8: Google sign-in spinner fixed — app navigates correctly after OAuth completes
+
+- **Google sign-in now lands on the home screen** — after returning from Google authentication, the app was getting stuck on the sign-in spinner even though the account was successfully created; fixed by explicitly refreshing the session state rather than waiting for an event that wasn't reliably firing on iOS
+
 ## [2026-04-30] — Build 7: Google sign-in fixed — handles both OAuth flows, sign-in now completes
 
 - **Google sign-in working** — fixed the root cause: the app was only handling one type of OAuth response (PKCE) but Supabase was sending the other type (implicit, with tokens in the URL). Both are now handled so sign-in completes correctly
