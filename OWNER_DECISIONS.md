@@ -58,22 +58,9 @@ Additional actions to reward (owner to confirm values):
 
 **Decision needed:** point values for each, and whether any are one-time vs repeatable (e.g. "first post" bonus vs "every post").
 
-### Account deletion flow (App Store blocker)
+### ✅ Account deletion flow — shipped (2026-04-29, build 3)
 
-Apple App Store Guideline 5.1.1(v) requires in-app account deletion for any app with account creation. **The current app has none — submission will be rejected.**
-
-Needs:
-- A "Delete my account" destructive button in the Profile page
-- A confirmation modal with friction (typed confirmation, plus an explainer of what happens)
-- An edge function that cascades delete across: `auth.users`, and every user-scoped table (profiles, meal_logs, sleep_logs, workouts completed, subscriptions, community posts, etc.)
-- Revocation of the session
-- **30-day soft delete** with restore option (decided 2026-04-29)
-
-**Still needed:**
-- Copy for the confirmation modal — this is a last-touch moment with the user
-- Anything beyond the core tables that should be wiped (e.g. ai_generation_log, error_logs, push subscriptions)?
-
-Pure engineering is ready to go once modal copy is supplied.
+App Store Guideline 5.1.1(v) satisfied. "Delete my account" button in Profile → confirmation modal with typed "DELETE" confirmation → `delete-account` edge function soft-deletes across 12 user tables and revokes the session. 30-day restore window. Ships in build 3.
 
 ### Privacy policy rewrite (ICO exposure)
 
@@ -129,16 +116,21 @@ Open questions:
 
 ### ✅ TestFlight — live as of 2026-04-30
 
-App is on TestFlight. Current build: **5** (version 1.0). Add testers via App Store Connect → TestFlight → Internal Testing.
+App is on TestFlight. Current build: **8** (version 1.0). Add testers via App Store Connect → TestFlight → Internal Testing.
 
-**Builds shipped:**
-- Build 3: first build — monitoring, analytics, account deletion, GPS share cards, push notifications
-- Build 4: uploaded during session gap
-- Build 5: Google sign-in fix, keyboard navigation on signup, location permission string
+**Build history:**
+| Build | Date | Notes |
+|---|---|---|
+| 3 | 2026-04-29 | First build — monitoring, analytics, account deletion, GPS share cards, push notifications |
+| 4 | 2026-04-30 | Uploaded during session gap |
+| 5 | 2026-04-30 | Google sign-in redirect, keyboard nav on signup, location permission string |
+| 6 | 2026-04-30 | Deep link handler + `hiitfitness://` URL scheme registered in Info.plist |
+| 7 | 2026-04-30 | OAuth handler covers both PKCE and implicit flow; Supabase client hardened for Capacitor |
+| 8 | 2026-04-30 | Google sign-in spinner fixed — session explicitly refreshed after OAuth completes |
 
-### ✅ Google OAuth on iOS — fixed (2026-04-30)
+### ✅ Google OAuth on iOS — fixed (2026-04-30, build 8)
 
-Google sign-in now works on TestFlight. Uses `hiitfitness://` deep link scheme to route back into the app after Google authenticates. Supabase Auth redirect URL `hiitfitness://auth-callback` has been added to the allowed list. **Important:** this redirect URL must be kept in Supabase Auth → URL Configuration → Redirect URLs. Do not remove it.
+Google sign-in works end-to-end on TestFlight. Uses `hiitfitness://` deep link scheme. Google OAuth credentials configured in Google Cloud Console project `hiit-fitness-oauth` (currently under Vanessa's Google account — see HANDOFF.md). Supabase Auth → URL Configuration → Redirect URLs contains `hiitfitness://auth-callback` — **do not remove this**. Deep link handler covers both PKCE (code in query) and implicit (tokens in hash) OAuth flows, and explicitly refreshes React session state on return.
 
 ### ✅ iOS permissions — all strings in place (2026-04-30)
 
