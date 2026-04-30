@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Analytics } from "@/lib/analytics";
@@ -54,6 +54,9 @@ const Auth = () => {
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
   const { signIn, signUp, signInWithGoogle, resetPassword, updatePassword, user } = useAuth();
@@ -371,6 +374,8 @@ const Auth = () => {
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             className="auth-input"
+            enterKeyHint="next"
+            onKeyDown={(e) => e.key === 'Enter' && emailRef.current?.focus()}
           />
           {errors.displayName && (
             <p className="text-xs text-destructive">{errors.displayName}</p>
@@ -382,12 +387,15 @@ const Auth = () => {
             Email Address
           </Label>
           <Input
+            ref={emailRef}
             id="email"
             type="email"
             placeholder="Enter your email address..."
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="auth-input"
+            enterKeyHint="next"
+            onKeyDown={(e) => e.key === 'Enter' && passwordRef.current?.focus()}
           />
           {errors.email && (
             <p className="text-xs text-destructive">{errors.email}</p>
@@ -400,12 +408,15 @@ const Auth = () => {
           </Label>
           <div className="relative">
             <Input
+              ref={passwordRef}
               id="password"
               type={showPassword ? "text" : "password"}
               placeholder="••••••••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="auth-input pr-10"
+              enterKeyHint="next"
+              onKeyDown={(e) => e.key === 'Enter' && confirmPasswordRef.current?.focus()}
             />
             <button
               type="button"
@@ -443,12 +454,15 @@ const Auth = () => {
           </Label>
           <div className="relative">
             <Input
+              ref={confirmPasswordRef}
               id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               placeholder="••••••••••••••"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="auth-input pr-10"
+              enterKeyHint="done"
+              onFocus={(e) => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
             />
             <button
               type="button"
@@ -773,8 +787,8 @@ const Auth = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-background overflow-y-auto">
+      <div className="w-full max-w-sm mx-auto px-6 py-12 pb-32">
         {view === "signin" && renderSignIn()}
         {view === "signup" && renderSignUp()}
         {view === "forgot-password" && renderForgotPassword()}

@@ -1,8 +1,14 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { log, logSecurityEvent, SecurityEventTypes, generateCorrelationId } from "@/lib/security-logger";
 import { identifyUser, resetAnalyticsUser } from "@/lib/analytics";
+
+const getOAuthRedirectUrl = () =>
+  Capacitor.isNativePlatform()
+    ? 'hiitfitness://auth-callback'
+    : `${window.location.origin}/`;
 
 interface AuthContextType {
   user: User | null;
@@ -105,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: getOAuthRedirectUrl(),
       },
     });
     

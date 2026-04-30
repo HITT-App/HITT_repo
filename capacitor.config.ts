@@ -33,7 +33,7 @@ const config: CapacitorConfig = {
     },
   },
   ios: {
-    scheme: 'HIIT Fitness',
+    scheme: 'hiitfitness',
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
     backgroundColor: '#0a0a0a',

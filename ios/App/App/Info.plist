@@ -59,6 +59,8 @@
 	<string>HIIT saves your workout share cards to your photo library.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>HIIT uses your location to track your outdoor workouts and map your routes.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>HIIT uses your location to track your outdoor workouts and map your routes.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>HIIT uses your microphone for voice commands with your AI coach.</string>
 </dict>

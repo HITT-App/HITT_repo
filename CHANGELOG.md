@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-04-30] — Build 4: Google sign-in fix, keyboard navigation on signup, location permission string
+
+- **Google sign-in fixed** — OAuth now redirects correctly back into the app on iOS using a deep link; was previously failing with a 400 error on TestFlight
+- **Signup keyboard** — "Next" button moves between name → email → password → confirm password; confirm password field scrolls into view when focused so it's never hidden behind the keyboard
+- **Signup form scrollable** — form now scrolls with plenty of padding at the bottom so no field is ever obscured by the iOS keyboard
+- **Location permission string** — added `NSLocationAlwaysAndWhenInUseUsageDescription` to clear the App Store compliance warning from build 3
+
 ## [2026-04-29] — First TestFlight build: monitoring, analytics, account deletion, GPS share cards
 
 - **Push notifications** — production APNs entitlement added; app will now receive push notifications on TestFlight and App Store builds
