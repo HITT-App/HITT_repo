@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
+import { App } from "@capacitor/app";
 import { supabase } from "@/integrations/supabase/client";
 import { log, logSecurityEvent, SecurityEventTypes, generateCorrelationId } from "@/lib/security-logger";
 import { identifyUser, resetAnalyticsUser } from "@/lib/analytics";
@@ -67,7 +68,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Handle OAuth deep link callback on iOS (hiitfitness://auth-callback?code=...)
+    let appUrlListener: { remove: () => void } | null = null;
+    if (Capacitor.isNativePlatform()) {
+      App.addListener('appUrlOpen', async ({ url }) => {
+        if (url.startsWith('hiitfitness://')) {
+          await supabase.auth.exchangeCodeForSession(url);
+        }
+      }).then(listener => { appUrlListener = listener; });
+    }
+
+    return () => {
+      subscription.unsubscribe();
+      appUrlListener?.remove();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {

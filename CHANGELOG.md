@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-04-30] — Build 6: Google sign-in deep link handler — OAuth now completes correctly on iOS
+
+- **Google sign-in fixed end-to-end** — app now catches the OAuth callback URL when iOS returns from the browser and completes the sign-in session automatically
+- **URL scheme registered** — `hiitfitness://` registered in iOS so the system knows to open the app when Google redirects back after authentication
+
 ## [2026-04-30] — Build 4: Google sign-in fix, keyboard navigation on signup, location permission string
 
 - **Google sign-in fixed** — OAuth now redirects correctly back into the app on iOS using a deep link; was previously failing with a 400 error on TestFlight
