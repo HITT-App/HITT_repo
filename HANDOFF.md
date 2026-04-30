@@ -25,6 +25,7 @@ These live in Supabase edge function secrets (Settings → Edge Functions → Se
 |---|---|---|
 | `AI_API_KEY` | Vanessa's Google account (Gemini API) | Create Google Cloud project → enable Gemini API → create API key → update Supabase secret |
 | `AI_GATEWAY_URL` | Points to Gemini direct endpoint — no account tied, stays the same | Nothing, unless they switch AI provider |
+| Google OAuth Client ID + Secret | Vanessa's Google Cloud project (`hiit-fitness-oauth`) | Owner creates their own Google Cloud project → OAuth consent screen → Web client → adds Supabase callback URL → pastes new Client ID + Secret into Supabase Auth → Providers → Google |
 | `VITE_SENTRY_DSN` | Vanessa's Sentry | Replace after Sentry account transfer above |
 | `VITE_POSTHOG_KEY` | Vanessa's PostHog | Replace after PostHog account transfer above |
 
