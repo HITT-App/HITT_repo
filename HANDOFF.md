@@ -81,11 +81,25 @@ Do these in order to avoid breaking the live app mid-transfer:
 1. Owner accepts Supabase team invite (data + secrets transfer in one go)
 2. Owner sets up RevenueCat and provides SDK key (Vanessa wires it up)
 3. Owner creates Sentry + PostHog accounts, provides keys (Vanessa swaps them, redeploys)
-4. Owner creates Google Cloud project + Gemini key (Vanessa updates Supabase secret)
-5. GitHub repo transferred to owner's account
-6. Owner confirms they have the `.env` values stored securely
-7. Vanessa removes herself from Supabase team
-8. Done ✅
+4. Owner creates Google Cloud project → OAuth consent screen → Web client → adds Supabase callback URL → pastes Client ID + Secret into Supabase Auth → Providers → Google (replacing Vanessa's)
+5. Owner creates Gemini API key → updates Supabase secret `AI_API_KEY`
+6. GitHub repo transferred to owner's account
+7. Owner confirms they have the `.env` values stored securely
+8. Vanessa removes herself from Supabase team
+9. Done ✅
+
+---
+
+## Pre-Launch Tasks (before public App Store release)
+
+These are not blocking for TestFlight/investor demo but must be done before public launch.
+
+| Task | Why | Notes |
+|---|---|---|
+| **Supabase custom domain** | OAuth sign-in currently shows `pbrqdlkjoxvglcdlixbi.supabase.co` for one second during Google sign-in — looks unprofessional at launch | Requires Supabase Pro (~$25/mo). Set up a custom auth domain (e.g. `auth.hiitfitness.app`) in Supabase → Settings → Custom Domains. The `VITE_SUPABASE_URL` in `.env` will need updating too. |
+| **Google OAuth under owner's account** | Currently registered under Vanessa's Google account (`Vanessa.latchem@outlook.com`) in Google Cloud project `hiit-fitness-oauth` | Owner creates their own Google Cloud project, sets up OAuth consent screen, creates Web client with the same Supabase callback URL, pastes new Client ID + Secret into Supabase → Auth → Providers → Google. Old credentials can then be deleted. |
+| **RevenueCat / IAP** | No real purchases can be made without it | See open item in OWNER_DECISIONS.md |
+| **Privacy policy rewrite** | Current policy is a placeholder — not valid for health data under UK GDPR | See open item in OWNER_DECISIONS.md |
 
 ---
 
