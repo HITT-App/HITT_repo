@@ -68,12 +68,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    // Handle OAuth deep link callback on iOS (hiitfitness://auth-callback?code=...)
+    // Handle OAuth deep link callback on iOS
     let appUrlListener: { remove: () => void } | null = null;
     if (Capacitor.isNativePlatform()) {
       App.addListener('appUrlOpen', async ({ url }) => {
-        if (url.startsWith('hiitfitness://')) {
-          await supabase.auth.exchangeCodeForSession(url);
+        if (!url.startsWith('hiitfitness://')) return;
+        try {
+          if (url.includes('code=')) {
+            // PKCE flow — exchange code for session
+            const { error } = await supabase.auth.exchangeCodeForSession(url);
+            if (error) console.error('OAuth PKCE exchange error:', error.message);
+          } else if (url.includes('access_token=')) {
+            // Implicit flow — parse tokens from hash or query
+            const fragment = url.includes('#') ? url.split('#')[1] : url.split('?')[1] ?? '';
+            const params = new URLSearchParams(fragment);
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+            if (accessToken && refreshToken) {
+              const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+              if (error) console.error('OAuth implicit session error:', error.message);
+            }
+          }
+        } catch (e) {
+          console.error('OAuth deep link error:', e);
         }
       }).then(listener => { appUrlListener = listener; });
     }

@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-04-30] — Build 7: Google sign-in fixed — handles both OAuth flows, sign-in now completes
+
+- **Google sign-in working** — fixed the root cause: the app was only handling one type of OAuth response (PKCE) but Supabase was sending the other type (implicit, with tokens in the URL). Both are now handled so sign-in completes correctly
+- **OAuth configuration hardened** — Supabase client explicitly configured for Capacitor native to prevent any automatic URL interception interfering with the sign-in flow
+
 ## [2026-04-30] — Build 6: Google sign-in deep link handler — OAuth now completes correctly on iOS
 
 - **Google sign-in fixed end-to-end** — app now catches the OAuth callback URL when iOS returns from the browser and completes the sign-in session automatically
