@@ -78,7 +78,7 @@ async function fetchPostsPage(
   // a community_profile still appear).
   let query = supabase
     .from('community_posts')
-    .select('*, community_profiles(display_name, username, avatar_url)')
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(PAGE_SIZE);
 
@@ -116,12 +116,6 @@ async function fetchPostsPage(
   );
 
   const enriched: CommunityPost[] = (postsData || []).map(post => {
-    // community_profiles comes back as an object (or null) from the join
-    const cp = post.community_profiles as {
-      display_name: string | null;
-      username: string | null;
-      avatar_url: string | null;
-    } | null;
     const mp = mainProfileMap.get(post.user_id);
 
     return {
@@ -130,12 +124,10 @@ async function fetchPostsPage(
       tags: post.tags || [],
       poll_options: post.poll_options as CommunityPost['poll_options'],
       workout_data: post.workout_data as CommunityPost['workout_data'],
-      // Drop the raw join column so it doesn't bleed into the typed shape
-      community_profiles: undefined,
       profile: {
-        display_name: cp?.display_name || mp?.display_name || null,
-        username: cp?.username || null,
-        avatar_url: cp?.avatar_url || mp?.avatar_url || null,
+        display_name: mp?.display_name || null,
+        username: null,
+        avatar_url: mp?.avatar_url || null,
       },
       is_liked: userLikedSet.has(post.id),
     };

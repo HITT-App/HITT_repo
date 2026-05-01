@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 28: Community feed fixed; AI upgraded to Gemini 2.5 Flash
+
+- **Community feed now loads correctly** — "Failed to load posts" error fixed; the posts query was attempting a database join that had no valid relationship defined, causing every load to fail even when posts exist
+- **All AI features upgraded to Gemini 2.5 Flash** — AI coach, food scanner, workout plans, sleep recommendations, and all other AI features now run on Google's latest model, with better response quality
+
 ## [2026-05-01] — Build 27: Barcode scanner fixed on iOS; chat now auto-scrolls
 
 - **Barcode scanner now works on iPhone** — iOS doesn't support the browser's native barcode detection API; the scanner now uses the ZXing library as a fallback, decoding barcodes from camera frames directly

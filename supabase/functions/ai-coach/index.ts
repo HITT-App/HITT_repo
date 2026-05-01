@@ -205,7 +205,7 @@ serve(async (req) => {
     await supabaseAdmin.from("ai_generation_log").insert({
       user_id: userId,
       generation_type: "ai_coach",
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       prompt: { redacted: true },
     });
 
@@ -395,7 +395,7 @@ serve(async (req) => {
     }
 
     const response = await aiChatCompletion({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       messages: apiMessages,
       stream: true,
     });
@@ -416,7 +416,7 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
       return new Response(
-        JSON.stringify({ error: "Failed to get AI response" }), 
+        JSON.stringify({ error: `Gemini ${response.status}: ${errorText.slice(0, 400)}` }), 
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

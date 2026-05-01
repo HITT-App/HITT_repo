@@ -40,7 +40,7 @@ serve(async (req) => {
     await supabaseAdmin.from("ai_generation_log").insert({
       user_id: user.id,
       generation_type: "smart_insights",
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       prompt: { redacted: true },
     });
 
@@ -151,7 +151,7 @@ RULES:
     }
 
     const aiResponse = await aiChatCompletion({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

@@ -104,7 +104,7 @@ serve(async (req) => {
     });
 
     const aiResponse = await aiChatCompletion({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -122,7 +122,7 @@ serve(async (req) => {
         response: null,
         error: `LLM responded ${aiResponse.status}: ${aiResponseText}`,
         latencyMs: Date.now() - started,
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
       });
       return json({ error: "AI plan generator failed — please try again." }, 502);
     }
@@ -135,7 +135,7 @@ serve(async (req) => {
         response: { raw: aiResponseText },
         error: "Could not parse JSON from LLM response",
         latencyMs: Date.now() - started,
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
       });
       return json({ error: "AI returned malformed response — please try again." }, 502);
     }
@@ -148,7 +148,7 @@ serve(async (req) => {
         response: parsed,
         error: `Validation failed: ${validation.reason}`,
         latencyMs: Date.now() - started,
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
       });
       return json({ error: `Plan validation failed: ${validation.reason}` }, 502);
     }
@@ -159,7 +159,7 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         generation_type: "workout_plan",
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         prompt: { system: systemPrompt, user: userPrompt },
         response: parsed,
         latency_ms: Date.now() - started,

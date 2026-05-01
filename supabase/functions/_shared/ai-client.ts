@@ -31,7 +31,7 @@ function getConfig(): { url: string; apiKey: string } {
       "AI_API_KEY (or legacy LOVABLE_API_KEY) environment variable is not set"
     );
   }
-  return { url, apiKey };
+  return { url: url.replace(/\/$/, ''), apiKey };
 }
 
 export async function aiChatCompletion(
