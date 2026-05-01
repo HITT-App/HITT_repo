@@ -136,11 +136,6 @@ const Auth = () => {
           } else {
             setApiError("Incorrect email or password.");
           }
-        } else {
-          toast({
-            title: "Welcome back!",
-            description: "You have successfully logged in.",
-          });
         }
       } else if (view === "signup") {
         const { error } = await signUp(email, password, displayName);

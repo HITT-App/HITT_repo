@@ -47,11 +47,10 @@ export const PostLoginWelcome = ({ userName, onDismiss }: PostLoginWelcomeProps)
 
   return (
     <div
-      className={`fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center transition-transform duration-400 ease-out ${
-        isDismissing ? "-translate-y-full" : ""
+      className={`fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center transition-transform duration-[400ms] ease-out ${
+        isDismissing ? "-translate-y-full pointer-events-none" : ""
       }`}
       onClick={dismiss}
-      onTouchEnd={dismiss}
     >
       {/* Background */}
       {customBg?.startsWith("video:") ? (

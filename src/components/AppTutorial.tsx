@@ -45,7 +45,7 @@ export const AppTutorial = ({ onComplete }: AppTutorialProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[55]" onClick={handleContinue}>
+    <div className="fixed inset-0 z-[100]" onClick={handleContinue}>
       {/* Dimmed overlay — pointer-events-none so touches pass through to the card */}
       <div className="absolute inset-0 bg-black/60 pointer-events-none" />
 

@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 21: Welcome screen UX fixed; tutorial no longer navigates away
+
+- **"Welcome back" toast removed** — the welcome screen already says hello; the toast was redundant
+- **Phantom navigation to Schedule fixed** — PostLoginWelcome used `onTouchEnd` to dismiss, which left ghost taps active during the 400ms slide-out animation; those ghost taps were reaching the BottomNav's Schedule tab behind the overlay; removed `onTouchEnd` (onClick is sufficient) and added `pointer-events-none` during the dismissal animation
+- **Tutorial z-index raised to 100** — ensures the tutorial overlay sits above all navigation elements with no ambiguity
+
 ## [2026-05-01] — Build 20: OAuthPlugin properly conforms to CAPBridgedPlugin — Google sign-in working
 
 - **Root cause of all plugin registration failures found** — Capacitor 8 SPM plugins self-register by conforming to the `CAPBridgedPlugin` Swift protocol with `identifier`, `jsName`, and `pluginMethods` properties; our plugin was missing this conformance entirely; the `CAP_PLUGIN` ObjC macro, `registerPluginType()`, and `@objc` auto-discovery all failed because none of them is the correct SPM mechanism; found by reading how `@capacitor/app` itself is implemented
