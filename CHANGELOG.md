@@ -1,6 +1,6 @@
 # HITT App Changelog
 
-## [2026-05-01] — Build 22: Google OAuth switched to native SocialLogin plugin
+## [2026-05-01] — Build 24: Google OAuth switched to native SocialLogin plugin
 
 - **Custom OAuthPlugin replaced** — the hand-rolled ASWebAuthenticationSession plugin (`OAuthPlugin.swift`) and its JS bridge wrapper have been removed; replaced with the maintained `@capgo/capacitor-social-login` package (v8.3.20)
 - **Simpler, more reliable sign-in flow** — Google sign-in now calls the native Google Sign-In SDK directly, receives an ID token, and exchanges it with Supabase via `signInWithIdToken`; no browser redirect, no deep link, no PKCE code exchange

@@ -116,7 +116,7 @@ Open questions:
 
 ### ✅ TestFlight — live as of 2026-04-30
 
-App is on TestFlight. Current build: **22** (version 1.0). Add testers via App Store Connect → TestFlight → Internal Testing.
+App is on TestFlight. Current build: **24** (version 1.0). Add testers via App Store Connect → TestFlight → Internal Testing.
 
 **Build history:**
 | Build | Date | Notes |
@@ -130,9 +130,10 @@ App is on TestFlight. Current build: **22** (version 1.0). Add testers via App S
 | 9–19 | 2026-04-30 – 2026-05-01 | Iterative Google OAuth debugging — custom OAuthPlugin built, registered, debugged across multiple approaches |
 | 20 | 2026-05-01 | OAuthPlugin conforms to CAPBridgedPlugin — Google sign-in working with custom plugin |
 | 21 | 2026-05-01 | Welcome screen UX fixed; tutorial no longer navigates away |
-| 22 | 2026-05-01 | Custom OAuthPlugin replaced with `@capgo/capacitor-social-login`; cleaner native ID token flow |
+| 22–23 | 2026-05-01 | Build number collisions in ASC (skipped) |
+| 24 | 2026-05-01 | Custom OAuthPlugin replaced with `@capgo/capacitor-social-login`; cleaner native ID token flow |
 
-### ✅ Google OAuth on iOS — rebuilt with native plugin (2026-05-01, build 22)
+### ✅ Google OAuth on iOS — rebuilt with native plugin (2026-05-01, build 24)
 
 Google sign-in works end-to-end using `@capgo/capacitor-social-login` v8.3.20. The native Google Sign-In SDK returns an ID token which is exchanged with Supabase via `signInWithIdToken` — no browser redirect or deep link needed. Google OAuth credentials (iOS + web client IDs) configured in Google Cloud Console project `hiit-fitness-oauth` (currently under Vanessa's Google account — see HANDOFF.md). Web client ID stored in `.env` as `VITE_GOOGLE_WEB_CLIENT_ID`. Supabase Auth → URL Configuration → Redirect URLs still contains `hiitfitness://auth-callback` — **do not remove**, it is used for email confirmation and password reset flows.
 
