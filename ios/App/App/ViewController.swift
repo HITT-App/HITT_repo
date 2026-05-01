@@ -1,11 +1,11 @@
 import UIKit
 import Capacitor
 
-// Capacitor 8 does not auto-discover local plugins via ObjC runtime.
-// registerPluginType() must be called explicitly on CAPBridgeViewController
-// using capacitorDidLoad(), which fires after the bridge is initialised.
+// Capacitor 8 does not auto-discover local plugins.
+// registerPluginType() is on CAPBridgeProtocol and must be called from
+// capacitorDidLoad(), which fires after the bridge is fully initialised.
 class ViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
-        registerPluginType(OAuthPlugin.self)
+        bridge?.registerPluginType(OAuthPlugin.self)
     }
 }
