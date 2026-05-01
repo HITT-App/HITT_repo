@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 18: Show real Google sign-in error for debugging
+
+- Shows the exact error from the OAuth flow instead of the generic "Google sign-in failed" message — needed to diagnose what's failing in ASWebAuthenticationSession
+
 ## [2026-05-01] — Build 17: Tutorial Continue button fixed
 
 - **Tutorial "Continue" button now works** — the dimmed overlay was intercepting touches on iOS before they could reach the button; added `pointer-events-none` to the overlay so touches pass through correctly

@@ -196,7 +196,7 @@ const Auth = () => {
     setIsLoading(false);
 
     if (error && (error as Error).message !== 'USER_CANCELLED') {
-      setApiError('Google sign-in failed. Please try again.');
+      setApiError((error as Error).message);
     }
     // Success: navigation is handled by the useEffect watching user above.
     // Web: OAuth redirects the page — nothing more to do here.
