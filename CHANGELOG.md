@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 15: OAuthPlugin properly registered — Google sign-in should work
+
+- **OAuthPlugin is now registered with Capacitor** — Capacitor 8 does not auto-discover local plugins; the correct API is `registerPluginType()` on `CAPBridgeViewController`, called from `capacitorDidLoad()`; a `ViewController` subclass now calls this at the right moment in the bridge lifecycle
+- **Google sign-in error was "plugin not implemented on ios"** — fixed; the plugin is now wired up end-to-end
+
 ## [2026-04-30] — Build 13: OAuthPlugin compiled into project — app loads, Google sign-in wired
 
 - **App now loads** — `OAuthPlugin.swift` was written to disk but never added to `project.pbxproj`, so Xcode never compiled it; the plugin didn't exist at runtime and (from Build 11) the storyboard referenced a `ViewController` class that also didn't exist, causing a black screen; fixed by properly registering `OAuthPlugin.swift` in the build and reverting to the standard `CAPBridgeViewController` storyboard entry
