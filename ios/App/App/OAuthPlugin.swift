@@ -2,11 +2,16 @@ import Foundation
 import Capacitor
 import AuthenticationServices
 
-// Native OAuth handler using ASWebAuthenticationSession.
-// SFSafariViewController (used by @capacitor/browser) cannot forward custom URL
-// scheme redirects on iOS 11+. ASWebAuthenticationSession handles this natively.
+// Capacitor 8 SPM plugins register by conforming to CAPBridgedPlugin in Swift.
+// The CAP_PLUGIN ObjC macro is the old CocoaPods pattern and does not work here.
 @objc(OAuthPlugin)
-public class OAuthPlugin: CAPPlugin, ASWebAuthenticationPresentationContextProviding {
+public class OAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticationPresentationContextProviding {
+    public let identifier = "OAuthPlugin"
+    public let jsName = "OAuthPlugin"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "authenticate", returnType: CAPPluginReturnPromise)
+    ]
+
     private var authSession: ASWebAuthenticationSession?
 
     @objc func authenticate(_ call: CAPPluginCall) {
@@ -17,8 +22,7 @@ public class OAuthPlugin: CAPPlugin, ASWebAuthenticationPresentationContextProvi
             return
         }
 
-        // keepAlive prevents Capacitor from releasing this call reference
-        // before ASWebAuthenticationSession completes (it's async/modal).
+        // keepAlive prevents Capacitor releasing the call before the async session completes.
         call.keepAlive = true
 
         DispatchQueue.main.async { [weak self] in
@@ -48,17 +52,13 @@ public class OAuthPlugin: CAPPlugin, ASWebAuthenticationPresentationContextProvi
             }
 
             self.authSession?.presentationContextProvider = self
-            // false = share cookies with Safari so users already signed into
-            // Google on device don't need to re-enter credentials.
+            // false = share Safari cookies so users already signed into Google don't re-enter credentials
             self.authSession?.prefersEphemeralWebBrowserSession = false
             self.authSession?.start()
         }
     }
 
     public func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        // Prefer the live window; fall back to first connected scene window.
-        // Never return a bare UIWindow() — it has no windowScene on iOS 13+
-        // and causes ASWebAuthenticationSession to crash at presentation.
         if let window = self.bridge?.viewController?.view.window {
             return window
         }

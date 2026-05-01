@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 20: OAuthPlugin properly conforms to CAPBridgedPlugin — Google sign-in working
+
+- **Root cause of all plugin registration failures found** — Capacitor 8 SPM plugins self-register by conforming to the `CAPBridgedPlugin` Swift protocol with `identifier`, `jsName`, and `pluginMethods` properties; our plugin was missing this conformance entirely; the `CAP_PLUGIN` ObjC macro, `registerPluginType()`, and `@objc` auto-discovery all failed because none of them is the correct SPM mechanism; found by reading how `@capacitor/app` itself is implemented
+
 ## [2026-05-01] — Build 19: OAuthPlugin registered via Objective-C macro — guaranteed pre-bridge registration
 
 - **Plugin registration moved to `CAP_PLUGIN` ObjC macro** — `bridge?.registerPluginType()` was silently no-oping because the bridge wasn't ready when called; the ObjC `CAP_PLUGIN` macro runs at app load time via the Objective-C runtime, before the Capacitor bridge is even created — this is the registration path used by all npm Capacitor plugins
