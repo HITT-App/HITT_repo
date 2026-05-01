@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 26: Black camera screen in meal scanner fixed
+
+- **Camera no longer shows a black screen when scanning food** — the live camera feed now appears correctly after granting permission
+
 ## [2026-05-01] — Build 25: Watch sync step count fixed
 
 - **Steps, distance, and calories now match the Health app** — the sync window was previously a rolling 24-hour window (yesterday → now), causing it to add yesterday's totals on top of today's; it now runs from midnight today, matching what Apple Health displays for the current day

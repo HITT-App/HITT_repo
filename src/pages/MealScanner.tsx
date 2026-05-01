@@ -71,13 +71,21 @@ export default function MealScanner() {
     };
   }, [stream]);
 
+  // Wire the stream to the video element after it's been rendered into the DOM.
+  // The <video> is conditionally rendered (only when scanState === 'scanning'), so
+  // setting srcObject in startCamera() is always too early — videoRef.current is null.
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, scanState]);
+
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: 1280, height: 720 }
       });
       setStream(mediaStream);
-      if (videoRef.current) videoRef.current.srcObject = mediaStream;
       setScanState('scanning');
     } catch {
       toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access camera' });
