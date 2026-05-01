@@ -6,6 +6,17 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
+### "OK HIIT" wake word feature
+
+The app has a "Say OK HIIT" toggle in Settings (backed by `WakeWordListener.tsx`). The intent is that saying "OK HIIT" activates the AI coach voice mode hands-free — similar to "Hey Siri". The scaffold is in place but the feature is not fully implemented.
+
+**Decision needed before enabling:**
+- Does the owner want continuous microphone listening as a feature? (Apple may scrutinise this during App Review — requires clear justification in the privacy usage string)
+- Should wake word detection run entirely on-device (requires a local ML model e.g. Picovoice Porcupine — ~1 week engineering) or trigger only when the app is in the foreground?
+- Alternatively: defer entirely and remove the toggle until post-launch when voice is a confirmed priority
+
+Currently the toggle is visible in Settings but has no active effect. It is safe to leave as-is for TestFlight.
+
 ### RevenueCat account — subscription wiring
 
 RevenueCat does not appear anywhere in the codebase. The subscription UI and admin panel are built, but no real IAP purchase can be made. The investor demo has no end-to-end monetisation flow without it.

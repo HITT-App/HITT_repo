@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 29: Profile screen no longer drifts sideways; back arrow removed
+
+- **Profile screen no longer slides left/right when scrolling** — horizontal overflow was causing the page to drift; locked to vertical scroll only
+- **Back arrow removed from profile header** — it was navigating incorrectly and is redundant now that the bottom nav bar handles all navigation
+
 ## [2026-05-01] — Build 28: Community feed fixed; AI upgraded to Gemini 2.5 Flash
 
 - **Community feed now loads correctly** — "Failed to load posts" error fixed; the posts query was attempting a database join that had no valid relationship defined, causing every load to fail even when posts exist
