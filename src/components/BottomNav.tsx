@@ -40,7 +40,7 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
       style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}
     >
       <div className="w-full px-4">
-        <div className="mb-3 rounded-2xl bg-background/95 backdrop-blur-md border border-border/40 shadow-elevated">
+        <div className="mb-1 rounded-2xl bg-background/95 backdrop-blur-md border border-border/40 shadow-elevated">
           <div className="flex items-center justify-around py-2 px-2">
             {navItems.map((item) => {
               if (item.id === "center") {

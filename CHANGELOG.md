@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 30: Bottom nav bar repositioned closer to screen edge
+
+- **Bottom nav bar now sits lower on screen** — removed excess spacing that was pushing it too far from the edge; it now sits flush with the safe area as intended
+
 ## [2026-05-01] — Build 29: Profile screen no longer drifts sideways; back arrow removed
 
 - **Profile screen no longer slides left/right when scrolling** — horizontal overflow was causing the page to drift; locked to vertical scroll only
