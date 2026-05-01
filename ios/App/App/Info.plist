@@ -2,12 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CAPACITOR_DEBUG</key>
+	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>HIIT Fitness</string>
+	<string>HIIT Fitness</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -20,10 +20,45 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>hiitfitness</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.669743846703-uvnt80o7etiqai1ggodla7k3eqd1bddv</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>HIIT uses your camera to scan meals and food packaging so you can log nutrition instantly.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>HIIT uses your Apple Health data (heart rate, steps, sleep, workouts) to calculate your HIIT Score and personalise your workout and meal plans.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>HIIT saves the workouts you complete in the app to Apple Health so they count toward your Activity rings.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>HIIT uses your location to track your outdoor workouts and map your routes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>HIIT uses your location to track your outdoor workouts and map your routes.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>HIIT uses your microphone for voice commands with your AI coach.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>HIIT saves your workout share cards to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>HIIT accesses your photo library so you can set a profile picture and upload progress photos.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -47,32 +82,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<key>NSHealthShareUsageDescription</key>
-	<string>HIIT uses your Apple Health data (heart rate, steps, sleep, workouts) to calculate your HIIT Score and personalise your workout and meal plans.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>HIIT saves the workouts you complete in the app to Apple Health so they count toward your Activity rings.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>HIIT uses your camera to scan meals and food packaging so you can log nutrition instantly.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>HIIT accesses your photo library so you can set a profile picture and upload progress photos.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>HIIT saves your workout share cards to your photo library.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>HIIT uses your location to track your outdoor workouts and map your routes.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>HIIT uses your location to track your outdoor workouts and map your routes.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>HIIT uses your microphone for voice commands with your AI coach.</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>hiitfitness</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist>

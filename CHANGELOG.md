@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 22: Google OAuth switched to native SocialLogin plugin
+
+- **Custom OAuthPlugin replaced** — the hand-rolled ASWebAuthenticationSession plugin (`OAuthPlugin.swift`) and its JS bridge wrapper have been removed; replaced with the maintained `@capgo/capacitor-social-login` package (v8.3.20)
+- **Simpler, more reliable sign-in flow** — Google sign-in now calls the native Google Sign-In SDK directly, receives an ID token, and exchanges it with Supabase via `signInWithIdToken`; no browser redirect, no deep link, no PKCE code exchange
+- **Google reverse client ID URL scheme added to Info.plist** — required by the Google Sign-In SDK; was missing from previous builds
+- **Google web client ID moved to `.env`** — no longer hardcoded in source; stored as `VITE_GOOGLE_WEB_CLIENT_ID`
+- **Sign-out now clears Google session** — calls `SocialLogin.logout()` so the next sign-in shows the account picker rather than silently reusing the cached account
+
 ## [2026-05-01] — Build 21: Welcome screen UX fixed; tutorial no longer navigates away
 
 - **"Welcome back" toast removed** — the welcome screen already says hello; the toast was redundant

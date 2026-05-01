@@ -2,10 +2,13 @@ import { useState, useEffect, createContext, useContext, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
+import { SocialLogin } from "@capgo/capacitor-social-login";
 import { supabase } from "@/integrations/supabase/client";
-import { OAuthPlugin } from "@/plugins/oauth";
 import { log, logSecurityEvent, SecurityEventTypes, generateCorrelationId } from "@/lib/security-logger";
 import { identifyUser, resetAnalyticsUser } from "@/lib/analytics";
+
+const GOOGLE_WEB_CLIENT_ID = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID as string;
+const GOOGLE_IOS_CLIENT_ID = "669743846703-uvnt80o7etiqai1ggodla7k3eqd1bddv.apps.googleusercontent.com";
 
 interface AuthContextType {
   user: User | null;
@@ -26,6 +29,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Initialise the native social login plugin once, on mount.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    SocialLogin.initialize({
+      google: {
+        webClientId: GOOGLE_WEB_CLIENT_ID,
+        iOSClientId: GOOGLE_IOS_CLIENT_ID,
+        mode: "online",
+      },
+    }).catch((e) => {
+      console.error("SocialLogin init failed:", e);
+    });
+  }, []);
 
   useEffect(() => {
     const correlationId = generateCorrelationId();
@@ -64,8 +81,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     // On iOS, handle deep links for email confirmation / password reset.
-    // Google OAuth is handled directly by OAuthPlugin (ASWebAuthenticationSession)
-    // and never comes through appUrlOpen, so this listener is only for email flows.
+    // Google sign-in is now handled natively by SocialLogin and never comes
+    // through appUrlOpen, so this listener is only for email flows.
     let appUrlListener: { remove: () => void } | null = null;
     if (Capacitor.isNativePlatform()) {
       App.addListener('appUrlOpen', async ({ url }) => {
@@ -130,46 +147,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async () => {
     if (Capacitor.isNativePlatform()) {
-      // Get the OAuth URL without navigating — skipBrowserRedirect preserves
-      // the PKCE code verifier in localStorage while ASWebAuthenticationSession
-      // handles the browser interaction natively.
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: 'hiitfitness://auth-callback',
-          skipBrowserRedirect: true,
-        },
-      });
-      if (error) return { error: error as Error | null };
-      if (!data?.url) return { error: new Error('No OAuth URL returned') };
-
-      let callbackUrl: string;
+      // Native flow: use the SocialLogin plugin to get a Google ID token,
+      // then hand it to Supabase via signInWithIdToken. No browser redirect,
+      // no deep links — entirely native.
       try {
-        const result = await OAuthPlugin.authenticate({
-          url: data.url,
-          callbackScheme: 'hiitfitness',
+        const result = await SocialLogin.login({
+          provider: "google",
+          options: { scopes: ["email", "profile"] },
         });
-        callbackUrl = result.url;
+
+        // The plugin returns provider-specific data under result.result.
+        // For Google we want the idToken.
+        const googleResult = result.result as { idToken?: string; accessToken?: { token: string } } | null;
+        const idToken = googleResult?.idToken;
+
+        if (!idToken) {
+          return { error: new Error("Google sign-in did not return an ID token") };
+        }
+
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: "google",
+          token: idToken,
+        });
+
+        if (error) return { error: error as Error | null };
+
+        // Push session into React state — onAuthStateChange can be unreliable
+        // immediately after a native bridge callback.
+        const { data: { session: newSession } } = await supabase.auth.getSession();
+        if (newSession) {
+          setSession(newSession);
+          setUser(newSession.user);
+          setLoading(false);
+        }
+        return { error: null };
       } catch (e: unknown) {
         const msg = (e as Error)?.message ?? String(e);
-        if (msg === 'USER_CANCELLED') return { error: new Error('USER_CANCELLED') };
+        if (msg.includes("cancel") || msg.includes("CANCEL")) {
+          return { error: new Error("USER_CANCELLED") };
+        }
         return { error: new Error(`Google sign-in failed: ${msg}`) };
       }
-
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(callbackUrl);
-      if (exchangeError) return { error: exchangeError as Error | null };
-
-      // Explicitly push session into React state — onAuthStateChange can be
-      // unreliable immediately after a native bridge callback.
-      const { data: { session: newSession } } = await supabase.auth.getSession();
-      if (newSession) {
-        setSession(newSession);
-        setUser(newSession.user);
-        setLoading(false);
-      }
-      return { error: null };
     }
 
+    // Web flow: standard Supabase OAuth redirect.
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/` },
@@ -179,6 +200,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
+      if (Capacitor.isNativePlatform()) {
+        // Best-effort: also sign out of Google natively so the next sign-in
+        // shows the account picker rather than silently re-using the cached one.
+        try { await SocialLogin.logout({ provider: "google" }); } catch { /* ignore */ }
+      }
       await supabase.auth.signOut();
     } catch {
       // Even if signOut fails (e.g. expired session), clear local state
