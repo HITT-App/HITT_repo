@@ -142,7 +142,8 @@ export function useWatchSync() {
     try {
       const { Health } = await import("@capgo/capacitor-health");
       const now = new Date();
-      const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const startDate = new Date(now);
+      startDate.setHours(0, 0, 0, 0); // midnight today — aligns with what Health app shows
       const opts = { startDate: startDate.toISOString(), endDate: now.toISOString(), bucket: "day" as const };
 
       const results: SyncResults = {};

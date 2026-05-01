@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 25: Watch sync step count fixed
+
+- **Steps, distance, and calories now match the Health app** — the sync window was previously a rolling 24-hour window (yesterday → now), causing it to add yesterday's totals on top of today's; it now runs from midnight today, matching what Apple Health displays for the current day
+
 ## [2026-05-01] — Build 24: Google OAuth switched to native SocialLogin plugin
 
 - **Custom OAuthPlugin replaced** — the hand-rolled ASWebAuthenticationSession plugin (`OAuthPlugin.swift`) and its JS bridge wrapper have been removed; replaced with the maintained `@capgo/capacitor-social-login` package (v8.3.20)
