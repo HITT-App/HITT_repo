@@ -15,17 +15,12 @@ interface ChatContainerProps {
 }
 
 export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick }: ChatContainerProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (viewport) {
-      setTimeout(() => {
-        viewport.scrollTop = viewport.scrollHeight;
-      }, 50);
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
   const handleImageSelect = (file: File) => {
@@ -54,7 +49,7 @@ export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick
 
   return (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 px-4">
         <div className="py-4 space-y-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-4">
@@ -115,6 +110,7 @@ export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick
               </div>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 

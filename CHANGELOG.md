@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 27: Barcode scanner fixed on iOS; chat now auto-scrolls
+
+- **Barcode scanner now works on iPhone** — iOS doesn't support the browser's native barcode detection API; the scanner now uses the ZXing library as a fallback, decoding barcodes from camera frames directly
+- **AI chat now scrolls to the latest message automatically** — the previous scroll method was unreliable in the iOS app; replaced with a more robust approach that consistently keeps the newest message in view
+
 ## [2026-05-01] — Build 26: Black camera screen in meal scanner fixed
 
 - **Camera no longer shows a black screen when scanning food** — the live camera feed now appears correctly after granting permission

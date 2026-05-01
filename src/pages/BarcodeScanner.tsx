@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import type { BrowserMultiFormatReader as ZXingReader } from "@zxing/browser";
 import { ArrowLeft, ScanBarcode, Loader2, X, Plus } from "lucide-react";
 import { Analytics } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export default function BarcodeScanner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const zxingReaderRef = useRef<ZXingReader | null>(null);
 
   const [scanning, setScanning] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -84,7 +86,14 @@ export default function BarcodeScanner() {
     }
   };
 
-  // Use BarcodeDetector API if available
+  // Initialise ZXing lazily when native BarcodeDetector is unavailable (WKWebView / iOS)
+  useEffect(() => {
+    if ("BarcodeDetector" in window) return;
+    import("@zxing/browser").then(({ BrowserMultiFormatReader }) => {
+      zxingReaderRef.current = new BrowserMultiFormatReader();
+    });
+  }, []);
+
   useEffect(() => {
     if (!scanning) return;
 
@@ -93,7 +102,7 @@ export default function BarcodeScanner() {
     const detectBarcode = async () => {
       if (!videoRef.current || !canvasRef.current || videoRef.current.readyState < 2) return;
 
-      // Try native BarcodeDetector
+      // Native path (Chrome Android, desktop)
       if ("BarcodeDetector" in window) {
         try {
           const detector = new (window as any).BarcodeDetector({
@@ -102,9 +111,24 @@ export default function BarcodeScanner() {
           const barcodes = await detector.detect(videoRef.current);
           if (barcodes.length > 0) {
             lookupBarcode(barcodes[0].rawValue);
-            return;
           }
         } catch {}
+        return;
+      }
+
+      // ZXing fallback — works in WKWebView / iOS where BarcodeDetector is absent
+      if (!zxingReaderRef.current) return;
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (video.videoWidth === 0) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d")?.drawImage(video, 0, 0);
+      try {
+        const result = zxingReaderRef.current.decodeFromCanvas(canvas);
+        lookupBarcode(result.getText());
+      } catch {
+        // NotFoundException on every empty frame — normal, ignore
       }
     };
 
