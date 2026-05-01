@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-01] — Build 17: Tutorial Continue button fixed
+
+- **Tutorial "Continue" button now works** — the dimmed overlay was intercepting touches on iOS before they could reach the button; added `pointer-events-none` to the overlay so touches pass through correctly
+
 ## [2026-05-01] — Build 15: OAuthPlugin properly registered — Google sign-in should work
 
 - **OAuthPlugin is now registered with Capacitor** — Capacitor 8 does not auto-discover local plugins; the correct API is `registerPluginType()` on `CAPBridgeViewController`, called from `capacitorDidLoad()`; a `ViewController` subclass now calls this at the right moment in the bridge lifecycle

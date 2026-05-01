@@ -46,8 +46,8 @@ export const AppTutorial = ({ onComplete }: AppTutorialProps) => {
 
   return (
     <div className="fixed inset-0 z-[55]" onClick={handleContinue}>
-      {/* Dimmed overlay */}
-      <div className="absolute inset-0 bg-black/60" />
+      {/* Dimmed overlay — pointer-events-none so touches pass through to the card */}
+      <div className="absolute inset-0 bg-black/60 pointer-events-none" />
 
       {/* Tooltip card */}
       <div className="absolute bottom-28 left-4 right-4 max-w-md mx-auto animate-fade-up">
