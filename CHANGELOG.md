@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-03] — Build 35: Body scan "expecting ; or )" error fixed
+
+- **Body scan analysis error fixed** — a cryptic "expecting ; or )" error that appeared when analysing a rear-camera photo is now resolved; the session token is fetched safely before the request and the response is parsed with a proper fallback if the server returns an unexpected format
+
 ## [2026-05-03] — Build 34: Body scan camera fix; workout library seeded with real exercises
 
 - **Body scan camera no longer fails after switching to rear camera** — the capture button is now disabled until the video stream is delivering frames; previously tapping too quickly sent an empty image to the AI, causing a silent failure

@@ -54,7 +54,7 @@ WORKOUT_SEARCHES = {
 }
 
 
-def search_youtube(query: str) -> str | None:
+def search_youtube(query: str):
     params = urllib.parse.urlencode({
         "part": "snippet",
         "q": query,

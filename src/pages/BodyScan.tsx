@@ -223,18 +223,24 @@ const BodyScan = () => {
         workoutSummary = `In the last 30 days: ${parts.join(", ")}.`;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const sessionResult = await supabase.auth.getSession();
+      const accessToken = sessionResult.data?.session?.access_token;
       const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-body`;
       const rawRes = await fetch(fnUrl, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ imageBase64: imagePreview, workoutSummary }),
       });
-      const json = await rawRes.json();
-      if (!rawRes.ok) throw new Error(json.error || `Analysis failed (${rawRes.status})`);
+      let json: any;
+      try {
+        json = await rawRes.json();
+      } catch {
+        throw new Error(`Analysis failed (${rawRes.status}) — try again`);
+      }
+      if (!rawRes.ok) throw new Error(json?.error || `Analysis failed (${rawRes.status})`);
       setAnalysis(json);
       toast.success("Body analysis complete!");
     } catch (err: any) {
