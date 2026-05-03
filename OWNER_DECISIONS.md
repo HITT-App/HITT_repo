@@ -6,6 +6,26 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
+### YouTube API key — workout video links
+
+All 28 workouts are seeded with exercises and thumbnails. Video links are the last missing piece. A script is ready (`scripts/populate_videos.py`) that will auto-search YouTube and populate a video URL for every workout.
+
+**Action needed (2 minutes):**
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → select project **hiit api**
+2. Search "YouTube Data API v3" → Enable
+3. APIs & Services → Credentials → Create Credentials → API Key
+4. Paste the key here or in `.env` as `YOUTUBE_API_KEY`, then run:
+   ```bash
+   YOUTUBE_API_KEY=<key> python3 scripts/populate_videos.py | supabase db query --linked
+   ```
+Owners can swap any video later by updating `video_url` on the `workouts` row directly.
+
+### Apple Watch companion app
+
+Framework is built and registered in the Xcode project (`ios/App/HIITWatch/`). The Watch app shows today's workout, tracks live HR/calories during an active session, and sends workout events back to the iPhone. One manual Xcode step is required before it can be built and deployed.
+
+**Action needed:** Follow `ios/App/WATCH_SETUP.md` to add the watchOS target in Xcode (File → New → Target → Watch App, ~5 minutes). After that, the Watch app will appear in the same TestFlight build automatically.
+
 ### "OK HIIT" wake word feature
 
 The app has a "Say OK HIIT" toggle in Settings (backed by `WakeWordListener.tsx`). The intent is that saying "OK HIIT" activates the AI coach voice mode hands-free — similar to "Hey Siri". The scaffold is in place but the feature is not fully implemented.
@@ -143,6 +163,16 @@ App is on TestFlight. Current build: **24** (version 1.0). Add testers via App S
 | 21 | 2026-05-01 | Welcome screen UX fixed; tutorial no longer navigates away |
 | 22–23 | 2026-05-01 | Build number collisions in ASC (skipped) |
 | 24 | 2026-05-01 | Custom OAuthPlugin replaced with `@capgo/capacitor-social-login`; cleaner native ID token flow |
+| 25 | 2026-05-01 | Watch sync step count fixed — window now runs from midnight today, matching Apple Health |
+| 26 | 2026-05-01 | Black camera screen in meal scanner fixed |
+| 27 | 2026-05-01 | Barcode scanner fixed on iOS (ZXing fallback); AI chat auto-scrolls to latest message |
+| 28 | 2026-05-01 | Community feed fixed; all AI features upgraded to Gemini 2.5 Flash |
+| 29 | 2026-05-01 | Profile screen locked to vertical scroll; redundant back arrow removed |
+| 30 | 2026-05-01 | Bottom nav bar repositioned closer to screen edge |
+| 31 | 2026-05-03 | Browse Meals shows full 30-recipe library with photos, macros, allergens |
+| 32 | 2026-05-03 | Body scan photos resized before upload (6 MB limit fix); story keyboard fix; duplicate greeting removed |
+| 33 | 2026-05-03 | Body scan: second-person AI output, camera flip button, AI disclaimer visible above nav |
+| 34 | 2026-05-03 | Body scan rear-camera fix (capture gate); workout library seeded (175 exercises, 28 thumbnails) |
 
 ### ✅ Google OAuth on iOS — rebuilt with native plugin (2026-05-01, build 24)
 
