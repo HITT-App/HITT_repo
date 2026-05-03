@@ -59,6 +59,7 @@ const BodyScan = () => {
   const [analysis, setAnalysis] = useState<BodyAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [measurements, setMeasurements] = useState<Record<string, string>>({});
@@ -102,6 +103,7 @@ const BodyScan = () => {
         video: { facingMode: selectedMode, width: { ideal: 1280 }, height: { ideal: 1920 } }
       });
       setStream(mediaStream);
+      setCameraReady(false);
       setIsCameraOpen(true);
       setTimeout(() => {
         if (videoRef.current) {
@@ -118,6 +120,7 @@ const BodyScan = () => {
     if (stream) stream.getTracks().forEach(t => t.stop());
     const newMode = facingMode === "user" ? "environment" : "user";
     setFacingMode(newMode);
+    setCameraReady(false);
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: newMode, width: { ideal: 1280 }, height: { ideal: 1920 } }
@@ -147,6 +150,10 @@ const BodyScan = () => {
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
+    if (!video.videoWidth || !video.videoHeight) {
+      toast.error("Camera not ready yet — wait a moment and try again.");
+      return;
+    }
     const canvas = canvasRef.current;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -216,12 +223,19 @@ const BodyScan = () => {
         workoutSummary = `In the last 30 days: ${parts.join(", ")}.`;
       }
 
-      const res = await supabase.functions.invoke("analyze-body", {
-        body: { imageBase64: imagePreview, workoutSummary },
+      const { data: { session } } = await supabase.auth.getSession();
+      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-body`;
+      const rawRes = await fetch(fnUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ imageBase64: imagePreview, workoutSummary }),
       });
-      if (res.error) throw new Error(res.error.message);
-      if (res.data?.error) throw new Error(res.data.error);
-      setAnalysis(res.data);
+      const json = await rawRes.json();
+      if (!rawRes.ok) throw new Error(json.error || `Analysis failed (${rawRes.status})`);
+      setAnalysis(json);
       toast.success("Body analysis complete!");
     } catch (err: any) {
       toast.error(err.message || "Analysis failed. Try a clearer photo.");
@@ -302,7 +316,7 @@ const BodyScan = () => {
           <TabsContent value="scan" className="space-y-4 mt-4">
             {isCameraOpen ? (
               <Card className="relative overflow-hidden rounded-2xl bg-black">
-                <video ref={videoRef} autoPlay playsInline muted className="w-full aspect-[3/4] object-cover" />
+                <video ref={videoRef} autoPlay playsInline muted onCanPlay={() => setCameraReady(true)} className="w-full aspect-[3/4] object-cover" />
                 <canvas ref={canvasRef} className="hidden" />
 
                 {/* Pose Guide Overlay */}
@@ -337,7 +351,7 @@ const BodyScan = () => {
                   <Button variant="outline" size="icon" onClick={flipCamera} className="rounded-full bg-white/20 border-white/30 text-white hover:bg-white/30">
                     <SwitchCamera className="w-5 h-5" />
                   </Button>
-                  <button onClick={capturePhoto} className="w-16 h-16 rounded-full border-4 border-white bg-white/20 hover:bg-white/40 transition-colors flex items-center justify-center">
+                  <button onClick={capturePhoto} disabled={!cameraReady} className="w-16 h-16 rounded-full border-4 border-white bg-white/20 hover:bg-white/40 transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
                     <div className="w-12 h-12 rounded-full bg-white" />
                   </button>
                   <Button variant="outline" size="icon" onClick={() => setPoseIndex((poseIndex + 1) % POSE_GUIDES.length)} className="rounded-full bg-white/20 border-white/30 text-white hover:bg-white/30">

@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-05-03] — Build 34: Body scan camera fix; workout library seeded with real exercises
+
+- **Body scan camera no longer fails after switching to rear camera** — the capture button is now disabled until the video stream is delivering frames; previously tapping too quickly sent an empty image to the AI, causing a silent failure
+- **Body scan errors now show the real reason** — error messages from the AI service are now surfaced directly instead of always showing a generic "non-2xx" message
+- **Workout library now has real content** — 175 exercises seeded across all 28 workouts with descriptions, sets/reps/durations, and muscle groups; thumbnails added to every workout
+
 ## [2026-05-03] — Build 33: Body scan improvements — second person, camera flip, warning visible
 
 - **Body scan analysis now speaks directly to you** — results say "your upper body shows…" instead of "the person's body shows…"
