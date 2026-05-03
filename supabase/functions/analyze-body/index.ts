@@ -112,6 +112,7 @@ serve(async (req) => {
         ]
       }],
       max_tokens: 1500,
+      response_format: { type: "json_object" },
     });
 
     if (!response.ok) {
@@ -133,8 +134,15 @@ serve(async (req) => {
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error('No response from AI');
 
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Could not parse body analysis');
+    // Strip markdown code fences if model wrapped the JSON
+    const stripped = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+
+    // Find the outermost JSON object
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error("Non-JSON response from Gemini:", content.slice(0, 500));
+      throw new Error(`AI did not return a structured analysis. Try a clearer full-body photo in good lighting.`);
+    }
 
     const analysis = JSON.parse(jsonMatch[0]);
 
