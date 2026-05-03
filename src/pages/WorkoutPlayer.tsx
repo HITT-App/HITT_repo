@@ -194,12 +194,20 @@ export default function WorkoutPlayer() {
   // Countdown Screen
   if (playerState === 'countdown') {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <p className="text-xl mb-8">
+      <div className="h-dvh bg-background flex flex-col items-center justify-center p-6 overflow-hidden">
+        <p className="text-xl mb-6">
           {countdown === 3 ? 'Are you ready?' : countdown === 2 ? 'Just do your best.' : 'Good Luck!'}
         </p>
-        <div className="text-[200px] font-bold text-primary leading-none">{countdown}</div>
-        <HIITLogo size="lg" className="mt-16" />
+        <div className="text-[120px] font-bold text-primary leading-none">{countdown}</div>
+        <HIITLogo size="lg" className="mt-10" />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-8 text-muted-foreground"
+          onClick={() => navigate(-1)}
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back
+        </Button>
       </div>
     );
   }
@@ -251,9 +259,9 @@ export default function WorkoutPlayer() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-dvh bg-background flex flex-col overflow-hidden">
       {/* Video/Exercise Area */}
-      <div className="relative flex-1 bg-gradient-to-b from-secondary to-background">
+      <div className="relative flex-1 bg-gradient-to-b from-secondary to-background min-h-0">
         {/* Header */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-10">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="bg-background/50 backdrop-blur">

@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-05-03] — Build 37: Home workouts section fixes; workout detail sticky header; player layout fixed
+
+- **Workouts section on home screen has proper spacing** — no longer crammed against the stats tiles above it
+- **Category filters on home screen now work** — tapping All / HIIT / Strength / Cardio / Yoga filters the real workout library; previously the pills were decorative only
+- **Workout detail back button always visible** — header is now sticky so you can go back without scrolling to the top
+- **Workout detail no longer scrolls sideways** — horizontal overflow fixed
+- **Countdown screen fits on screen** — number scaled down, back button added; no more needing to scroll to exit
+- **Workout player controls stay in place** — pause and skip buttons are locked at the bottom of the screen and no longer drift out of view when content scrolls
+
 ## [2026-05-03] — Build 36: Camera flip single-tap fix; watch syncs on app open
 
 - **Body scan camera flip now works in one tap** — previously required two taps on iOS due to a timing race when switching cameras; now switches reliably first time

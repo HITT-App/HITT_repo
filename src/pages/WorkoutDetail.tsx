@@ -6,7 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
@@ -169,9 +168,26 @@ export default function WorkoutDetail() {
   const totalReps = exercises.reduce((sum, e) => sum + (e.reps || 0) * (e.sets || 1), 0);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      {/* Sticky header — always visible regardless of scroll position */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur border-b border-border/40 flex items-center justify-between px-4 py-3"
+        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <h1 className="font-semibold text-sm truncate flex-1 text-center px-2">{workout.title}</h1>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="rounded-full">
+            <Share2 className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSaved(!isSaved)}>
+            <Bookmark className={cn("w-4 h-4", isSaved && "fill-primary text-primary")} />
+          </Button>
+        </div>
+      </div>
+
       {/* Hero / Video Section */}
-      <div className="relative bg-gradient-to-br from-primary/30 to-secondary">
+      <div className="bg-gradient-to-br from-primary/30 to-secondary">
         {embedUrl ? (
           <div className="aspect-video w-full">
             <iframe
@@ -192,31 +208,16 @@ export default function WorkoutDetail() {
             />
           </div>
         ) : (
-          <div className="h-64 relative">
+          <div className="h-52 relative">
             {workout.thumbnail_url && (
               <img src={workout.thumbnail_url} alt={workout.title} className="w-full h-full object-cover" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
           </div>
         )}
-        
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-10">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="bg-background/50 backdrop-blur rounded-full">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon" className="bg-background/50 backdrop-blur rounded-full">
-              <Share2 className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="bg-background/50 backdrop-blur rounded-full" onClick={() => setIsSaved(!isSaved)}>
-              <Bookmark className={cn("w-5 h-5", isSaved && "fill-primary text-primary")} />
-            </Button>
-          </div>
-        </div>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-256px)]">
+      <div className="overflow-x-hidden">
         <div className="p-4 space-y-5">
           {/* Title & Badges */}
           <div>
@@ -349,11 +350,11 @@ export default function WorkoutDetail() {
                 {exercises.map((exercise, index) => (
                   <Card key={exercise.id}>
                     <CardContent className="p-3 flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
                         {exercise.thumbnail_url ? (
                           <img src={exercise.thumbnail_url} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-lg font-bold text-muted-foreground">{index + 1}</span>
+                          <span className="text-lg font-bold text-primary">{index + 1}</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -406,7 +407,7 @@ export default function WorkoutDetail() {
 
           <div className="h-8" />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Schedule Sheet */}
       <Sheet open={showSchedule} onOpenChange={setShowSchedule}>
