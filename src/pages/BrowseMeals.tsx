@@ -9,26 +9,24 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Search, Filter, Grid, List, Clock, Star, Flame, Plus, X } from 'lucide-react';
+import { ArrowLeft, Search, Filter, Grid, List, Flame, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Meal = {
   id: string;
   name: string;
-  description: string;
-  category: string;
-  cuisine_type: string;
-  calories: number;
-  protein_grams: number;
-  fat_grams: number;
-  carbs_grams: number;
-  prep_time_minutes: number;
-  cook_time_minutes: number;
+  emoji: string | null;
+  category: string | null;
+  meal_type: string | null;
+  description: string | null;
+  calories: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
   image_url: string | null;
-  tags: string[];
-  rating: number;
-  is_featured: boolean;
-  servings: number | null;
+  allergens: string[] | null;
+  veg_swap: string | null;
+  vegan_swap: string | null;
 };
 
 const CATEGORIES = [
@@ -39,29 +37,21 @@ const CATEGORIES = [
   { id: 'snack', label: 'Snack' },
 ];
 
-const CUISINE_TYPES = [
-  { id: 'vegetarian', label: 'Vegetarian', icon: '🥬' },
-  { id: 'keto', label: 'Keto', icon: '🥑' },
-  { id: 'paleo', label: 'Paleo', icon: '🍖' },
-  { id: 'vegan', label: 'Vegan', icon: '🌱' },
-];
-
 export default function BrowseMeals() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+
   const [meals, setMeals] = useState<Meal[]>([]);
   const [filteredMeals, setFilteredMeals] = useState<Meal[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'grid'>('card');
   const [showFilters, setShowFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedRecipe, setSelectedRecipe] = useState<Meal | null>(null);
 
   // Filter state
   const [maxCalories, setMaxCalories] = useState(1000);
-  const [maxCookTime, setMaxCookTime] = useState(60);
   const [minProtein, setMinProtein] = useState(0);
 
   useEffect(() => {
@@ -70,14 +60,14 @@ export default function BrowseMeals() {
 
   useEffect(() => {
     filterMeals();
-  }, [meals, searchQuery, selectedCategory, selectedCuisine, maxCalories, maxCookTime, minProtein]);
+  }, [meals, searchQuery, selectedCategory, maxCalories, minProtein]);
 
   const fetchMeals = async () => {
     setIsLoading(true);
     const { data, error } = await supabase
-      .from('meals')
+      .from('recipes')
       .select('*')
-      .order('is_featured', { ascending: false });
+      .order('name');
 
     if (data) {
       setMeals(data as Meal[]);
@@ -96,46 +86,30 @@ export default function BrowseMeals() {
       );
     }
 
-    // Category filter
+    // Category filter (uses meal_type)
     if (selectedCategory !== 'all') {
-      result = result.filter(meal => meal.category === selectedCategory);
-    }
-
-    // Cuisine filter
-    if (selectedCuisine) {
-      result = result.filter(meal => meal.cuisine_type === selectedCuisine);
+      result = result.filter(meal => meal.meal_type === selectedCategory);
     }
 
     // Calorie filter
     result = result.filter(meal => (meal.calories || 0) <= maxCalories);
 
-    // Cook time filter
-    result = result.filter(meal => 
-      ((meal.prep_time_minutes || 0) + (meal.cook_time_minutes || 0)) <= maxCookTime
-    );
-
     // Protein filter
-    result = result.filter(meal => (meal.protein_grams || 0) >= minProtein);
+    result = result.filter(meal => (meal.protein_g || 0) >= minProtein);
 
     setFilteredMeals(result);
   };
 
   const clearFilters = () => {
-    setSelectedCuisine(null);
     setMaxCalories(1000);
-    setMaxCookTime(60);
     setMinProtein(0);
     setShowFilters(false);
   };
 
   const activeFiltersCount = [
-    selectedCuisine,
     maxCalories < 1000,
-    maxCookTime < 60,
     minProtein > 0,
   ].filter(Boolean).length;
-
-  const featuredMeals = filteredMeals.filter(m => m.is_featured);
 
   return (
     <div className="min-h-screen bg-background">
@@ -146,8 +120,8 @@ export default function BrowseMeals() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-semibold flex-1">Browse Meals</h1>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="icon"
             onClick={() => setViewMode(viewMode === 'card' ? 'grid' : 'card')}
           >
@@ -166,8 +140,8 @@ export default function BrowseMeals() {
               className="pl-10"
             />
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="icon"
             onClick={() => setShowFilters(true)}
             className="relative"
@@ -180,78 +154,10 @@ export default function BrowseMeals() {
             )}
           </Button>
         </div>
-
-        {/* Cuisine Quick Filters */}
-        <div className="px-4 pb-4">
-          <ScrollArea className="w-full">
-            <div className="flex gap-2">
-              {CUISINE_TYPES.map((cuisine) => (
-                <Button
-                  key={cuisine.id}
-                  variant={selectedCuisine === cuisine.id ? 'default' : 'outline'}
-                  size="sm"
-                  className="rounded-full whitespace-nowrap gap-1"
-                  onClick={() => setSelectedCuisine(
-                    selectedCuisine === cuisine.id ? null : cuisine.id
-                  )}
-                >
-                  <span>{cuisine.icon}</span>
-                  {cuisine.label}
-                </Button>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
       </header>
 
-      <ScrollArea className="h-[calc(100vh-200px)]">
+      <ScrollArea className="h-[calc(100vh-140px)]">
         <div className="p-4 space-y-6">
-          {/* Featured Meals */}
-          {featuredMeals.length > 0 && !searchQuery && selectedCategory === 'all' && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold">Featured Meal</h2>
-                <Button variant="link" className="text-primary p-0 h-auto">See All</Button>
-              </div>
-              <ScrollArea className="w-full">
-                <div className="flex gap-3">
-                  {featuredMeals.slice(0, 3).map((meal) => (
-                    <Card 
-                      key={meal.id} 
-                      className="min-w-[280px] border-border/50 overflow-hidden cursor-pointer"
-                      onClick={() => navigate(`/meal/${meal.id}`)}
-                    >
-                      <div className="h-40 bg-gradient-to-br from-secondary to-muted relative">
-                        {meal.image_url ? (
-                          <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Flame className="w-12 h-12 text-primary/30" />
-                          </div>
-                        )}
-                        <Badge className="absolute top-2 left-2 bg-background/80 text-foreground">
-                          New
-                        </Badge>
-                      </div>
-                      <CardContent className="p-3">
-                        <h3 className="font-semibold truncate">{meal.name}</h3>
-                        <p className="text-xs text-muted-foreground truncate">{meal.description}</p>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Flame className="w-3 h-3 text-primary" />
-                            {meal.calories}
-                          </span>
-                          <span>🥩 {meal.protein_grams}g</span>
-                          <span>🧈 {meal.fat_grams}g</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
-            </section>
-          )}
-
           {/* Category Tabs */}
           <div className="flex gap-2 overflow-x-auto pb-2">
             {CATEGORIES.map((cat) => (
@@ -293,18 +199,18 @@ export default function BrowseMeals() {
             ) : viewMode === 'card' ? (
               <div className="space-y-3">
                 {filteredMeals.map((meal) => (
-                  <Card 
-                    key={meal.id} 
+                  <Card
+                    key={meal.id}
                     className="border-border/50 overflow-hidden cursor-pointer"
-                    onClick={() => navigate(`/meal/${meal.id}`)}
+                    onClick={() => setSelectedRecipe(meal)}
                   >
                     <CardContent className="p-3 flex gap-3">
                       <div className="w-16 h-16 rounded-xl bg-secondary flex-shrink-0 overflow-hidden">
                         {meal.image_url ? (
                           <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Flame className="w-6 h-6 text-primary/30" />
+                          <div className="w-full h-full flex items-center justify-center text-2xl">
+                            {meal.emoji || <Flame className="w-6 h-6 text-primary/30" />}
                           </div>
                         )}
                       </div>
@@ -315,7 +221,9 @@ export default function BrowseMeals() {
                             <Flame className="w-3 h-3 text-primary" />
                             {meal.calories}kcal
                           </span>
-                          <span>· {meal.servings || 1} Meal</span>
+                          {meal.protein_g != null && (
+                            <span>· {meal.protein_g}g protein</span>
+                          )}
                         </div>
                       </div>
                       <Button size="icon" variant="ghost" className="flex-shrink-0">
@@ -328,21 +236,21 @@ export default function BrowseMeals() {
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 {filteredMeals.map((meal) => (
-                  <Card 
-                    key={meal.id} 
+                  <Card
+                    key={meal.id}
                     className="border-border/50 overflow-hidden cursor-pointer"
-                    onClick={() => navigate(`/meal/${meal.id}`)}
+                    onClick={() => setSelectedRecipe(meal)}
                   >
                     <div className="aspect-square bg-secondary relative">
                       {meal.image_url ? (
                         <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Flame className="w-8 h-8 text-primary/30" />
+                        <div className="w-full h-full flex items-center justify-center text-4xl">
+                          {meal.emoji || <Flame className="w-8 h-8 text-primary/30" />}
                         </div>
                       )}
-                      <Button 
-                        size="icon" 
+                      <Button
+                        size="icon"
                         variant="secondary"
                         className="absolute bottom-2 right-2 w-8 h-8 rounded-full"
                       >
@@ -377,7 +285,7 @@ export default function BrowseMeals() {
             <div>
               <label className="text-sm font-medium mb-2 block">Filter by meal type</label>
               <div className="flex gap-2 flex-wrap">
-                {['Breakfast', 'Lunch', 'Dinner'].map((type) => (
+                {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => (
                   <Badge
                     key={type}
                     variant="outline"
@@ -393,22 +301,6 @@ export default function BrowseMeals() {
                   </Badge>
                 ))}
               </div>
-            </div>
-
-            {/* Cooking Time */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Cooking Time</label>
-              <Select value={maxCookTime.toString()} onValueChange={(v) => setMaxCookTime(parseInt(v))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">Under 15 minutes</SelectItem>
-                  <SelectItem value="30">Under 30 minutes</SelectItem>
-                  <SelectItem value="45">Under 45 minutes</SelectItem>
-                  <SelectItem value="60">Under 1 hour</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Protein Filter */}
@@ -444,13 +336,110 @@ export default function BrowseMeals() {
           </div>
 
           <div className="absolute bottom-6 left-6 right-6">
-            <Button 
+            <Button
               className="w-full h-12 rounded-2xl gap-2"
               onClick={() => setShowFilters(false)}
             >
               Show Results ({filteredMeals.length}) <Filter className="w-4 h-4" />
             </Button>
           </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Recipe Detail Sheet */}
+      <Sheet open={!!selectedRecipe} onOpenChange={(o) => !o && setSelectedRecipe(null)}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            {selectedRecipe && (
+              <div>
+                {/* Image */}
+                <div className="h-48 bg-secondary w-full overflow-hidden">
+                  {selectedRecipe.image_url ? (
+                    <img
+                      src={selectedRecipe.image_url}
+                      alt={selectedRecipe.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-6xl">
+                      {selectedRecipe.emoji || <Flame className="w-16 h-16 text-primary/30" />}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <SheetHeader className="text-left p-0">
+                    <SheetTitle className="text-xl">{selectedRecipe.name}</SheetTitle>
+                  </SheetHeader>
+
+                  {selectedRecipe.description && (
+                    <p className="text-sm text-muted-foreground">{selectedRecipe.description}</p>
+                  )}
+
+                  {/* Macro Pills */}
+                  <div className="flex gap-2 flex-wrap">
+                    {selectedRecipe.calories != null && (
+                      <div className="flex items-center gap-1 bg-secondary rounded-full px-3 py-1 text-xs font-medium">
+                        <Flame className="w-3 h-3 text-primary" />
+                        {selectedRecipe.calories} kcal
+                      </div>
+                    )}
+                    {selectedRecipe.protein_g != null && (
+                      <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">
+                        🥩 {selectedRecipe.protein_g}g protein
+                      </div>
+                    )}
+                    {selectedRecipe.carbs_g != null && (
+                      <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">
+                        🍞 {selectedRecipe.carbs_g}g carbs
+                      </div>
+                    )}
+                    {selectedRecipe.fat_g != null && (
+                      <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">
+                        🧈 {selectedRecipe.fat_g}g fat
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Allergens */}
+                  {selectedRecipe.allergens && selectedRecipe.allergens.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Allergens</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {selectedRecipe.allergens.map((allergen) => (
+                          <Badge key={allergen} variant="destructive" className="text-xs capitalize">
+                            {allergen}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Veg / Vegan swaps */}
+                  {selectedRecipe.veg_swap && (
+                    <div className="bg-secondary/50 rounded-xl p-3">
+                      <p className="text-xs font-medium mb-1">🥬 Vegetarian swap</p>
+                      <p className="text-sm text-muted-foreground">{selectedRecipe.veg_swap}</p>
+                    </div>
+                  )}
+                  {selectedRecipe.vegan_swap && (
+                    <div className="bg-secondary/50 rounded-xl p-3">
+                      <p className="text-xs font-medium mb-1">🌱 Vegan swap</p>
+                      <p className="text-sm text-muted-foreground">{selectedRecipe.vegan_swap}</p>
+                    </div>
+                  )}
+
+                  {/* Log button */}
+                  <Button
+                    className="w-full h-12 rounded-2xl mt-2"
+                    onClick={() => navigate('/log-meal')}
+                  >
+                    Log this meal
+                  </Button>
+                </div>
+              </div>
+            )}
+          </ScrollArea>
         </SheetContent>
       </Sheet>
     </div>

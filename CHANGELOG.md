@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-05-03] — Build 31: Recipe images live in Browse Meals; bottom nav fix shipped
+
+- **Browse Meals now shows the real recipe library** — switched from 8 placeholder entries to the full 30-recipe collection with photos; 23 recipes have images, 7 awaiting photos from the owner
+- **Tapping a recipe opens a detail sheet** — shows the full-width photo, macros (calories, protein, carbs, fat), allergens, and vegetarian/vegan swap options
+- **Bottom nav bar sits closer to the screen edge** — the excess gap below the floating bar has been removed (was committed in Build 30 but hit Apple's daily upload limit)
+- **Recipe images and allergens added to database** — 23 photos uploaded and matched to recipes; best-guess allergens set for all 30 recipes pending owner review
+
 ## [2026-05-01] — Build 30: Bottom nav bar repositioned closer to screen edge
 
 - **Bottom nav bar now sits lower on screen** — removed excess spacing that was pushing it too far from the edge; it now sits flush with the safe area as intended
