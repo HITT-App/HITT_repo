@@ -140,6 +140,7 @@ const CreateStory = () => {
               placeholder="Add a caption... (optional)"
               value={textContent}
               onChange={(e) => setTextContent(e.target.value)}
+              onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 300)}
               className="bg-card border-border resize-none"
               rows={2}
             />

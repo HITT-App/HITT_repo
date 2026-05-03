@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-05-03] — Build 32: Body scan fix; story keyboard fix; duplicate greeting removed
+
+- **Body scan photos no longer fail to upload** — camera and gallery photos are now resized to 900px before sending; previously full-resolution photos exceeded the upload limit and caused an error
+- **Caption box no longer hidden by keyboard when creating a story** — text input scrolls into view automatically when the keyboard appears
+- **Duplicate welcome message removed from home screen** — the "Hello, name!" line in the header has been removed; the hero already shows the greeting over the video
+
 ## [2026-05-03] — Build 31: Recipe images live in Browse Meals; bottom nav fix shipped
 
 - **Browse Meals now shows the real recipe library** — switched from 8 placeholder entries to the full 30-recipe collection with photos; 23 recipes have images, 7 awaiting photos from the owner

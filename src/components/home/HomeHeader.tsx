@@ -53,14 +53,7 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
               <img src={hiitLogo} alt="HIIT Logo" className="w-full h-full object-cover" />
             </AvatarFallback>
           </Avatar>
-          <div>
-            <p className="text-base font-semibold text-foreground">
-              Hello, {userName}!
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {getTimeGreeting()}
-            </p>
-          </div>
+          <p className="text-base font-semibold text-foreground">HIIT Fitness</p>
         </div>
         
         <Button

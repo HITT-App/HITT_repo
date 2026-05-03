@@ -112,6 +112,16 @@ const BodyScan = () => {
     }
   }, []);
 
+  const resizeToDataUrl = (srcCanvas: HTMLCanvasElement, maxPx = 900): string => {
+    const { width, height } = srcCanvas;
+    const scale = Math.min(1, maxPx / Math.max(width, height));
+    const out = document.createElement("canvas");
+    out.width = Math.round(width * scale);
+    out.height = Math.round(height * scale);
+    out.getContext("2d")?.drawImage(srcCanvas, 0, 0, out.width, out.height);
+    return out.toDataURL("image/jpeg", 0.8);
+  };
+
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
@@ -121,8 +131,7 @@ const BodyScan = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-    setImagePreview(dataUrl);
+    setImagePreview(resizeToDataUrl(canvas));
     closeCamera();
   }, []);
 
@@ -142,7 +151,17 @@ const BodyScan = () => {
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result as string);
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext("2d")?.drawImage(img, 0, 0);
+        setImagePreview(resizeToDataUrl(canvas));
+      };
+      img.src = reader.result as string;
+    };
     reader.onerror = () => toast.error("Failed to read image file.");
     reader.readAsDataURL(file);
     // Reset so the same file can be re-selected
