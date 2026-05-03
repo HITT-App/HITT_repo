@@ -96,21 +96,24 @@ const BodyScan = () => {
     loadProgress();
   }, [user]);
 
+  // Wire stream to video element whenever the stream changes — avoids
+  // setTimeout races where the video element isn't ready at the arbitrary delay.
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [stream]);
+
   const openCamera = useCallback(async (mode?: "user" | "environment") => {
     const selectedMode = mode ?? facingMode;
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: selectedMode, width: { ideal: 1280 }, height: { ideal: 1920 } }
       });
-      setStream(mediaStream);
       setCameraReady(false);
       setIsCameraOpen(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          videoRef.current.play();
-        }
-      }, 100);
+      setStream(mediaStream);
     } catch {
       toast.error("Could not access camera. Please check permissions.");
     }
@@ -126,12 +129,6 @@ const BodyScan = () => {
         video: { facingMode: newMode, width: { ideal: 1280 }, height: { ideal: 1920 } }
       });
       setStream(mediaStream);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          videoRef.current.play();
-        }
-      }, 100);
     } catch {
       toast.error("Could not switch camera.");
     }

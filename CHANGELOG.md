@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-03] — Build 36: Camera flip single-tap fix; watch syncs on app open
+
+- **Body scan camera flip now works in one tap** — previously required two taps on iOS due to a timing race when switching cameras; now switches reliably first time
+- **Apple Watch / health data syncs automatically on app open** — no longer requires manually pressing the sync button; syncs once per 5 minutes when you open the app
+
 ## [2026-05-03] — Build 35: Body scan "expecting ; or )" error fixed
 
 - **Body scan analysis error fixed** — a cryptic "expecting ; or )" error that appeared when analysing a rear-camera photo is now resolved; the session token is fetched safely before the request and the response is parsed with a proper fallback if the server returns an unexpected format

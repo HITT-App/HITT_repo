@@ -66,7 +66,7 @@ export function useWatchSync() {
     lastSyncedAt: getLastSync(),
     error: null,
     watchType: localStorage.getItem(WATCH_TYPE_KEY) || null,
-    syncFrequency: (localStorage.getItem(SYNC_FREQ_KEY) as SyncState["syncFrequency"]) || "manual",
+    syncFrequency: (localStorage.getItem(SYNC_FREQ_KEY) as SyncState["syncFrequency"]) || "on_open",
     lastSyncResults: getSavedResults(),
   });
 
