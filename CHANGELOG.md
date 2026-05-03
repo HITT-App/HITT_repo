@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-05-03] — Build 33: Body scan improvements — second person, camera flip, warning visible
+
+- **Body scan analysis now speaks directly to you** — results say "your upper body shows…" instead of "the person's body shows…"
+- **Camera flip button added** — switch between front and rear camera while scanning; defaults to rear camera for full-body shots
+- **AI disclaimer now visible** — warning text has a background and padding so it's no longer hidden behind the bottom navigation bar
+
 ## [2026-05-03] — Build 32: Body scan fix; story keyboard fix; duplicate greeting removed
 
 - **Body scan photos no longer fail to upload** — camera and gallery photos are now resized to 900px before sending; previously full-resolution photos exceeded the upload limit and caused an error

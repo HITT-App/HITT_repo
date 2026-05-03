@@ -10,13 +10,13 @@ const corsHeaders = {
 };
 
 const buildBodyAnalysisPrompt = (workoutSummary: string) =>
-  `You are an expert fitness and body composition analyst. Analyze the person's body from this photo.
+  `You are an expert fitness and body composition analyst. Analyze this body photo and speak directly to the person — use second person throughout ("you", "your"). Never refer to the subject in third person ("they", "the person", "their").
 
 User's recent workout history (last 30 days): ${workoutSummary}
 
 Cross-reference this workout history when writing the recommendations section. For example, if the user does no strength training, suggest adding it; if they run frequently, comment on how their lower-body development reflects that; if the data is absent, give general guidance.
 
-Provide your analysis in this exact JSON format:
+Provide your analysis in this exact JSON format. All "keyObservations" and "recommendations" strings MUST address the user in second person (e.g. "Your upper body shows…", "You would benefit from…"):
 {
   "estimatedBodyFat": <number 5-50, your best estimate of body fat percentage>,
   "bodyType": "<ectomorph|mesomorph|endomorph|ecto-mesomorph|endo-mesomorph>",

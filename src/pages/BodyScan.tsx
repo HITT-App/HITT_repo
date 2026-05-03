@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User } from "lucide-react";
+import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User, SwitchCamera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,6 +59,7 @@ const BodyScan = () => {
   const [analysis, setAnalysis] = useState<BodyAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [measurements, setMeasurements] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -94,10 +95,11 @@ const BodyScan = () => {
     loadProgress();
   }, [user]);
 
-  const openCamera = useCallback(async () => {
+  const openCamera = useCallback(async (mode?: "user" | "environment") => {
+    const selectedMode = mode ?? facingMode;
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 1920 } }
+        video: { facingMode: selectedMode, width: { ideal: 1280 }, height: { ideal: 1920 } }
       });
       setStream(mediaStream);
       setIsCameraOpen(true);
@@ -110,7 +112,27 @@ const BodyScan = () => {
     } catch {
       toast.error("Could not access camera. Please check permissions.");
     }
-  }, []);
+  }, [facingMode]);
+
+  const flipCamera = useCallback(async () => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    const newMode = facingMode === "user" ? "environment" : "user";
+    setFacingMode(newMode);
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newMode, width: { ideal: 1280 }, height: { ideal: 1920 } }
+      });
+      setStream(mediaStream);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.play();
+        }
+      }, 100);
+    } catch {
+      toast.error("Could not switch camera.");
+    }
+  }, [facingMode, stream]);
 
   const resizeToDataUrl = (srcCanvas: HTMLCanvasElement, maxPx = 900): string => {
     const { width, height } = srcCanvas;
@@ -312,6 +334,9 @@ const BodyScan = () => {
                   <Button variant="outline" size="icon" onClick={closeCamera} className="rounded-full bg-white/20 border-white/30 text-white hover:bg-white/30">
                     <X className="w-5 h-5" />
                   </Button>
+                  <Button variant="outline" size="icon" onClick={flipCamera} className="rounded-full bg-white/20 border-white/30 text-white hover:bg-white/30">
+                    <SwitchCamera className="w-5 h-5" />
+                  </Button>
                   <button onClick={capturePhoto} className="w-16 h-16 rounded-full border-4 border-white bg-white/20 hover:bg-white/40 transition-colors flex items-center justify-center">
                     <div className="w-12 h-12 rounded-full bg-white" />
                   </button>
@@ -437,9 +462,11 @@ const BodyScan = () => {
                   {isSaving ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</> : "Save Scan Results"}
                 </Button>
 
-                <p className="text-xs text-center text-muted-foreground">
-                  ⚠️ AI estimates are approximations, not medical assessments.
-                </p>
+                <div className="pb-24 pt-1">
+                  <p className="text-xs text-center text-muted-foreground bg-secondary/60 rounded-xl px-3 py-2">
+                    ⚠️ AI estimates are approximations, not medical assessments.
+                  </p>
+                </div>
               </div>
             )}
           </TabsContent>
