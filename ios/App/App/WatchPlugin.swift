@@ -9,6 +9,7 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sendWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearWorkout", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "sendMessage", returnType: CAPPluginReturnPromise),
     ]
 
     private var workoutEventListeners: [String: CAPPluginCall] = [:]
@@ -39,6 +40,15 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func clearWorkout(_ call: CAPPluginCall) {
         WatchBridge.shared.clearWorkout()
+        call.resolve()
+    }
+
+    @objc func sendMessage(_ call: CAPPluginCall) {
+        guard let message = call.getObject("message") else {
+            call.reject("Missing message")
+            return
+        }
+        WatchBridge.shared.sendRawMessage(message)
         call.resolve()
     }
 

@@ -4,7 +4,18 @@ interface WatchPluginInterface {
   isAvailable(): Promise<{ available: boolean }>;
   sendWorkout(options: { workout: WatchWorkout }): Promise<void>;
   clearWorkout(): Promise<void>;
+  sendMessage(options: { message: Record<string, unknown> }): Promise<void>;
   addListener(event: "workoutEvent", handler: (data: WatchWorkoutEvent) => void): Promise<{ remove: () => void }>;
+}
+
+export interface TriathlonLeg {
+  type: "swim" | "bike" | "run";
+  targetKm: number;
+}
+
+export interface TriathlonPlan {
+  name: string;
+  legs: TriathlonLeg[];
 }
 
 export interface WatchWorkout {
@@ -51,6 +62,11 @@ export const sendWorkoutToWatch = async (workout: WatchWorkout): Promise<void> =
 export const clearWatchWorkout = async (): Promise<void> => {
   if (!Capacitor.isNativePlatform()) return;
   await WatchPluginImpl.clearWorkout();
+};
+
+export const sendTriathlonToWatch = async (plan: TriathlonPlan): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  await WatchPluginImpl.sendMessage({ message: { triathlon: plan } });
 };
 
 export const onWatchWorkoutEvent = (handler: (event: WatchWorkoutEvent) => void) => {

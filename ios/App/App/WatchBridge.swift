@@ -41,6 +41,18 @@ class WatchBridge: NSObject, WCSessionDelegate {
         try? WCSession.default.updateApplicationContext(payload)
     }
 
+    // Send any arbitrary message (used for triathlon plans, etc.)
+    func sendRawMessage(_ message: [String: Any]) {
+        guard WCSession.default.activationState == .activated else { return }
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(message, replyHandler: nil, errorHandler: { _ in
+                try? WCSession.default.updateApplicationContext(message)
+            })
+        } else {
+            try? WCSession.default.updateApplicationContext(message)
+        }
+    }
+
     // MARK: — WCSessionDelegate
 
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {}

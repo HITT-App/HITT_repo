@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, SkipForward, Flag, Waves, Bike, Footprints, Trophy, Lock, Unlock } from "lucide-react";
+import { ArrowLeft, Play, Pause, SkipForward, Flag, Waves, Bike, Footprints, Trophy, Lock, Unlock, Watch, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,6 +9,7 @@ import LiveActivityMap from "@/components/activity/LiveActivityMap";
 import { GpsFilter } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
 import type { GpsPoint } from "@/lib/gps-filter";
+import { sendTriathlonToWatch } from "@/plugins/WatchPlugin";
 
 interface LegData {
   elapsed: number;
@@ -32,6 +33,14 @@ const fmt = (s: number) => {
     : `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 };
 
+const PRESETS = [
+  { label: "Full Ironman",  distances: [3.8, 180, 42.2] },
+  { label: "Half Ironman",  distances: [1.9, 90,  21.1] },
+  { label: "Olympic",       distances: [1.5, 40,  10.0] },
+  { label: "Sprint",        distances: [0.75, 20,  5.0] },
+  { label: "Custom",        distances: null },
+] as const;
+
 const Triathlon = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -39,6 +48,12 @@ const Triathlon = () => {
   const [running, setRunning] = useState(false);
   const [locked, setLocked] = useState(false);
   const [finished, setFinished] = useState(false);
+
+  // Race setup
+  const [targetKm, setTargetKm] = useState([3.8, 180, 42.2]);
+  const [raceName, setRaceName] = useState("Full Ironman");
+  const [showSetup, setShowSetup] = useState(true);
+  const [watchSent, setWatchSent] = useState(false);
   const [legData, setLegData] = useState<LegData[]>([
     { elapsed: 0, distance: 0, calories: 0, positions: [] },
     { elapsed: 0, distance: 0, calories: 0, positions: [] },
@@ -211,16 +226,122 @@ const Triathlon = () => {
     );
   }
 
+  // Setup screen shown before race starts
+  if (showSetup) {
+    const sendToWatch = async () => {
+      await sendTriathlonToWatch({
+        name: raceName,
+        legs: [
+          { type: "swim", targetKm: targetKm[0] },
+          { type: "bike", targetKm: targetKm[1] },
+          { type: "run",  targetKm: targetKm[2] },
+        ],
+      });
+      setWatchSent(true);
+      toast({ title: "Sent to Apple Watch ⌚" });
+    };
+
+    return (
+      <div className="min-h-[100dvh] bg-background flex flex-col">
+        <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+          <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
+            <ArrowLeft size={18} />
+          </button>
+          <h1 className="text-sm font-bold flex items-center gap-2">
+            <Trophy size={14} className="text-yellow-500" /> RACE SETUP
+          </h1>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-4">
+          {/* Preset selector */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2 tracking-wider uppercase">Race Type</p>
+            <div className="grid grid-cols-2 gap-2">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => {
+                    setRaceName(p.label === "Custom" ? raceName : p.label);
+                    if (p.distances) setTargetKm([...p.distances]);
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-colors ${
+                    raceName === p.label
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card text-foreground"
+                  }`}
+                >
+                  <p className="text-xs font-bold">{p.label}</p>
+                  {p.distances && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {p.distances[0]}km / {p.distances[1]}km / {p.distances[2]}km
+                    </p>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Distance editors */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2 tracking-wider uppercase">Target Distances</p>
+            <div className="space-y-2">
+              {[
+                { label: "Swim", icon: Waves, color: "text-blue-400" },
+                { label: "Bike", icon: Bike,  color: "text-cyan-400" },
+                { label: "Run",  icon: Footprints, color: "text-green-400" },
+              ].map(({ label, icon: Icon, color }, i) => (
+                <div key={label} className="flex items-center gap-3 bg-card rounded-xl p-3 border border-border">
+                  <Icon size={18} className={color} />
+                  <span className="text-sm font-medium flex-1">{label}</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={targetKm[i]}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value) || 0;
+                      setTargetKm((prev) => { const n = [...prev]; n[i] = v; return n; });
+                      setRaceName("Custom");
+                    }}
+                    className="w-20 text-right bg-secondary border border-border rounded-lg px-2 py-1 text-sm font-mono"
+                  />
+                  <span className="text-xs text-muted-foreground">km</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Send to Watch */}
+          <button
+            onClick={sendToWatch}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-border bg-card hover:bg-secondary transition-colors"
+          >
+            <Watch size={16} className={watchSent ? "text-green-500" : "text-muted-foreground"} />
+            <span className="text-sm font-medium">{watchSent ? "Sent to Watch ✓" : "Send Plan to Apple Watch"}</span>
+          </button>
+
+          {/* Start */}
+          <Button
+            className="w-full h-12 gap-2 bg-primary text-primary-foreground rounded-xl"
+            onClick={() => setShowSetup(false)}
+          >
+            <Play size={16} /> Start Race
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col relative">
       {/* Header */}
       <div className="relative z-10 px-4 pt-4 pb-2 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-xl border border-border/30 flex items-center justify-center">
+        <button onClick={() => setShowSetup(true)} className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-xl border border-border/30 flex items-center justify-center">
           <ArrowLeft size={18} className="text-foreground" />
         </button>
         <div className="flex-1">
           <h1 className="text-sm font-bold text-foreground flex items-center gap-2">
-            <Trophy size={14} className="text-yellow-500" /> IRONMAN / TRIATHLON
+            <Trophy size={14} className="text-yellow-500" /> {raceName.toUpperCase()}
           </h1>
         </div>
         <button

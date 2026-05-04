@@ -1,73 +1,39 @@
 import SwiftUI
 
 struct TodayView: View {
-    @EnvironmentObject var sessionManager: WatchSessionManager
-    @EnvironmentObject var workoutManager: WorkoutManager
+    @State private var workout: WatchWorkout? = nil
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Image(systemName: "bolt.fill")
-                        .foregroundColor(.yellow)
-                    Text("Today")
-                        .font(.headline)
+                    Image(systemName: "bolt.fill").foregroundColor(.yellow)
+                    Text("Today").font(.headline)
                 }
-
-                if let workout = sessionManager.todayWorkout {
-                    Text(workout.name)
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-
-                    Text("\(workout.durationMinutes) min")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-
-                    ForEach(workout.exercises.prefix(4)) { exercise in
+                if let w = workout {
+                    Text(w.name).font(.title3.bold())
+                    Text("\(w.durationMinutes) min").font(.caption).foregroundColor(.gray)
+                    ForEach(w.exercises.prefix(4)) { ex in
                         HStack {
-                            Circle()
-                                .fill(Color.yellow)
-                                .frame(width: 6, height: 6)
-                            Text(exercise.name)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                            Circle().fill(Color.yellow).frame(width: 6, height: 6)
+                            Text(ex.name).font(.caption2).foregroundColor(.secondary)
                             Spacer()
-                            Text(exercise.setsRepsLabel)
-                                .font(.caption2)
-                                .foregroundColor(.gray)
+                            Text(ex.setsRepsLabel).font(.caption2).foregroundColor(.gray)
                         }
                     }
-
-                    if workout.exercises.count > 4 {
-                        Text("+\(workout.exercises.count - 4) more")
-                            .font(.caption2)
-                            .foregroundColor(.gray)
-                    }
-
-                    Button(action: { workoutManager.startWorkout(workout) }) {
-                        Label("Start", systemImage: "play.fill")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
+                    NavigationLink("Start") {
+                        ActiveWorkoutView()
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.yellow)
-                    .foregroundColor(.black)
-                    .padding(.top, 4)
                 } else {
-                    VStack(spacing: 6) {
-                        Image(systemName: "moon.zzz.fill")
-                            .font(.title2)
-                            .foregroundColor(.gray)
-                        Text("No workout\nscheduled today")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 12)
+                    Text("No workout today").font(.caption).foregroundColor(.gray)
                 }
             }
             .padding()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .watchWorkoutReceived)) { note in
+            workout = note.object as? WatchWorkout
         }
     }
 }

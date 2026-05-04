@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-05-04] — Build 38: Ironman triathlon Watch integration + race setup screen
+
+- **Triathlon race setup screen added** — before starting, choose Full Ironman, Half Ironman, Olympic, Sprint, or set fully custom distances for each leg; distances are editable individually
+- **Send race plan to Apple Watch** — new button on the setup screen pushes the plan (name + target distances) to the Watch over Bluetooth so the Watch knows exactly what you're aiming for
+- **Apple Watch gets a Race tab** — a 4th tab on the Watch shows the Ironman triathlon screen; each leg displays elapsed time, current distance vs target, a live progress bar, and heart rate
+- **Manual leg transitions** — user taps "NOW SWIM / CYCLE / RUN" to start each leg and "NEXT: BIKE →" to advance; each leg records to Apple Health with the correct activity type (swimming, cycling, running)
+- **Finish and sync** — tapping "FINISH RACE" on the final leg saves the result and sends totals back to the iPhone
+
 ## [2026-05-03] — Build 37: Home workouts section fixes; workout detail sticky header; player layout fixed
 
 - **Workouts section on home screen has proper spacing** — no longer crammed against the stats tiles above it
