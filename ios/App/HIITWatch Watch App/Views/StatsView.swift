@@ -29,7 +29,7 @@ struct StatsView: View {
                     if syncing {
                         ProgressView()
                             .scaleEffect(0.6)
-                            .tint(hiitOrange)
+                            .accentColor(hiitOrange)
                     }
                 }
 

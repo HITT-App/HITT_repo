@@ -3,7 +3,7 @@ import SwiftUI
 private let hiitOrange = Color(red: 0.976, green: 0.451, blue: 0.086)
 private let legIcons  = ["🌊", "🚴", "🏃"]
 private let legLabels = ["SWIM", "BIKE", "RUN"]
-private let legColors: [Color] = [.blue, .cyan, .green]
+private let legColors: [Color] = [.blue, Color(red: 0, green: 0.8, blue: 1.0), .green]
 
 struct TriathlonView: View {
     @State private var plan: TriathlonPlan? = nil
