@@ -1,28 +1,18 @@
 import SwiftUI
-import HealthKit
-import WatchConnectivity
 
 private let hiitOrange = Color(red: 0.976, green: 0.451, blue: 0.086)
-
 private let legIcons  = ["🌊", "🚴", "🏃"]
 private let legLabels = ["SWIM", "BIKE", "RUN"]
 private let legColors: [Color] = [.blue, .cyan, .green]
-private let legHKTypes: [HKWorkoutActivityType] = [.swimming, .cycling, .running]
-private let legDistanceIds: [HKQuantityTypeIdentifier] = [.distanceSwimming, .distanceCycling, .distanceWalkingRunning]
 
 struct TriathlonView: View {
     @State private var plan: TriathlonPlan? = nil
     @State private var currentLeg: Int = 0
-    @State private var legState: LegState = .idle   // idle → active → done
-    @State private var elapsed: [Int]  = [0, 0, 0]
+    @State private var legState: LegState = .idle
+    @State private var elapsed: [Int]   = [0, 0, 0]
     @State private var distKm: [Double] = [0, 0, 0]
-    @State private var heartRate: Int  = 0
-    @State private var ticker: Timer?  = nil
-    @State private var raceFinished    = false
-
-    private let store = HKHealthStore()
-    private var session: HKWorkoutSession?
-    private var builder: HKLiveWorkoutBuilder?
+    @State private var heartRate: Int   = 0
+    @State private var raceFinished     = false
 
     enum LegState { case idle, active, done }
 
@@ -49,19 +39,13 @@ struct TriathlonView: View {
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .watchTriathlonReceived)) { note in
-            if let p = note.object as? TriathlonPlan {
-                plan = p
-                elapsed  = Array(repeating: 0,   count: p.legs.count)
-                distKm   = Array(repeating: 0.0, count: p.legs.count)
+        .onAppear {
+            if let p = WatchSessionManager.shared.triathlonPlan {
+                loadPlan(p)
             }
         }
-        .onAppear {
-            plan = WatchSessionManager.shared.triathlonPlan
-            if let p = plan {
-                elapsed = Array(repeating: 0,   count: p.legs.count)
-                distKm  = Array(repeating: 0.0, count: p.legs.count)
-            }
+        .onReceive(NotificationCenter.default.publisher(for: .watchTriathlonReceived)) { note in
+            if let p = note.object as? TriathlonPlan { loadPlan(p) }
         }
     }
 
@@ -73,7 +57,7 @@ struct TriathlonView: View {
 
         return ScrollView {
             VStack(spacing: 10) {
-                // Leg indicator dots
+                // Leg dots
                 HStack(spacing: 8) {
                     ForEach(0..<p.legs.count, id: \.self) { i in
                         VStack(spacing: 2) {
@@ -87,30 +71,25 @@ struct TriathlonView: View {
                 }
                 .padding(.top, 4)
 
-                // Leg label
                 Text("\(legLabels[currentLeg]) — LEG \(currentLeg + 1) OF \(p.legs.count)")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(legState == .active ? hiitOrange : .gray)
                     .tracking(1.2)
 
-                // Timer
                 Text(fmtTime(elapsed[currentLeg]))
                     .font(.system(size: 38, weight: .black, design: .monospaced))
                     .foregroundColor(.white)
 
-                // Distance vs target
                 HStack(spacing: 4) {
                     Text(String(format: "%.2f", distKm[currentLeg]))
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
-                    Text("/")
-                        .foregroundColor(.gray)
+                    Text("/").foregroundColor(.gray)
                     Text(String(format: "%.1f km", leg.targetKm))
                         .font(.system(size: 14))
                         .foregroundColor(.gray)
                 }
 
-                // Progress bar
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 4)
@@ -125,29 +104,39 @@ struct TriathlonView: View {
                 .frame(height: 6)
                 .padding(.horizontal, 4)
 
-                // Heart rate
                 if legState == .active && heartRate > 0 {
                     HStack(spacing: 4) {
-                        Image(systemName: "heart.fill").foregroundColor(.red).font(.system(size: 11))
+                        Image(systemName: "heart.fill")
+                            .foregroundColor(.red).font(.system(size: 11))
                         Text("\(heartRate) bpm")
-                            .font(.system(size: 12))
-                            .foregroundColor(.gray)
+                            .font(.system(size: 12)).foregroundColor(.gray)
                     }
                 }
 
                 Spacer(minLength: 4)
-
-                // Action button
-                actionButton(p)
-                    .padding(.bottom, 6)
+                actionButton(p).padding(.bottom, 6)
             }
             .padding(.horizontal, 8)
         }
         .onReceive(NotificationCenter.default.publisher(for: .watchTriathlonReceived)) { note in
-            if let p = note.object as? TriathlonPlan, legState == .idle {
-                plan = p
-                elapsed = Array(repeating: 0,   count: p.legs.count)
-                distKm  = Array(repeating: 0.0, count: p.legs.count)
+            if let p = note.object as? TriathlonPlan, legState == .idle { loadPlan(p) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .triathlonElapsedTick)) { note in
+            guard let info = note.userInfo,
+                  let leg = info["leg"] as? Int,
+                  let secs = info["secs"] as? Int,
+                  leg == currentLeg else { return }
+            elapsed[leg] = secs
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .triathlonDistanceUpdate)) { note in
+            guard let info = note.userInfo,
+                  let leg = info["leg"] as? Int,
+                  let km = info["km"] as? Double else { return }
+            distKm[leg] = km
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .triathlonHRUpdate)) { note in
+            if let info = note.userInfo, let bpm = info["bpm"] as? Int {
+                heartRate = bpm
             }
         }
     }
@@ -160,8 +149,7 @@ struct TriathlonView: View {
                 HStack(spacing: 6) {
                     Text(legIcons[currentLeg])
                     Text("NOW \(legLabels[currentLeg])")
-                        .font(.system(size: 12, weight: .bold))
-                        .tracking(0.8)
+                        .font(.system(size: 12, weight: .bold)).tracking(0.8)
                 }
                 .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
@@ -176,8 +164,7 @@ struct TriathlonView: View {
                 Button(action: { advanceLeg(p) }) {
                     HStack(spacing: 4) {
                         Text("NEXT: \(legLabels[currentLeg + 1])")
-                            .font(.system(size: 12, weight: .bold))
-                            .tracking(0.8)
+                            .font(.system(size: 12, weight: .bold)).tracking(0.8)
                         Text("→")
                     }
                     .foregroundColor(.white)
@@ -192,8 +179,7 @@ struct TriathlonView: View {
                     HStack(spacing: 6) {
                         Text("🏅")
                         Text("FINISH RACE")
-                            .font(.system(size: 12, weight: .bold))
-                            .tracking(0.8)
+                            .font(.system(size: 12, weight: .bold)).tracking(0.8)
                     }
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
@@ -216,21 +202,20 @@ struct TriathlonView: View {
             Text("🏅").font(.system(size: 36))
             Text("RACE COMPLETE")
                 .font(.system(size: 13, weight: .black))
-                .foregroundColor(hiitOrange)
-                .tracking(1.5)
+                .foregroundColor(hiitOrange).tracking(1.5)
             Text(fmtTime(elapsed.reduce(0, +)))
                 .font(.system(size: 28, weight: .black, design: .monospaced))
                 .foregroundColor(.white)
-            Text("Total time")
-                .font(.system(size: 10))
-                .foregroundColor(.gray)
+            Text("Total time").font(.system(size: 10)).foregroundColor(.gray)
             ForEach(0..<elapsed.count, id: \.self) { i in
                 HStack {
                     Text(legIcons[i]).font(.system(size: 12))
                     Text(legLabels[i]).font(.system(size: 11)).foregroundColor(.gray)
                     Spacer()
-                    Text(fmtTime(elapsed[i])).font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
-                    Text(String(format: "%.2fkm", distKm[i])).font(.system(size: 10)).foregroundColor(hiitOrange)
+                    Text(fmtTime(elapsed[i]))
+                        .font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
+                    Text(String(format: "%.2fkm", distKm[i]))
+                        .font(.system(size: 10)).foregroundColor(hiitOrange)
                 }
             }
         }
@@ -239,70 +224,31 @@ struct TriathlonView: View {
 
     // MARK: - Race control
 
-    private mutating func startLeg(_ p: TriathlonPlan) {
-        legState = .active
-        startHKSession(legIndex: currentLeg)
-        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            elapsed[currentLeg] += 1
-        }
-    }
-
-    private mutating func advanceLeg(_ p: TriathlonPlan) {
-        endHKSession()
-        ticker?.invalidate(); ticker = nil
+    private func loadPlan(_ p: TriathlonPlan) {
+        plan = p
+        elapsed  = Array(repeating: 0,   count: p.legs.count)
+        distKm   = Array(repeating: 0.0, count: p.legs.count)
+        currentLeg = 0
         legState = .idle
-        currentLeg += 1
     }
 
-    private mutating func finishRace(_ p: TriathlonPlan) {
-        endHKSession()
-        ticker?.invalidate(); ticker = nil
-        legState = .done
-        raceFinished = true
-        notifyPhoneFinished(p)
+    private func startLeg(_ p: TriathlonPlan) {
+        legState = .active
+        TriathlonManager.shared.startLeg(currentLeg, legType: p.legs[currentLeg].type)
     }
 
-    // MARK: - HealthKit
-
-    private mutating func startHKSession(legIndex: Int) {
-        guard HKHealthStore.isHealthDataAvailable() else { return }
-        let config = HKWorkoutConfiguration()
-        config.activityType = legHKTypes[legIndex]
-        config.locationType = legIndex == 0 ? .indoor : .outdoor
-        do {
-            let s = try HKWorkoutSession(healthStore: store, configuration: config)
-            let b = s.associatedWorkoutBuilder()
-            b.dataSource = HKLiveWorkoutDataSource(healthStore: store, workoutConfiguration: config)
-            session = s
-            builder = b
-            s.startActivity(with: Date())
-            b.beginCollection(withStart: Date()) { _, _ in }
-        } catch { print("TriathlonView: HK session failed — \(error)") }
-    }
-
-    private mutating func endHKSession() {
-        guard let s = session, let b = builder else { return }
-        s.end()
-        b.endCollection(withEnd: Date()) { [self] _, _ in
-            b.finishWorkout { _, _ in }
+    private func advanceLeg(_ p: TriathlonPlan) {
+        TriathlonManager.shared.endLeg {
+            legState = .idle
+            currentLeg += 1
         }
-        session = nil
-        builder = nil
     }
 
-    // MARK: - Notify phone
-
-    private func notifyPhoneFinished(_ p: TriathlonPlan) {
-        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
-        var legResults: [[String: Any]] = []
-        for i in 0..<p.legs.count {
-            legResults.append(["type": p.legs[i].type, "elapsedSeconds": elapsed[i], "distanceKm": distKm[i]])
-        }
-        let payload: [String: Any] = ["event": "triathlonCompleted", "raceName": p.name, "legs": legResults]
-        if WCSession.default.isReachable {
-            WCSession.default.sendMessage(payload, replyHandler: nil, errorHandler: nil)
-        } else {
-            try? WCSession.default.updateApplicationContext(payload)
+    private func finishRace(_ p: TriathlonPlan) {
+        TriathlonManager.shared.endLeg {
+            legState = .done
+            raceFinished = true
+            TriathlonManager.shared.notifyPhoneFinished(p, elapsed: elapsed, distKm: distKm)
         }
     }
 
