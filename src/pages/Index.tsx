@@ -19,7 +19,6 @@ import {
   FitnessMetricsCard,
   ActivitySection,
   WorkoutsSection,
-  CoachSessionSection,
   NutritionSection,
   SleepSection,
   AICoachSection,
@@ -100,7 +99,6 @@ const Index = () => {
     fitness_metrics: "health_metrics_enabled",
     activity: "activity_enabled",
     workouts: "workouts_enabled",
-    coaching: "coaching_enabled",
     nutrition: "nutrition_enabled",
     sleep: "sleep_enabled",
     ai_coach: "ai_coach_enabled",
@@ -116,7 +114,6 @@ const Index = () => {
     fitness_metrics: <FitnessMetricsCard hasData={true} />,
     activity: <ActivitySection />,
     workouts: <WorkoutsSection />,
-    coaching: <CoachSessionSection />,
     nutrition: <NutritionSection hasData={true} />,
     sleep: <SleepSection hasData={true} />,
     ai_coach: <AICoachSection />,
@@ -136,7 +133,6 @@ const Index = () => {
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
           {flags.activity_enabled && <ActivitySection />}
           {flags.workouts_enabled && <WorkoutsSection />}
-          {flags.coaching_enabled && <CoachSessionSection />}
           {flags.nutrition_enabled && <NutritionSection hasData={true} />}
           {flags.sleep_enabled && <SleepSection hasData={true} />}
           {flags.ai_coach_enabled && <AICoachSection />}

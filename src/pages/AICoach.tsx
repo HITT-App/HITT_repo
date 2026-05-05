@@ -6,7 +6,6 @@ import { useAIChat } from '@/hooks/useAIChat';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { CoachOnboarding } from '@/components/coach/CoachOnboarding';
 import { VoiceMode } from '@/components/coach/VoiceMode';
-import { JarvisMode } from '@/components/coach/JarvisMode';
 import { ClearDataDialog } from '@/components/coach/ClearDataDialog';
 import { OutOfTokensDialog } from '@/components/coach/OutOfTokensDialog';
 import { HIITPlusSheet } from '@/components/coach/SandowPlusSheet';
@@ -36,11 +35,9 @@ export default function AICoach() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showVoiceMode, setShowVoiceMode] = useState(false);
-  const [showJarvisMode, setShowJarvisMode] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showOutOfTokens, setShowOutOfTokens] = useState(false);
   const [showPlusSheet, setShowPlusSheet] = useState(false);
-  const [interactionMode, setInteractionMode] = useState<'chatbot' | 'immersive'>('chatbot');
 
   const { messages, isLoading, error, sendMessage, loadMessages, setMessages } = useAIChat(currentConversation);
 
@@ -80,8 +77,7 @@ export default function AICoach() {
     }
   }, [currentConversation, loadMessages, setMessages, setSearchParams]);
 
-  const handleOnboardingComplete = (mode: 'chatbot' | 'immersive') => {
-    setInteractionMode(mode);
+  const handleOnboardingComplete = (_mode: string) => {
     setShowOnboarding(false);
     localStorage.setItem(ONBOARDING_KEY, 'true');
   };
@@ -186,15 +182,6 @@ export default function AICoach() {
     );
   }
 
-  // Show Jarvis mode (new real-time voice chat)
-  if (showJarvisMode && currentConversation) {
-    return (
-      <JarvisMode 
-        conversationId={currentConversation}
-        onClose={() => setShowJarvisMode(false)}
-      />
-    );
-  }
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -210,25 +197,6 @@ export default function AICoach() {
           </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
-          {interactionMode === 'immersive' && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full text-xs px-3 min-h-[36px] touch-manipulation"
-              onClick={async () => {
-                let convId = currentConversation;
-                if (!convId) {
-                  convId = await createNewConversation();
-                }
-                if (convId) {
-                  setShowJarvisMode(true);
-                }
-              }}
-            >
-              <Mic className="w-3 h-3 mr-1" />
-              <span className="hidden xs:inline">Voice</span>
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="icon"
@@ -339,7 +307,7 @@ export default function AICoach() {
             isLoading={isLoading}
             onSend={handleSendMessage}
             error={error}
-            onVoiceClick={interactionMode === 'immersive' ? () => setShowVoiceMode(true) : undefined}
+            onVoiceClick={undefined}
           />
         </main>
       </div>

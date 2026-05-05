@@ -119,13 +119,6 @@ export const FullNavMenu = ({ open, onOpenChange }: FullNavMenuProps) => {
         { icon: Smile, label: "Mood", path: "/mood" },
       ]
     }] : []),
-    ...(flags.coaching_enabled ? [{
-      title: "Coaching",
-      items: [
-        { icon: Users, label: "Find a Coach", path: "/browse-coaches" },
-        { icon: Calendar, label: "Sessions", path: "/coach-appointments" },
-      ]
-    }] : []),
     ...(flags.community_enabled ? [{
       title: "Community",
       items: [

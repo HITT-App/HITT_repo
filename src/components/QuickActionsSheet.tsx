@@ -5,8 +5,6 @@ import {
   Moon, 
   Apple, 
   Dumbbell, 
-  Calendar,
-  Users,
   Bot,
   BookOpen,
   LogOut
@@ -32,8 +30,6 @@ const quickActions = [
   { id: "sleep", icon: Moon, label: "Sleep", color: "text-blue-400", path: "/sleep" },
   { id: "nutrition", icon: Apple, label: "Nutrition", color: "text-orange-400", path: "/nutrition" },
   { id: "workouts", icon: Dumbbell, label: "Workouts", color: "text-purple-400", path: "/workouts" },
-  { id: "coaching", icon: Calendar, label: "Find a Coach", color: "text-pink-400", path: "/browse-coaches" },
-  { id: "appointments", icon: Users, label: "My Sessions", color: "text-cyan-400", path: "/coach-appointments" },
   { id: "hiit-ai", icon: Bot, label: "HIIT AI", color: "text-yellow-400", path: "/ai-coach" },
   { id: "resources", icon: BookOpen, label: "Resources", color: "text-emerald-400", path: "/resources" },
 ];

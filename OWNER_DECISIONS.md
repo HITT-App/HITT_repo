@@ -6,6 +6,33 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
+### V2: Fitness Coach Sessions
+
+Removed from v1 at owner request. The full infrastructure (BrowseCoaches, BookCoach, CoachAppointments pages, coach profiles, session booking DB tables) is preserved in the codebase but hidden from navigation.
+
+**For v2, decide:**
+- Will coaches be internal HIIT staff, or can external coaches list themselves?
+- Free to browse, paid to book — or subscription unlocks sessions?
+- Video calls (integrate Zoom/Daily.co) or in-app messaging only?
+- Should session history appear in user profiles?
+
+### V2: AI Cinematic / Jarvis Mode
+
+Removed from v1 at owner request (not working reliably). Suggestions for a better replacement:
+
+1. **AI Workout Camera** — use the phone camera during a workout to count reps via pose detection and give real-time form feedback
+2. **AI Voice Coach mid-workout** — press a button during a workout and speak naturally; AI responds with motivation, form tips, and adjusts difficulty
+3. **Workout Highlight Reel** — after completing a workout, AI generates a 15-second shareable video summary with stats overlaid
+4. **Live AI Session** — scheduled 1:1 live AI coaching session (like a call, but with the AI avatar) using a proper real-time API
+
+**Action needed:** Pick one (or rank them) to build for v2.
+
+### App Icon
+
+Current icon is an orange gradient placeholder. Replace with final branded artwork before App Store submission.
+
+**Action needed:** Provide a 1024×1024 PNG of the final icon. Drop it into `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png` and rebuild.
+
 ### YouTube API key — workout video links
 
 All 28 workouts are seeded with exercises and thumbnails. Video links are the last missing piece. A script is ready (`scripts/populate_videos.py`) that will auto-search YouTube and populate a video URL for every workout.

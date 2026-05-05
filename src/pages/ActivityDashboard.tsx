@@ -17,7 +17,6 @@ import { useActivity } from "@/hooks/useActivity";
 import { useProfile } from "@/hooks/useProfile";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
-import { AIRecommendationsCard } from "@/components/activity/AIRecommendationsCard";
 
 const activityIcons: Record<string, string> = {
   jogging: "🏃",
@@ -239,13 +238,6 @@ const ActivityDashboard = () => {
           </Card>
         </div>
 
-        {/* AI Recommendations */}
-        <AIRecommendationsCard 
-          recommendations={recommendations} 
-          isLoading={preferencesLoading}
-          limit={2}
-          showRefresh={true}
-        />
       </div>
 
       {/* Floating Action Button */}
