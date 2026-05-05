@@ -35,22 +35,22 @@ const Community = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-[100dvh] bg-background flex flex-col pb-20">
       {/* Hero */}
-      <div className="flex items-center justify-center p-6 pt-8 bg-gradient-to-b from-primary/5 to-background">
+      <div className="flex items-center justify-center px-6 pt-6 pb-4 bg-gradient-to-b from-primary/5 to-background">
         <div className="text-center">
-          <div className="w-48 h-48 mx-auto mb-4 rounded-3xl overflow-hidden bg-muted flex items-center justify-center">
+          <div className="w-20 h-20 mx-auto mb-3 rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
             <img src={hiitLogo} alt="HIIT Fitness" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-2xl font-bold mb-1">HIIT Fitness Community</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl font-bold mb-1">HIIT Fitness Community</h1>
+          <p className="text-xs text-muted-foreground">
             Share your fitness progress and interact with other members.
           </p>
         </div>
       </div>
 
       {/* Quick Links */}
-      <div className="px-4 py-4 space-y-2">
+      <div className="px-4 space-y-2 flex-1">
         {quickLinks.map((link) => {
           const Icon = link.icon;
           return (
@@ -75,7 +75,7 @@ const Community = () => {
       </div>
 
       {/* CTA */}
-      <div className="mt-auto p-4 pb-6">
+      <div className="p-4">
         <Button
           className="w-full"
           onClick={() => navigate("/community/onboarding")}
