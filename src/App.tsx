@@ -16,6 +16,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { PageLoader } from "@/components/PageLoader";
 import { useCacheVersion } from "@/hooks/useCacheVersion";
+import { useNativePush } from "@/hooks/useNativePush";
 
 // Critical pages loaded eagerly
 import Index from "./pages/Index";
@@ -89,6 +90,7 @@ const WorkoutDetail = lazy(() => import("./pages/WorkoutDetail"));
 const WorkoutPlayer = lazy(() => import("./pages/WorkoutPlayer"));
 const WorkoutSchedule = lazy(() => import("./pages/WorkoutSchedule"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const NotificationPreferences = lazy(() => import("./pages/NotificationPreferences"));
 const Search = lazy(() => import("./pages/Search"));
 const ServerError = lazy(() => import("./pages/ServerError"));
 const NoInternet = lazy(() => import("./pages/NoInternet"));
@@ -137,6 +139,11 @@ function CacheVersionCheck() {
   return null;
 }
 
+function NativePushRegistrar() {
+  useNativePush();
+  return null;
+}
+
 
 const App = () => (
   <ErrorBoundary>
@@ -150,6 +157,7 @@ const App = () => (
         <BrowserRouter>
           <ScrollToTop />
           <CacheVersionCheck />
+          <NativePushRegistrar />
           <VerificationBanner />
           <VoiceController />
           <AppLayout>
@@ -242,6 +250,7 @@ const App = () => (
             <Route path="/hiit-trial" element={<HIITTrialWelcome />} />
             <Route path="/meal/:id" element={<ProtectedRoute><MealDetail /></ProtectedRoute>} />
             <Route path="/notification-demo" element={<ProtectedRoute><NotificationDemo /></ProtectedRoute>} />
+            <Route path="/notification-preferences" element={<ProtectedRoute><NotificationPreferences /></ProtectedRoute>} />
             <Route path="/community/messages/:recipientId" element={<ProtectedRoute><CommunityMessages /></ProtectedRoute>} />
             <Route path="/community/chatroom" element={<ProtectedRoute><CommunityChatroom /></ProtectedRoute>} />
             <Route path="/routes" element={<ProtectedRoute><RoutesExplorer /></ProtectedRoute>} />
