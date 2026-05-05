@@ -319,7 +319,8 @@ const BodyScan = () => {
           <TabsContent value="scan" className="space-y-4 mt-4">
             {isCameraOpen ? (
               <Card className="relative overflow-hidden rounded-2xl bg-black">
-                <video ref={videoRef} autoPlay playsInline muted onCanPlay={() => setCameraReady(true)} className="w-full aspect-[3/4] object-cover" />
+                <video ref={videoRef} autoPlay playsInline muted onCanPlay={() => setCameraReady(true)}
+                  className={`w-full aspect-[3/4] object-cover${facingMode === "user" ? " scale-x-[-1]" : ""}`} />
                 <canvas ref={canvasRef} className="hidden" />
 
                 {/* Pose Guide Overlay */}

@@ -130,10 +130,10 @@ const Index = () => {
           <HealthSyncPrompt />
           <SmartDailyBriefing />
           <StatsGrid />
+          {flags.nutrition_enabled && <NutritionSection hasData={true} />}
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
           {flags.activity_enabled && <ActivitySection />}
           {flags.workouts_enabled && <WorkoutsSection />}
-          {flags.nutrition_enabled && <NutritionSection hasData={true} />}
           {flags.sleep_enabled && <SleepSection hasData={true} />}
           {flags.ai_coach_enabled && <AICoachSection />}
           {flags.resources_enabled && <ResourcesSection />}

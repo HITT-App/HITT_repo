@@ -1,9 +1,10 @@
-import { TrendingUp, Flame, Clock, Target } from "lucide-react";
+import { TrendingUp, Flame, Clock, Target, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
 
 export const StatsGrid = () => {
   const { user } = useAuth();
@@ -77,6 +78,18 @@ export const StatsGrid = () => {
     },
   ];
 
+  const shareStats = async () => {
+    const text = `My HIIT Fitness stats 💪\n🔥 ${totalCalories.toLocaleString()} calories\n🏋️ ${workoutCount} workouts\n⏱ ${totalMinutes} minutes\n🔥 ${streak?.current_streak || 0} day streak\n\n#HIIT #Fitness`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ text });
+      } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Stats copied to clipboard" });
+    }
+  };
+
   return (
     <div className="px-4 -mt-14 relative z-10">
       <div className="grid grid-cols-2 gap-3">
@@ -131,6 +144,13 @@ export const StatsGrid = () => {
           );
         })}
       </div>
+      <button
+        onClick={shareStats}
+        className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-xs font-semibold tracking-wide active:bg-white/10 transition-colors touch-manipulation"
+      >
+        <Share2 size={13} />
+        Share My Stats
+      </button>
     </div>
   );
 };
