@@ -9,7 +9,7 @@ import LiveActivityMap from "@/components/activity/LiveActivityMap";
 import { GpsFilter } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
 import type { GpsPoint } from "@/lib/gps-filter";
-import { sendTriathlonToWatch, isWatchAvailable } from "@/plugins/WatchPlugin";
+import { sendTriathlonToWatch } from "@/plugins/WatchPlugin";
 
 interface LegData {
   elapsed: number;
@@ -54,6 +54,7 @@ const Triathlon = () => {
   const [raceName, setRaceName] = useState("Full Ironman");
   const [showSetup, setShowSetup] = useState(true);
   const [watchSent, setWatchSent] = useState(false);
+  const [watchSending, setWatchSending] = useState(false);
   const [legData, setLegData] = useState<LegData[]>([
     { elapsed: 0, distance: 0, calories: 0, positions: [] },
     { elapsed: 0, distance: 0, calories: 0, positions: [] },
@@ -229,28 +230,32 @@ const Triathlon = () => {
   // Scroll to top whenever setup screen is shown
   useEffect(() => { window.scrollTo(0, 0); }, [showSetup]);
 
+  const sendToWatch = async () => {
+    setWatchSending(true);
+    try {
+      await sendTriathlonToWatch({
+        name: raceName,
+        legs: [
+          { type: "swim", targetKm: targetKm[0] },
+          { type: "bike", targetKm: targetKm[1] },
+          { type: "run",  targetKm: targetKm[2] },
+        ],
+      });
+      setWatchSent(true);
+      toast({ title: "Sent to Apple Watch ⌚", description: "Open the HIIT app on your Watch to load the plan." });
+    } catch {
+      toast({
+        title: "Could not reach Apple Watch",
+        description: "Make sure the HIIT app is installed on your Watch and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setWatchSending(false);
+    }
+  };
+
   // Setup screen shown before race starts
   if (showSetup) {
-    const sendToWatch = async () => {
-      try {
-        await sendTriathlonToWatch({
-          name: raceName,
-          legs: [
-            { type: "swim", targetKm: targetKm[0] },
-            { type: "bike", targetKm: targetKm[1] },
-            { type: "run",  targetKm: targetKm[2] },
-          ],
-        });
-        setWatchSent(true);
-        toast({ title: "Sent to Apple Watch ⌚", description: "Open the HIIT app on your Watch to load the plan." });
-      } catch {
-        toast({
-          title: "Could not reach Apple Watch",
-          description: "Make sure the HIIT app is installed on your Watch and try again.",
-          variant: "destructive",
-        });
-      }
-    };
 
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col">
@@ -327,13 +332,15 @@ const Triathlon = () => {
           </div>
 
           {/* Send to Watch */}
-          <button
+          <Button
+            variant="outline"
+            className="w-full gap-2 active:scale-95 active:bg-secondary transition-all"
             onClick={sendToWatch}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-border bg-card hover:bg-secondary transition-colors"
+            disabled={watchSending}
           >
             <Watch size={16} className={watchSent ? "text-green-500" : "text-muted-foreground"} />
-            <span className="text-sm font-medium">{watchSent ? "Sent to Watch ✓" : "Send Plan to Apple Watch"}</span>
-          </button>
+            {watchSending ? "Sending…" : watchSent ? "Sent to Watch ✓" : "Send Plan to Apple Watch"}
+          </Button>
 
           {/* Start */}
           <Button
