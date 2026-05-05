@@ -9,7 +9,7 @@ import LiveActivityMap from "@/components/activity/LiveActivityMap";
 import { GpsFilter } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
 import type { GpsPoint } from "@/lib/gps-filter";
-import { sendTriathlonToWatch } from "@/plugins/WatchPlugin";
+import { sendTriathlonToWatch, isWatchAvailable } from "@/plugins/WatchPlugin";
 
 interface LegData {
   elapsed: number;
@@ -226,19 +226,30 @@ const Triathlon = () => {
     );
   }
 
+  // Scroll to top whenever setup screen is shown
+  useEffect(() => { window.scrollTo(0, 0); }, [showSetup]);
+
   // Setup screen shown before race starts
   if (showSetup) {
     const sendToWatch = async () => {
-      await sendTriathlonToWatch({
-        name: raceName,
-        legs: [
-          { type: "swim", targetKm: targetKm[0] },
-          { type: "bike", targetKm: targetKm[1] },
-          { type: "run",  targetKm: targetKm[2] },
-        ],
-      });
-      setWatchSent(true);
-      toast({ title: "Sent to Apple Watch ⌚" });
+      try {
+        await sendTriathlonToWatch({
+          name: raceName,
+          legs: [
+            { type: "swim", targetKm: targetKm[0] },
+            { type: "bike", targetKm: targetKm[1] },
+            { type: "run",  targetKm: targetKm[2] },
+          ],
+        });
+        setWatchSent(true);
+        toast({ title: "Sent to Apple Watch ⌚", description: "Open the HIIT app on your Watch to load the plan." });
+      } catch {
+        toast({
+          title: "Could not reach Apple Watch",
+          description: "Make sure the HIIT app is installed on your Watch and try again.",
+          variant: "destructive",
+        });
+      }
     };
 
     return (
@@ -261,7 +272,7 @@ const Triathlon = () => {
                 <button
                   key={p.label}
                   onClick={() => {
-                    setRaceName(p.label === "Custom" ? raceName : p.label);
+                    setRaceName(p.label);
                     if (p.distances) setTargetKm([...p.distances]);
                   }}
                   className={`p-3 rounded-xl border text-left transition-colors ${
@@ -298,12 +309,16 @@ const Triathlon = () => {
                     step="0.1"
                     min="0.1"
                     value={targetKm[i]}
+                    readOnly={raceName !== "Custom"}
                     onChange={(e) => {
                       const v = parseFloat(e.target.value) || 0;
                       setTargetKm((prev) => { const n = [...prev]; n[i] = v; return n; });
-                      setRaceName("Custom");
                     }}
-                    className="w-20 text-right bg-secondary border border-border rounded-lg px-2 py-1 text-sm font-mono"
+                    className={`w-20 text-right border rounded-lg px-2 py-1 text-sm font-mono transition-colors ${
+                      raceName === "Custom"
+                        ? "bg-secondary border-border"
+                        : "bg-muted border-transparent text-muted-foreground cursor-default"
+                    }`}
                   />
                   <span className="text-xs text-muted-foreground">km</span>
                 </div>
