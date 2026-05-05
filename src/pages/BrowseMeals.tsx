@@ -9,8 +9,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Search, Filter, Grid, List, Flame, Plus } from 'lucide-react';
+import { ArrowLeft, Search, Filter, Grid, List, Flame, Plus, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+type Ingredient = { name: string; amount: number; unit: string };
+type Instruction = { step: number; text: string };
 
 type Meal = {
   id: string;
@@ -27,6 +31,10 @@ type Meal = {
   allergens: string[] | null;
   veg_swap: string | null;
   vegan_swap: string | null;
+  ingredients: Ingredient[] | null;
+  instructions: Instruction[] | null;
+  prep_time_minutes: number | null;
+  cook_time_minutes: number | null;
 };
 
 const CATEGORIES = [
@@ -367,75 +375,110 @@ export default function BrowseMeals() {
                   )}
                 </div>
 
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   <SheetHeader className="text-left p-0">
                     <SheetTitle className="text-xl">{selectedRecipe.name}</SheetTitle>
                   </SheetHeader>
-
                   {selectedRecipe.description && (
                     <p className="text-sm text-muted-foreground">{selectedRecipe.description}</p>
                   )}
 
-                  {/* Macro Pills */}
+                  {/* Macro row */}
                   <div className="flex gap-2 flex-wrap">
                     {selectedRecipe.calories != null && (
                       <div className="flex items-center gap-1 bg-secondary rounded-full px-3 py-1 text-xs font-medium">
-                        <Flame className="w-3 h-3 text-primary" />
-                        {selectedRecipe.calories} kcal
+                        <Flame className="w-3 h-3 text-primary" />{selectedRecipe.calories} kcal
                       </div>
                     )}
                     {selectedRecipe.protein_g != null && (
-                      <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">
-                        🥩 {selectedRecipe.protein_g}g protein
-                      </div>
+                      <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">🥩 {selectedRecipe.protein_g}g protein</div>
                     )}
                     {selectedRecipe.carbs_g != null && (
-                      <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">
-                        🍞 {selectedRecipe.carbs_g}g carbs
-                      </div>
+                      <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">🍞 {selectedRecipe.carbs_g}g carbs</div>
                     )}
                     {selectedRecipe.fat_g != null && (
-                      <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">
-                        🧈 {selectedRecipe.fat_g}g fat
-                      </div>
+                      <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">🧈 {selectedRecipe.fat_g}g fat</div>
                     )}
                   </div>
 
-                  {/* Allergens */}
-                  {selectedRecipe.allergens && selectedRecipe.allergens.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Allergens</p>
-                      <div className="flex gap-2 flex-wrap">
-                        {selectedRecipe.allergens.map((allergen) => (
-                          <Badge key={allergen} variant="destructive" className="text-xs capitalize">
-                            {allergen}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <Tabs defaultValue="ingredients">
+                    <TabsList className="w-full">
+                      <TabsTrigger value="ingredients" className="flex-1">Ingredients</TabsTrigger>
+                      <TabsTrigger value="instructions" className="flex-1">Instructions</TabsTrigger>
+                      {(selectedRecipe.veg_swap || selectedRecipe.vegan_swap) && (
+                        <TabsTrigger value="swaps" className="flex-1">Swaps</TabsTrigger>
+                      )}
+                    </TabsList>
 
-                  {/* Veg / Vegan swaps */}
-                  {selectedRecipe.veg_swap && (
-                    <div className="bg-secondary/50 rounded-xl p-3">
-                      <p className="text-xs font-medium mb-1">🥬 Vegetarian swap</p>
-                      <p className="text-sm text-muted-foreground">{selectedRecipe.veg_swap}</p>
-                    </div>
-                  )}
-                  {selectedRecipe.vegan_swap && (
-                    <div className="bg-secondary/50 rounded-xl p-3">
-                      <p className="text-xs font-medium mb-1">🌱 Vegan swap</p>
-                      <p className="text-sm text-muted-foreground">{selectedRecipe.vegan_swap}</p>
-                    </div>
-                  )}
+                    <TabsContent value="ingredients" className="mt-3 space-y-2">
+                      {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 ? (
+                        selectedRecipe.ingredients.map((ing, i) => (
+                          <div key={i} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
+                            <span className="text-sm text-foreground capitalize">{ing.name}</span>
+                            <span className="text-sm text-muted-foreground font-medium">{ing.amount} {ing.unit}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">Ingredients coming soon</p>
+                      )}
+                      {selectedRecipe.allergens && selectedRecipe.allergens.length > 0 && (
+                        <div className="pt-2 flex gap-2 flex-wrap">
+                          {selectedRecipe.allergens.map((a) => (
+                            <Badge key={a} variant="destructive" className="text-xs capitalize">{a}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
 
-                  {/* Log button */}
-                  <Button
-                    className="w-full h-12 rounded-2xl mt-2"
-                    onClick={() => navigate('/log-meal')}
-                  >
-                    Log this meal
-                  </Button>
+                    <TabsContent value="instructions" className="mt-3 space-y-3">
+                      {selectedRecipe.instructions && selectedRecipe.instructions.length > 0 ? (
+                        selectedRecipe.instructions.map((inst, i) => (
+                          <div key={i} className="flex gap-3">
+                            <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                              {inst.step}
+                            </div>
+                            <p className="text-sm text-foreground leading-relaxed">{inst.text}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">Instructions coming soon</p>
+                      )}
+                    </TabsContent>
+
+                    {(selectedRecipe.veg_swap || selectedRecipe.vegan_swap) && (
+                      <TabsContent value="swaps" className="mt-3 space-y-3">
+                        {selectedRecipe.veg_swap && (
+                          <div className="bg-secondary/50 rounded-xl p-3">
+                            <p className="text-xs font-medium mb-1">🥬 Vegetarian swap</p>
+                            <p className="text-sm text-muted-foreground">{selectedRecipe.veg_swap}</p>
+                          </div>
+                        )}
+                        {selectedRecipe.vegan_swap && (
+                          <div className="bg-secondary/50 rounded-xl p-3">
+                            <p className="text-xs font-medium mb-1">🌱 Vegan swap</p>
+                            <p className="text-sm text-muted-foreground">{selectedRecipe.vegan_swap}</p>
+                          </div>
+                        )}
+                      </TabsContent>
+                    )}
+                  </Tabs>
+
+                  {/* Log buttons */}
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      className="h-12 rounded-2xl text-sm"
+                      onClick={() => navigate('/log-meal', { state: { recipe: selectedRecipe, useSwap: true } })}
+                    >
+                      Log with swaps
+                    </Button>
+                    <Button
+                      className="h-12 rounded-2xl text-sm"
+                      onClick={() => navigate('/log-meal', { state: { recipe: selectedRecipe } })}
+                    >
+                      Log as-is
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Analytics } from '@/lib/analytics';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,19 +30,25 @@ const FOOD_ICONS = [
 
 export default function LogMeal() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [showMethodSelect, setShowMethodSelect] = useState(true);
-  const [mealName, setMealName] = useState('');
+  const prefill = location.state?.recipe as { name: string; calories: number | null; protein_g: number | null; carbs_g: number | null; fat_g: number | null; veg_swap?: string | null; vegan_swap?: string | null } | undefined;
+  const useSwap = location.state?.useSwap as boolean | undefined;
+
+  const [showMethodSelect, setShowMethodSelect] = useState(!prefill);
+  const [mealName, setMealName] = useState(prefill?.name ?? '');
   const [servingAmount, setServingAmount] = useState(1);
   const [servingUnit, setServingUnit] = useState('plate');
   const [category, setCategory] = useState('breakfast');
-  const [description, setDescription] = useState('');
-  const [calories, setCalories] = useState(500);
-  const [protein, setProtein] = useState(25);
-  const [carbs, setCarbs] = useState(50);
-  const [fat, setFat] = useState(20);
+  const [description, setDescription] = useState(
+    useSwap && prefill ? `${prefill.veg_swap || prefill.vegan_swap || ''}` : ''
+  );
+  const [calories, setCalories] = useState(prefill?.calories ?? 500);
+  const [protein, setProtein] = useState(prefill?.protein_g ?? 25);
+  const [carbs, setCarbs] = useState(prefill?.carbs_g ?? 50);
+  const [fat, setFat] = useState(prefill?.fat_g ?? 20);
   const [selectedIcon, setSelectedIcon] = useState('🍳');
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -154,6 +160,14 @@ export default function LogMeal() {
         </Button>
         <h1 className="text-lg font-semibold">Add New Meal (Manual)</h1>
       </header>
+
+      {prefill && (
+        <div className={`mx-4 mt-4 p-3 rounded-xl border text-sm ${useSwap ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-primary/10 border-primary/30 text-primary'}`}>
+          {useSwap
+            ? `Logging with substitutions from "${prefill.name}"`
+            : `Pre-filled from "${prefill.name}" — adjust any values below`}
+        </div>
+      )}
 
       <div className="p-4 space-y-6">
         {/* Icon Selector */}
