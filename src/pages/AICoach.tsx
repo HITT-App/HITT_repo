@@ -184,7 +184,7 @@ export default function AICoach() {
 
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-background overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-background">
         <div className="flex items-center gap-3 flex-shrink-0">

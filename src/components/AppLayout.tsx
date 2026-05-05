@@ -21,6 +21,7 @@ const HIDDEN_NAV_ROUTES = [
   "/community/create-story",
   "/routes",
   "/route/",
+  "/ai-coach",
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {

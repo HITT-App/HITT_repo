@@ -5,6 +5,7 @@ import { ChatInput } from './ChatInput';
 import { ImageAnalysisPreview } from '@/components/coach/ImageAnalysisPreview';
 import { Bot, Dumbbell } from 'lucide-react';
 import type { Message } from '@/hooks/useAIChat';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -18,10 +19,11 @@ export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, keyboardHeight]);
 
   const handleImageSelect = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -130,9 +132,12 @@ export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick
         </div>
       )}
 
-      <div className="p-4 border-t border-border bg-background/80 backdrop-blur-sm">
-        <ChatInput 
-          onSend={handleSend} 
+      <div
+        className="p-4 border-t border-border bg-background/80 backdrop-blur-sm transition-all duration-200"
+        style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : undefined }}
+      >
+        <ChatInput
+          onSend={handleSend}
           isLoading={isLoading}
           onVoiceClick={onVoiceClick}
           onImageSelect={handleImageSelect}
