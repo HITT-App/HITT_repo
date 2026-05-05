@@ -13,6 +13,7 @@ import { VoiceController } from "@/components/coach/VoiceController";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppLayout } from "@/components/AppLayout";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import { PageLoader } from "@/components/PageLoader";
 import { useCacheVersion } from "@/hooks/useCacheVersion";
 
@@ -147,6 +148,7 @@ const App = () => (
         <Sonner />
         <PushPermissionBanner />
         <BrowserRouter>
+          <ScrollToTop />
           <CacheVersionCheck />
           <VerificationBanner />
           <VoiceController />

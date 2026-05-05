@@ -53,7 +53,7 @@ const LogActivity = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col pb-24">
       {/* Header */}
       <header className="flex items-center gap-3 p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => step > 0 ? setStep(0) : navigate(-1)}>

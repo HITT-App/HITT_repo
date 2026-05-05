@@ -32,9 +32,10 @@ export function ChatInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Enter adds a newline — user taps Send button when ready
+    if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      setInput((v) => v + '\n');
     }
   };
 

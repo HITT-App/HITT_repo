@@ -169,7 +169,7 @@ const PostComments = () => {
               placeholder={user ? "Type to write comment..." : "Log in to comment"}
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
               className="pr-20"
               disabled={!user}
             />

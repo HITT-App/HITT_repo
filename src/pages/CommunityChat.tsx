@@ -191,7 +191,7 @@ const CommunityChat = () => {
               placeholder="Type a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
               className="pr-10"
             />
             <Button variant="ghost" size="icon" className="absolute right-0 top-0 h-full">
