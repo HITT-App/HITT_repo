@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { notifyUser } from '@/lib/notify';
 
 // Leaderboard point values for actions
 const POINTS = {
@@ -214,7 +215,12 @@ export function useStreaksAndBadges() {
 
     if (newlyEarned.length > 0) {
       setNewBadges(newlyEarned);
-      
+
+      // Push notifications for each badge
+      for (const badge of newlyEarned) {
+        notifyUser(user.id, "workout", `🏆 Badge unlocked: ${badge.name}`, badge.description || "Keep it up!", "/achievements");
+      }
+
       // Award leaderboard points for each badge
       if (user) {
         await supabase.rpc("award_points", {

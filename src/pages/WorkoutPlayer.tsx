@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { HIITLogo } from '@/components/HIITLogo';
+import { notifyUser } from '@/lib/notify';
 import { AIFormAnalysis } from '@/components/workout/AIFormAnalysis';
 import { NewBadgeModal } from '@/components/gamification/NewBadgeModal';
 import { CompletionSummary } from '@/components/workout/CompletionSummary';
@@ -162,6 +163,12 @@ export default function WorkoutPlayer() {
         // Update streak and check for new badges
         const pts = await recordWorkout();
         setPointsEarned(pts);
+
+        // Push notification — sent after a delay so it arrives when app is backgrounded
+        setTimeout(() => {
+          notifyUser(user.id, "workout", "Workout complete! 💪",
+            `You finished ${workout.name}. Great work!`, "/workout-library");
+        }, 3000);
       } catch (error) {
         console.error('Error saving progress:', error);
       }
