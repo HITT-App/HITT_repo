@@ -78,6 +78,17 @@ final class WatchSessionManager: NSObject {
             triathlonPlan = decoded
             NotificationCenter.default.post(name: .watchTriathlonReceived, object: decoded)
         }
+
+        // Mirror workout — iPhone started a workout, show Ready screen on Watch
+        if let mirror = message["mirrorWorkout"] as? [String: Any],
+           let name = mirror["name"] as? String {
+            WorkoutCoordinator.shared.receiveMirroredWorkout(named: name)
+        }
+
+        // Clear mirror
+        if let clear = message["clearMirrorWorkout"] as? Bool, clear {
+            WorkoutCoordinator.shared.clearPending()
+        }
     }
 }
 

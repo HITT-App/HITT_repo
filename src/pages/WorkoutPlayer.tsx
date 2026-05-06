@@ -107,8 +107,8 @@ export default function WorkoutPlayer() {
 
       if (workoutData) {
         setWorkout(workoutData);
-        // Start HealthKit session on iPhone — triggers Watch mirroring prompt automatically
-        startWorkoutMirroring('hiit');
+        // Tell Watch to navigate to Ready screen
+        startWorkoutMirroring('hiit', workoutData.title);
         // Also push workout plan to Watch via WatchConnectivity for older watchOS
         sendWorkoutToWatch({
           id: workoutData.id,

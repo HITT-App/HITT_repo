@@ -5,7 +5,7 @@ interface WatchPluginInterface {
   sendWorkout(options: { workout: WatchWorkout }): Promise<void>;
   clearWorkout(): Promise<void>;
   sendMessage(options: { message: Record<string, unknown> }): Promise<void>;
-  startMirroredWorkout(options: { activityType: string }): Promise<{ mirroring: boolean }>;
+  startMirroredWorkout(options: { activityType: string; workoutName?: string }): Promise<{ mirroring: boolean }>;
   endMirroredWorkout(): Promise<void>;
   addListener(event: "workoutEvent", handler: (data: WatchWorkoutEvent) => void): Promise<{ remove: () => void }>;
 }
@@ -71,10 +71,10 @@ export const sendTriathlonToWatch = async (plan: TriathlonPlan): Promise<void> =
   await WatchPluginImpl.sendMessage({ message: { triathlon: plan } });
 };
 
-export const startWorkoutMirroring = async (activityType = "hiit"): Promise<boolean> => {
+export const startWorkoutMirroring = async (activityType = "hiit", workoutName = "HIIT Workout"): Promise<boolean> => {
   if (!Capacitor.isNativePlatform()) return false;
   try {
-    const { mirroring } = await WatchPluginImpl.startMirroredWorkout({ activityType });
+    const { mirroring } = await WatchPluginImpl.startMirroredWorkout({ activityType, workoutName });
     return mirroring;
   } catch { return false; }
 };
