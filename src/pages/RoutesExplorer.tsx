@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Search, Bookmark, Plus, LocateFixed, Layers, Home, Mountain, Ruler, Gauge } from "lucide-react";
+import { Search, Bookmark, Plus, LocateFixed, Home, Mountain, Ruler, Gauge } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRoutes, Route } from "@/hooks/useRoutes";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: "#22c55e",
@@ -20,6 +22,7 @@ const FILTER_CHIPS = ["All", "Official", "Easy", "Moderate", "Hard", "Short", "L
 
 const RoutesExplorer = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { routes, isLoading } = useRoutes();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -30,6 +33,29 @@ const RoutesExplorer = () => {
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [showSaved, setShowSaved] = useState(false);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const [savedRouteIds, setSavedRouteIds] = useState<Set<string>>(new Set());
+
+  // Load saved routes
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('saved_routes').select('route_id').eq('user_id', user.id)
+      .then(({ data }) => {
+        if (data) setSavedRouteIds(new Set(data.map(r => r.route_id)));
+      });
+  }, [user]);
+
+  const toggleSave = useCallback(async (routeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+    const isSaved = savedRouteIds.has(routeId);
+    if (isSaved) {
+      await supabase.from('saved_routes').delete().eq('user_id', user.id).eq('route_id', routeId);
+      setSavedRouteIds(prev => { const n = new Set(prev); n.delete(routeId); return n; });
+    } else {
+      await supabase.from('saved_routes').insert({ user_id: user.id, route_id: routeId });
+      setSavedRouteIds(prev => new Set([...prev, routeId]));
+    }
+  }, [user, savedRouteIds]);
 
   // Separate official & user routes
   const officialRoutes = useMemo(() => routes.filter(r => (r as any).is_official), [routes]);
@@ -48,8 +74,9 @@ const RoutesExplorer = () => {
     else if (activeFilter === "Short") list = list.filter(r => r.distance_km <= 5);
     else if (activeFilter === "Long") list = list.filter(r => r.distance_km > 10);
     else if (activeFilter === "Official") list = list.filter(r => (r as any).is_official);
+    if (showSaved) list = list.filter(r => savedRouteIds.has(r.id));
     return list;
-  }, [routes, search, activeFilter]);
+  }, [routes, search, activeFilter, showSaved, savedRouteIds]);
 
   // Get user location
   useEffect(() => {
@@ -198,6 +225,15 @@ const RoutesExplorer = () => {
                     <p className="text-xs text-muted-foreground line-clamp-1">{selectedRoute.description}</p>
                   )}
                 </div>
+                <button
+                  onClick={(e) => toggleSave(selectedRoute.id, e)}
+                  className="ml-2 p-2 rounded-full active:bg-secondary/50"
+                >
+                  <Bookmark
+                    size={18}
+                    className={savedRouteIds.has(selectedRoute.id) ? "text-primary fill-primary" : "text-muted-foreground"}
+                  />
+                </button>
               </div>
               <div className="flex items-center gap-5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><Ruler size={13} />{selectedRoute.distance_km.toFixed(1)} km</span>

@@ -170,6 +170,8 @@ export function useAIChat(conversationId: string | null) {
           messages: apiMessages,
           hasImage: !!imageUrl,
           imageData: imageBase64,
+          customResponse: localStorage.getItem('hiit-ai-custom-response') ?? '',
+          customMemory: localStorage.getItem('hiit-ai-custom-memory') ?? '',
         }),
       });
 

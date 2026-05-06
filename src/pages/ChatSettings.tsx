@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,13 +11,6 @@ import { ArrowLeft, Settings, Bot, Cat, Ghost, Sparkles, Dumbbell, Upload, Smile
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-const AI_MODELS = [
-  { id: 'gpt', label: 'GPT' },
-  { id: 'llama', label: 'LLama' },
-  { id: 'perplexity', label: 'Perplexity' },
-  { id: 'gemini', label: 'Gemini' },
-];
-
 const VOICES = [
   { id: 'peter', label: 'Caucasian Male (Peter)' },
   { id: 'sarah', label: 'Caucasian Female (Sarah)' },
@@ -25,12 +18,6 @@ const VOICES = [
   { id: 'aisha', label: 'African Female (Aisha)' },
 ];
 
-const LANGUAGES = [
-  { id: 'en-gb', label: 'English (United Kingdom)' },
-  { id: 'en-us', label: 'English (United States)' },
-  { id: 'es', label: 'Spanish' },
-  { id: 'fr', label: 'French' },
-];
 
 const AVATAR_ICONS = [
   { id: 'bot', icon: Bot },
@@ -60,27 +47,20 @@ export default function ChatSettings() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('general');
 
-  // General settings state
-  const [selectedModel, setSelectedModel] = useState('gpt');
-  const [mode, setMode] = useState<'chatbot'>('chatbot');
-  const [customResponse, setCustomResponse] = useState('');
+  const [customResponse, setCustomResponse] = useState(() => localStorage.getItem('hiit-ai-custom-response') ?? '');
   const [shareData, setShareData] = useState(true);
-  const [customMemory, setCustomMemory] = useState('');
+  const [customMemory, setCustomMemory] = useState(() => localStorage.getItem('hiit-ai-custom-memory') ?? '');
   const [insightSuggestions, setInsightSuggestions] = useState(INSIGHT_SUGGESTIONS);
-
-  // Customize settings state
   const [assistantName, setAssistantName] = useState('HIIT');
   const [selectedVoice, setSelectedVoice] = useState('peter');
-  const [selectedLanguage, setSelectedLanguage] = useState('en-gb');
   const [selectedAvatar, setSelectedAvatar] = useState('bot');
   const [responseType, setResponseType] = useState('neutral');
-
-  // Privacy settings state
   const [dataSharing, setDataSharing] = useState(true);
 
   const handleSave = () => {
-    // Note: model selection and voice are UI-only for now — the app uses Gemini regardless
-    toast({ title: 'Settings saved', description: 'Your preferences have been updated.' });
+    localStorage.setItem('hiit-ai-custom-response', customResponse.trim());
+    localStorage.setItem('hiit-ai-custom-memory', customMemory.trim());
+    toast({ title: 'Settings saved', description: 'Your AI preferences have been updated.' });
   };
 
   const handleClearHistory = () => {
@@ -130,50 +110,17 @@ export default function ChatSettings() {
                 <h2 className="font-semibold">General Settings</h2>
               </div>
 
-              {/* AI Model */}
-              <div className="space-y-2">
-                <Label>AI Model</Label>
-                <div className="flex gap-2">
-                  {AI_MODELS.map((model) => (
-                    <Button
-                      key={model.id}
-                      variant={selectedModel === model.id ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedModel(model.id)}
-                      className="rounded-full"
-                    >
-                      {model.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mode */}
-              <div className="space-y-2">
-                <Label>Mode</Label>
-                <div className="flex gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => setMode('chatbot')}
-                    className="rounded-full"
-                  >
-                    Chatbot
-                  </Button>
-                </div>
-              </div>
-
               {/* Custom Response */}
               <div className="space-y-2">
-                <Label>Custom Response</Label>
+                <Label>Response Style</Label>
                 <Textarea
-                  placeholder="Enter your main text here..."
+                  placeholder={'Tell the AI how you want it to respond. For example:\n"Always give me short bullet points"\n"Be tough and push me hard"\n"Explain things simply, I\'m a beginner"'}
                   value={customResponse}
                   onChange={(e) => setCustomResponse(e.target.value)}
                   className="resize-none"
-                  rows={3}
+                  rows={4}
                 />
-                <p className="text-xs text-muted-foreground text-right">0/300</p>
+                <p className="text-xs text-muted-foreground">{customResponse.length}/300 — this is added to every conversation with your AI coach</p>
               </div>
 
               {/* Share Data Toggle */}
@@ -184,15 +131,15 @@ export default function ChatSettings() {
 
               {/* Custom Memory */}
               <div className="space-y-2">
-                <Label>Custom Memory</Label>
+                <Label>About Me</Label>
                 <Textarea
-                  placeholder="Enter your main text here..."
+                  placeholder={'Add personal context for your AI coach. For example:\n"I have a bad knee, avoid high-impact moves"\n"I train at 5am before work, keep it time-efficient"\n"I\'m vegetarian and lactose intolerant"'}
                   value={customMemory}
                   onChange={(e) => setCustomMemory(e.target.value)}
                   className="resize-none"
-                  rows={3}
+                  rows={4}
                 />
-                <p className="text-xs text-muted-foreground text-right">0/300</p>
+                <p className="text-xs text-muted-foreground">{customMemory.length}/500 — your coach will always remember this about you</p>
               </div>
 
               {/* Insight Suggestion */}
@@ -265,23 +212,6 @@ export default function ChatSettings() {
                     {VOICES.map((voice) => (
                       <SelectItem key={voice.id} value={voice.id}>
                         {voice.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Language Preference */}
-              <div className="space-y-2">
-                <Label>Language Preference</Label>
-                <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGES.map((lang) => (
-                      <SelectItem key={lang.id} value={lang.id}>
-                        {lang.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

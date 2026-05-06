@@ -356,10 +356,18 @@ serve(async (req) => {
     userContext += "\nUse this context to personalise your responses. Address the user by name when appropriate. Reference their goals, fitness level, and recent activity. If data is missing, ask them about it naturally.\n";
     userContext += "\n⚠️ WORKOUT CALIBRATION: When recommending workouts, consider the user's weight for calorie calculations (MET × weight_kg × duration_hours). Recommend workout types that match their preferences and fitness level.\n";
 
-    const personalizedPrompt = SYSTEM_PROMPT + userContext;
-
     // ─── Process request ───
-    const { messages, imageData, hasImage } = await req.json();
+    const { messages, imageData, hasImage, customResponse, customMemory } = await req.json();
+
+    let extraContext = '';
+    if (customMemory && customMemory.trim()) {
+      extraContext += `\n\n📋 PERSONAL CONTEXT (always remember this):\n${customMemory.trim()}`;
+    }
+    if (customResponse && customResponse.trim()) {
+      extraContext += `\n\n🎯 RESPONSE STYLE (always follow this):\n${customResponse.trim()}`;
+    }
+
+    const personalizedPrompt = SYSTEM_PROMPT + userContext + extraContext;
 
     // Build the messages array for the API
     let apiMessages: any[] = [{ role: "system", content: personalizedPrompt }];
