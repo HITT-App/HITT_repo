@@ -30,6 +30,7 @@ export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number>();
   const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const responseEndRef = useRef<HTMLDivElement | null>(null);
 
   // ElevenLabs Scribe hook for real-time transcription
   const scribe = useScribe({
@@ -264,6 +265,10 @@ export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
   };
 
   useEffect(() => {
+    responseEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [response, transcript]);
+
+  useEffect(() => {
     // Auto-start listening on mount
     const timer = setTimeout(() => {
       startListening();
@@ -307,7 +312,7 @@ export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
+      <div className="flex-1 flex flex-col items-center p-6 overflow-y-auto">
         {/* Status indicator */}
         <div className={cn(
           "w-32 h-32 rounded-full flex items-center justify-center mb-8 transition-all duration-300",
@@ -360,19 +365,20 @@ export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
         </div>
 
         {/* Transcript / Response */}
-        <div className="w-full max-w-md text-center">
+        <div className="w-full max-w-md text-center mt-4">
           {transcript && (
-            <div className="mb-4">
+            <div className="mb-4 bg-secondary/50 rounded-2xl p-4">
               <p className="text-xs text-muted-foreground mb-1">You said:</p>
-              <p className="text-lg text-foreground">{transcript}</p>
+              <p className="text-base text-foreground">{transcript}</p>
             </div>
           )}
           {response && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">HIIT:</p>
-              <p className="text-lg text-foreground">{response}</p>
+            <div className="bg-primary/10 rounded-2xl p-4">
+              <p className="text-xs text-muted-foreground mb-1">HIIT AI:</p>
+              <p className="text-base text-foreground leading-relaxed">{response}</p>
             </div>
           )}
+          <div ref={responseEndRef} />
         </div>
       </div>
 
