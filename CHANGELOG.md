@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-05-05] — Build 45: AI coach speaks responses; voice selection; owner handoff docs updated
+
+- **AI coach now speaks** — after each AI response, the coach reads it aloud using ElevenLabs; enable in Chat Settings → Customize → AI Voice Responses
+- **Six real voices to choose from** — Brian (American Male), Jessica (American Female), George (British Male), Lily (British Female), Aria (American Female), Chris (American Male)
+- **Voice mute toggle in chat** — a small Volume icon above the input bar lets you silence voice mid-conversation without going to settings
+- **Voice preference saved** — your choice of voice and on/off state persists across sessions
+- **Handoff docs updated** — ElevenLabs API key and APNs push key instructions added for the app owner
+
 ## [2026-05-04] — Build 38: Ironman triathlon Watch integration + race setup screen
 
 - **Triathlon race setup screen added** — before starting, choose Full Ironman, Half Ironman, Olympic, Sprint, or set fully custom distances for each leg; distances are editable individually
