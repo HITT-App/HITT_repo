@@ -25,6 +25,8 @@ These live in Supabase edge function secrets (Settings → Edge Functions → Se
 |---|---|---|
 | `AI_API_KEY` | Vanessa's Google account (Gemini API) | Create Google Cloud project → enable Gemini API → create API key → update Supabase secret |
 | `AI_GATEWAY_URL` | Points to Gemini direct endpoint — no account tied, stays the same | Nothing, unless they switch AI provider |
+| `ELEVENLABS_API_KEY` | Current ElevenLabs account | Create account at elevenlabs.io → API Keys → create key with Speech-to-Text + Text-to-Speech permissions → update Supabase secret `ELEVENLABS_API_KEY`. Used for: "Ok HIIT" wake word voice recognition, AI coach voice responses, home screen greeting. Without this key all voice features are silently disabled. |
+| `APNS_KEY` + `APNS_KEY_ID` | Current Apple Developer account | Apple Developer → Keys → create APNs key → download `.p8` file → set as Supabase secrets. Without these, push notifications are not delivered to iOS devices. |
 | Google OAuth Client ID + Secret | Vanessa's Google Cloud project (`hiit-fitness-oauth`) | Owner creates their own Google Cloud project → OAuth consent screen → Web client → adds Supabase callback URL → pastes new Client ID + Secret into Supabase Auth → Providers → Google |
 | `VITE_SENTRY_DSN` | Vanessa's Sentry | Replace after Sentry account transfer above |
 | `VITE_POSTHOG_KEY` | Vanessa's PostHog | Replace after PostHog account transfer above |

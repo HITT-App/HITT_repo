@@ -11,11 +11,14 @@ import { ArrowLeft, Settings, Bot, Cat, Ghost, Sparkles, Dumbbell, Upload, Smile
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
+// ElevenLabs voice IDs — stock voices available on all plans
 const VOICES = [
-  { id: 'peter', label: 'Caucasian Male (Peter)' },
-  { id: 'sarah', label: 'Caucasian Female (Sarah)' },
-  { id: 'james', label: 'British Male (James)' },
-  { id: 'aisha', label: 'African Female (Aisha)' },
+  { id: 'nPczCjzI2devNBz1zQrb', label: 'Brian — American Male' },
+  { id: 'cgSgspJ2msm6clMCkdW9', label: 'Jessica — American Female' },
+  { id: 'JBFqnCBsd6RMkjVDRZzb', label: 'George — British Male' },
+  { id: 'XrExE9yKIg1WjnnlVkGX', label: 'Lily — British Female' },
+  { id: '9BWtsMINqrJLrRacOk9x', label: 'Aria — American Female' },
+  { id: 'iP95p4xoKVk53GoZ742B', label: 'Chris — American Male' },
 ];
 
 
@@ -52,7 +55,8 @@ export default function ChatSettings() {
   const [customMemory, setCustomMemory] = useState(() => localStorage.getItem('hiit-ai-custom-memory') ?? '');
   const [insightSuggestions, setInsightSuggestions] = useState(INSIGHT_SUGGESTIONS);
   const [assistantName, setAssistantName] = useState('HIIT');
-  const [selectedVoice, setSelectedVoice] = useState('peter');
+  const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem('hiit-ai-voice-enabled') === 'true');
+  const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb');
   const [selectedAvatar, setSelectedAvatar] = useState('bot');
   const [responseType, setResponseType] = useState('neutral');
   const [dataSharing, setDataSharing] = useState(true);
@@ -60,6 +64,8 @@ export default function ChatSettings() {
   const handleSave = () => {
     localStorage.setItem('hiit-ai-custom-response', customResponse.trim());
     localStorage.setItem('hiit-ai-custom-memory', customMemory.trim());
+    localStorage.setItem('hiit-ai-voice-enabled', voiceEnabled ? 'true' : 'false');
+    localStorage.setItem('hiit-ai-voice-id', selectedVoice);
     toast({ title: 'Settings saved', description: 'Your AI preferences have been updated.' });
   };
 
@@ -201,21 +207,29 @@ export default function ChatSettings() {
                 </div>
               </div>
 
-              {/* Voice Selection */}
-              <div className="space-y-2">
-                <Label>Voice Selection</Label>
-                <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VOICES.map((voice) => (
-                      <SelectItem key={voice.id} value={voice.id}>
-                        {voice.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Voice */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>AI Voice Responses</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Coach reads responses aloud</p>
+                  </div>
+                  <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} />
+                </div>
+                {voiceEnabled && (
+                  <Select value={selectedVoice} onValueChange={setSelectedVoice}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VOICES.map((voice) => (
+                        <SelectItem key={voice.id} value={voice.id}>
+                          {voice.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Avatar Icon */}

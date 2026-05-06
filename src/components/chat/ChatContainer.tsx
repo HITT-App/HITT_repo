@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ImageAnalysisPreview } from '@/components/coach/ImageAnalysisPreview';
-import { Bot, Dumbbell } from 'lucide-react';
+import { Bot, Dumbbell, Volume2, VolumeX } from 'lucide-react';
 import type { Message } from '@/hooks/useAIChat';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -20,10 +21,57 @@ export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const keyboardHeight = useKeyboardHeight();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [voiceMuted, setVoiceMuted] = useState(false);
+  const lastSpokenRef = useRef<string>('');
+
+  const speakMessage = useCallback(async (text: string) => {
+    if (voiceMuted) return;
+    if (localStorage.getItem('hiit-ai-voice-enabled') !== 'true') return;
+    if (text === lastSpokenRef.current) return;
+    lastSpokenRef.current = text;
+
+    try {
+      const voiceId = localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb';
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ text: text.slice(0, 500), voiceId }),
+        }
+      );
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+      audioRef.current = new Audio(url);
+      audioRef.current.play().catch(() => {});
+    } catch { /* best-effort */ }
+  }, [voiceMuted]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, keyboardHeight]);
+
+  // Speak the last assistant message when it finishes streaming
+  useEffect(() => {
+    if (isLoading) return;
+    const last = messages[messages.length - 1];
+    if (last?.role === 'assistant' && last.content) {
+      speakMessage(last.content);
+    }
+  }, [isLoading, messages, speakMessage]);
 
   const handleImageSelect = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -132,6 +180,17 @@ export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick
         </div>
       )}
 
+      {localStorage.getItem('hiit-ai-voice-enabled') === 'true' && (
+        <div className="flex justify-end px-4 py-1 border-t border-border/40">
+          <button
+            onClick={() => setVoiceMuted(m => !m)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground active:text-foreground transition-colors"
+          >
+            {voiceMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+            {voiceMuted ? 'Voice off' : 'Voice on'}
+          </button>
+        </div>
+      )}
       <div
         className="p-4 border-t border-border bg-background/80 backdrop-blur-sm transition-all duration-200"
         style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : undefined }}
