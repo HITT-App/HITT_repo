@@ -55,6 +55,8 @@
 	<string>HIIT uses your location to track your outdoor workouts and map your routes.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>HIIT uses your microphone for voice commands with your AI coach.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>HIIT listens for "Ok HIIT" to activate your AI coach hands-free.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>HIIT saves your workout share cards to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
