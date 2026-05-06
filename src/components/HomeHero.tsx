@@ -159,8 +159,8 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
 
-      {/* Logo — floating top center */}
-      <div className="absolute top-8 left-0 right-0 flex justify-center opacity-0 animate-fade-up" style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}>
+      {/* Logo — floating top center, below status bar / Dynamic Island */}
+      <div className="absolute left-0 right-0 flex justify-center opacity-0 animate-fade-up" style={{ top: "calc(var(--safe-area-inset-top, 44px) + 1rem)", animationDelay: "0.1s", animationFillMode: "forwards" }}>
         <div className="relative">
           <div className="absolute -inset-2 rounded-3xl bg-primary/20 blur-xl" />
           <img src={hiitLogo} alt="HIIT Logo" className="relative w-14 h-14 rounded-2xl object-cover border border-white/10 shadow-2xl" />

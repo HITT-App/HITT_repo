@@ -241,17 +241,10 @@ const Triathlon = () => {
           { type: "run",  targetKm: targetKm[2] },
         ],
       });
-      setWatchSent(true);
-      toast({ title: "Sent to Apple Watch ⌚", description: "Open the HIIT app on your Watch to load the plan." });
-    } catch {
-      toast({
-        title: "Could not reach Apple Watch",
-        description: "Your Watch isn't in range or the screen is off. Open the HIIT app on your Watch first, then try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setWatchSending(false);
-    }
+    } catch { /* best-effort — plan delivered via applicationContext when Watch app opens */ }
+    setWatchSent(true);
+    setWatchSending(false);
+    toast({ title: "Plan sent to Watch ⌚", description: "Open the Race tab on your Watch to start." });
   };
 
   // Setup screen shown before race starts
