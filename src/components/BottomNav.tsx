@@ -29,7 +29,10 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
   };
 
   const handleNavClick = (item: typeof navItems[0]) => {
-    if (item.path) {
+    if (!item.path) return;
+    if (item.id === "community" && unreadCount > 0) {
+      navigate("/community/notifications");
+    } else {
       navigate(item.path);
     }
   };

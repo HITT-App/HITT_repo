@@ -11,7 +11,7 @@ import { REACTION_EMOJIS, ReactionType } from "@/hooks/useReactions";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const FriendRequestActions = ({ notification }: { notification: CommunityNotification }) => {
   const { user } = useAuth();
@@ -86,6 +86,13 @@ const Notifications = () => {
     markAllAsRead,
     unreadCount,
   } = useCommunityNotifications();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      markAllAsRead();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const readNotifications = notifications.filter(n => n.is_read);
   const unreadNotifications = notifications.filter(n => !n.is_read);

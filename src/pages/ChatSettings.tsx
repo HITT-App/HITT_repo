@@ -49,9 +49,9 @@ const RESPONSE_TYPES = [
 
 const INSIGHT_SUGGESTIONS = [
   { id: 'health_recommendations', label: 'Health Recommendations', enabled: true },
-  { id: 'health_metrics', label: 'Health Metrics', enabled: false },
+  { id: 'health_metrics', label: 'Health Metrics', enabled: true },
   { id: 'activity_suggestion', label: 'Activity Suggestion', enabled: true },
-  { id: 'nutrition_insight', label: 'Nutrition Insight', enabled: false },
+  { id: 'nutrition_insight', label: 'Nutrition Insight', enabled: true },
   { id: 'sleep_monitoring', label: 'Sleep Monitoring', enabled: true },
 ];
 
@@ -62,7 +62,7 @@ export default function ChatSettings() {
 
   // General settings state
   const [selectedModel, setSelectedModel] = useState('gpt');
-  const [mode, setMode] = useState<'chatbot' | 'immersive'>('chatbot');
+  const [mode, setMode] = useState<'chatbot'>('chatbot');
   const [customResponse, setCustomResponse] = useState('');
   const [shareData, setShareData] = useState(true);
   const [customMemory, setCustomMemory] = useState('');
@@ -79,6 +79,7 @@ export default function ChatSettings() {
   const [dataSharing, setDataSharing] = useState(true);
 
   const handleSave = () => {
+    // Note: model selection and voice are UI-only for now — the app uses Gemini regardless
     toast({ title: 'Settings saved', description: 'Your preferences have been updated.' });
   };
 
@@ -152,20 +153,12 @@ export default function ChatSettings() {
                 <Label>Mode</Label>
                 <div className="flex gap-2">
                   <Button
-                    variant={mode === 'chatbot' ? 'default' : 'outline'}
+                    variant="default"
                     size="sm"
                     onClick={() => setMode('chatbot')}
                     className="rounded-full"
                   >
                     Chatbot
-                  </Button>
-                  <Button
-                    variant={mode === 'immersive' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setMode('immersive')}
-                    className="rounded-full"
-                  >
-                    Immersive
                   </Button>
                 </div>
               </div>
@@ -281,23 +274,18 @@ export default function ChatSettings() {
               {/* Language Preference */}
               <div className="space-y-2">
                 <Label>Language Preference</Label>
-                <div className="flex gap-2">
-                  <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LANGUAGES.map((lang) => (
-                        <SelectItem key={lang.id} value={lang.id}>
-                          {lang.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" size="icon">
-                    US
-                  </Button>
-                </div>
+                <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LANGUAGES.map((lang) => (
+                      <SelectItem key={lang.id} value={lang.id}>
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Avatar Icon */}
