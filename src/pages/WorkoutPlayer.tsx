@@ -12,6 +12,7 @@ import { notifyUser } from '@/lib/notify';
 import { AIFormAnalysis } from '@/components/workout/AIFormAnalysis';
 import { NewBadgeModal } from '@/components/gamification/NewBadgeModal';
 import { CompletionSummary } from '@/components/workout/CompletionSummary';
+import { startWorkoutMirroring, endWorkoutMirroring, sendWorkoutToWatch } from '@/plugins/WatchPlugin';
 import { 
   ArrowLeft, Play, Pause, SkipForward, SkipBack, 
   MoreHorizontal, Volume2, Settings, Download, Share2, Camera
@@ -104,7 +105,18 @@ export default function WorkoutPlayer() {
         .eq('id', id)
         .single();
 
-      if (workoutData) setWorkout(workoutData);
+      if (workoutData) {
+        setWorkout(workoutData);
+        // Start HealthKit session on iPhone — triggers Watch mirroring prompt automatically
+        startWorkoutMirroring('hiit');
+        // Also push workout plan to Watch via WatchConnectivity for older watchOS
+        sendWorkoutToWatch({
+          id: workoutData.id,
+          name: workoutData.title,
+          durationMinutes: workoutData.duration_minutes ?? 30,
+          exercises: [],
+        });
+      }
 
       const { data: exercisesData } = await supabase
         .from('workout_exercises')
@@ -151,6 +163,7 @@ export default function WorkoutPlayer() {
   const completeWorkout = async () => {
     setPlayerState('completed');
     setShowCompleted(true);
+    endWorkoutMirroring();
 
     if (user && workout) {
       try {
