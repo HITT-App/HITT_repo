@@ -1,9 +1,57 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Volume2, VolumeX, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+
+// Renders AI response text with paragraph spacing, bullet lists, and bold.
+// Strips excessive emoji usage (keeps max 1 per paragraph).
+function formatResponse(text: string): React.ReactNode[] {
+  const emojiRe = /[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu;
+
+  const stripExcessEmoji = (str: string) => {
+    const matches = str.match(emojiRe) ?? [];
+    if (matches.length <= 1) return str;
+    let kept = 0;
+    return str.replace(emojiRe, (m) => (kept++ === 0 ? m : ''));
+  };
+
+  const paragraphs = text.split(/\n\n+/).filter(Boolean);
+
+  return paragraphs.map((para, pi) => {
+    const lines = para.split('\n');
+    const isBulletList = lines.some(l => /^[-•*]\s/.test(l.trim()));
+
+    if (isBulletList) {
+      return (
+        <ul key={pi} className="space-y-1.5">
+          {lines.map((line, li) => {
+            const clean = stripExcessEmoji(line.replace(/^[-•*]\s*/, '').trim());
+            if (!clean) return null;
+            return (
+              <li key={li} className="flex items-start gap-2 text-sm leading-relaxed">
+                <span className="text-primary mt-0.5 shrink-0 text-xs">•</span>
+                <span dangerouslySetInnerHTML={{ __html: bold(clean) }} />
+              </li>
+            );
+          })}
+        </ul>
+      );
+    }
+
+    const cleaned = stripExcessEmoji(para);
+    return (
+      <p key={pi} className="text-sm leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: bold(cleaned.replace(/\n/g, '<br/>')) }} />
+    );
+  });
+}
+
+// Convert **text** to <strong>
+function bold(str: string): string {
+  return str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
 
 interface JarvisModeProps {
   onClose: () => void;
@@ -313,119 +361,90 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
-      {/* Hidden audio element */}
       <audio ref={audioRef} className="hidden" />
 
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <h2 className="text-lg font-semibold text-foreground">HIIT Voice Mode</h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMuted(!isMuted)}
-            className="text-muted-foreground"
-          >
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+      {/* Header — sits below Dynamic Island / notch */}
+      <div
+        className="flex items-center justify-between px-4 pb-3 border-b border-border shrink-0"
+        style={{ paddingTop: "calc(var(--safe-area-inset-top, 44px) + 0.5rem)" }}
+      >
+        <h2 className="text-base font-semibold text-foreground">Voice Mode</h2>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)} className="text-muted-foreground h-9 w-9">
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            className="text-muted-foreground"
-          >
-            <X className="w-5 h-5" />
+          <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground h-9 w-9">
+            <X className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col items-center p-6 overflow-y-auto">
-        {/* Status indicator */}
-        <div className={cn(
-          "w-32 h-32 rounded-full flex items-center justify-center mb-8 transition-all duration-300",
-          isListening && "bg-primary/20 animate-pulse",
-          isSpeaking && "bg-accent/20",
-          isProcessing && "bg-muted"
-        )}>
-          <div className={cn(
-            "w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300",
-            isListening && "bg-primary/30",
-            isSpeaking && "bg-accent/30",
-            isProcessing && "bg-muted"
-          )}>
-            <div className={cn(
-              "w-16 h-16 rounded-full flex items-center justify-center",
-              isListening && "bg-primary",
-              isSpeaking && "bg-accent",
-              isProcessing && "bg-muted-foreground"
-            )}>
-              {isProcessing ? (
-                <Loader2 className="w-8 h-8 text-primary-foreground animate-spin" />
-              ) : isListening ? (
-                <Mic className="w-8 h-8 text-primary-foreground" />
-              ) : isSpeaking ? (
-                <Volume2 className="w-8 h-8 text-accent-foreground" />
-              ) : (
-                <MicOff className="w-8 h-8 text-muted-foreground" />
-              )}
+      {/* Scrollable conversation area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        {/* Visualizer — compact bar, only visible while speaking/listening */}
+        {(isListening || isSpeaking) && (
+          <div className="flex items-center justify-center gap-0.5 h-8 mb-2">
+            {visualizerData.map((value, i) => (
+              <div
+                key={i}
+                className={cn("w-0.5 rounded-full transition-all duration-75",
+                  isListening ? "bg-primary" : "bg-accent")}
+                style={{ height: `${Math.max(3, (value / 255) * 28)}px` }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* AI response — formatted */}
+        {response && (
+          <div className="bg-secondary/40 rounded-2xl px-4 py-3">
+            <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>
+            <div className="text-sm text-foreground leading-relaxed space-y-2">
+              {formatResponse(response)}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Status text */}
-        <p className="text-sm text-muted-foreground mb-4">
-          {isProcessing ? 'Thinking...' : isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : 'Tap to speak'}
-        </p>
+        {/* Processing indicator */}
+        {isProcessing && !response && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-secondary/40 rounded-2xl">
+            <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
+            <span className="text-sm text-muted-foreground">Thinking…</span>
+          </div>
+        )}
 
-        {/* Visualizer */}
-        <div className="w-full max-w-md h-16 flex items-center justify-center gap-0.5 mb-8">
-          {visualizerData.map((value, i) => (
-            <div
-              key={i}
-              className={cn(
-                "w-1 rounded-full transition-all duration-75",
-                isListening ? "bg-primary" : isSpeaking ? "bg-accent" : "bg-muted"
-              )}
-              style={{ height: `${Math.max(4, (value / 255) * 64)}px` }}
-            />
-          ))}
-        </div>
+        {/* User transcript */}
+        {transcript && (
+          <div className="bg-primary/10 rounded-2xl px-4 py-3 ml-8">
+            <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-1 uppercase">You</p>
+            <p className="text-sm text-foreground">{transcript}</p>
+          </div>
+        )}
 
-        {/* Transcript / Response */}
-        <div className="w-full max-w-md text-center mt-4">
-          {transcript && (
-            <div className="mb-4 bg-secondary/50 rounded-2xl p-4">
-              <p className="text-xs text-muted-foreground mb-1">You said:</p>
-              <p className="text-base text-foreground">{transcript}</p>
-            </div>
-          )}
-          {response && (
-            <div className="bg-primary/10 rounded-2xl p-4">
-              <p className="text-xs text-muted-foreground mb-1">HIIT AI:</p>
-              <p className="text-base text-foreground leading-relaxed">{response}</p>
-            </div>
-          )}
-          <div ref={responseEndRef} />
-        </div>
+        <div ref={responseEndRef} />
       </div>
 
-      {/* Controls */}
-      <div className="p-6 flex justify-center">
+      {/* Bottom controls — mic button above safe area, status label above it */}
+      <div
+        className="shrink-0 flex flex-col items-center gap-3 pt-3 pb-4 border-t border-border/40"
+        style={{ paddingBottom: "calc(var(--safe-area-inset-bottom, 24px) + 1rem)" }}
+      >
+        {/* Status label — hovers above mic */}
+        <p className="text-xs text-muted-foreground">
+          {isProcessing ? 'Thinking…' : isListening ? 'Listening…' : isSpeaking ? 'Speaking…' : 'Tap to speak'}
+        </p>
+
+        {/* Mic button */}
         <Button
           size="lg"
           className={cn(
-            "w-20 h-20 rounded-full",
+            "w-16 h-16 rounded-full shadow-lg",
             isListening ? "bg-destructive hover:bg-destructive/90" : "bg-primary hover:bg-primary/90"
           )}
           onClick={isListening ? stopListening : startListening}
           disabled={isProcessing || isSpeaking}
         >
-          {isListening ? (
-            <MicOff className="w-8 h-8" />
-          ) : (
-            <Mic className="w-8 h-8" />
-          )}
+          {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
         </Button>
       </div>
     </div>
