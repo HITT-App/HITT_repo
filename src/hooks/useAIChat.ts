@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
+export type { ActivityLevel } from './useHealthProfile';
+
 interface RichContent {
   type: 'goal_progress' | 'hydration' | 'heart_rate' | 'workout' | 'recipe' | 
         'nutrition' | 'activity_suggestion' | 'hiit_score' | 'blood_pressure' | 
@@ -69,7 +71,7 @@ const detectRichContent = (content: string): RichContent | undefined => {
   return undefined;
 };
 
-export function useAIChat(conversationId: string | null) {
+export function useAIChat(conversationId: string | null, healthProfile?: string) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -172,6 +174,7 @@ export function useAIChat(conversationId: string | null) {
           imageData: imageBase64,
           customResponse: localStorage.getItem('hiit-ai-custom-response') ?? '',
           customMemory: localStorage.getItem('hiit-ai-custom-memory') ?? '',
+          healthProfile: healthProfile ?? '',
         }),
       });
 

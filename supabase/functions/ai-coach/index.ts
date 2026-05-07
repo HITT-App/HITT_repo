@@ -357,9 +357,12 @@ serve(async (req) => {
     userContext += "\n⚠️ WORKOUT CALIBRATION: When recommending workouts, consider the user's weight for calorie calculations (MET × weight_kg × duration_hours). Recommend workout types that match their preferences and fitness level.\n";
 
     // ─── Process request ───
-    const { messages, imageData, hasImage, customResponse, customMemory } = await req.json();
+    const { messages, imageData, hasImage, customResponse, customMemory, healthProfile } = await req.json();
 
     let extraContext = '';
+    if (healthProfile && healthProfile.trim()) {
+      extraContext += `\n\n📊 LIVE BIOMETRIC PROFILE (from HealthKit — use this to personalise every response):\n${healthProfile.trim()}`;
+    }
     if (customMemory && customMemory.trim()) {
       extraContext += `\n\n📋 PERSONAL CONTEXT (always remember this):\n${customMemory.trim()}`;
     }

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAIChat } from '@/hooks/useAIChat';
+import { useHealthProfile } from '@/hooks/useHealthProfile';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { CoachOnboarding } from '@/components/coach/CoachOnboarding';
 import { VoiceMode } from '@/components/coach/VoiceMode';
@@ -39,7 +40,8 @@ export default function AICoach() {
   const [showOutOfTokens, setShowOutOfTokens] = useState(false);
   const [showPlusSheet, setShowPlusSheet] = useState(false);
 
-  const { messages, isLoading, error, sendMessage, loadMessages, setMessages } = useAIChat(currentConversation);
+  const { profile: healthProfile } = useHealthProfile();
+  const { messages, isLoading, error, sendMessage, loadMessages, setMessages } = useAIChat(currentConversation, healthProfile);
 
   // Check if onboarding is complete
   useEffect(() => {
