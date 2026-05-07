@@ -252,7 +252,7 @@ const Triathlon = () => {
 
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col">
-        <div className="flex items-center gap-3 px-4 pt-4 pb-2 sticky top-0 z-10 bg-background">
+        <div className="flex items-center gap-3 px-4 pb-2 sticky top-0 z-10 bg-background" style={{ paddingTop: "calc(var(--safe-area-inset-top, 44px) + 0.5rem)" }}>
           <button onClick={() => navigate('/')} className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
             <Home size={18} />
           </button>
@@ -350,7 +350,7 @@ const Triathlon = () => {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col relative">
       {/* Header */}
-      <div className="relative z-10 px-4 pt-4 pb-2 flex items-center gap-3">
+      <div className="relative z-10 px-4 pb-2 flex items-center gap-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 44px) + 0.5rem)" }}>
         <button onClick={() => setShowSetup(true)} className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-xl border border-border/30 flex items-center justify-center">
           <ArrowLeft size={18} className="text-foreground" />
         </button>
