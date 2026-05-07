@@ -171,8 +171,8 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     setIsProcessing(true);
     try {
       const greetingPrompt = healthProfile?.trim()
-        ? `[GREETING] Open with a warm, personal 1-2 sentence greeting based on my actual biometric data below. Be specific — reference something real (workout frequency, sleep, steps, or activity level). No question yet. Sound like a coach who genuinely knows me.\n\nMy data:\n${healthProfile}`
-        : `[GREETING] Welcome me warmly in 1-2 sentences. You don't have my data yet — express you're excited to learn about me and help me reach my goals.`;
+        ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: tell me I can say "Ok HIIT" anytime to activate you, and ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
+        : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach and say you're excited to get to know me. Second: tell me I can say "Ok HIIT" anytime to activate you and ask what I want to work on today.`;
 
       let full = '';
       await streamAIResponse(
@@ -226,10 +226,17 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
 
   const speakResponse = async (text: string) => {
     setIsSpeaking(true);
-    const accessToken = await getAccessToken();
-
     try {
-      const response = await fetch(
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        console.warn('[TTS] No auth token — skipping voice');
+        setIsSpeaking(false);
+        startListening();
+        return;
+      }
+
+      const voiceId = localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb';
+      const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
         {
           method: 'POST',
@@ -238,32 +245,41 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({
-            text: text.substring(0, 500),
-            voiceId: localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb',
-          }),
+          body: JSON.stringify({ text: text.substring(0, 500), voiceId }),
         }
       );
 
-      if (!response.ok) {
-        throw new Error('TTS request failed');
+      if (!res.ok) {
+        const err = await res.text().catch(() => res.status.toString());
+        console.error('[TTS] Request failed:', err);
+        setIsSpeaking(false);
+        startListening();
+        return;
       }
 
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
       if (audioRef.current) {
-        audioRef.current.src = audioUrl;
+        audioRef.current.src = url;
         audioRef.current.onended = () => {
           setIsSpeaking(false);
-          // Auto-start listening after response
+          URL.revokeObjectURL(url);
           startListening();
         };
-        await audioRef.current.play();
+        audioRef.current.onerror = () => {
+          setIsSpeaking(false);
+          startListening();
+        };
+        await audioRef.current.play().catch(e => {
+          console.error('[TTS] Audio play failed:', e);
+          setIsSpeaking(false);
+          startListening();
+        });
       }
     } catch (error) {
-      console.error('TTS error:', error);
+      console.error('[TTS] Unexpected error:', error);
       setIsSpeaking(false);
+      startListening();
     }
   };
 

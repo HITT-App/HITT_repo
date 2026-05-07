@@ -8,7 +8,6 @@ interface WakeWordListenerProps {
 
 const WAKE_WORD_REGEX = /\b(?:ok|okay|hey)\s+(?:hiit|hit|heat)\b/i;
 
-// Extend window with webkit prefix used on iOS/Safari
 declare global {
   interface Window {
     webkitSpeechRecognition: typeof SpeechRecognition;
@@ -17,30 +16,37 @@ declare global {
 }
 
 export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListenerProps) {
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const enabledRef = useRef(enabled);
-  const detectedRef = useRef(false);
+  const recognitionRef  = useRef<SpeechRecognition | null>(null);
+  const enabledRef      = useRef(enabled);
+  const detectedRef     = useRef(false);
+  const failCountRef    = useRef(0);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
   enabledRef.current = enabled;
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return; // Not supported (shouldn't happen on iOS 13+)
+    if (!SR) return;
 
-    if (!enabled) {
-      recognitionRef.current?.abort();
-      recognitionRef.current = null;
-      return;
-    }
+    const scheduleRestart = (delayMs = 400) => {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = setTimeout(() => {
+        if (enabledRef.current && !detectedRef.current) start();
+      }, delayMs);
+    };
 
     const start = () => {
       if (!enabledRef.current) return;
-      detectedRef.current = false;
 
+      // Abort any existing session cleanly
+      try { recognitionRef.current?.abort(); } catch {}
+
+      detectedRef.current = false;
       const recognition = new SR();
       recognitionRef.current = recognition;
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-GB';
+      recognition.continuous      = true;
+      recognition.interimResults  = true;
+      recognition.lang            = 'en-GB';
       recognition.maxAlternatives = 3;
 
       recognition.onresult = (event) => {
@@ -48,7 +54,8 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
           const transcript = event.results[i][0].transcript;
           if (WAKE_WORD_REGEX.test(transcript) && !detectedRef.current) {
             detectedRef.current = true;
-            recognition.abort();
+            failCountRef.current = 0;
+            try { recognition.abort(); } catch {}
             onWakeWordDetected();
             return;
           }
@@ -57,27 +64,41 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
 
       recognition.onerror = (event) => {
         if (event.error === 'not-allowed') {
-          toast.error('Microphone access denied. Go to iOS Settings → HIIT → Microphone to enable it.');
+          toast.error('Microphone access denied — go to iOS Settings → HIIT → Microphone to enable.');
+          return; // don't retry
         }
-        // Any other error — silently restart
+        // 'network', 'audio-capture', 'aborted', 'no-speech' — all restartable
+        failCountRef.current++;
+        // Exponential backoff: 0.5s, 1s, 2s … max 8s
+        const delay = Math.min(500 * Math.pow(2, failCountRef.current - 1), 8000);
+        scheduleRestart(delay);
       };
 
       recognition.onend = () => {
-        // Auto-restart so it listens continuously
+        // iOS caps continuous sessions; restart immediately when it ends naturally
         if (enabledRef.current && !detectedRef.current) {
-          setTimeout(start, 300);
+          // Small backoff to avoid hammering on repeated quick ends
+          const delay = failCountRef.current > 0 ? 600 : 250;
+          scheduleRestart(delay);
         }
       };
 
       try {
         recognition.start();
+        failCountRef.current = 0;
       } catch {
-        setTimeout(start, 1000);
+        scheduleRestart(1000);
       }
     };
 
-    // iOS requires a user gesture before the first start().
-    // We attempt immediately; if it fails with not-allowed, we wait for a tap.
+    if (!enabled) {
+      clearTimeout(restartTimerRef.current);
+      try { recognitionRef.current?.abort(); } catch {}
+      recognitionRef.current = null;
+      return;
+    }
+
+    // iOS requires a user gesture before the first start()
     const handleGesture = () => {
       window.removeEventListener('pointerdown', handleGesture);
       start();
@@ -90,8 +111,9 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
     }
 
     return () => {
+      clearTimeout(restartTimerRef.current);
       window.removeEventListener('pointerdown', handleGesture);
-      recognitionRef.current?.abort();
+      try { recognitionRef.current?.abort(); } catch {}
       recognitionRef.current = null;
     };
   }, [enabled, onWakeWordDetected]);
