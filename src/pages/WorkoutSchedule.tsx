@@ -5,16 +5,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 
-import { 
-  ArrowLeft, Calendar, ChevronLeft, ChevronRight, Clock, 
-  Plus, Dumbbell, Play, MoreHorizontal, Trash2
+import {
+  ArrowLeft, Calendar, ChevronLeft, ChevronRight, Clock,
+  Plus, Dumbbell, Play, MoreHorizontal, Trash2, CalendarDays, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, addDays, isSameDay, parseISO, addWeeks } from 'date-fns';
 
 type ScheduledWorkout = {
   id: string;
@@ -40,6 +40,12 @@ export default function WorkoutSchedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Edit state
+  const [activeWorkout, setActiveWorkout] = useState<ScheduledWorkout | null>(null);
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [showDayPicker, setShowDayPicker] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -100,6 +106,35 @@ export default function WorkoutSchedule() {
     } catch (error) {
       console.error('Error deleting scheduled workout:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to remove workout' });
+    }
+  };
+
+  const openActions = (workout: ScheduledWorkout, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveWorkout(workout);
+    setShowDayPicker(false);
+    setShowActionSheet(true);
+  };
+
+  const moveWorkout = async (newDate: Date) => {
+    if (!activeWorkout) return;
+    setIsMoving(true);
+    try {
+      const dateStr = newDate.toISOString().split('T')[0];
+      const { error } = await supabase
+        .from('scheduled_workouts')
+        .update({ scheduled_date: dateStr })
+        .eq('id', activeWorkout.id);
+      if (error) throw error;
+      setScheduledWorkouts(prev =>
+        prev.map(w => w.id === activeWorkout.id ? { ...w, scheduled_date: dateStr } : w)
+      );
+      toast({ title: 'Moved', description: `Workout moved to ${format(newDate, 'EEE d MMM')}` });
+      setShowActionSheet(false);
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not move workout' });
+    } finally {
+      setIsMoving(false);
     }
   };
 
@@ -221,14 +256,11 @@ export default function WorkoutSchedule() {
                                 {workout.workout?.duration_minutes}min · {workout.workout?.category}
                               </p>
                             </div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="flex-shrink-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteScheduledWorkout(workout.id);
-                              }}
+                              onClick={(e) => openActions(workout, e)}
                             >
                               <MoreHorizontal className="w-4 h-4" />
                             </Button>
@@ -300,11 +332,8 @@ export default function WorkoutSchedule() {
                                   <span className="capitalize">{workout.workout?.category}</span>
                                 </div>
                               </div>
-                              <Button variant="ghost" size="icon" onClick={(e) => {
-                                e.stopPropagation();
-                                deleteScheduledWorkout(workout.id);
-                              }}>
-                                <Trash2 className="w-4 h-4 text-destructive" />
+                              <Button variant="ghost" size="icon" onClick={(e) => openActions(workout, e)}>
+                                <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </CardContent>
                           </Card>
@@ -320,6 +349,75 @@ export default function WorkoutSchedule() {
           </ScrollArea>
         </TabsContent>
       </Tabs>
+
+      {/* Action sheet — Move or Delete */}
+      <Sheet open={showActionSheet} onOpenChange={setShowActionSheet}>
+        <SheetContent side="bottom" className="rounded-t-3xl pb-10">
+          {activeWorkout && (
+            <div className="pt-2">
+              <p className="font-semibold text-base mb-1 px-1">{activeWorkout.workout?.title}</p>
+              <p className="text-xs text-muted-foreground px-1 mb-5">
+                {format(parseISO(activeWorkout.scheduled_date), 'EEEE d MMMM')}
+              </p>
+
+              {!showDayPicker ? (
+                <div className="space-y-2">
+                  <button
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-secondary/50 active:bg-secondary transition-colors text-left"
+                    onClick={() => navigate(`/workout-player/${activeWorkout.workout_id}`)}
+                  >
+                    <Play className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Start now</span>
+                  </button>
+                  <button
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-secondary/50 active:bg-secondary transition-colors text-left"
+                    onClick={() => setShowDayPicker(true)}
+                  >
+                    <CalendarDays className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Move to a different day</span>
+                  </button>
+                  <button
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-destructive/10 active:bg-destructive/20 transition-colors text-left"
+                    onClick={() => { deleteScheduledWorkout(activeWorkout.id); setShowActionSheet(false); }}
+                  >
+                    <Trash2 className="w-5 h-5 text-destructive" />
+                    <span className="font-medium text-destructive">Remove from schedule</span>
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <button onClick={() => setShowDayPicker(false)} className="p-1">
+                      <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                    <p className="text-sm font-medium">Choose a new day</p>
+                  </div>
+                  {/* Next 4 weeks of dates */}
+                  <div className="grid grid-cols-4 gap-2 max-h-56 overflow-y-auto">
+                    {Array.from({ length: 28 }, (_, i) => addDays(new Date(), i + 1)).map(date => (
+                      <button
+                        key={date.toISOString()}
+                        disabled={isMoving}
+                        onClick={() => moveWorkout(date)}
+                        className={cn(
+                          'flex flex-col items-center py-3 rounded-2xl border-2 transition-all text-center',
+                          isSameDay(date, parseISO(activeWorkout.scheduled_date))
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border bg-secondary/30'
+                        )}
+                      >
+                        <span className="text-xs text-muted-foreground">{format(date, 'EEE')}</span>
+                        <span className="text-sm font-bold">{format(date, 'd')}</span>
+                        <span className="text-[10px] text-muted-foreground">{format(date, 'MMM')}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Empty State */}
       {scheduledWorkouts.length === 0 && !isLoading && (
