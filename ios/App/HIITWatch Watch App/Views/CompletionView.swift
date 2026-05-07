@@ -83,7 +83,7 @@ struct CompletionView: View {
     }
 
     private func generateConfetti() {
-        let colors: [Color] = [hiitOrange, hiitGold, hiitGreen, .pink, .cyan, Color(hex:"#A78BFA")]
+        let colors: [Color] = [hiitOrange, hiitGold, hiitGreen, .pink, Color(red:0,green:0.8,blue:1), Color(red:0.655,green:0.545,blue:0.980)]
         confetti = (0..<12).map { _ in
             (
                 x: Double.random(in: 20...160),

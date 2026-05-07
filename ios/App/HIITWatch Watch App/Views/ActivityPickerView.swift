@@ -55,7 +55,7 @@ struct ActivityPickerView: View {
                                 Color.clear.frame(height: geo.size.height * 0.25)
                             }
                         }
-                        .onChange(of: selectedIdx) { _, idx in
+                        .onChange(of: selectedIdx) { idx in
                             withAnimation(.easeOut(duration: 0.18)) {
                                 proxy.scrollTo(idx, anchor: .center)
                             }
@@ -94,7 +94,7 @@ struct ActivityPickerView: View {
             isContinuous: false,
             isHapticFeedbackEnabled: true
         )
-        .onChange(of: crownValue) { _, v in
+        .onChange(of: crownValue) { v in
             selectedIdx = max(0, min(activities.count - 1, Int(v.rounded())))
         }
         .onAppear {

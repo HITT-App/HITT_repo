@@ -144,9 +144,10 @@ struct ActiveWorkoutView: View {
             controlsPage.tag(2)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
-        .overlay(alignment: .bottom) {
-            PageDots(count: pageCount, current: page).padding(.bottom, 2)
-        }
+        .overlay(
+            PageDots(count: pageCount, current: page).padding(.bottom, 2),
+            alignment: .bottom
+        )
     }
 
     // Page 1 — Main metrics
