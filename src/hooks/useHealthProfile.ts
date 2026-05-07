@@ -30,12 +30,15 @@ export function useHealthProfile() {
   const buildProfile = useCallback(async (force = false) => {
     if (!user) return;
 
-    // Use cached version if fresh enough
+    // Use cached version if fresh enough — but always rebuild if cache shows
+    // "no activity" in case permissions were just granted
     if (!force) {
       const ts = localStorage.getItem(CACHE_TS_KEY);
       if (ts && Date.now() - parseInt(ts) < CACHE_TTL_MS) {
         const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) { setProfile(cached); return; }
+        const cachedLevel = localStorage.getItem(LEVEL_KEY) as ActivityLevel;
+        // If cached shows no activity, rebuild in case auth was pending
+        if (cached && cachedLevel !== 'none') { setProfile(cached); return; }
       }
     }
 
@@ -49,6 +52,15 @@ export function useHealthProfile() {
     if (Capacitor.isNativePlatform()) {
       try {
         const { Health } = await import('@capgo/capacitor-health');
+
+        // Request authorization before querying — without this, iOS silently
+        // returns empty results even when data exists in Apple Health.
+        await Health.requestAuthorization({
+          read: ['workouts', 'steps', 'heartRate', 'restingHeartRate',
+                 'sleep', 'weight', 'bodyFat', 'totalCalories',
+                 'heartRateVariability'],
+        }).catch(() => {}); // non-fatal if already granted or denied
+
         const res = await Health.queryWorkouts({
           startDate: d(90).toISOString(),
           endDate: now.toISOString(),
