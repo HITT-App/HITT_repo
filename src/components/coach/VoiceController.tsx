@@ -6,11 +6,13 @@ import { JarvisMode } from './JarvisMode';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useWakeWordPreference } from '@/hooks/useWakeWordPreference';
+import { useHealthProfile } from '@/hooks/useHealthProfile';
 
 export function VoiceController() {
   const { user } = useAuth();
   const location = useLocation();
   const { enabled: wakeWordEnabled } = useWakeWordPreference();
+  const { profile: healthProfile } = useHealthProfile();
   const [showJarvisMode, setShowJarvisMode] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
@@ -92,8 +94,9 @@ export function VoiceController() {
 
       {/* Full-screen Jarvis Mode */}
       {showJarvisMode && conversationId && (
-        <JarvisMode 
+        <JarvisMode
           conversationId={conversationId}
+          healthProfile={healthProfile}
           onClose={handleJarvisModeClose}
         />
       )}

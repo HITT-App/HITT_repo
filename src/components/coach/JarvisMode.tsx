@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface JarvisModeProps {
   onClose: () => void;
   conversationId: string;
+  healthProfile?: string;
 }
 
 type ConversationMessage = {
@@ -15,7 +16,7 @@ type ConversationMessage = {
   content: string;
 };
 
-export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
+export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisModeProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -113,6 +114,86 @@ export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
     setVisualizerData(new Array(32).fill(4));
   }, [scribe]);
 
+  const getAccessToken = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    return sessionData?.session?.access_token ?? null;
+  };
+
+  const streamAIResponse = async (
+    messages: { role: string; content: string }[],
+    onDelta: (delta: string) => void
+  ): Promise<string> => {
+    const accessToken = await getAccessToken();
+    if (!accessToken) throw new Error('Not authenticated');
+
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({
+        messages,
+        healthProfile: healthProfile ?? '',
+        customResponse: localStorage.getItem('hiit-ai-custom-response') ?? '',
+        customMemory: localStorage.getItem('hiit-ai-custom-memory') ?? '',
+      }),
+    });
+
+    if (!res.ok) throw new Error('AI request failed');
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error('No reader');
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let full = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buffer.indexOf('\n')) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (!line.startsWith('data: ')) continue;
+        const json = line.slice(6).trim();
+        if (json === '[DONE]') break;
+        try {
+          const delta = JSON.parse(json).choices?.[0]?.delta?.content;
+          if (delta) { full += delta; onDelta(delta); }
+        } catch { /* partial chunk */ }
+      }
+    }
+    return full;
+  };
+
+  // Fires on mount — AI greets the user based on their biometric data
+  const triggerGreeting = useCallback(async () => {
+    setIsProcessing(true);
+    try {
+      const greetingPrompt = healthProfile?.trim()
+        ? `[GREETING] Open with a warm, personal 1-2 sentence greeting based on my actual biometric data below. Be specific — reference something real (workout frequency, sleep, steps, or activity level). No question yet. Sound like a coach who genuinely knows me.\n\nMy data:\n${healthProfile}`
+        : `[GREETING] Welcome me warmly in 1-2 sentences. You don't have my data yet — express you're excited to learn about me and help me reach my goals.`;
+
+      let full = '';
+      await streamAIResponse(
+        [{ role: 'user', content: greetingPrompt }],
+        delta => { full += delta; setResponse(r => r + delta); }
+      );
+
+      if (full) {
+        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: full });
+        setConversationHistory([{ role: 'assistant', content: full }]);
+        if (!isMuted) await speakResponse(full);
+        else startListening();
+      }
+    } catch (err) {
+      console.error('Greeting error:', err);
+      startListening();
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [healthProfile, isMuted, conversationId]);
+
   const handleUserMessage = async (text: string) => {
     stopListening();
     setIsProcessing(true);
@@ -121,102 +202,32 @@ export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
     setConversationHistory(updatedHistory);
 
     try {
-      // Save user message to database
-      await supabase.from('messages').insert({
-        conversation_id: conversationId,
-        role: 'user',
-        content: text,
-      });
+      await supabase.from('messages').insert({ conversation_id: conversationId, role: 'user', content: text });
 
-      // Get AI response
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
+      let full = '';
+      await streamAIResponse(
+        updatedHistory.map(m => ({ role: m.role, content: m.content })),
+        delta => { full += delta; setResponse(r => r + delta); }
+      );
 
-      if (!accessToken) {
-        throw new Error('Not authenticated');
-      }
-
-      const aiResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          messages: updatedHistory.map(m => ({ role: m.role, content: m.content })),
-        }),
-      });
-
-      if (!aiResponse.ok) {
-        throw new Error('AI request failed');
-      }
-
-      // Stream the response
-      const reader = aiResponse.body?.getReader();
-      if (!reader) throw new Error('No reader');
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let fullResponse = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-          let line = buffer.slice(0, newlineIndex);
-          buffer = buffer.slice(newlineIndex + 1);
-
-          if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (line.startsWith(':') || line.trim() === '') continue;
-          if (!line.startsWith('data: ')) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') break;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const delta = parsed.choices?.[0]?.delta?.content;
-            if (delta) {
-              fullResponse += delta;
-              setResponse(fullResponse);
-            }
-          } catch {
-            buffer = line + '\n' + buffer;
-            break;
-          }
-        }
-      }
-
-      // Save assistant response
-      if (fullResponse) {
-        await supabase.from('messages').insert({
-          conversation_id: conversationId,
-          role: 'assistant',
-          content: fullResponse,
-        });
-
-        setConversationHistory(prev => [...prev, { role: 'assistant', content: fullResponse }]);
-
-        // Speak the response
-        if (!isMuted) {
-          await speakResponse(fullResponse);
-        }
+      if (full) {
+        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: full });
+        setConversationHistory(prev => [...prev, { role: 'assistant', content: full }]);
+        if (!isMuted) await speakResponse(full);
       }
     } catch (error) {
       console.error('Error processing message:', error);
-      setResponse('Sorry, I encountered an error. Please try again.');
+      setResponse('Sorry, I had trouble understanding that. Try again?');
     } finally {
       setIsProcessing(false);
     }
   };
 
+
   const speakResponse = async (text: string) => {
     setIsSpeaking(true);
-    
+    const accessToken = await getAccessToken();
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
@@ -225,11 +236,11 @@ export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
           headers: {
             'Content-Type': 'application/json',
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({ 
-            text: text.substring(0, 500), // Limit text length
-            voiceId: 'JBFqnCBsd6RMkjVDRZzb' 
+          body: JSON.stringify({
+            text: text.substring(0, 500),
+            voiceId: localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb',
           }),
         }
       );
@@ -269,10 +280,11 @@ export function JarvisMode({ onClose, conversationId }: JarvisModeProps) {
   }, [response, transcript]);
 
   useEffect(() => {
-    // Auto-start listening on mount
+    // Trigger contextual greeting on open; greeting speaks then auto-starts listening.
+    // Falls back to listening directly if greeting fails.
     const timer = setTimeout(() => {
-      startListening();
-    }, 500);
+      triggerGreeting();
+    }, 400);
 
     return () => {
       clearTimeout(timer);
