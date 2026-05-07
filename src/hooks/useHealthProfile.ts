@@ -144,6 +144,15 @@ export function useHealthProfile() {
       }
     } catch { /* non-fatal */ }
 
+    // Body scan results (stored after AI body scan is completed)
+    const scanSummary = localStorage.getItem('hiit-body-scan-summary');
+    const scanAt = localStorage.getItem('hiit-body-scan-at');
+    if (scanSummary && scanAt) {
+      const scanAge = Date.now() - parseInt(scanAt);
+      const scanDays = Math.round(scanAge / 86_400_000);
+      lines.push(`\nAI BODY SCAN RESULTS (${scanDays === 0 ? 'today' : `${scanDays} days ago`}):\n${scanSummary}`);
+    }
+
     const profileStr = lines.join('\n');
     localStorage.setItem(CACHE_KEY, profileStr);
     localStorage.setItem(CACHE_TS_KEY, Date.now().toString());

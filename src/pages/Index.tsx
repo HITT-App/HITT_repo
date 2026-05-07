@@ -1,4 +1,5 @@
 import { useState, useEffect, ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { OnboardingFlow } from "@/components/coach/OnboardingFlow";
 import { useHealthProfile } from "@/hooks/useHealthProfile";
@@ -39,6 +40,7 @@ const Index = () => {
     previousLevel: number;
   }>({ isOpen: false, newLevel: 1, newTitle: "Rookie", previousLevel: 1 });
 
+  const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { user } = useAuth();
@@ -184,6 +186,28 @@ const Index = () => {
         )}
 
         {renderSections()}
+
+        {/* Body scan CTA — shown to active/very_active users who haven't scanned recently */}
+        {(activityLevel === 'active' || activityLevel === 'very_active') &&
+          (() => {
+            const scanAt = localStorage.getItem('hiit-body-scan-at');
+            const stale = !scanAt || Date.now() - parseInt(scanAt) > 30 * 86_400_000;
+            return stale;
+          })() && (
+          <div className="px-4 pb-2">
+            <button
+              onClick={() => navigate('/body-scan')}
+              className="w-full rounded-2xl bg-secondary/60 border border-border/40 p-4 text-left flex items-center gap-4 active:bg-secondary transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 text-xl">🔍</div>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">AI Body Scan</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Personalise your plan with a body composition analysis</p>
+              </div>
+              <span className="text-primary text-lg">→</span>
+            </button>
+          </div>
+        )}
 
         {/* Build my plan CTA — shown to users with no/low activity or no existing plan */}
         {!localStorage.getItem('hiit-plan-onboarding-done') && (

@@ -239,6 +239,18 @@ const BodyScan = () => {
       }
       if (!rawRes.ok) throw new Error(json?.error || `Analysis failed (${rawRes.status})`);
       setAnalysis(json);
+      // Persist a summary so the AI coach can reference scan results
+      const summary = [
+        json.bodyType ? `Body type: ${json.bodyType}` : '',
+        json.estimatedBodyFat ? `Estimated body fat: ${json.estimatedBodyFat}%` : '',
+        json.muscleDevelopment ? `Muscle development — upper: ${json.muscleDevelopment.upper_body}, core: ${json.muscleDevelopment.core}, lower: ${json.muscleDevelopment.lower_body}` : '',
+        ...(json.keyObservations ?? []).slice(0, 2),
+        ...(json.recommendations ?? []).slice(0, 2),
+      ].filter(Boolean).join('\n');
+      localStorage.setItem('hiit-body-scan-summary', summary);
+      localStorage.setItem('hiit-body-scan-at', Date.now().toString());
+      // Invalidate health profile cache so next AI message picks up the scan
+      localStorage.removeItem('hiit-health-profile-at');
       toast.success("Body analysis complete!");
     } catch (err: any) {
       toast.error(err.message || "Analysis failed. Try a clearer photo.");
