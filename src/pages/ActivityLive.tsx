@@ -341,7 +341,7 @@ const ActivityLive = () => {
       </div>
 
       {/* Floating header */}
-      <header className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-[1002]">
+      <header className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pb-4 z-[1002]" style={{ paddingTop: "calc(var(--safe-area-inset-top, 44px) + 0.5rem)" }}>
         <Button variant="ghost" size="icon" className="bg-card/70 backdrop-blur-md rounded-full border border-border/20" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -478,17 +478,18 @@ const ActivityLive = () => {
           <div className="relative">
             <button
               className={cn(
-                "w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all touch-manipulation",
+                "w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all touch-manipulation select-none",
                 isLocked && "opacity-40 pointer-events-none",
                 isHolding ? "bg-destructive scale-110" : "bg-destructive/80"
               )}
+              style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
               onMouseDown={handleHoldStart}
               onMouseUp={handleHoldEnd}
               onMouseLeave={handleHoldEnd}
               onTouchStart={handleHoldStart}
               onTouchEnd={handleHoldEnd}
             >
-              <span className="text-destructive-foreground text-[10px] font-semibold leading-tight text-center">
+              <span className="text-destructive-foreground text-[10px] font-semibold leading-tight text-center select-none pointer-events-none">
                 Hold to<br />Finish
               </span>
             </button>
