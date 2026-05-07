@@ -1,5 +1,7 @@
 import { useState, useEffect, ReactNode } from "react";
 
+import { OnboardingFlow } from "@/components/coach/OnboardingFlow";
+import { useHealthProfile } from "@/hooks/useHealthProfile";
 import { QuickStartFAB } from "@/components/QuickStartFAB";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { LevelUpModal } from "@/components/gamification/LevelUpModal";
@@ -37,12 +39,15 @@ const Index = () => {
     previousLevel: number;
   }>({ isOpen: false, newLevel: 1, newTitle: "Rookie", previousLevel: 1 });
 
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   const { user } = useAuth();
   const { profile } = useProfile();
   const { addXP, previousLevel } = useUserLevel();
   const { flags } = useFeatureFlags();
   const { sections, loading: layoutLoading } = useHomeLayout();
   const { score: hiitScore, components: hiitComponents } = useHiitScore();
+  const { activityLevel } = useHealthProfile();
   
   const displayName = profile?.display_name || 
                       user?.user_metadata?.display_name || 
@@ -179,7 +184,37 @@ const Index = () => {
         )}
 
         {renderSections()}
+
+        {/* Build my plan CTA — shown to users with no/low activity or no existing plan */}
+        {!localStorage.getItem('hiit-plan-onboarding-done') && (
+          <div className="px-4 pb-6">
+            <button
+              onClick={() => setShowOnboarding(true)}
+              className="w-full rounded-2xl bg-primary/10 border border-primary/30 p-4 text-left flex items-center gap-4 active:bg-primary/20 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 text-xl">
+                {activityLevel === 'none' || activityLevel === 'light' ? '🤖' : '💪'}
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">
+                  {activityLevel === 'none' || activityLevel === 'light'
+                    ? "Let me build you a routine"
+                    : "Build a personalised training plan"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Answer 5 quick questions → AI creates your schedule</p>
+              </div>
+              <span className="text-primary text-lg">→</span>
+            </button>
+          </div>
+        )}
       </div>
+
+      {showOnboarding && (
+        <OnboardingFlow
+          onClose={() => setShowOnboarding(false)}
+          activityLevel={activityLevel}
+        />
+      )}
     </div>
   );
 };
