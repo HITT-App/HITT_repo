@@ -232,11 +232,11 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: full });
         setConversationHistory([{ role: 'assistant', content: full }]);
         if (!isMuted) await speakResponse(full);
-        else startListening();
+        // Don't auto-start listening — user taps the mic button when ready
       }
     } catch (err) {
       console.error('Greeting error:', err);
-      startListening();
+      // Don't auto-start listening on error
     } finally {
       setIsProcessing(false);
     }
@@ -262,10 +262,11 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: full });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: full }]);
         if (!isMuted) await speakResponse(full);
+        // User taps mic when ready to respond — no auto-listen
       }
     } catch (error) {
       console.error('Error processing message:', error);
-      setResponse('Sorry, I had trouble understanding that. Try again?');
+      setResponse('Sorry, I had trouble with that. Tap the mic and try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -279,7 +280,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       if (!accessToken) {
         console.warn('[TTS] No auth token — skipping voice');
         setIsSpeaking(false);
-        startListening();
         return;
       }
 
@@ -301,7 +301,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         const err = await res.text().catch(() => res.status.toString());
         console.error('[TTS] Request failed:', err);
         setIsSpeaking(false);
-        startListening();
         return;
       }
 
@@ -312,22 +311,17 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         audioRef.current.onended = () => {
           setIsSpeaking(false);
           URL.revokeObjectURL(url);
-          startListening();
+          // User taps mic to respond — no auto-listen
         };
-        audioRef.current.onerror = () => {
-          setIsSpeaking(false);
-          startListening();
-        };
+        audioRef.current.onerror = () => { setIsSpeaking(false); };
         await audioRef.current.play().catch(e => {
           console.error('[TTS] Audio play failed:', e);
           setIsSpeaking(false);
-          startListening();
         });
       }
     } catch (error) {
       console.error('[TTS] Unexpected error:', error);
       setIsSpeaking(false);
-      startListening();
     }
   };
 
@@ -360,13 +354,14 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    // z-[100] sits above bottom nav (z-50) and all other overlays
+    <div className="fixed inset-0 z-[100] bg-background flex flex-col">
       <audio ref={audioRef} className="hidden" />
 
-      {/* Header — sits below Dynamic Island / notch */}
+      {/* Header — below Dynamic Island using native env() variable */}
       <div
         className="flex items-center justify-between px-4 pb-3 border-b border-border shrink-0"
-        style={{ paddingTop: "calc(var(--safe-area-inset-top, 44px) + 0.5rem)" }}
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 44px) + 0.5rem)" }}
       >
         <h2 className="text-base font-semibold text-foreground">Voice Mode</h2>
         <div className="flex items-center gap-1">
@@ -427,7 +422,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       {/* Bottom controls — mic button above safe area, status label above it */}
       <div
         className="shrink-0 flex flex-col items-center gap-3 pt-3 pb-4 border-t border-border/40"
-        style={{ paddingBottom: "calc(var(--safe-area-inset-bottom, 24px) + 1rem)" }}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 24px) + 1rem)" }}
       >
         {/* Status label — hovers above mic */}
         <p className="text-xs text-muted-foreground">

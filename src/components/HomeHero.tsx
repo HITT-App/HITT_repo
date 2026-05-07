@@ -110,17 +110,21 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
   };
 
   useEffect(() => {
-    const handleInteraction = () => {
-      if (!hasPlayed) playVoiceGreeting();
-      document.removeEventListener("click", handleInteraction);
-      document.removeEventListener("touchstart", handleInteraction);
-    };
-    document.addEventListener("click", handleInteraction);
-    document.addEventListener("touchstart", handleInteraction);
-    return () => {
-      document.removeEventListener("click", handleInteraction);
-      document.removeEventListener("touchstart", handleInteraction);
-    };
+    if (hasPlayed) return;
+    // Try immediately — works if the user has already interacted with the page
+    const t = setTimeout(() => {
+      playVoiceGreeting().catch(() => {
+        // Autoplay blocked — wait for first touch
+        const handleInteraction = () => {
+          playVoiceGreeting();
+          document.removeEventListener("click", handleInteraction);
+          document.removeEventListener("touchstart", handleInteraction);
+        };
+        document.addEventListener("click", handleInteraction);
+        document.addEventListener("touchstart", handleInteraction);
+      });
+    }, 800);
+    return () => clearTimeout(t);
   }, [hasPlayed]);
 
   return (
