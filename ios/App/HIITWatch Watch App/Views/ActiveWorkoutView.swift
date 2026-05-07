@@ -1,16 +1,35 @@
 import SwiftUI
 import Combine
 
-private let hiitOrange = Color(red: 0.976, green: 0.451, blue: 0.086)
+// Design-spec colours
+private let hiitOrange = Color(red: 1,    green: 0.541, blue: 0.149)
+private let hiitRed    = Color(red: 1,    green: 0.271, blue: 0.227)
+private let hiitGold   = Color(red: 1,    green: 0.690, blue: 0.125)
+private let hiitYellow = Color(red: 1,    green: 0.753, blue: 0.180)
+private let dimText    = Color(white: 0.541)
+private let dimText2   = Color(white: 0.353)
+private let rowBg      = Color(white: 1, opacity: 0.06)
 
 // MARK: - Phase
 
 private enum WorkoutPhase {
-    case idle
-    case ready      // Mirrored plan received — waiting for user to tap READY
-    case countdown  // 3-2-1 countdown before recording starts
-    case active     // Workout is recording
+    case idle, ready, countdown, active, paused
 }
+
+// MARK: - HR Zone helpers
+
+private func hrZone(_ bpm: Int) -> Int {
+    if bpm < 115 { return 1 }
+    if bpm < 133 { return 2 }
+    if bpm < 152 { return 3 }
+    if bpm < 171 { return 4 }
+    return 5
+}
+
+private let zoneColors: [Color] = [
+    Color(hex:"#60A5FA"), Color(hex:"#4ADE80"),
+    Color(hex:"#FBBF24"), Color(hex:"#FB923C"), Color(hex:"#EF4444")
+]
 
 // MARK: - ActiveWorkoutView
 
@@ -21,23 +40,33 @@ struct ActiveWorkoutView: View {
     @State private var elapsedSeconds = 0
     @State private var heartRate = 0
     @State private var calories = 0
+    @State private var distanceKm = 0.0
     @State private var workoutName = ""
+    @State private var workoutColor = hiitOrange
+    @State private var workoutIcon = "bolt"
     @State private var ticker: Timer? = nil
     @State private var countdownValue = 3
+    @State private var page = 0    // 0=metrics, 1=HR zones, 2=controls
+
+    private let pageCount = 3
 
     var body: some View {
-        Group {
-            switch phase {
-            case .idle:      idleScreen
-            case .ready:     readyScreen
-            case .countdown: countdownScreen
-            case .active:    activeScreen
+        ZStack {
+            Color.black.ignoresSafeArea()
+            Group {
+                switch phase {
+                case .idle:      idleScreen
+                case .ready:     readyScreen
+                case .countdown: countdownScreen
+                case .active:    activeScreen
+                case .paused:    pausedScreen
+                }
             }
         }
         .onReceive(coordinator.$pendingWorkoutName) { name in
             guard let name else { return }
             if phase == .idle || phase == .ready {
-                workoutName = name
+                setActivity(name: name)
                 phase = .ready
             }
         }
@@ -47,55 +76,41 @@ struct ActiveWorkoutView: View {
 
     private var idleScreen: some View {
         VStack(spacing: 10) {
+            Spacer()
             ZStack {
-                Circle()
-                    .fill(hiitOrange.opacity(0.12))
-                    .frame(width: 56, height: 56)
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(hiitOrange)
+                Circle().fill(hiitOrange.opacity(0.12)).frame(width: 56, height: 56)
+                Image(systemName: "bolt.fill").font(.system(size: 24)).foregroundColor(hiitOrange)
             }
-            Text("Ready to Work")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.white)
-            Text("Start a workout\nfrom the iPhone")
-                .font(.system(size: 11))
-                .foregroundColor(.gray)
+            Text("Ready to Work").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+            Text("Start from\nthe iPhone app").font(.system(size: 11)).foregroundColor(dimText)
                 .multilineTextAlignment(.center)
+            Spacer()
         }
     }
 
-    // MARK: - Ready (mirrored plan received)
+    // MARK: - Ready (plan received from iPhone)
 
     private var readyScreen: some View {
-        VStack(spacing: 10) {
-            Text("🏋️")
-                .font(.system(size: 32))
-            Text(workoutName.isEmpty ? "WORKOUT" : workoutName.uppercased())
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white)
-                .tracking(1.2)
-                .lineLimit(1)
-            Text("Synced from iPhone")
-                .font(.system(size: 10))
-                .foregroundColor(.gray)
-
-            Spacer(minLength: 6)
-
+        VStack(spacing: 0) {
+            TopLabel("READY TO START", color: hiitOrange)
+            Spacer()
+            ZStack {
+                Circle().fill(workoutColor.opacity(0.18)).frame(width: 56, height: 56).blur(radius: 8)
+                Image(systemName: workoutIcon).font(.system(size: 26, weight: .medium)).foregroundColor(workoutColor)
+            }
+            .padding(.bottom, 6)
+            Text(workoutName.isEmpty ? "HIIT" : workoutName.uppercased())
+                .font(.system(size: 13, weight: .bold)).tracking(0.8).foregroundColor(.white)
+            Text("Synced from iPhone").font(.system(size: 10)).foregroundColor(dimText).padding(.bottom, 14)
+            Spacer()
             Button(action: startCountdown) {
                 Text("READY  →")
-                    .font(.system(size: 14, weight: .black))
-                    .tracking(1.2)
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(hiitOrange)
-                    .cornerRadius(22)
+                    .font(.system(size: 14, weight: .black)).tracking(1.2).foregroundColor(.black)
+                    .frame(maxWidth: .infinity).padding(.vertical, 10)
+                    .background(hiitOrange).cornerRadius(22)
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 6)
+            .buttonStyle(.plain).padding(.horizontal, 10).padding(.bottom, 10)
         }
-        .padding(.vertical, 10)
     }
 
     // MARK: - Countdown
@@ -103,76 +118,147 @@ struct ActiveWorkoutView: View {
     private var countdownScreen: some View {
         VStack {
             Spacer()
+            Text(workoutName.isEmpty ? "" : workoutName)
+                .font(.system(size: 11, weight: .semibold)).tracking(1).foregroundColor(workoutColor)
+                .padding(.bottom, 4)
             ZStack {
-                Circle()
-                    .stroke(hiitOrange.opacity(0.2), lineWidth: 4)
-                    .frame(width: 100, height: 100)
+                Circle().stroke(hiitOrange.opacity(0.2), lineWidth: 5).frame(width: 96, height: 96)
+                Circle().stroke(hiitOrange, lineWidth: 5).frame(width: 96, height: 96)
+                    .shadow(color: hiitOrange.opacity(0.6), radius: 8)
+                    .opacity(countdownValue > 0 ? 1 : 0)
                 Text(countdownValue > 0 ? "\(countdownValue)" : "GO!")
-                    .font(.system(size: countdownValue > 0 ? 64 : 36,
-                                  weight: .black,
-                                  design: .rounded))
+                    .font(.system(size: countdownValue > 0 ? 62 : 34, weight: .black, design: .rounded))
                     .foregroundColor(countdownValue > 0 ? .white : hiitOrange)
             }
+            Text("Get ready…").font(.system(size: 11)).foregroundColor(dimText).padding(.top, 8)
             Spacer()
         }
     }
 
-    // MARK: - Active
+    // MARK: - Active (3 pages)
 
     private var activeScreen: some View {
-        VStack(spacing: 0) {
-            Text(workoutName.isEmpty ? "ACTIVE" : workoutName.uppercased())
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(hiitOrange)
-                .tracking(1.2)
-                .lineLimit(1)
-                .padding(.top, 6)
-
-            Text(timeFormatted)
-                .font(.system(size: 44, weight: .black, design: .monospaced))
-                .foregroundColor(.white)
-                .padding(.vertical, 4)
-
-            HStack(spacing: 8) {
-                metricTile(value: heartRate > 0 ? "\(heartRate)" : "—",
-                           unit: "BPM", icon: "heart.fill", color: .red)
-                metricTile(value: calories > 0 ? "\(calories)" : "—",
-                           unit: "KCAL", icon: "flame.fill", color: hiitOrange)
-            }
-            .padding(.horizontal, 4)
-
-            Spacer()
-
-            Button(action: stopWorkout) {
-                HStack(spacing: 6) {
-                    Image(systemName: "stop.fill").font(.system(size: 11))
-                    Text("END").font(.system(size: 13, weight: .bold)).tracking(1)
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 9)
-                .background(Color.red.opacity(0.8))
-                .cornerRadius(20)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 8)
-            .padding(.bottom, 6)
+        TabView(selection: $page) {
+            metricsPage.tag(0)
+            hrZonePage.tag(1)
+            controlsPage.tag(2)
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .overlay(alignment: .bottom) {
+            PageDots(count: pageCount, current: page).padding(.bottom, 2)
         }
     }
 
-    private func metricTile(value: String, unit: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon).foregroundColor(color).font(.system(size: 13))
-            VStack(alignment: .leading, spacing: 0) {
-                Text(value).font(.system(size: 18, weight: .bold)).foregroundColor(.white)
-                Text(unit).font(.system(size: 8, weight: .medium)).foregroundColor(.gray)
+    // Page 1 — Main metrics
+    private var metricsPage: some View {
+        VStack(spacing: 0) {
+            // Sport header
+            HStack(spacing: 6) {
+                Image(systemName: workoutIcon).font(.system(size: 11)).foregroundColor(workoutColor)
+                Text(workoutName.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(1).foregroundColor(workoutColor)
+                Spacer()
+                Circle().fill(hiitRed).frame(width: 5, height: 5)
+                    .opacity(elapsedSeconds % 2 == 0 ? 1 : 0.3)
+            }
+            .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 4)
+
+            // Elapsed time — large
+            Text(timeFormatted(elapsedSeconds))
+                .font(.system(size: 50, weight: .black, design: .monospaced))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, 6)
+
+            // 2x2 metrics grid
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                MetricTile(value: heartRate > 0 ? "\(heartRate)" : "—", unit: "BPM",
+                           color: hiitRed, icon: "heart.fill")
+                MetricTile(value: String(format: "%.2f", distanceKm), unit: "KM",
+                           color: workoutColor, icon: "figure.run")
+                MetricTile(value: pace, unit: "/KM",
+                           color: .white, icon: "speedometer")
+                MetricTile(value: "\(calories)", unit: "CAL",
+                           color: hiitGold, icon: "flame.fill")
+            }
+            .padding(.horizontal, 8)
+        }
+    }
+
+    // Page 2 — HR Zones
+    private var hrZonePage: some View {
+        VStack(spacing: 4) {
+            let zone = hrZone(heartRate)
+            TopLabel("HEART · ZONE \(zone)", color: hiitRed)
+            Text(heartRate > 0 ? "\(heartRate)" : "—")
+                .font(.system(size: 64, weight: .black, design: .monospaced))
+                .foregroundColor(hiitRed).frame(maxWidth: .infinity)
+            Text("AVG \(avgHR) · MAX \(maxHR)")
+                .font(.system(size: 10)).foregroundColor(dimText).padding(.bottom, 6)
+
+            HStack(spacing: 4) {
+                ForEach(1...5, id: \.self) { z in
+                    Capsule()
+                        .fill(z == zone ? zoneColors[z - 1] : Color.white.opacity(0.12))
+                        .frame(height: z == zone ? 20 : 14)
+                        .shadow(color: z == zone ? zoneColors[z - 1].opacity(0.8) : .clear, radius: 4)
+                        .overlay(
+                            Text("Z\(z)").font(.system(size: 7, weight: .bold))
+                                .foregroundColor(z == zone ? .black : dimText)
+                        )
+                }
+            }
+            .padding(.horizontal, 12)
+        }
+    }
+
+    // Page 3 — Controls
+    private var controlsPage: some View {
+        VStack(spacing: 0) {
+            TopLabel("CONTROLS", color: dimText)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ControlButton(icon: "pause.fill", label: "Pause",  color: hiitYellow) { togglePause() }
+                ControlButton(icon: "stop.fill",  label: "End",    color: hiitRed)    { stopWorkout() }
+                ControlButton(icon: "lock.fill",  label: "Lock",   color: .white)     { }
+                ControlButton(icon: "arrow.triangle.2.circlepath", label: "Switch", color: hiitOrange) { }
+                ControlButton(icon: "flag.fill",  label: "Lap",    color: Color(hex:"#A78BFA")) { }
+                ControlButton(icon: "music.note", label: "Music",  color: Color(hex:"#60A5FA")) { }
+            }
+            .padding(.horizontal, 10).padding(.top, 4)
+        }
+    }
+
+    // MARK: - Paused
+
+    private var pausedScreen: some View {
+        ZStack {
+            RadialGradient(gradient: Gradient(colors: [hiitYellow.opacity(0.15), .clear]),
+                           center: .center, startRadius: 10, endRadius: 90).ignoresSafeArea()
+            VStack(spacing: 0) {
+                TopLabel("PAUSED · \(workoutName.uppercased())", color: hiitYellow)
+                Text(timeFormatted(elapsedSeconds))
+                    .font(.system(size: 40, weight: .black, design: .monospaced))
+                    .foregroundColor(hiitYellow).padding(.vertical, 4)
+                Text(String(format: "%.2f KM · %d CAL", distanceKm, calories))
+                    .font(.system(size: 11)).foregroundColor(dimText).padding(.bottom, 10)
+                HStack(spacing: 10) {
+                    Button(action: stopWorkout) {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 20)).foregroundColor(.white)
+                            .frame(width: 52, height: 52).background(hiitRed).cornerRadius(26)
+                            .shadow(color: hiitRed.opacity(0.4), radius: 6)
+                    }
+                    .buttonStyle(.plain)
+                    Button(action: togglePause) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 20)).foregroundColor(.black)
+                            .frame(width: 52, height: 52).background(hiitOrange).cornerRadius(26)
+                            .shadow(color: hiitOrange.opacity(0.5), radius: 6)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Text("Side button to resume").font(.system(size: 9)).foregroundColor(dimText2).padding(.top, 6)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .padding(.horizontal, 10)
-        .background(Color.white.opacity(0.07))
-        .cornerRadius(10)
     }
 
     // MARK: - Countdown logic
@@ -184,32 +270,30 @@ struct ActiveWorkoutView: View {
     }
 
     private func tick() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            if self.countdownValue > 0 {
-                self.countdownValue -= 1
-                self.tick()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            if countdownValue > 0 {
+                countdownValue -= 1
+                tick()
             } else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    self.beginWorkout()
-                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { beginWorkout() }
             }
         }
     }
 
     private func beginWorkout() {
-        let w = WatchWorkout(
-            id: UUID().uuidString,
-            name: workoutName.isEmpty ? "Workout" : workoutName,
-            durationMinutes: 60,
-            exercises: []
-        )
+        let w = WatchWorkout(id: UUID().uuidString, name: workoutName.isEmpty ? "Workout" : workoutName,
+                             durationMinutes: 60, exercises: [])
         coordinator.clearPending()
         WorkoutManager.shared.start(w)
         phase = .active
+        page = 0
         startTicker()
     }
 
-    // MARK: - Workout control
+    private func togglePause() {
+        phase = phase == .paused ? .active : .paused
+        if phase == .active { startTicker() } else { ticker?.invalidate(); ticker = nil }
+    }
 
     private func stopWorkout() {
         ticker?.invalidate(); ticker = nil
@@ -222,48 +306,103 @@ struct ActiveWorkoutView: View {
         elapsedSeconds = WorkoutManager.shared.elapsedSeconds
         ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             self.elapsedSeconds += 1
+            self.distanceKm += 0.002  // simulated until GPS bridge is wired
         }
     }
 
-    private var timeFormatted: String {
-        String(format: "%d:%02d", elapsedSeconds / 60, elapsedSeconds % 60)
+    private func setActivity(name: String) {
+        workoutName = name
+        if let act = WATCH_ACTIVITIES.first(where: { name.lowercased().contains($0.id) })
+                  ?? WATCH_ACTIVITIES.first(where: { name.lowercased() == $0.name.lowercased() }) {
+            workoutColor = act.color
+            workoutIcon  = act.icon
+        } else {
+            workoutColor = hiitOrange
+            workoutIcon  = "bolt"
+        }
     }
 
-    // MARK: - Lifecycle (called from wrapper)
+    // MARK: - Helpers
+
+    private var pace: String {
+        guard distanceKm > 0.05 else { return "—" }
+        let sPerKm = Double(elapsedSeconds) / distanceKm
+        return String(format: "%d:%02d", Int(sPerKm) / 60, Int(sPerKm) % 60)
+    }
+
+    @State private var maxHR = 0
+    @State private var totalHR = 0
+    @State private var hrSamples = 0
+    private var avgHR: Int { hrSamples > 0 ? totalHR / hrSamples : 0 }
+
+    // MARK: - Lifecycle
 
     func setup() {
-        if WorkoutManager.shared.isRunning {
-            phase = .active
-            startTicker()
-        } else if let name = coordinator.pendingWorkoutName {
-            workoutName = name
-            phase = .ready
-        }
+        if WorkoutManager.shared.isRunning { phase = .active; startTicker() }
+        else if let name = coordinator.pendingWorkoutName { setActivity(name: name); phase = .ready }
 
         WorkoutManager.shared.onStateChange = { running, name in
-            if running {
-                self.phase = .active
-                self.workoutName = name ?? ""
-                self.startTicker()
-            } else {
-                self.ticker?.invalidate(); self.ticker = nil
-                self.elapsedSeconds = 0; self.heartRate = 0; self.calories = 0
-                self.phase = self.coordinator.pendingWorkoutName != nil ? .ready : .idle
-            }
+            if running { self.phase = .active; if let n = name { self.setActivity(name: n) }; self.startTicker() }
+            else { self.ticker?.invalidate(); self.ticker = nil
+                   self.elapsedSeconds = 0; self.heartRate = 0; self.calories = 0; self.distanceKm = 0
+                   self.phase = self.coordinator.pendingWorkoutName != nil ? .ready : .idle }
         }
-        WorkoutManager.shared.onHeartRateUpdate = { self.heartRate = $0 }
-        WorkoutManager.shared.onCaloriesUpdate  = { self.calories = $0 }
+        WorkoutManager.shared.onHeartRateUpdate = { bpm in
+            self.heartRate = bpm
+            self.totalHR += bpm; self.hrSamples += 1
+            if bpm > self.maxHR { self.maxHR = bpm }
+        }
+        WorkoutManager.shared.onCaloriesUpdate = { self.calories = $0 }
     }
 
     func teardown() {
-        WorkoutManager.shared.onStateChange     = nil
+        WorkoutManager.shared.onStateChange = nil
         WorkoutManager.shared.onHeartRateUpdate = nil
-        WorkoutManager.shared.onCaloriesUpdate  = nil
+        WorkoutManager.shared.onCaloriesUpdate = nil
         ticker?.invalidate(); ticker = nil
     }
 }
 
-// MARK: - Wrapper
+// MARK: - Sub-views
+
+private struct MetricTile: View {
+    let value: String; let unit: String; let color: Color; let icon: String
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).foregroundColor(color).font(.system(size: 11))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(value).font(.system(size: 18, weight: .bold, design: .monospaced)).foregroundColor(.white)
+                Text(unit).font(.system(size: 8, weight: .medium)).foregroundColor(dimText)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 8).padding(.horizontal, 10)
+        .background(rowBg).cornerRadius(10)
+    }
+}
+
+private struct ControlButton: View {
+    let icon: String; let label: String; let color: Color; let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon).font(.system(size: 16)).foregroundColor(color)
+                Text(label).font(.system(size: 8, weight: .medium)).foregroundColor(dimText)
+            }
+            .frame(maxWidth: .infinity).padding(.vertical, 10)
+            .background(rowBg).cornerRadius(12)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private func timeFormatted(_ s: Int) -> String {
+    let h = s / 3600; let m = (s % 3600) / 60; let sec = s % 60
+    if h > 0 { return String(format: "%d:%02d:%02d", h, m, sec) }
+    return String(format: "%02d:%02d", m, sec)
+}
+
+// MARK: - Wrapper (preserves existing lifecycle pattern)
 
 struct ActiveWorkoutTab: View {
     var body: some View { ActiveWorkoutViewWrapper() }
@@ -271,7 +410,6 @@ struct ActiveWorkoutTab: View {
 
 private struct ActiveWorkoutViewWrapper: View {
     @State private var inner = ActiveWorkoutView()
-
     var body: some View {
         inner
             .onAppear  { inner.setup() }

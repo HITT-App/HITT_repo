@@ -1,7 +1,11 @@
 import SwiftUI
 import HealthKit
 
-private let hiitOrange = Color(red: 0.976, green: 0.451, blue: 0.086)
+private let hiitOrange = Color(red: 1,    green: 0.541, blue: 0.149)
+private let hiitRed    = Color(red: 1,    green: 0.271, blue: 0.227)
+private let hiitGold   = Color(red: 1,    green: 0.690, blue: 0.125)
+private let hiitGreen  = Color(red: 0.357, green: 0.890, blue: 0.627)
+private let dimText    = Color(white: 0.541)
 
 struct StatsView: View {
     @State private var steps = 0
@@ -12,106 +16,85 @@ struct StatsView: View {
 
     private let store = HKHealthStore()
 
+    // Steps target for ring progress
+    private let stepsGoal = 10_000
+    private var stepsProgress: Double { min(1.0, Double(steps) / Double(stepsGoal)) }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(spacing: 10) {
 
-                // Header
+                TopLabel("TODAY")
+
+                // Hero ring — steps
+                ZStack {
+                    Circle()
+                        .stroke(hiitGreen.opacity(0.15), lineWidth: 6)
+                        .frame(width: 72, height: 72)
+                    Circle()
+                        .trim(from: 0, to: stepsProgress)
+                        .stroke(hiitGreen, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .frame(width: 72, height: 72)
+                        .rotationEffect(.degrees(-90))
+                        .shadow(color: hiitGreen.opacity(0.5), radius: 4)
+                    Image(systemName: "figure.walk")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(hiitGreen)
+                }
+
+                VStack(spacing: 2) {
+                    Text(formatted(steps))
+                        .font(.system(size: 20, weight: .black, design: .monospaced))
+                        .foregroundColor(.white)
+                    Text("STEPS · \(Int(stepsProgress * 100))%")
+                        .font(.system(size: 9, weight: .semibold))
+                        .tracking(1)
+                        .foregroundColor(dimText)
+                }
+
+                // 3-column stats row
                 HStack(spacing: 6) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(hiitOrange)
-                        .frame(width: 4, height: 18)
-                    Text("TODAY")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(hiitOrange)
-                        .tracking(1.5)
-                    Spacer()
-                    if syncing {
-                        ProgressView()
-                            .scaleEffect(0.6)
-                            .accentColor(hiitOrange)
-                    }
+                    StatBox(value: heartRate > 0 ? "\(heartRate)" : "—",
+                            unit: "BPM", color: hiitRed, icon: "heart.fill")
+                    StatBox(value: calories > 0 ? "\(calories)" : "—",
+                            unit: "CAL", color: hiitOrange, icon: "flame.fill")
+                    StatBox(value: distanceKm > 0.01 ? String(format: "%.1f", distanceKm) : "—",
+                            unit: "KM", color: hiitGold, icon: "arrow.left.right")
                 }
-
-                // Stats card
-                VStack(spacing: 0) {
-                    statRow(icon: "figure.walk",     color: .green,   label: "Steps",
-                            value: steps > 0      ? formatted(steps)                  : "—")
-                    divider
-                    statRow(icon: "heart.fill",       color: .red,     label: "Heart Rate",
-                            value: heartRate > 0  ? "\(heartRate) bpm"                : "—")
-                    divider
-                    statRow(icon: "flame.fill",        color: hiitOrange, label: "Calories",
-                            value: calories > 0   ? "\(calories) kcal"                : "—")
-                    divider
-                    statRow(icon: "arrow.left.right",  color: .blue,   label: "Distance",
-                            value: distanceKm > 0 ? String(format: "%.2f km", distanceKm) : "—")
-                }
-                .background(Color.white.opacity(0.07))
-                .cornerRadius(12)
+                .padding(.horizontal, 8)
 
                 // Sync button
-                Button(action: { syncStats() }) {
-                    HStack(spacing: 6) {
+                Button(action: syncStats) {
+                    HStack(spacing: 5) {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10))
                             .rotationEffect(syncing ? .degrees(360) : .degrees(0))
                             .animation(syncing ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: syncing)
-                        Text("Sync Health Data")
-                            .font(.system(size: 12, weight: .medium))
+                        Text(syncing ? "Syncing…" : "Refresh")
+                            .font(.system(size: 11, weight: .medium))
                     }
-                    .foregroundColor(syncing ? .gray : hiitOrange)
+                    .foregroundColor(syncing ? dimText : hiitOrange)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
+                    .padding(.vertical, 8)
                     .background(hiitOrange.opacity(0.1))
                     .cornerRadius(20)
                 }
                 .buttonStyle(.plain)
                 .disabled(syncing)
+                .padding(.horizontal, 8)
             }
-            .padding(.horizontal, 8)
             .padding(.vertical, 4)
         }
         .onAppear { syncStats() }
     }
 
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.07))
-            .frame(height: 1)
-            .padding(.horizontal, 10)
-    }
-
-    private func statRow(icon: String, color: Color, label: String, value: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .font(.system(size: 14))
-                .frame(width: 20)
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundColor(.gray)
-            Spacer()
-            Text(value)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-    }
-
-    private func formatted(_ n: Int) -> String {
-        let fmt = NumberFormatter()
-        fmt.numberStyle = .decimal
-        return fmt.string(from: NSNumber(value: n)) ?? "\(n)"
-    }
+    // MARK: - Data
 
     private func syncStats() {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         syncing = true
         let start = Calendar.current.startOfDay(for: Date())
         let group = DispatchGroup()
-
         group.enter()
         querySum(.stepCount, unit: .count(), start: start) { steps = Int($0); group.leave() }
         group.enter()
@@ -120,7 +103,6 @@ struct StatsView: View {
         querySum(.distanceWalkingRunning, unit: HKUnit.meterUnit(with: .kilo), start: start) { distanceKm = $0; group.leave() }
         group.enter()
         queryLatest(.heartRate, unit: HKUnit.count().unitDivided(by: .minute())) { heartRate = Int($0); group.leave() }
-
         group.notify(queue: .main) { syncing = false }
     }
 
@@ -143,5 +125,23 @@ struct StatsView: View {
             let v = (samples?.first as? HKQuantitySample)?.quantity.doubleValue(for: unit) ?? 0
             DispatchQueue.main.async { completion(v) }
         })
+    }
+
+    private func formatted(_ n: Int) -> String {
+        let fmt = NumberFormatter(); fmt.numberStyle = .decimal
+        return fmt.string(from: NSNumber(value: n)) ?? "\(n)"
+    }
+}
+
+private struct StatBox: View {
+    let value: String; let unit: String; let color: Color; let icon: String
+    var body: some View {
+        VStack(spacing: 3) {
+            Image(systemName: icon).font(.system(size: 12)).foregroundColor(color)
+            Text(value).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundColor(.white)
+            Text(unit).font(.system(size: 7, weight: .semibold)).foregroundColor(dimText)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 8)
+        .background(Color.white.opacity(0.06)).cornerRadius(10)
     }
 }
