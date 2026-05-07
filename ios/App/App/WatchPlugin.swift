@@ -1,5 +1,6 @@
 import Capacitor
 import Foundation
+import HealthKit
 
 @objc(WatchPlugin)
 public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -15,6 +16,9 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     private var workoutEventListeners: [String: CAPPluginCall] = [:]
+    // iOS 26+: real HKWorkoutSession that triggers the Watch face prompt
+    private var mirrorSession: AnyObject?
+    private let hkStore = HKHealthStore()
 
     public override func load() {
         NotificationCenter.default.addObserver(
@@ -26,15 +30,12 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func isAvailable(_ call: CAPPluginCall) {
-        call.resolve([
-            "available": WatchBridge.shared.isReachable
-        ])
+        call.resolve(["available": WatchBridge.shared.isReachable])
     }
 
     @objc func sendWorkout(_ call: CAPPluginCall) {
         guard let workout = call.getObject("workout") else {
-            call.reject("Missing workout object")
-            return
+            call.reject("Missing workout object"); return
         }
         WatchBridge.shared.sendWorkout(workout)
         call.resolve()
@@ -47,8 +48,7 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func sendMessage(_ call: CAPPluginCall) {
         guard let message = call.getObject("message") else {
-            call.reject("Missing message")
-            return
+            call.reject("Missing message"); return
         }
         WatchBridge.shared.sendRawMessage(message)
         call.resolve()
@@ -59,21 +59,59 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
         notifyListeners("workoutEvent", data: event)
     }
 
-    // MARK: - Watch mirroring via WatchConnectivity
-    // Sends a message to the Watch app telling it to navigate to the Ready screen.
-    // When iOS 26 / watchOS 26 are public we can upgrade this to full HealthKit mirroring.
+    // MARK: - Watch mirroring
+    // iOS 26+: starts a real HKWorkoutSession which causes watchOS to show the
+    //          workout prompt on the Watch face and auto-launch the Watch app.
+    // Fallback: WCSession message navigates the Watch app if already open.
 
     @objc func startMirroredWorkout(_ call: CAPPluginCall) {
         let name = call.getString("workoutName") ?? "HIIT Workout"
         let type = call.getString("activityType") ?? "hiit"
+
+        // Always send WCSession message as fallback / supplement
         WatchBridge.shared.sendRawMessage([
             "mirrorWorkout": ["name": name, "activityType": type]
         ])
-        call.resolve(["mirroring": true])
+
+        if #available(iOS 26.0, *), HKHealthStore.isHealthDataAvailable() {
+            let config = HKWorkoutConfiguration()
+            config.activityType = Self.hkActivityType(for: type)
+            config.locationType = .indoor
+
+            hkStore.requestAuthorization(toShare: [HKObjectType.workoutType()], read: []) { [weak self] granted, _ in
+                guard granted, let self else {
+                    call.resolve(["mirroring": false]); return
+                }
+                do {
+                    let session = try HKWorkoutSession(healthStore: self.hkStore, configuration: config)
+                    self.mirrorSession = session
+                    session.startActivity(with: .now)
+                    call.resolve(["mirroring": true])
+                } catch {
+                    call.resolve(["mirroring": false])
+                }
+            }
+        } else {
+            call.resolve(["mirroring": false])
+        }
     }
 
     @objc func endMirroredWorkout(_ call: CAPPluginCall) {
         WatchBridge.shared.sendRawMessage(["clearMirrorWorkout": true])
+        if #available(iOS 26.0, *) {
+            (mirrorSession as? HKWorkoutSession)?.end()
+        }
+        mirrorSession = nil
         call.resolve()
+    }
+
+    private static func hkActivityType(for str: String) -> HKWorkoutActivityType {
+        switch str {
+        case "running":  return .running
+        case "cycling":  return .cycling
+        case "swimming": return .swimming
+        case "strength": return .traditionalStrengthTraining
+        default:         return .highIntensityIntervalTraining
+        }
     }
 }
