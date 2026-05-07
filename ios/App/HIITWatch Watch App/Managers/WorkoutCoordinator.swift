@@ -20,6 +20,10 @@ final class WorkoutCoordinator: NSObject, ObservableObject {
         }
     }
 
+    func navigateToRaceTab() {
+        DispatchQueue.main.async { self.activeTab = 2 }
+    }
+
     func clearPending() {
         DispatchQueue.main.async {
             self.pendingWorkoutName = nil

@@ -26,6 +26,10 @@ struct HIITWatchApp: App {
 
     init() {
         WatchSessionManager.shared.activate()
+        // If a triathlon plan was queued while the app was closed, go straight to Race tab
+        if WatchSessionManager.shared.triathlonPlan != nil {
+            WorkoutCoordinator.shared.navigateToRaceTab()
+        }
     }
 
     var body: some Scene {

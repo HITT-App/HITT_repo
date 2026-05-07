@@ -71,12 +71,13 @@ final class WatchSessionManager: NSObject {
             NotificationCenter.default.post(name: .watchWorkoutReceived, object: nil)
         }
 
-        // Triathlon plan
+        // Triathlon plan — also auto-navigate to the Race tab
         if let planData = message["triathlon"] as? [String: Any],
            let data = try? JSONSerialization.data(withJSONObject: planData),
            let decoded = try? JSONDecoder().decode(TriathlonPlan.self, from: data) {
             triathlonPlan = decoded
             NotificationCenter.default.post(name: .watchTriathlonReceived, object: decoded)
+            WorkoutCoordinator.shared.navigateToRaceTab()
         }
 
         // Mirror workout — iPhone started a workout, show Ready screen on Watch
