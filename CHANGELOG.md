@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-05-08] — Build 60: HealthKit foreground refresh + voice food logging
+
+- **HealthKit refreshes on every app open** — go for a run, open the app, and your activity is there immediately; data now refreshes whenever the app comes to the foreground (was a 24-hour cache)
+- **Voice food logging** — tell Jarvis what you ate and it logs it: "Ok HIIT, log I just ate an apple" identifies the food, estimates the calories and macros, picks the right meal slot from the time of day, and saves it to your nutrition tracker
+- **Multiple foods at once** — log several items in one message and they all get recorded
+- Coach responses are clean — the internal logging instructions are stripped before anything is shown or spoken
+
 ## [2026-05-08] — Build 59: Jarvis schedules real workouts + welcome greeting fix + Watch icon
 
 - **Jarvis builds your schedule automatically** — ask the coach for a plan and it now pulls real workouts from the library and saves them directly to your Schedule tab; no more being told to go add it yourself

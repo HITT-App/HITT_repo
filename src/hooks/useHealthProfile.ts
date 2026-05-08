@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -7,7 +8,7 @@ export type ActivityLevel = 'none' | 'light' | 'moderate' | 'active' | 'very_act
 
 const CACHE_KEY = 'hiit-health-profile';
 const CACHE_TS_KEY = 'hiit-health-profile-at';
-const CACHE_TTL_MS = 24 * 3600 * 1000;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — refresh when user returns from a workout
 const LEVEL_KEY = 'hiit-health-activity-level';
 
 function activityLevelFrom(weeklyAvg: number): ActivityLevel {
@@ -174,6 +175,16 @@ export function useHealthProfile() {
   }, [user]);
 
   useEffect(() => { buildProfile(); }, [buildProfile]);
+
+  // Refresh whenever the app comes back to the foreground — catches post-workout data
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let listener: { remove: () => void } | null = null;
+    App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) buildProfile();
+    }).then(l => { listener = l; });
+    return () => { listener?.remove(); };
+  }, [buildProfile]);
 
   return { profile, activityLevel, refreshProfile: () => buildProfile(true) };
 }

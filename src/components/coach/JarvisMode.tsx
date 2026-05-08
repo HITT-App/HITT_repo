@@ -203,6 +203,34 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     }));
   };
 
+  // Called when AI response contains one or more [LOG_FOOD:{...}] markers
+  const logFoodFromJarvis = async (items: {
+    name: string; category: string; calories: number;
+    protein: number; carbs: number; fat: number; fiber: number;
+  }[]) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId || !items.length) return;
+
+      await supabase.from('meal_logs').insert(
+        items.map(item => ({
+          user_id: userId,
+          custom_name: item.name,
+          category: item.category,
+          calories: Math.round(item.calories),
+          protein_grams: item.protein,
+          carbs_grams: item.carbs,
+          fat_grams: item.fat,
+          fiber_grams: item.fiber,
+          logged_at: new Date().toISOString(),
+        }))
+      );
+    } catch (err) {
+      console.error('[Jarvis] Food log failed:', err);
+    }
+  };
+
   // Called when AI response contains [SCHEDULE_PLAN:{...}]
   const createScheduleFromJarvis = async (params: {
     goal: string; daysPerWeek: number; selectedDays: number[]; sessionMinutes: number;
@@ -248,6 +276,17 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     } catch (err) {
       console.error('[Jarvis] Schedule creation failed:', err);
     }
+  };
+
+  // Strips action markers from text and returns clean display text + detected actions
+  const parseAIResponse = (raw: string) => {
+    const scheduleMatch = raw.match(/\[SCHEDULE_PLAN:({.*?})\]/s);
+    const foodMatches = [...raw.matchAll(/\[LOG_FOOD:({.*?})\]/gs)];
+    const displayText = raw
+      .replace(/\[SCHEDULE_PLAN:{.*?}\]/gs, '')
+      .replace(/\[LOG_FOOD:{.*?}\]/gs, '')
+      .trim();
+    return { displayText, scheduleMatch, foodMatches };
   };
 
   const streamAIResponse = async (
@@ -350,9 +389,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); }, abort.signal);
 
       if (full && !abort.signal.aborted) {
-        // Strip [SCHEDULE_PLAN:...] marker before saving/displaying/speaking
-        const scheduleMatch = full.match(/\[SCHEDULE_PLAN:({.*?})\]/s);
-        const displayText = full.replace(/\[SCHEDULE_PLAN:{.*?}\]/s, '').trim();
+        const { displayText, scheduleMatch, foodMatches } = parseAIResponse(full);
 
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
@@ -360,6 +397,9 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
 
         if (scheduleMatch) {
           try { createScheduleFromJarvis(JSON.parse(scheduleMatch[1])); } catch {}
+        }
+        if (foodMatches.length) {
+          try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
         }
       }
     } catch (err: unknown) {
@@ -395,9 +435,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       );
 
       if (full && !abort.signal.aborted) {
-        // Strip [SCHEDULE_PLAN:...] marker before saving/displaying/speaking
-        const scheduleMatch = full.match(/\[SCHEDULE_PLAN:({.*?})\]/s);
-        const displayText = full.replace(/\[SCHEDULE_PLAN:{.*?}\]/s, '').trim();
+        const { displayText, scheduleMatch, foodMatches } = parseAIResponse(full);
 
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         const withReply = [...updatedHistory, { role: 'assistant' as const, content: displayText }];
@@ -407,6 +445,9 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
 
         if (scheduleMatch) {
           try { createScheduleFromJarvis(JSON.parse(scheduleMatch[1])); } catch {}
+        }
+        if (foodMatches.length) {
+          try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
         }
       }
     } catch (err: unknown) {
@@ -557,7 +598,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           <div className="bg-secondary/40 rounded-2xl px-4 py-3">
             <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>
             <div className="text-sm text-foreground leading-relaxed space-y-2">
-              {formatResponse(response.replace(/\[SCHEDULE_PLAN:{.*?}\]/s, '').trim())}
+              {formatResponse(response.replace(/\[SCHEDULE_PLAN:{.*?}\]/gs, '').replace(/\[LOG_FOOD:{.*?}\]/gs, '').trim())}
             </div>
           </div>
         )}
