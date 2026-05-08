@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-08] — Build 61: Voice picker with preview + HIIT pronunciation fix
+
+- **Voice picker redesigned** — voices now appear as individual cards in Settings; tap Preview on any voice to hear a sample clip before choosing it
+- **Pronunciation fixed** — "HIIT" now sounds like "hit" everywhere the coach speaks; was being read aloud as individual letters "H I I T"
+
 ## [2026-05-08] — Build 60: HealthKit foreground refresh + voice food logging
 
 - **HealthKit refreshes on every app open** — go for a run, open the app, and your activity is there immediately; data now refreshes whenever the app comes to the foreground (was a 24-hour cache)

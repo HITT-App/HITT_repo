@@ -47,9 +47,11 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
     setIsPlaying(true);
     try {
       // Greeting includes Ok HIIT prompt if wake word is on
-      const text = wakeWordEnabled
-        ? `${greeting} ${userName}! Your coach is ready. Say Ok HIIT anytime to activate me.`
+      // "HIIT" reads as individual letters — replace with phonetic "hit" for TTS
+      const rawText = wakeWordEnabled
+        ? `${greeting} ${userName}! Your coach is ready. Say Ok hit anytime to activate me.`
         : `${greeting} ${userName}! Your coach is ready — tap the chat to get started.`;
+      const text = rawText;
 
       const cacheKey = `tts_cache_${text}`;
       let audioUrl: string;

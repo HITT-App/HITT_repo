@@ -481,7 +481,13 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({ text: text.substring(0, 500), voiceId }),
+          // Normalise acronyms that TTS reads as individual letters
+      const ttsText = text
+        .replace(/\bHIIT\b/g, 'hit')
+        .replace(/\bOk HIIT\b/gi, 'ok hit')
+        .replace(/\bOkay HIIT\b/gi, 'okay hit')
+        .substring(0, 500);
+      body: JSON.stringify({ text: ttsText, voiceId }),
         }
       );
 

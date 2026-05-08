@@ -6,10 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Settings, Bot, Cat, Ghost, Sparkles, Dumbbell, Upload, Smile, Zap, X } from 'lucide-react';
+import { ArrowLeft, Settings, Bot, Cat, Ghost, Sparkles, Dumbbell, Upload, Smile, Zap, X, Play, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // ElevenLabs voice IDs — stock voices available on all plans
 const VOICES = [
@@ -57,6 +57,7 @@ export default function ChatSettings() {
   const [assistantName, setAssistantName] = useState('HIIT');
   const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem('hiit-ai-voice-enabled') === 'true');
   const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb');
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
   const [selectedAvatar, setSelectedAvatar] = useState('bot');
   const [responseType, setResponseType] = useState('neutral');
   const [dataSharing, setDataSharing] = useState(true);
@@ -67,6 +68,40 @@ export default function ChatSettings() {
     localStorage.setItem('hiit-ai-voice-enabled', voiceEnabled ? 'true' : 'false');
     localStorage.setItem('hiit-ai-voice-id', selectedVoice);
     toast({ title: 'Settings saved', description: 'Your AI preferences have been updated.' });
+  };
+
+  const previewVoice = async (voiceId: string) => {
+    if (previewingVoice) return;
+    setPreviewingVoice(voiceId);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) { setPreviewingVoice(null); return; }
+
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          text: "Hey! Ready to crush today's workout? Let's go!",
+          voiceId,
+        }),
+      });
+
+      if (!res.ok) { setPreviewingVoice(null); return; }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => { URL.revokeObjectURL(url); setPreviewingVoice(null); };
+      audio.onerror = () => setPreviewingVoice(null);
+      await audio.play().catch(() => setPreviewingVoice(null));
+    } catch {
+      setPreviewingVoice(null);
+    }
   };
 
   const handleClearHistory = () => {
@@ -217,18 +252,38 @@ export default function ChatSettings() {
                   <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} />
                 </div>
                 {voiceEnabled && (
-                  <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {VOICES.map((voice) => (
-                        <SelectItem key={voice.id} value={voice.id}>
-                          {voice.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2 pt-1">
+                    {VOICES.map((voice) => (
+                      <div
+                        key={voice.id}
+                        onClick={() => setSelectedVoice(voice.id)}
+                        className={cn(
+                          'flex items-center justify-between px-3 py-2.5 rounded-xl border cursor-pointer transition-all',
+                          selectedVoice === voice.id
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border bg-secondary/40 hover:bg-secondary/70'
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          {selectedVoice === voice.id
+                            ? <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                            : <div className="w-3.5 h-3.5 shrink-0" />}
+                          <span className="text-sm font-medium">{voice.label}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 gap-1 text-xs text-muted-foreground hover:text-foreground shrink-0"
+                          onClick={(e) => { e.stopPropagation(); previewVoice(voice.id); }}
+                          disabled={previewingVoice !== null}
+                        >
+                          {previewingVoice === voice.id
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : <><Play className="w-3 h-3" />Preview</>}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
