@@ -1,5 +1,23 @@
 # HITT App Changelog
 
+## [2026-05-08] — Build 57: All 9 missing Watch screens + persistent Jarvis chat history
+
+- **Watch: Nothing scheduled** — redesigned open-day screen with Quick start (orange) and Mark as rest (purple moon) buttons
+- **Watch: Recovery day** — new screen with purple wind icon and coach-suggested activity
+- **Watch: Deliberate rest** — new screen with readiness score card showing sleep and HRV; Override button to pick a sport anyway
+- **Watch: Day type from iPhone** — the iPhone app can now tell the Watch which day state to show
+- **Watch: End workout confirm** — tapping End now shows a full confirmation screen with elapsed time, distance, calories; End & Save / Discard / Resume
+- **Watch: Switch activity** — Switch button opens the sport picker, then a from → to confirmation before switching
+- **Watch: Streak completion** — new post-workout screen for streak milestones with flame icon and week pill calendar
+- **Watch: Personal best completion** — new post-workout screen for PRs with green gradient, time, and improvement delta
+- **Watch: Race loaded** — triathlon tab now shows a pre-race overview (plan name + leg distances) before the race starts
+- **Watch: Race summary** — post-race screen upgraded with gold medal, total time, and per-leg time grid
+- **Jarvis: Persistent chat history** — voice coach chat is now preserved across sessions; reopening loads the last 40 messages
+- **Jarvis: Single conversation thread** — one permanent Jarvis conversation per user, history accumulates forever
+- **Jarvis: Welcome back greeting** — returning users get a brief personalised greeting referencing recent chat instead of a cold intro
+- **Jarvis: Streaming fix** — text no longer bleeds from one response into the next
+- **Home: Welcome greeting** — voice greeting on the home screen now always attempts to play on load
+
 ## [2026-05-05] — Build 45: AI coach speaks responses; voice selection; owner handoff docs updated
 
 - **AI coach now speaks** — after each AI response, the coach reads it aloud using ElevenLabs; enable in Chat Settings → Customize → AI Voice Responses

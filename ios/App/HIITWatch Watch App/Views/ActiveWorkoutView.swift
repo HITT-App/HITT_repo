@@ -10,10 +10,14 @@ private let dimText    = Color(white: 0.541)
 private let dimText2   = Color(white: 0.353)
 private let rowBg      = Color(white: 1, opacity: 0.06)
 
-// MARK: - Phase
+// MARK: - Phase & Overlay
 
 private enum WorkoutPhase {
     case idle, ready, countdown, active, paused
+}
+
+private enum WorkoutOverlay {
+    case none, endConfirm, switchPicker, switchConfirm, completion
 }
 
 // MARK: - HR Zone helpers
@@ -48,18 +52,32 @@ struct ActiveWorkoutView: View {
     @State private var countdownValue = 3
     @State private var page = 0    // 0=metrics, 1=HR zones, 2=controls
 
+    // Overlay states (EndConfirm, Switch, Completion sit on top of phase views)
+    @State private var overlay: WorkoutOverlay = .none
+    @State private var switchTarget: WatchActivity? = nil
+    @State private var completionElapsed = 0
+    @State private var completionCalories = 0
+
     private let pageCount = 3
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             Group {
-                switch phase {
-                case .idle:      idleScreen
-                case .ready:     readyScreen
-                case .countdown: countdownScreen
-                case .active:    activeScreen
-                case .paused:    pausedScreen
+                // Overlays take precedence over phase views
+                switch overlay {
+                case .endConfirm:    endConfirmScreen
+                case .switchPicker:  switchPickerView
+                case .switchConfirm: switchConfirmScreen
+                case .completion:    completionScreen
+                case .none:
+                    switch phase {
+                    case .idle:      idleScreen
+                    case .ready:     readyScreen
+                    case .countdown: countdownScreen
+                    case .active:    activeScreen
+                    case .paused:    pausedScreen
+                    }
                 }
             }
         }
@@ -70,6 +88,143 @@ struct ActiveWorkoutView: View {
                 phase = .ready
             }
         }
+    }
+
+    // MARK: - End confirm screen
+
+    private var endConfirmScreen: some View {
+        VStack(spacing: 0) {
+            TopLabel("END WORKOUT?", color: hiitRed)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(timeFormatted(elapsedSeconds))
+                    .font(.system(size: 50, weight: .black, design: .monospaced))
+                    .foregroundColor(.white).lineLimit(1).minimumScaleFactor(0.7)
+                Text(String(format: "%.2f KM · %d CAL", distanceKm, calories))
+                    .font(.system(size: 11, weight: .semibold)).tracking(1.2).foregroundColor(dimText)
+                    .padding(.top, 2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14).padding(.top, 8)
+
+            Spacer(minLength: 4)
+
+            VStack(spacing: 7) {
+                Button(action: { confirmEnd(save: true) }) {
+                    Text("End & Save")
+                        .font(.system(size: 15, weight: .bold)).foregroundColor(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 11)
+                        .background(hiitRed).cornerRadius(20)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: { confirmEnd(save: false) }) {
+                    Text("Discard")
+                        .font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 9)
+                        .background(Color.white.opacity(0.08)).cornerRadius(18)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: { overlay = .none }) {
+                    Text("Resume")
+                        .font(.system(size: 12)).foregroundColor(dimText)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 14).padding(.bottom, 14)
+        }
+    }
+
+    // MARK: - Switch activity picker
+
+    private var switchPickerView: some View {
+        ActivityPickerView(
+            onSelect: { activity in
+                switchTarget = activity
+                overlay = .switchConfirm
+            },
+            onCancel: { overlay = .none }
+        )
+    }
+
+    // MARK: - Switch activity confirm
+
+    private var switchConfirmScreen: some View {
+        let fromActivity = WATCH_ACTIVITIES.first {
+            workoutName.lowercased().contains($0.id) || workoutName.lowercased() == $0.name.lowercased()
+        }
+        let toActivity = switchTarget
+
+        return VStack(spacing: 0) {
+            TopLabel("SWITCH ACTIVITY", color: dimText)
+
+            HStack(spacing: 16) {
+                // From (dim)
+                VStack(spacing: 6) {
+                    ZStack {
+                        Circle().fill(Color.white.opacity(0.06)).frame(width: 56, height: 56)
+                        Image(systemName: fromActivity?.icon ?? "bolt")
+                            .font(.system(size: 24)).foregroundColor(fromActivity?.color ?? hiitOrange)
+                    }
+                    Text(fromActivity?.name ?? workoutName)
+                        .font(.system(size: 11)).foregroundColor(dimText)
+                }
+                .opacity(0.5)
+
+                Image(systemName: "chevron.right").foregroundColor(hiitOrange).font(.system(size: 16))
+
+                // To (bright)
+                VStack(spacing: 6) {
+                    ZStack {
+                        Circle().fill(hiitOrange.opacity(0.15)).frame(width: 68, height: 68)
+                            .shadow(color: hiitOrange.opacity(0.3), radius: 8)
+                        Image(systemName: toActivity?.icon ?? "bolt")
+                            .font(.system(size: 28)).foregroundColor(toActivity?.color ?? hiitOrange)
+                    }
+                    Text(toActivity?.name ?? "").font(.system(size: 13, weight: .bold)).foregroundColor(.white)
+                }
+            }
+            .padding(.top, 12)
+
+            Text("Time keeps running.\nNew activity logs separately.")
+                .font(.system(size: 11)).foregroundColor(dimText)
+                .multilineTextAlignment(.center).padding(.horizontal, 16).padding(.top, 10)
+
+            Spacer(minLength: 4)
+
+            HStack(spacing: 8) {
+                Button(action: { overlay = .none }) {
+                    Text("Cancel")
+                        .font(.system(size: 12)).foregroundColor(dimText)
+                        .frame(maxWidth: .infinity).padding(.vertical, 9)
+                        .background(Color.white.opacity(0.08)).cornerRadius(18)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: {
+                    if let to = switchTarget { confirmSwitch(to: to) }
+                }) {
+                    Text("Switch")
+                        .font(.system(size: 13, weight: .bold)).foregroundColor(.black)
+                        .frame(maxWidth: .infinity).padding(.vertical, 9)
+                        .background(hiitOrange).cornerRadius(18)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12).padding(.bottom, 14)
+        }
+    }
+
+    // MARK: - Completion screen
+
+    private var completionScreen: some View {
+        CompletionView(
+            variant: .celebrate(elapsedSeconds: completionElapsed, calories: completionCalories, workoutName: workoutName),
+            onDone: {
+                overlay = .none
+                phase = .idle
+            }
+        )
     }
 
     // MARK: - Idle
@@ -218,9 +373,9 @@ struct ActiveWorkoutView: View {
             TopLabel("CONTROLS", color: dimText)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ControlButton(icon: "pause.fill", label: "Pause",  color: hiitYellow) { togglePause() }
-                ControlButton(icon: "stop.fill",  label: "End",    color: hiitRed)    { stopWorkout() }
+                ControlButton(icon: "stop.fill",  label: "End",    color: hiitRed)    { overlay = .endConfirm }
                 ControlButton(icon: "lock.fill",  label: "Lock",   color: .white)     { }
-                ControlButton(icon: "arrow.triangle.2.circlepath", label: "Switch", color: hiitOrange) { }
+                ControlButton(icon: "arrow.triangle.2.circlepath", label: "Switch", color: hiitOrange) { overlay = .switchPicker }
                 ControlButton(icon: "flag.fill",  label: "Lap",    color: Color(hex:"#A78BFA")) { }
                 ControlButton(icon: "music.note", label: "Music",  color: Color(hex:"#60A5FA")) { }
             }
@@ -242,7 +397,7 @@ struct ActiveWorkoutView: View {
                 Text(String(format: "%.2f KM · %d CAL", distanceKm, calories))
                     .font(.system(size: 11)).foregroundColor(dimText).padding(.bottom, 10)
                 HStack(spacing: 10) {
-                    Button(action: stopWorkout) {
+                    Button(action: { overlay = .endConfirm }) {
                         Image(systemName: "stop.fill")
                             .font(.system(size: 20)).foregroundColor(.white)
                             .frame(width: 52, height: 52).background(hiitRed).cornerRadius(26)
@@ -300,6 +455,27 @@ struct ActiveWorkoutView: View {
         ticker?.invalidate(); ticker = nil
         WorkoutManager.shared.end()
         phase = .idle
+    }
+
+    private func confirmEnd(save: Bool) {
+        if save {
+            completionElapsed = elapsedSeconds
+            completionCalories = calories
+        }
+        ticker?.invalidate(); ticker = nil
+        WorkoutManager.shared.end()
+        elapsedSeconds = 0; heartRate = 0; calories = 0; distanceKm = 0
+        maxHR = 0; totalHR = 0; hrSamples = 0
+        phase = .idle
+        overlay = save ? .completion : .none
+    }
+
+    private func confirmSwitch(to activity: WatchActivity) {
+        // End current segment without full reset, start new activity
+        setActivity(name: activity.name)
+        overlay = .none
+        switchTarget = nil
+        // The ticker keeps running — WorkoutManager stays active
     }
 
     private func startTicker() {

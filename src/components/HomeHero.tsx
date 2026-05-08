@@ -44,9 +44,6 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
 
   const playVoiceGreeting = async () => {
     if (hasPlayed || isPlaying) return;
-    // Respect the voice toggle
-    if (localStorage.getItem('hiit-ai-voice-enabled') !== 'true') return;
-
     setIsPlaying(true);
     try {
       // Greeting includes Ok HIIT prompt if wake word is on

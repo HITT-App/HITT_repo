@@ -1,14 +1,22 @@
 import SwiftUI
 
-private let hiitOrange = Color(red: 0.976, green: 0.451, blue: 0.086)
-private let legIcons  = ["🌊", "🚴", "🏃"]
-private let legLabels = ["SWIM", "BIKE", "RUN"]
-private let legColors: [Color] = [.blue, Color(red: 0, green: 0.8, blue: 1.0), .green]
+private let hiitOrange = Color(red: 1,     green: 0.541, blue: 0.149)
+private let hiitGold   = Color(red: 1,     green: 0.752, blue: 0.180)
+private let hiitGreen  = Color(red: 0.357, green: 0.890, blue: 0.627)
+private let swimBlue   = Color(red: 0.353, green: 0.784, blue: 0.980)
+private let dimText    = Color(white: 0.541)
+private let dimText2   = Color(white: 0.35)
+
+private let legIcons:  [String] = ["wave.3.right", "bicycle", "figure.run"]
+private let legLabels: [String] = ["SWIM", "BIKE", "RUN"]
+private let legColors: [Color]  = [swimBlue, hiitGreen, hiitGold]
+private let legEmoji:  [String] = ["🌊", "🚴", "🏃"]
 
 struct TriathlonView: View {
     @State private var plan: TriathlonPlan? = nil
     @State private var currentLeg: Int = 0
     @State private var legState: LegState = .idle
+    @State private var raceStarted = false
     @State private var elapsed: [Int]   = [0, 0, 0]
     @State private var distKm: [Double] = [0, 0, 0]
     @State private var heartRate: Int   = 0
@@ -18,9 +26,13 @@ struct TriathlonView: View {
 
     var body: some View {
         if raceFinished {
-            finishedScreen
+            raceSummaryScreen
         } else if let p = plan {
-            raceScreen(p)
+            if raceStarted {
+                raceScreen(p)
+            } else {
+                raceLoadedScreen(p)
+            }
         } else {
             noPlanScreen
         }
@@ -30,19 +42,72 @@ struct TriathlonView: View {
 
     private var noPlanScreen: some View {
         VStack(spacing: 10) {
-            Text("🏅").font(.system(size: 32))
+            Image(systemName: "medal.fill").font(.system(size: 32)).foregroundColor(hiitGold)
             Text("No Race Loaded")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.white)
+                .font(.system(size: 14, weight: .bold)).foregroundColor(.white)
             Text("Set up your race\nin the HIIT app")
-                .font(.system(size: 11))
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
+                .font(.system(size: 11)).foregroundColor(dimText).multilineTextAlignment(.center)
         }
         .onAppear {
-            if let p = WatchSessionManager.shared.triathlonPlan {
-                loadPlan(p)
+            if let p = WatchSessionManager.shared.triathlonPlan { loadPlan(p) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .watchTriathlonReceived)) { note in
+            if let p = note.object as? TriathlonPlan { loadPlan(p) }
+        }
+    }
+
+    // MARK: - Race loaded (pre-start overview)
+
+    private func raceLoadedScreen(_ p: TriathlonPlan) -> some View {
+        let legDefs: [(icon: String, color: Color, label: String, km: Double)] = zip(p.legs, zip(legIcons, zip(legColors, legLabels))).map {
+            leg, rest in (icon: rest.0, color: rest.1.0, label: rest.1.1, km: leg.targetKm)
+        }
+
+        return VStack(spacing: 0) {
+            TopLabel("RACE READY", color: hiitGold)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(p.name)
+                    .font(.system(size: 24, weight: .black)).foregroundColor(.white).lineLimit(1).minimumScaleFactor(0.8)
+                Text("Tap Start when you're ready")
+                    .font(.system(size: 11)).foregroundColor(dimText).padding(.top, 2)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14).padding(.top, 6)
+
+            VStack(spacing: 7) {
+                ForEach(0..<legDefs.count, id: \.self) { i in
+                    let leg = legDefs[i]
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle().fill(Color.white.opacity(0.06)).frame(width: 30, height: 30)
+                            Image(systemName: leg.icon).font(.system(size: 14)).foregroundColor(leg.color)
+                        }
+                        Text(leg.label)
+                            .font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
+                        Spacer()
+                        HStack(alignment: .lastTextBaseline, spacing: 2) {
+                            Text(String(format: leg.km >= 10 ? "%.0f" : "%.1f", leg.km))
+                                .font(.system(size: 18, weight: .black)).foregroundColor(.white)
+                            Text("km").font(.system(size: 11)).foregroundColor(dimText)
+                        }
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 9)
+                    .background(Color.white.opacity(0.05)).cornerRadius(12)
+                }
+            }
+            .padding(.horizontal, 12).padding(.top, 12)
+
+            Spacer(minLength: 4)
+
+            Button(action: { raceStarted = true }) {
+                Text("Start Race")
+                    .font(.system(size: 14, weight: .black))
+                    .foregroundColor(Color(red: 0.1, green: 0.08, blue: 0.0))
+                    .frame(maxWidth: .infinity).padding(.vertical, 11)
+                    .background(hiitGold).cornerRadius(22)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 14).padding(.bottom, 14)
         }
         .onReceive(NotificationCenter.default.publisher(for: .watchTriathlonReceived)) { note in
             if let p = note.object as? TriathlonPlan { loadPlan(p) }
@@ -61,7 +126,7 @@ struct TriathlonView: View {
                 HStack(spacing: 8) {
                     ForEach(0..<p.legs.count, id: \.self) { i in
                         VStack(spacing: 2) {
-                            Text(legIcons[i]).font(.system(size: 14))
+                            Image(systemName: legIcons[i]).font(.system(size: 13)).foregroundColor(legColors[i])
                             Circle()
                                 .fill(i < currentLeg  ? legColors[i] :
                                       i == currentLeg ? hiitOrange : Color.gray.opacity(0.3))
@@ -147,7 +212,7 @@ struct TriathlonView: View {
         case .idle:
             Button(action: { startLeg(p) }) {
                 HStack(spacing: 6) {
-                    Text(legIcons[currentLeg])
+                    Image(systemName: legIcons[currentLeg]).font(.system(size: 12))
                     Text("NOW \(legLabels[currentLeg])")
                         .font(.system(size: 12, weight: .bold)).tracking(0.8)
                 }
@@ -195,41 +260,65 @@ struct TriathlonView: View {
         }
     }
 
-    // MARK: - Finished screen
+    // MARK: - Race summary screen
 
-    private var finishedScreen: some View {
-        VStack(spacing: 8) {
-            Text("🏅").font(.system(size: 36))
-            Text("RACE COMPLETE")
-                .font(.system(size: 13, weight: .black))
-                .foregroundColor(hiitOrange).tracking(1.5)
-            Text(fmtTime(elapsed.reduce(0, +)))
-                .font(.system(size: 28, weight: .black, design: .monospaced))
-                .foregroundColor(.white)
-            Text("Total time").font(.system(size: 10)).foregroundColor(.gray)
-            ForEach(0..<elapsed.count, id: \.self) { i in
-                HStack {
-                    Text(legIcons[i]).font(.system(size: 12))
-                    Text(legLabels[i]).font(.system(size: 11)).foregroundColor(.gray)
-                    Spacer()
-                    Text(fmtTime(elapsed[i]))
-                        .font(.system(size: 11, design: .monospaced)).foregroundColor(.white)
-                    Text(String(format: "%.2fkm", distKm[i]))
-                        .font(.system(size: 10)).foregroundColor(hiitOrange)
+    private var raceSummaryScreen: some View {
+        VStack(spacing: 0) {
+            TopLabel("FINISHED", color: hiitGold)
+
+            VStack(spacing: 4) {
+                Image(systemName: "medal.fill")
+                    .font(.system(size: 48)).foregroundColor(hiitGold)
+                    .shadow(color: hiitGold.opacity(0.4), radius: 8)
+                    .padding(.top, 8)
+                Text(fmtTime(elapsed.reduce(0, +)))
+                    .font(.system(size: 34, weight: .black, design: .monospaced))
+                    .foregroundColor(.white)
+                Text("Total time").font(.system(size: 10)).foregroundColor(dimText)
+            }
+
+            // Per-leg grid
+            HStack(spacing: 5) {
+                ForEach(0..<min(elapsed.count, 3), id: \.self) { i in
+                    VStack(spacing: 3) {
+                        Text(fmtTime(elapsed[i]))
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundColor(legColors[i])
+                        Text(legLabels[i])
+                            .font(.system(size: 7, weight: .bold)).tracking(1).foregroundColor(dimText2)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(Color.white.opacity(0.05))
+                    .cornerRadius(8)
                 }
             }
+            .padding(.horizontal, 12).padding(.top, 14)
+
+            Spacer(minLength: 4)
+
+            Button(action: { raceFinished = false; plan = nil }) {
+                Text("Save")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(Color(red: 0.1, green: 0.08, blue: 0.0))
+                    .frame(maxWidth: .infinity).padding(.vertical, 11)
+                    .background(hiitGold).cornerRadius(20)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 14).padding(.bottom, 14)
         }
-        .padding()
     }
 
     // MARK: - Race control
 
     private func loadPlan(_ p: TriathlonPlan) {
         plan = p
-        elapsed  = Array(repeating: 0,   count: p.legs.count)
-        distKm   = Array(repeating: 0.0, count: p.legs.count)
+        elapsed    = Array(repeating: 0,   count: p.legs.count)
+        distKm     = Array(repeating: 0.0, count: p.legs.count)
         currentLeg = 0
-        legState = .idle
+        legState   = .idle
+        raceStarted = false
+        raceFinished = false
     }
 
     private func startLeg(_ p: TriathlonPlan) {

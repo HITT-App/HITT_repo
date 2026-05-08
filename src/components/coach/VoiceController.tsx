@@ -16,33 +16,28 @@ export function VoiceController() {
   const [showJarvisMode, setShowJarvisMode] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
-  // Create or get conversation for Jarvis Mode
+  // Always use one permanent "Jarvis" conversation per user so history persists
   const getOrCreateConversation = useCallback(async () => {
     if (!user) return null;
 
     try {
-      // Try to get the most recent conversation
       const { data: existing } = await supabase
         .from('conversations')
         .select('id')
         .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
+        .eq('title', 'Jarvis')
+        .maybeSingle();
 
-      if (existing) {
-        return existing.id;
-      }
+      if (existing) return existing.id;
 
-      // Create a new conversation
       const { data: newConvo, error } = await supabase
         .from('conversations')
-        .insert({ user_id: user.id, title: 'Voice Conversation' })
+        .insert({ user_id: user.id, title: 'Jarvis' })
         .select('id')
         .single();
 
       if (error) throw error;
-      return newConvo?.id || null;
+      return newConvo?.id ?? null;
     } catch (error) {
       console.error('Failed to get/create conversation:', error);
       return null;

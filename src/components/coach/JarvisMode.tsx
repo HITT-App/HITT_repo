@@ -68,6 +68,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState('');
@@ -129,8 +130,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       });
 
       setIsListening(true);
-      setTranscript('');
-      setResponse('');
+      setTranscript(''); // clear current in-progress transcript only, not history
 
       // Start visualizer
       try {
@@ -214,29 +214,59 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     return full;
   };
 
-  // Fires on mount — AI greets the user based on their biometric data
-  const triggerGreeting = useCallback(async () => {
-    setIsProcessing(true);
+  // Loads the last 40 messages from Supabase for this conversation
+  const loadHistory = useCallback(async (): Promise<ConversationMessage[]> => {
     try {
-      const greetingPrompt = healthProfile?.trim()
-        ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: tell me I can say "Ok HIIT" anytime to activate you, and ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
-        : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach and say you're excited to get to know me. Second: tell me I can say "Ok HIIT" anytime to activate you and ask what I want to work on today.`;
+      const { data } = await supabase
+        .from('messages')
+        .select('role, content, created_at')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+        .limit(40);
+
+      if (!data || data.length === 0) return [];
+
+      const history: ConversationMessage[] = data.map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
+      setConversationHistory(history);
+      return history;
+    } catch {
+      return [];
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [conversationId]);
+
+  // Greets on open. If there's prior history, gives a brief welcome back using that context.
+  const triggerGreeting = useCallback(async (loadedHistory: ConversationMessage[]) => {
+    setIsProcessing(true);
+    setResponse('');
+    const hasHistory = loadedHistory.length > 0;
+    try {
+      const greetingPrompt = hasHistory
+        ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
+        : healthProfile?.trim()
+          ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
+          : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
+
+      // Pass full history so AI has session context when welcoming back
+      const messagesForAI = [
+        ...loadedHistory.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: greetingPrompt },
+      ];
 
       let full = '';
-      await streamAIResponse(
-        [{ role: 'user', content: greetingPrompt }],
-        delta => { full += delta; setResponse(r => r + delta); }
-      );
+      await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); });
 
       if (full) {
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: full });
-        setConversationHistory([{ role: 'assistant', content: full }]);
+        setConversationHistory(prev => [...prev, { role: 'assistant', content: full }]);
         if (!isMuted) await speakResponse(full);
-        // Don't auto-start listening — user taps the mic button when ready
       }
     } catch (err) {
       console.error('Greeting error:', err);
-      // Don't auto-start listening on error
     } finally {
       setIsProcessing(false);
     }
@@ -245,6 +275,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   const handleUserMessage = async (text: string) => {
     stopListening();
     setIsProcessing(true);
+    setResponse(''); // reset streaming buffer for this new response
 
     const updatedHistory = [...conversationHistory, { role: 'user' as const, content: text }];
     setConversationHistory(updatedHistory);
@@ -335,23 +366,28 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
 
   useEffect(() => {
     responseEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [response, transcript]);
+  }, [response, transcript, conversationHistory]);
 
   useEffect(() => {
-    // Trigger contextual greeting on open; greeting speaks then auto-starts listening.
-    // Falls back to listening directly if greeting fails.
-    const timer = setTimeout(() => {
-      triggerGreeting();
-    }, 400);
+    let cancelled = false;
+
+    const init = async () => {
+      const history = await loadHistory();
+      if (cancelled) return;
+      // Brief pause so the UI renders before greeting starts
+      await new Promise(r => setTimeout(r, 400));
+      if (cancelled) return;
+      triggerGreeting(history);
+    };
+
+    init();
 
     return () => {
-      clearTimeout(timer);
+      cancelled = true;
       stopListening();
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
-      }
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     // z-[100] sits above bottom nav (z-50) and all other overlays
@@ -374,24 +410,35 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         </div>
       </div>
 
-      {/* Scrollable conversation area */}
+      {/* Scrollable conversation — full history */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {/* Visualizer — compact bar, only visible while speaking/listening */}
-        {(isListening || isSpeaking) && (
-          <div className="flex items-center justify-center gap-0.5 h-8 mb-2">
-            {visualizerData.map((value, i) => (
-              <div
-                key={i}
-                className={cn("w-0.5 rounded-full transition-all duration-75",
-                  isListening ? "bg-primary" : "bg-accent")}
-                style={{ height: `${Math.max(3, (value / 255) * 28)}px` }}
-              />
-            ))}
+
+        {/* Loading history indicator */}
+        {isLoadingHistory && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 text-primary animate-spin" />
           </div>
         )}
 
-        {/* AI response — formatted */}
-        {response && (
+        {/* Persisted conversation history */}
+        {conversationHistory.map((msg, i) => (
+          msg.role === 'assistant' ? (
+            <div key={i} className="bg-secondary/40 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>
+              <div className="text-sm text-foreground leading-relaxed space-y-2">
+                {formatResponse(msg.content)}
+              </div>
+            </div>
+          ) : (
+            <div key={i} className="bg-primary/10 rounded-2xl px-4 py-3 ml-8">
+              <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-1 uppercase">You</p>
+              <p className="text-sm text-foreground">{msg.content}</p>
+            </div>
+          )
+        ))}
+
+        {/* Streaming response (in progress) */}
+        {isProcessing && response && (
           <div className="bg-secondary/40 rounded-2xl px-4 py-3">
             <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>
             <div className="text-sm text-foreground leading-relaxed space-y-2">
@@ -400,7 +447,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           </div>
         )}
 
-        {/* Processing indicator */}
+        {/* Processing indicator (before first token arrives) */}
         {isProcessing && !response && (
           <div className="flex items-center gap-2 px-4 py-3 bg-secondary/40 rounded-2xl">
             <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
@@ -408,11 +455,24 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           </div>
         )}
 
-        {/* User transcript */}
-        {transcript && (
-          <div className="bg-primary/10 rounded-2xl px-4 py-3 ml-8">
+        {/* Current in-progress transcript (while mic is active) */}
+        {isListening && transcript && (
+          <div className="bg-primary/10 rounded-2xl px-4 py-3 ml-8 opacity-70">
             <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-1 uppercase">You</p>
-            <p className="text-sm text-foreground">{transcript}</p>
+            <p className="text-sm text-foreground italic">{transcript}</p>
+          </div>
+        )}
+
+        {/* Visualizer — only while speaking/listening */}
+        {(isListening || isSpeaking) && (
+          <div className="flex items-center justify-center gap-0.5 h-6">
+            {visualizerData.map((value, i) => (
+              <div key={i}
+                className={cn("w-0.5 rounded-full transition-all duration-75",
+                  isListening ? "bg-primary" : "bg-accent")}
+                style={{ height: `${Math.max(3, (value / 255) * 22)}px` }}
+              />
+            ))}
           </div>
         )}
 

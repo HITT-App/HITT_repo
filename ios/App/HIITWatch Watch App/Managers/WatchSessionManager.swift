@@ -35,9 +35,12 @@ struct TriathlonLegDef: Codable {
     let targetKm: Double
 }
 
+enum WatchDayType: String { case open, recovery, rest }
+
 extension Notification.Name {
     static let watchWorkoutReceived    = Notification.Name("hiit.watchWorkoutReceived")
     static let watchTriathlonReceived  = Notification.Name("hiit.watchTriathlonReceived")
+    static let watchDayTypeChanged     = Notification.Name("hiit.watchDayTypeChanged")
 }
 
 // MARK: - WatchSessionManager
@@ -47,6 +50,7 @@ final class WatchSessionManager: NSObject {
 
     private(set) var todayWorkout: WatchWorkout?
     private(set) var triathlonPlan: TriathlonPlan?
+    private(set) var todayDayType: WatchDayType = .open
 
     private override init() { super.init() }
 
@@ -78,6 +82,12 @@ final class WatchSessionManager: NSObject {
             triathlonPlan = decoded
             NotificationCenter.default.post(name: .watchTriathlonReceived, object: decoded)
             WorkoutCoordinator.shared.navigateToRaceTab()
+        }
+
+        // Day type (open / recovery / rest)
+        if let t = message["dayType"] as? String, let dt = WatchDayType(rawValue: t) {
+            todayDayType = dt
+            NotificationCenter.default.post(name: .watchDayTypeChanged, object: dt)
         }
 
         // Mirror workout — iPhone started a workout, show Ready screen on Watch
