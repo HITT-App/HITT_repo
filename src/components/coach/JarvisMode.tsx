@@ -82,6 +82,17 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const responseEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Fix #2: AbortController kills stale streams before new ones start
+  const streamAbortRef = useRef<AbortController>();
+  // Fix #8: Ref mirrors conversationHistory so handleUserMessage never reads a stale closure
+  const historyRef = useRef<ConversationMessage[]>([]);
+  // Fix #6: Ref mirrors isMuted so closures captured before a toggle still see the current value
+  const isMutedRef = useRef(isMuted);
+
+  // Keep refs in sync with state on every render
+  isMutedRef.current = isMuted;
+  historyRef.current = conversationHistory;
+
   // ElevenLabs Scribe hook for real-time transcription
   const scribe = useScribe({
     modelId: 'scribe_v2_realtime',
@@ -95,10 +106,10 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     },
     onCommittedTranscript: async (data) => {
       const finalTranscript = data.text.trim();
-      if (finalTranscript) {
-        setTranscript(finalTranscript);
-        await handleUserMessage(finalTranscript);
-      }
+      // Fix #3: skip if already processing — prevents Scribe double-fire from creating duplicate messages
+      if (!finalTranscript || isProcessing) return;
+      setTranscript(finalTranscript);
+      await handleUserMessage(finalTranscript);
     },
   });
 
@@ -169,13 +180,15 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
 
   const streamAIResponse = async (
     messages: { role: string; content: string }[],
-    onDelta: (delta: string) => void
+    onDelta: (delta: string) => void,
+    signal?: AbortSignal
   ): Promise<string> => {
     const accessToken = await getAccessToken();
     if (!accessToken) throw new Error('Not authenticated');
 
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`, {
       method: 'POST',
+      signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({
         messages,
@@ -241,6 +254,11 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
 
   // Greets on open. If there's prior history, gives a brief welcome back using that context.
   const triggerGreeting = useCallback(async (loadedHistory: ConversationMessage[]) => {
+    // Fix #2: abort any in-flight stream before starting
+    streamAbortRef.current?.abort();
+    const abort = new AbortController();
+    streamAbortRef.current = abort;
+
     setIsProcessing(true);
     setResponse('');
     const hasHistory = loadedHistory.length > 0;
@@ -251,33 +269,40 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
           : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
 
-      // Pass full history so AI has session context when welcoming back
       const messagesForAI = [
         ...loadedHistory.map(m => ({ role: m.role, content: m.content })),
         { role: 'user' as const, content: greetingPrompt },
       ];
 
       let full = '';
-      await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); });
+      await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); }, abort.signal);
 
-      if (full) {
+      if (full && !abort.signal.aborted) {
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: full });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: full }]);
-        if (!isMuted) await speakResponse(full);
+        // Fix #6: read from ref so mute toggle within the 400ms delay is respected
+        if (!isMutedRef.current) await speakResponse(full);
       }
-    } catch (err) {
-      console.error('Greeting error:', err);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') console.error('Greeting error:', err);
     } finally {
       setIsProcessing(false);
     }
-  }, [healthProfile, isMuted, conversationId]);
+  }, [healthProfile, conversationId]);
 
-  const handleUserMessage = async (text: string) => {
+  const handleUserMessage = useCallback(async (text: string) => {
+    // Fix #2: abort any in-flight stream before starting a new one
+    streamAbortRef.current?.abort();
+    const abort = new AbortController();
+    streamAbortRef.current = abort;
+
     stopListening();
     setIsProcessing(true);
-    setResponse(''); // reset streaming buffer for this new response
+    setResponse('');
 
-    const updatedHistory = [...conversationHistory, { role: 'user' as const, content: text }];
+    // Fix #8: read from ref so rapid VAD commits never see a stale closure
+    const updatedHistory = [...historyRef.current, { role: 'user' as const, content: text }];
+    historyRef.current = updatedHistory; // update ref immediately before setState flushes
     setConversationHistory(updatedHistory);
 
     try {
@@ -286,22 +311,27 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       let full = '';
       await streamAIResponse(
         updatedHistory.map(m => ({ role: m.role, content: m.content })),
-        delta => { full += delta; setResponse(r => r + delta); }
+        delta => { full += delta; setResponse(r => r + delta); },
+        abort.signal
       );
 
-      if (full) {
+      if (full && !abort.signal.aborted) {
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: full });
-        setConversationHistory(prev => [...prev, { role: 'assistant', content: full }]);
-        if (!isMuted) await speakResponse(full);
-        // User taps mic when ready to respond — no auto-listen
+        const withReply = [...updatedHistory, { role: 'assistant' as const, content: full }];
+        historyRef.current = withReply;
+        setConversationHistory(withReply);
+        // Fix #6: read from ref so isMuted toggle is always current
+        if (!isMutedRef.current) await speakResponse(full);
       }
-    } catch (error) {
-      console.error('Error processing message:', error);
-      setResponse('Sorry, I had trouble with that. Tap the mic and try again.');
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Error processing message:', err);
+        setResponse('Sorry, I had trouble with that. Tap the mic and try again.');
+      }
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [conversationId, stopListening]);
 
 
   const speakResponse = async (text: string) => {
@@ -357,10 +387,9 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   };
 
   const handleClose = () => {
+    streamAbortRef.current?.abort();
     stopListening();
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    if (audioRef.current) audioRef.current.pause();
     onClose();
   };
 

@@ -21,11 +21,15 @@ export function VoiceController() {
     if (!user) return null;
 
     try {
+      // Fix #5: order by created_at so duplicate "Jarvis" conversations
+      // (if they ever exist) always resolve to the oldest — the canonical one
       const { data: existing } = await supabase
         .from('conversations')
         .select('id')
         .eq('user_id', user.id)
         .eq('title', 'Jarvis')
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (existing) return existing.id;

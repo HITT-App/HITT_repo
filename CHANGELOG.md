@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-05-08] — Build 58: Jarvis logic hardening — 5 bugs fixed
+
+- **No more response bleed** — a new request now kills the previous AI stream instantly; old tokens can no longer spill into a new reply
+- **Rapid speech handled correctly** — speaking two phrases quickly no longer causes the second message to overwrite the first in chat history
+- **Duplicate message guard** — if the voice engine fires twice for one utterance, the second is now silently ignored
+- **Mute toggle is instant** — toggling mute within the first 400ms of opening no longer lets the greeting slip through
+- **Single conversation guaranteed** — if duplicate Jarvis threads exist, the app now always picks the original one consistently
+- **Clean exit** — closing voice mode mid-response now cancels the fetch cleanly with no dangling network requests
+
 ## [2026-05-08] — Build 57: All 9 missing Watch screens + persistent Jarvis chat history
 
 - **Watch: Nothing scheduled** — redesigned open-day screen with Quick start (orange) and Mark as rest (purple moon) buttons
