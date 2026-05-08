@@ -108,20 +108,24 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
 
   useEffect(() => {
     if (hasPlayed) return;
-    // Try immediately — works if the user has already interacted with the page
-    const t = setTimeout(() => {
-      playVoiceGreeting().catch(() => {
-        // Autoplay blocked — wait for first touch
-        const handleInteraction = () => {
-          playVoiceGreeting();
-          document.removeEventListener("click", handleInteraction);
-          document.removeEventListener("touchstart", handleInteraction);
-        };
-        document.addEventListener("click", handleInteraction);
-        document.addEventListener("touchstart", handleInteraction);
-      });
-    }, 800);
-    return () => clearTimeout(t);
+
+    // Always register interaction fallback first — iOS blocks autoplay until user touches
+    const handleInteraction = () => {
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("touchstart", handleInteraction);
+      playVoiceGreeting();
+    };
+    document.addEventListener("click", handleInteraction, { passive: true });
+    document.addEventListener("touchstart", handleInteraction, { passive: true });
+
+    // Also attempt autoplay after 800ms — works if the user already interacted
+    const t = setTimeout(() => { playVoiceGreeting(); }, 800);
+
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("touchstart", handleInteraction);
+    };
   }, [hasPlayed]);
 
   return (

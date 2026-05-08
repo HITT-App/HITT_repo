@@ -178,6 +178,78 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     return sessionData?.session?.access_token ?? null;
   };
 
+  // Maps plan items to upcoming dates based on user's preferred days of week
+  const mapToScheduleDates = (
+    planItems: { workout_id: string }[],
+    selectedDays: number[]
+  ): { workout_id: string; scheduled_date: string }[] => {
+    const sorted = [...selectedDays].sort((a, b) => a - b);
+    const today = new Date();
+    const todayDow = today.getDay();
+    const upcomingDates: Date[] = [];
+    for (let week = 0; week < 4; week++) {
+      for (const dow of sorted) {
+        const diff = ((dow - todayDow + 7) % 7) + week * 7;
+        if (diff === 0 && week === 0) continue;
+        const d = new Date(today);
+        d.setDate(today.getDate() + (diff || 7));
+        upcomingDates.push(d);
+      }
+    }
+    upcomingDates.sort((a, b) => a.getTime() - b.getTime());
+    return planItems.slice(0, upcomingDates.length).map((item, i) => ({
+      workout_id: item.workout_id,
+      scheduled_date: upcomingDates[i].toISOString().split('T')[0],
+    }));
+  };
+
+  // Called when AI response contains [SCHEDULE_PLAN:{...}]
+  const createScheduleFromJarvis = async (params: {
+    goal: string; daysPerWeek: number; selectedDays: number[]; sessionMinutes: number;
+  }) => {
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) return;
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-workout-plan`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({
+            goal: params.goal,
+            days: params.daysPerWeek * 4,
+            sessions_per_week: params.daysPerWeek,
+            duration_minutes: params.sessionMinutes,
+            title: `${params.goal} Plan`,
+          }),
+        }
+      );
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const planItems: { day_index: number; workout_id: string }[] = data.plan_items ?? [];
+      const rows = mapToScheduleDates(planItems, params.selectedDays);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId || !rows.length) return;
+
+      await supabase.from('scheduled_workouts').insert(
+        rows.map(r => ({ user_id: userId, workout_id: r.workout_id, scheduled_date: r.scheduled_date }))
+      );
+
+      const confirmation = `✅ Done! Added ${rows.length} workouts to your schedule. Check the Schedule tab to see them.`;
+      const withConfirm = [...historyRef.current, { role: 'assistant' as const, content: confirmation }];
+      historyRef.current = withConfirm;
+      setConversationHistory(withConfirm);
+      await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
+      if (!isMutedRef.current) await speakResponse(confirmation);
+    } catch (err) {
+      console.error('[Jarvis] Schedule creation failed:', err);
+    }
+  };
+
   const streamAIResponse = async (
     messages: { role: string; content: string }[],
     onDelta: (delta: string) => void,
@@ -278,10 +350,17 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); }, abort.signal);
 
       if (full && !abort.signal.aborted) {
-        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: full });
-        setConversationHistory(prev => [...prev, { role: 'assistant', content: full }]);
-        // Fix #6: read from ref so mute toggle within the 400ms delay is respected
-        if (!isMutedRef.current) await speakResponse(full);
+        // Strip [SCHEDULE_PLAN:...] marker before saving/displaying/speaking
+        const scheduleMatch = full.match(/\[SCHEDULE_PLAN:({.*?})\]/s);
+        const displayText = full.replace(/\[SCHEDULE_PLAN:{.*?}\]/s, '').trim();
+
+        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
+        setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
+        if (!isMutedRef.current) await speakResponse(displayText);
+
+        if (scheduleMatch) {
+          try { createScheduleFromJarvis(JSON.parse(scheduleMatch[1])); } catch {}
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') console.error('Greeting error:', err);
@@ -316,12 +395,19 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       );
 
       if (full && !abort.signal.aborted) {
-        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: full });
-        const withReply = [...updatedHistory, { role: 'assistant' as const, content: full }];
+        // Strip [SCHEDULE_PLAN:...] marker before saving/displaying/speaking
+        const scheduleMatch = full.match(/\[SCHEDULE_PLAN:({.*?})\]/s);
+        const displayText = full.replace(/\[SCHEDULE_PLAN:{.*?}\]/s, '').trim();
+
+        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
+        const withReply = [...updatedHistory, { role: 'assistant' as const, content: displayText }];
         historyRef.current = withReply;
         setConversationHistory(withReply);
-        // Fix #6: read from ref so isMuted toggle is always current
-        if (!isMutedRef.current) await speakResponse(full);
+        if (!isMutedRef.current) await speakResponse(displayText);
+
+        if (scheduleMatch) {
+          try { createScheduleFromJarvis(JSON.parse(scheduleMatch[1])); } catch {}
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -466,12 +552,12 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           )
         ))}
 
-        {/* Streaming response (in progress) */}
+        {/* Streaming response (in progress) — strip the schedule marker from live display */}
         {isProcessing && response && (
           <div className="bg-secondary/40 rounded-2xl px-4 py-3">
             <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>
             <div className="text-sm text-foreground leading-relaxed space-y-2">
-              {formatResponse(response)}
+              {formatResponse(response.replace(/\[SCHEDULE_PLAN:{.*?}\]/s, '').trim())}
             </div>
           </div>
         )}

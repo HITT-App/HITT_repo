@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-05-08] — Build 59: Jarvis schedules real workouts + welcome greeting fix + Watch icon
+
+- **Jarvis builds your schedule automatically** — ask the coach for a plan and it now pulls real workouts from the library and saves them directly to your Schedule tab; no more being told to go add it yourself
+- **Schedule confirmation in chat** — after creating your plan, Jarvis tells you how many workouts were added and where to find them
+- **Welcome greeting fixed** — the spoken greeting on the home screen now reliably plays after your first tap, even when iOS blocks autoplay on load
+- **Watch app icon** — the orange circle placeholder in the iPhone Watch app has been replaced with the real HIIT logo
+
 ## [2026-05-08] — Build 58: Jarvis logic hardening — 5 bugs fixed
 
 - **No more response bleed** — a new request now kills the previous AI stream instantly; old tokens can no longer spill into a new reply
