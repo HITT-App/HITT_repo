@@ -472,6 +472,13 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       }
 
       const voiceId = localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb';
+      // Normalise acronyms that TTS reads as individual letters
+      const ttsText = text
+        .replace(/\bHIIT\b/g, 'hit')
+        .replace(/\bOk HIIT\b/gi, 'ok hit')
+        .replace(/\bOkay HIIT\b/gi, 'okay hit')
+        .substring(0, 500);
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
         {
@@ -481,13 +488,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${accessToken}`,
           },
-          // Normalise acronyms that TTS reads as individual letters
-      const ttsText = text
-        .replace(/\bHIIT\b/g, 'hit')
-        .replace(/\bOk HIIT\b/gi, 'ok hit')
-        .replace(/\bOkay HIIT\b/gi, 'okay hit')
-        .substring(0, 500);
-      body: JSON.stringify({ text: ttsText, voiceId }),
+          body: JSON.stringify({ text: ttsText, voiceId }),
         }
       );
 
