@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-09] — Build 65: Fix WebSocket not connected Sentry error
+
+- **Voice mic stability** — fixed a crash that occurred when tapping the mic button rapidly or when the voice session closed unexpectedly; the app now handles these cases cleanly without errors
+
 ## [2026-05-09] — Build 64: Watch opens Race screen automatically when plan is sent
 
 - **No more manual navigation** — removed the pop-up telling you to open the Race tab; the Watch now navigates there automatically when the plan arrives

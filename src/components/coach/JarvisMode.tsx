@@ -92,6 +92,10 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   const historyRef = useRef<ConversationMessage[]>([]);
   // Fix #6: Ref mirrors isMuted so closures captured before a toggle still see the current value
   const isMutedRef = useRef(isMuted);
+  // Ref mirrors isListening so transcript callbacks can guard against post-disconnect firing
+  const isListeningRef = useRef(false);
+  // Guard against overlapping connect() calls (e.g. rapid mic taps)
+  const isConnectingRef = useRef(false);
 
   // Keep refs in sync with state on every render
   isMutedRef.current = isMuted;
@@ -102,15 +106,15 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     modelId: 'scribe_v2_realtime',
     commitStrategy: CommitStrategy.VAD,
     onPartialTranscript: (data) => {
+      // Guard: don't process after disconnect — prevents "WebSocket not connected" errors
+      if (!isListeningRef.current) return;
       setTranscript(data.text);
-      // Reset silence timeout on new speech
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
-      }
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
     },
     onCommittedTranscript: async (data) => {
+      // Guard: skip if disconnected or already processing
+      if (!isListeningRef.current) return;
       const finalTranscript = data.text.trim();
-      // Fix #3: skip if already processing — prevents Scribe double-fire from creating duplicate messages
       if (!finalTranscript || isProcessing) return;
       setTranscript(finalTranscript);
       await handleUserMessage(finalTranscript);
@@ -127,25 +131,26 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   }, []);
 
   const startListening = useCallback(async () => {
+    // Prevent double-connect — the source of "WebSocket not connected" errors
+    if (isListeningRef.current || isConnectingRef.current) return;
+    isConnectingRef.current = true;
     try {
-      // Get scribe token from edge function
       const { data, error } = await supabase.functions.invoke('elevenlabs-scribe-token');
-      
       if (error || !data?.token) {
         console.error('Failed to get scribe token:', error);
+        isConnectingRef.current = false;
         return;
       }
 
       await scribe.connect({
         token: data.token,
-        microphone: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
+        microphone: { echoCancellation: true, noiseSuppression: true },
       });
 
+      isListeningRef.current = true;
+      isConnectingRef.current = false;
       setIsListening(true);
-      setTranscript(''); // clear current in-progress transcript only, not history
+      setTranscript('');
 
       // Start visualizer
       try {
@@ -161,19 +166,20 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       }
     } catch (error) {
       console.error('Failed to start listening:', error);
+      isListeningRef.current = false;
+      isConnectingRef.current = false;
+      setIsListening(false);
     }
   }, [scribe, updateVisualizer]);
 
   const stopListening = useCallback(() => {
-    scribe.disconnect();
+    // Mark as not listening before disconnect so callbacks fired during teardown are ignored
+    isListeningRef.current = false;
+    isConnectingRef.current = false;
+    try { scribe.disconnect(); } catch { /* already disconnected — safe to ignore */ }
     setIsListening(false);
-    
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-    }
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    if (audioContextRef.current) audioContextRef.current.close().catch(() => {});
     setVisualizerData(new Array(32).fill(4));
   }, [scribe]);
 
