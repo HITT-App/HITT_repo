@@ -258,7 +258,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   }) => {
     try {
       const accessToken = await getAccessToken();
-      if (!accessToken) return;
+      if (!accessToken) throw new Error('Not authenticated');
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-workout-plan`,
@@ -274,15 +274,25 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           }),
         }
       );
-      if (!res.ok) return;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error ?? `Plan generator returned ${res.status}`);
+      }
 
       const data = await res.json();
-      const planItems: { day_index: number; workout_id: string }[] = data.plan_items ?? [];
-      const rows = mapToScheduleDates(planItems, params.selectedDays);
+      // The edge function returns { items: [...] } — not plan_items
+      const planItems: { day_index: number; workout_id: string }[] = data.items ?? [];
+
+      // If the AI didn't provide selectedDays, fall back to evenly-spaced weekdays
+      const days = params.selectedDays?.length
+        ? params.selectedDays
+        : defaultDays(params.daysPerWeek);
+      const rows = mapToScheduleDates(planItems, days);
 
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
-      if (!userId || !rows.length) return;
+      if (!userId) throw new Error('No user session');
+      if (!rows.length) throw new Error('Plan generator returned no workouts');
 
       await supabase.from('scheduled_workouts').insert(
         rows.map(r => ({ user_id: userId, workout_id: r.workout_id, scheduled_date: r.scheduled_date }))
@@ -296,7 +306,19 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       if (!isMutedRef.current) await speakResponse(confirmation);
     } catch (err) {
       console.error('[Jarvis] Schedule creation failed:', err);
+      const msg = `Sorry, I couldn't add the schedule right now. You can add workouts manually from the Schedule tab.`;
+      const withErr = [...historyRef.current, { role: 'assistant' as const, content: msg }];
+      historyRef.current = withErr;
+      setConversationHistory(withErr);
     }
+  };
+
+  // Fallback day selection when AI omits selectedDays
+  const defaultDays = (n: number): number[] => {
+    const presets: Record<number, number[]> = {
+      1: [1], 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5], 6: [1, 2, 3, 4, 5, 6],
+    };
+    return presets[Math.max(1, Math.min(6, n))] ?? [1, 3, 5];
   };
 
   // Strips action markers from text and returns clean display text + detected actions
@@ -560,6 +582,16 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   useEffect(() => {
     responseEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [response, transcript, conversationHistory]);
+
+  // Pre-unlock iOS WKWebView audio on mount. JarvisMode is always opened by a user tap,
+  // so this runs within the gesture window. Without it, play() calls after async AI work
+  // are blocked by iOS autoplay policy and the greeting + all responses are silent.
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    el.play().catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let cancelled = false;
