@@ -74,6 +74,10 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   const [response, setResponse] = useState('');
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [visualizerData, setVisualizerData] = useState<number[]>(new Array(32).fill(4));
+  const [pendingSchedule, setPendingSchedule] = useState<{
+    goal: string; daysPerWeek: number; selectedDays: number[]; sessionMinutes: number;
+  } | null>(null);
+  const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -229,6 +233,14 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     } catch (err) {
       console.error('[Jarvis] Food log failed:', err);
     }
+  };
+
+  const confirmSchedule = async () => {
+    if (!pendingSchedule || isAddingSchedule) return;
+    setIsAddingSchedule(true);
+    await createScheduleFromJarvis(pendingSchedule);
+    setPendingSchedule(null);
+    setIsAddingSchedule(false);
   };
 
   // Called when AI response contains [SCHEDULE_PLAN:{...}]
@@ -396,7 +408,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         if (!isMutedRef.current) await speakResponse(displayText);
 
         if (scheduleMatch) {
-          try { createScheduleFromJarvis(JSON.parse(scheduleMatch[1])); } catch {}
+          try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
         }
         if (foodMatches.length) {
           try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
@@ -444,7 +456,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         if (!isMutedRef.current) await speakResponse(displayText);
 
         if (scheduleMatch) {
-          try { createScheduleFromJarvis(JSON.parse(scheduleMatch[1])); } catch {}
+          try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
         }
         if (foodMatches.length) {
           try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
@@ -636,6 +648,35 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
                 style={{ height: `${Math.max(3, (value / 255) * 22)}px` }}
               />
             ))}
+          </div>
+        )}
+
+        {/* Schedule confirmation card — shown when Jarvis proposes a plan */}
+        {pendingSchedule && (
+          <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
+            <p className="text-sm font-semibold text-foreground">Add to your schedule?</p>
+            <p className="text-xs text-muted-foreground">
+              {pendingSchedule.daysPerWeek}× per week · {pendingSchedule.sessionMinutes} min sessions · {pendingSchedule.goal}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-primary text-primary-foreground text-xs h-9"
+                onClick={confirmSchedule}
+                disabled={isAddingSchedule}
+              >
+                {isAddingSchedule ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add to schedule'}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1 text-xs h-9 text-muted-foreground"
+                onClick={() => setPendingSchedule(null)}
+                disabled={isAddingSchedule}
+              >
+                Maybe later
+              </Button>
+            </div>
           </div>
         )}
 

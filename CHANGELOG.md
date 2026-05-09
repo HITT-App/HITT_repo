@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-05-09] — Build 63: Schedule requires user confirmation before saving
+
+- **Confirm before scheduling** — Jarvis now asks before saving anything: after proposing a plan it shows a card in the chat with the goal, days per week, and session length, plus "Add to schedule" and "Maybe later" buttons
+- Nothing is written to your schedule until you tap "Add to schedule"
+- Food logging is unchanged — still logs immediately when you ask
+
 ## [2026-05-09] — Build 62: Voice interrupt + preview fix + schedule live updates
 
 - **Interrupt the coach mid-speech** — tap the mic button at any time while the coach is talking to stop it immediately; button shows a stop icon and "Tap to interrupt" while speaking
