@@ -521,10 +521,12 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       const url = URL.createObjectURL(blob);
       if (audioRef.current) {
         audioRef.current.src = url;
+        // load() must be called after changing src on iOS WKWebView —
+        // without it the element stays in its previous ended state and play() silently does nothing
+        audioRef.current.load();
         audioRef.current.onended = () => {
           setIsSpeaking(false);
           URL.revokeObjectURL(url);
-          // User taps mic to respond — no auto-listen
         };
         audioRef.current.onerror = () => { setIsSpeaking(false); };
         await audioRef.current.play().catch(e => {

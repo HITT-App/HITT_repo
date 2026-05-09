@@ -157,7 +157,7 @@ export default function WorkoutDetail() {
     );
   }
 
-  const dates = Array.from({ length: 4 }, (_, i) => {
+  const dates = Array.from({ length: 14 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() + i);
     return date;
@@ -419,17 +419,18 @@ export default function WorkoutDetail() {
             <p className="text-sm text-muted-foreground">We'll send reminders before your workout</p>
             <div>
               <h4 className="font-medium mb-3">Select Date</h4>
-              <div className="flex gap-3">
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 {dates.map((date, index) => {
                   const isSelected = date.toDateString() === selectedDate.toDateString();
                   return (
                     <button
                       key={index}
                       onClick={() => setSelectedDate(date)}
-                      className={cn("flex-1 p-3 rounded-xl border-2 text-center transition-all", isSelected ? "border-primary bg-primary/5" : "border-border")}
+                      className={cn("shrink-0 w-14 p-2 rounded-xl border-2 text-center transition-all", isSelected ? "border-primary bg-primary/5" : "border-border")}
                     >
                       <p className="text-xs text-muted-foreground">{date.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-                      <p className="font-bold">{date.getDate()}</p>
+                      <p className="font-bold text-sm">{date.getDate()}</p>
+                      <p className="text-[10px] text-muted-foreground">{date.toLocaleDateString('en-US', { month: 'short' })}</p>
                     </button>
                   );
                 })}
@@ -439,7 +440,7 @@ export default function WorkoutDetail() {
               <h4 className="font-medium mb-3">Select Time</h4>
               <div className="flex items-center justify-center gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="h-32 overflow-hidden">
+                  <div className="h-32 overflow-y-auto">
                     {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(hour => (
                       <button key={hour} onClick={() => setSelectedTime(prev => ({ ...prev, hour }))}
                         className={cn("block py-1.5 text-lg transition-all", selectedTime.hour === hour ? "font-bold text-primary" : "text-muted-foreground")}>
@@ -450,7 +451,7 @@ export default function WorkoutDetail() {
                 </div>
                 <span className="text-2xl font-bold">:</span>
                 <div className="flex flex-col items-center">
-                  <div className="h-32 overflow-hidden">
+                  <div className="h-32 overflow-y-auto">
                     {[0, 15, 30, 45].map(minute => (
                       <button key={minute} onClick={() => setSelectedTime(prev => ({ ...prev, minute }))}
                         className={cn("block py-1.5 text-lg transition-all", selectedTime.minute === minute ? "font-bold text-primary" : "text-muted-foreground")}>

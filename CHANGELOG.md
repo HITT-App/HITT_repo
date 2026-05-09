@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-05-09] — Build 66: TTS speaks every response + schedule built properly
+
+- **AI coach voice fixed** — the coach now speaks every response, not just the first one; an iOS audio element reuse issue was causing all subsequent responses to play silently
+- **Schedule date picker** — now shows 14 days ahead (was 4) and scrolls horizontally; time picker options were previously unreachable due to a CSS overflow bug, now fully selectable
+- **Add to Schedule** — new button in the Schedule screen header opens a proper sheet: search the workout library, pick a date and time, save directly; no longer demo-only
+
 ## [2026-05-09] — Build 65: Fix WebSocket not connected Sentry error
 
 - **Voice mic stability** — fixed a crash that occurred when tapping the mic button rapidly or when the voice session closed unexpectedly; the app now handles these cases cleanly without errors

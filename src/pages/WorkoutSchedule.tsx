@@ -11,8 +11,10 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 import {
   ArrowLeft, Calendar, ChevronLeft, ChevronRight, Clock,
-  Plus, Dumbbell, Play, MoreHorizontal, Trash2, CalendarDays, X
+  Plus, Dumbbell, Play, MoreHorizontal, Trash2, CalendarDays, X, Search
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { format, startOfWeek, addDays, isSameDay, parseISO, addWeeks } from 'date-fns';
 
@@ -46,6 +48,15 @@ export default function WorkoutSchedule() {
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
+
+  // Add-to-schedule state
+  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [addSearch, setAddSearch] = useState('');
+  const [addWorkoutResults, setAddWorkoutResults] = useState<{ id: string; title: string; duration_minutes: number; category: string }[]>([]);
+  const [addSelectedWorkout, setAddSelectedWorkout] = useState<{ id: string; title: string } | null>(null);
+  const [addSelectedDate, setAddSelectedDate] = useState(new Date());
+  const [addSelectedHour, setAddSelectedHour] = useState(8);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -155,6 +166,43 @@ export default function WorkoutSchedule() {
     }
   };
 
+  const searchWorkouts = async (q: string) => {
+    setAddSearch(q);
+    if (!q.trim()) { setAddWorkoutResults([]); return; }
+    const { data } = await supabase
+      .from('workouts')
+      .select('id, title, duration_minutes, category')
+      .ilike('title', `%${q}%`)
+      .limit(20);
+    setAddWorkoutResults(data ?? []);
+  };
+
+  const saveAddedWorkout = async () => {
+    if (!addSelectedWorkout || !user) return;
+    setIsSaving(true);
+    try {
+      const dateStr = addSelectedDate.toISOString().split('T')[0];
+      const timeStr = `${addSelectedHour.toString().padStart(2, '0')}:00:00`;
+      const { error } = await supabase.from('scheduled_workouts').insert({
+        user_id: user.id,
+        workout_id: addSelectedWorkout.id,
+        scheduled_date: dateStr,
+        scheduled_time: timeStr,
+        status: 'scheduled',
+      });
+      if (error) throw error;
+      toast({ title: 'Workout scheduled!', description: `${addSelectedWorkout.title} added for ${format(addSelectedDate, 'EEE d MMM')} at ${addSelectedHour}:00` });
+      setShowAddSheet(false);
+      setAddSelectedWorkout(null);
+      setAddSearch('');
+      setAddWorkoutResults([]);
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not schedule workout' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const navigateWeek = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => addDays(prev, direction === 'next' ? 7 : -7));
   };
@@ -179,8 +227,8 @@ export default function WorkoutSchedule() {
         <h1 className="text-lg font-semibold">
           Workout Schedule ({view === 'daily' ? 'Daily' : 'Weekly'})
         </h1>
-        <Button variant="ghost" size="icon" onClick={() => navigate('/workout-library')}>
-          <Calendar className="w-5 h-5" />
+        <Button size="sm" onClick={() => { setAddSelectedDate(currentDate); setShowAddSheet(true); }} className="gap-1 h-8 px-3 text-xs">
+          <Plus className="w-3.5 h-3.5" /> Add
         </Button>
       </header>
 
@@ -433,6 +481,87 @@ export default function WorkoutSchedule() {
               )}
             </div>
           )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Add workout to schedule sheet */}
+      <Sheet open={showAddSheet} onOpenChange={setShowAddSheet}>
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Add to Schedule</SheetTitle>
+          </SheetHeader>
+
+          {/* Date picker */}
+          <div className="mb-4">
+            <p className="text-sm font-medium mb-2">Date</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {Array.from({ length: 14 }, (_, i) => addDays(new Date(), i)).map((date, i) => {
+                const sel = isSameDay(date, addSelectedDate);
+                return (
+                  <button key={i} onClick={() => setAddSelectedDate(date)}
+                    className={cn("shrink-0 w-14 p-2 rounded-xl border-2 text-center transition-all text-sm",
+                      sel ? "border-primary bg-primary/10" : "border-border")}>
+                    <p className="text-[10px] text-muted-foreground">{format(date, 'EEE')}</p>
+                    <p className="font-bold">{format(date, 'd')}</p>
+                    <p className="text-[10px] text-muted-foreground">{format(date, 'MMM')}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Time picker */}
+          <div className="mb-4">
+            <p className="text-sm font-medium mb-2">Time</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21].map(h => (
+                <button key={h} onClick={() => setAddSelectedHour(h)}
+                  className={cn("shrink-0 px-3 py-2 rounded-lg border text-sm font-medium transition-all",
+                    addSelectedHour === h ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                  {h}:00
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Workout search */}
+          <div className="mb-4">
+            <p className="text-sm font-medium mb-2">Workout</p>
+            <div className="relative mb-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Search workouts…" className="pl-9"
+                value={addSearch} onChange={e => searchWorkouts(e.target.value)} />
+            </div>
+            {addSelectedWorkout && (
+              <div className="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/30 mb-2">
+                <span className="text-sm font-semibold">{addSelectedWorkout.title}</span>
+                <button onClick={() => setAddSelectedWorkout(null)} className="text-muted-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            {addWorkoutResults.length > 0 && !addSelectedWorkout && (
+              <div className="border border-border rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+                {addWorkoutResults.map(w => (
+                  <button key={w.id} onClick={() => { setAddSelectedWorkout(w); setAddWorkoutResults([]); }}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-secondary transition-colors text-left border-b border-border last:border-0">
+                    <div>
+                      <p className="text-sm font-medium">{w.title}</p>
+                      <p className="text-xs text-muted-foreground">{w.category} · {w.duration_minutes} min</p>
+                    </div>
+                    <Plus className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+            {addSearch && addWorkoutResults.length === 0 && !addSelectedWorkout && (
+              <p className="text-sm text-muted-foreground text-center py-4">No workouts found</p>
+            )}
+          </div>
+
+          <Button onClick={saveAddedWorkout} disabled={!addSelectedWorkout || isSaving} className="w-full h-12 rounded-2xl">
+            {isSaving ? 'Saving…' : 'Add to Schedule'}
+          </Button>
         </SheetContent>
       </Sheet>
 
