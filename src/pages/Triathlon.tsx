@@ -244,7 +244,7 @@ const Triathlon = () => {
     } catch { /* best-effort — plan delivered via applicationContext when Watch app opens */ }
     setWatchSent(true);
     setWatchSending(false);
-    toast({ title: "Plan sent to Watch ⌚", description: "Open the Race tab on your Watch to start." });
+    toast({ title: "Plan sent to Watch ⌚", description: "Your Watch will open the Race screen automatically." });
   };
 
   // Setup screen shown before race starts

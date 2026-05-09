@@ -42,15 +42,23 @@ class WatchBridge: NSObject, WCSessionDelegate {
     }
 
     // Send any arbitrary message (used for triathlon plans, etc.)
+    // Uses transferUserInfo when Watch isn't reachable so the plan is queued
+    // and delivered reliably — unlike updateApplicationContext which is overwritten.
     func sendRawMessage(_ message: [String: Any]) {
         guard WCSession.default.activationState == .activated else { return }
         if WCSession.default.isReachable {
-            WCSession.default.sendMessage(message, replyHandler: nil, errorHandler: { _ in
-                try? WCSession.default.updateApplicationContext(message)
+            WCSession.default.sendMessage(message, replyHandler: nil, errorHandler: { [weak self] _ in
+                self?.transferQueued(message)
             })
         } else {
-            try? WCSession.default.updateApplicationContext(message)
+            transferQueued(message)
         }
+    }
+
+    private func transferQueued(_ message: [String: Any]) {
+        // transferUserInfo queues all transfers in order and never overwrites —
+        // the Watch app receives it the next time it becomes reachable.
+        WCSession.default.transferUserInfo(message)
     }
 
     // MARK: — WCSessionDelegate

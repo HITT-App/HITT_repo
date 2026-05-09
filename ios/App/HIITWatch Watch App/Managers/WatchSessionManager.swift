@@ -126,4 +126,10 @@ extension WatchSessionManager: WCSessionDelegate {
                              didReceiveApplicationContext ctx: [String: Any]) {
         DispatchQueue.main.async { [weak self] in self?.applyMessage(ctx) }
     }
+
+    // Handles transferUserInfo deliveries (queued, never overwritten — used for triathlon plans)
+    nonisolated func session(_ session: WCSession,
+                             didReceiveUserInfo userInfo: [String: Any]) {
+        DispatchQueue.main.async { [weak self] in self?.applyMessage(userInfo) }
+    }
 }

@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-09] — Build 64: Watch opens Race screen automatically when plan is sent
+
+- **No more manual navigation** — removed the pop-up telling you to open the Race tab; the Watch now navigates there automatically when the plan arrives
+- **Reliable delivery when Watch is out of range** — triathlon plans are now queued and guaranteed to arrive the next time your Watch connects, instead of being silently dropped or overwritten
+
 ## [2026-05-09] — Build 63: Schedule requires user confirmation before saving
 
 - **Confirm before scheduling** — Jarvis now asks before saving anything: after proposing a plan it shows a card in the chat with the goal, days per week, and session length, plus "Add to schedule" and "Maybe later" buttons
