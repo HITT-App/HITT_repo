@@ -25,16 +25,25 @@ struct TriathlonView: View {
     enum LegState { case idle, active, done }
 
     var body: some View {
-        if raceFinished {
-            raceSummaryScreen
-        } else if let p = plan {
-            if raceStarted {
-                raceScreen(p)
+        Group {
+            if raceFinished {
+                raceSummaryScreen
+            } else if let p = plan {
+                if raceStarted {
+                    raceScreen(p)
+                } else {
+                    raceLoadedScreen(p)
+                }
             } else {
-                raceLoadedScreen(p)
+                noPlanScreen
             }
-        } else {
-            noPlanScreen
+        }
+        // Single top-level observer — never missed regardless of which sub-view is active
+        .onReceive(NotificationCenter.default.publisher(for: .watchTriathlonReceived)) { note in
+            if let p = note.object as? TriathlonPlan { loadPlan(p) }
+        }
+        .onAppear {
+            if plan == nil, let p = WatchSessionManager.shared.triathlonPlan { loadPlan(p) }
         }
     }
 
@@ -47,12 +56,6 @@ struct TriathlonView: View {
                 .font(.system(size: 14, weight: .bold)).foregroundColor(.white)
             Text("Set up your race\nin the HIIT app")
                 .font(.system(size: 11)).foregroundColor(dimText).multilineTextAlignment(.center)
-        }
-        .onAppear {
-            if let p = WatchSessionManager.shared.triathlonPlan { loadPlan(p) }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .watchTriathlonReceived)) { note in
-            if let p = note.object as? TriathlonPlan { loadPlan(p) }
         }
     }
 
@@ -108,9 +111,6 @@ struct TriathlonView: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 14).padding(.bottom, 14)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .watchTriathlonReceived)) { note in
-            if let p = note.object as? TriathlonPlan { loadPlan(p) }
         }
     }
 
@@ -182,9 +182,6 @@ struct TriathlonView: View {
                 actionButton(p).padding(.bottom, 6)
             }
             .padding(.horizontal, 8)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .watchTriathlonReceived)) { note in
-            if let p = note.object as? TriathlonPlan, legState == .idle { loadPlan(p) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .triathlonElapsedTick)) { note in
             guard let info = note.userInfo,

@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-08] — Build 67: Watch triathlon plan now sticks
+
+- **Race plan persists on Watch** — the triathlon plan is now saved to the Watch's local storage; it survives the Watch app closing and reopening, so "No Race Loaded" no longer appears after the app is restarted
+- **Notification timing fixed** — moved the plan-arrival observer to the top level of the Race screen so it's always listening, regardless of which sub-view is active; the plan could previously be missed if it arrived during a view transition
+
 ## [2026-05-09] — Build 66: TTS speaks every response + schedule built properly
 
 - **AI coach voice fixed** — the coach now speaks every response, not just the first one; an iOS audio element reuse issue was causing all subsequent responses to play silently

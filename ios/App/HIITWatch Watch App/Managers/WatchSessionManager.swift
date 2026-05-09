@@ -52,7 +52,16 @@ final class WatchSessionManager: NSObject {
     private(set) var triathlonPlan: TriathlonPlan?
     private(set) var todayDayType: WatchDayType = .open
 
-    private override init() { super.init() }
+    private static let planKey = "hiit.triathlonPlan"
+
+    private override init() {
+        super.init()
+        // Restore plan that arrived while the app was closed
+        if let data = UserDefaults.standard.data(forKey: Self.planKey),
+           let saved = try? JSONDecoder().decode(TriathlonPlan.self, from: data) {
+            triathlonPlan = saved
+        }
+    }
 
     func activate() {
         guard WCSession.isSupported() else { return }
@@ -80,6 +89,10 @@ final class WatchSessionManager: NSObject {
            let data = try? JSONSerialization.data(withJSONObject: planData),
            let decoded = try? JSONDecoder().decode(TriathlonPlan.self, from: data) {
             triathlonPlan = decoded
+            // Persist so the plan survives Watch app restarts
+            if let encoded = try? JSONEncoder().encode(decoded) {
+                UserDefaults.standard.set(encoded, forKey: Self.planKey)
+            }
             NotificationCenter.default.post(name: .watchTriathlonReceived, object: decoded)
             WorkoutCoordinator.shared.navigateToRaceTab()
         }
