@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Volume2, VolumeX, X, Loader2, StopCircle } from 'lucide-react';
@@ -65,6 +66,7 @@ type ConversationMessage = {
 };
 
 export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisModeProps) {
+  const navigate = useNavigate();
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -74,6 +76,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   const [response, setResponse] = useState('');
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [visualizerData, setVisualizerData] = useState<number[]>(new Array(32).fill(4));
+  const [pendingBodyScan, setPendingBodyScan] = useState(false);
   const [pendingSchedule, setPendingSchedule] = useState<{
     goal: string; daysPerWeek: number; selectedDays: number[]; sessionMinutes: number;
   } | null>(null);
@@ -300,11 +303,13 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   const parseAIResponse = (raw: string) => {
     const scheduleMatch = raw.match(/\[SCHEDULE_PLAN:({.*?})\]/s);
     const foodMatches = [...raw.matchAll(/\[LOG_FOOD:({.*?})\]/gs)];
+    const showBodyScan = raw.includes('[BODY_SCAN_PROMPT]');
     const displayText = raw
       .replace(/\[SCHEDULE_PLAN:{.*?}\]/gs, '')
       .replace(/\[LOG_FOOD:{.*?}\]/gs, '')
+      .replace(/\[BODY_SCAN_PROMPT\]/g, '')
       .trim();
-    return { displayText, scheduleMatch, foodMatches };
+    return { displayText, scheduleMatch, foodMatches, showBodyScan };
   };
 
   const streamAIResponse = async (
@@ -381,8 +386,8 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     }
   }, [conversationId]);
 
-  // Greets on open. If there's prior history, gives a brief welcome back using that context.
-  const triggerGreeting = useCallback(async (loadedHistory: ConversationMessage[]) => {
+  // Greets on open. Runs onboarding flow if user has no history and no schedule yet.
+  const triggerGreeting = useCallback(async (loadedHistory: ConversationMessage[], hasSchedule = true) => {
     // Fix #2: abort any in-flight stream before starting
     streamAbortRef.current?.abort();
     const abort = new AbortController();
@@ -391,12 +396,15 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     setIsProcessing(true);
     setResponse('');
     const hasHistory = loadedHistory.length > 0;
+    const isOnboarding = !hasHistory && !hasSchedule;
     try {
-      const greetingPrompt = hasHistory
-        ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
-        : healthProfile?.trim()
-          ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
-          : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
+      const greetingPrompt = isOnboarding
+        ? `[ONBOARDING] This user has no schedule yet. Introduce yourself as Coach HIIT in one warm sentence, then say you want to ask a couple of quick questions to build their perfect plan, then ask just this: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`
+        : hasHistory
+          ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
+          : healthProfile?.trim()
+            ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
+            : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
 
       const messagesForAI = [
         ...loadedHistory.map(m => ({ role: m.role, content: m.content })),
@@ -407,7 +415,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); }, abort.signal);
 
       if (full && !abort.signal.aborted) {
-        const { displayText, scheduleMatch, foodMatches } = parseAIResponse(full);
+        const { displayText, scheduleMatch, foodMatches, showBodyScan } = parseAIResponse(full);
 
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
@@ -419,6 +427,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         if (foodMatches.length) {
           try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
         }
+        if (showBodyScan) setPendingBodyScan(true);
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') console.error('Greeting error:', err);
@@ -453,7 +462,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       );
 
       if (full && !abort.signal.aborted) {
-        const { displayText, scheduleMatch, foodMatches } = parseAIResponse(full);
+        const { displayText, scheduleMatch, foodMatches, showBodyScan } = parseAIResponse(full);
 
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         const withReply = [...updatedHistory, { role: 'assistant' as const, content: displayText }];
@@ -467,6 +476,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         if (foodMatches.length) {
           try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
         }
+        if (showBodyScan) setPendingBodyScan(true);
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -557,10 +567,31 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     const init = async () => {
       const history = await loadHistory();
       if (cancelled) return;
+
+      // On first open (no history), check whether a schedule already exists.
+      // If not, Jarvis runs the onboarding flow instead of a normal greeting.
+      let hasSchedule = true;
+      if (history.length === 0) {
+        try {
+          const { data: session } = await supabase.auth.getSession();
+          const userId = session?.session?.user?.id;
+          if (userId) {
+            const { count } = await supabase
+              .from('scheduled_workouts')
+              .select('id', { count: 'exact', head: true })
+              .eq('user_id', userId)
+              .gte('scheduled_date', new Date().toISOString().split('T')[0]);
+            hasSchedule = (count ?? 0) > 0;
+          }
+        } catch {
+          hasSchedule = true; // default to normal greeting if check fails
+        }
+      }
+
       // Brief pause so the UI renders before greeting starts
       await new Promise(r => setTimeout(r, 400));
       if (cancelled) return;
-      triggerGreeting(history);
+      triggerGreeting(history, hasSchedule);
     };
 
     init();
@@ -656,6 +687,37 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
                 style={{ height: `${Math.max(3, (value / 255) * 22)}px` }}
               />
             ))}
+          </div>
+        )}
+
+        {/* Body scan CTA — shown when Jarvis recommends a scan during onboarding */}
+        {pendingBodyScan && (
+          <div className="bg-accent/10 border border-accent/30 rounded-2xl px-4 py-3 space-y-3">
+            <p className="text-sm font-semibold text-foreground">📷 Body Scan</p>
+            <p className="text-xs text-muted-foreground">
+              Take 3 photos (front, side, back) — I'll analyse your physique and personalise your plan around what I find.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-primary text-primary-foreground text-xs h-9"
+                onClick={() => {
+                  setPendingBodyScan(false);
+                  onClose();
+                  navigate('/body-scan');
+                }}
+              >
+                Open Body Scan →
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1 text-xs h-9 text-muted-foreground"
+                onClick={() => setPendingBodyScan(false)}
+              >
+                Skip for now
+              </Button>
+            </div>
           </div>
         )}
 
