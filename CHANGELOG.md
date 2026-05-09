@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-05-09] — Build 68: Jarvis onboarding flow
+
+- **First open intake** — if Jarvis opens and you have no schedule yet, it runs a quick goal intake: asks your main fitness goal, what specifically you want to achieve, how many days a week you can train, and how long each session should be — one question at a time
+- **Auto schedule proposal** — once Jarvis has your answers it builds a plan and asks "Want me to add this to your schedule?"
+- **Body scan offer** — after the schedule step, Jarvis asks if you want a body scan; if you say yes it shows an "Open Body Scan" button in the chat that takes you straight there
+- **Re-onboarding awareness** — if you tell Jarvis your goals have shifted, it offers to build a fresh plan based on your new direction
+
 ## [2026-05-08] — Build 67: Watch triathlon plan now sticks
 
 - **Race plan persists on Watch** — the triathlon plan is now saved to the Watch's local storage; it survives the Watch app closing and reopening, so "No Race Loaded" no longer appears after the app is restarted
