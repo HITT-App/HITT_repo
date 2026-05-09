@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-05-09] — Build 62: Voice interrupt + preview fix + schedule live updates
+
+- **Interrupt the coach mid-speech** — tap the mic button at any time while the coach is talking to stop it immediately; button shows a stop icon and "Tap to interrupt" while speaking
+- **Voice preview fixed** — sample playback in Settings now works correctly on iOS; was silently failing due to an audio unlock issue
+- **Schedule updates instantly** — when Jarvis creates a workout plan, entries now appear in the Schedule tab straight away without needing to reload or navigate away
+
 ## [2026-05-08] — Build 61: Voice picker with preview + HIIT pronunciation fix
 
 - **Voice picker redesigned** — voices now appear as individual cards in Settings; tap Preview on any voice to hear a sample clip before choosing it

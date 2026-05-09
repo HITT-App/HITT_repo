@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Volume2, VolumeX, X, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, X, Loader2, StopCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -647,22 +647,43 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         className="shrink-0 flex flex-col items-center gap-3 pt-3 pb-4 border-t border-border/40"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 24px) + 1rem)" }}
       >
-        {/* Status label — hovers above mic */}
+        {/* Status label */}
         <p className="text-xs text-muted-foreground">
-          {isProcessing ? 'Thinking…' : isListening ? 'Listening…' : isSpeaking ? 'Speaking…' : 'Tap to speak'}
+          {isProcessing ? 'Thinking…' : isListening ? 'Listening…' : isSpeaking ? 'Tap to interrupt' : 'Tap to speak'}
         </p>
 
-        {/* Mic button */}
+        {/* Mic / interrupt button */}
         <Button
           size="lg"
           className={cn(
-            "w-16 h-16 rounded-full shadow-lg",
-            isListening ? "bg-destructive hover:bg-destructive/90" : "bg-primary hover:bg-primary/90"
+            "w-16 h-16 rounded-full shadow-lg transition-all",
+            isListening
+              ? "bg-destructive hover:bg-destructive/90"
+              : isSpeaking
+                ? "bg-secondary hover:bg-secondary/90 border-2 border-primary"
+                : "bg-primary hover:bg-primary/90"
           )}
-          onClick={isListening ? stopListening : startListening}
-          disabled={isProcessing || isSpeaking}
+          onClick={() => {
+            if (isListening) {
+              stopListening();
+            } else if (isSpeaking) {
+              // Interrupt: stop audio, ready to listen
+              if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = '';
+              }
+              setIsSpeaking(false);
+            } else {
+              startListening();
+            }
+          }}
+          disabled={isProcessing}
         >
-          {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+          {isListening
+            ? <MicOff className="w-6 h-6" />
+            : isSpeaking
+              ? <StopCircle className="w-6 h-6 text-primary" />
+              : <Mic className="w-6 h-6" />}
         </Button>
       </div>
     </div>

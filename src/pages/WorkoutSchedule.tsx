@@ -53,6 +53,23 @@ export default function WorkoutSchedule() {
     }
   }, [user, currentDate]);
 
+  // Real-time subscription — picks up entries written by Jarvis without a full reload
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('schedule_realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'scheduled_workouts',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        fetchScheduledWorkouts();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
   const fetchScheduledWorkouts = async () => {
     if (!user) return;
     setIsLoading(true);

@@ -58,6 +58,7 @@ export default function ChatSettings() {
   const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem('hiit-ai-voice-enabled') === 'true');
   const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb');
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
+  const previewAudioRef = { current: null as HTMLAudioElement | null };
   const [selectedAvatar, setSelectedAvatar] = useState('bot');
   const [responseType, setResponseType] = useState('neutral');
   const [dataSharing, setDataSharing] = useState(true);
@@ -73,6 +74,17 @@ export default function ChatSettings() {
   const previewVoice = async (voiceId: string) => {
     if (previewingVoice) return;
     setPreviewingVoice(voiceId);
+
+    // Create and unlock the audio element synchronously in the click handler —
+    // iOS WKWebView blocks play() if called after an async gap (lost gesture context)
+    const audio = new Audio();
+    previewAudioRef.current?.pause();
+    previewAudioRef.current = audio;
+    // Silent unlock: lets iOS trust this element for future playback
+    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    audio.volume = 0;
+    audio.play().catch(() => {});
+
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
@@ -95,7 +107,8 @@ export default function ChatSettings() {
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      audio.volume = 1;
+      audio.src = url;
       audio.onended = () => { URL.revokeObjectURL(url); setPreviewingVoice(null); };
       audio.onerror = () => setPreviewingVoice(null);
       await audio.play().catch(() => setPreviewingVoice(null));
