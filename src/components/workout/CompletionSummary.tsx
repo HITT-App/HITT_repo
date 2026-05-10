@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShareOptionsGrid, type ShareStyle } from './ShareOptionsGrid';
 import { SocialShareButtons } from './SocialShareButtons';
-import { generateStatsCard, generatePhotoCard, generateMapCard, generateRouteCard, type RoutePoint } from './ShareCardCanvas';
+import { generateStatsCard, generatePhotoCard, generateMapCard, generateRouteCard, generateTransparentCard, generateStoryCard, type RoutePoint } from './ShareCardCanvas';
 
 import type { Json } from '@/integrations/supabase/types';
 
@@ -236,6 +236,7 @@ export function CompletionSummary({
     setIsGenerating(true);
     try {
       let dataUrl: string;
+
       if (style === 'map') {
         if (routePositions && routePositions.length >= 2) {
           dataUrl = await generateRouteCard(routePositions, activityTitle, stats);
@@ -244,13 +245,18 @@ export function CompletionSummary({
         } else {
           dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
         }
+      } else if (style === 'transparent') {
+        dataUrl = await generateTransparentCard(routePositions ?? [], activityTitle, stats);
+      } else if (style === 'story') {
+        dataUrl = await generateStoryCard(routePositions ?? [], activityTitle, activityType || 'workout', stats);
       } else {
         dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, effectiveMapRef.current);
       }
+
       setGeneratedImageUrl(dataUrl);
       toast.success('Share card created! 🎨');
     } catch { toast.error('Failed to create card'); } finally { setIsGenerating(false); }
-  }, [activityTitle, activityType, stats, effectiveMapRef]);
+  }, [activityTitle, activityType, stats, effectiveMapRef, routePositions]);
 
   const handleQuickPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

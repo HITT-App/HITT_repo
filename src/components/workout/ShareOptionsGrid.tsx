@@ -1,7 +1,7 @@
-import { Map, BarChart3, Sparkles, Camera } from 'lucide-react';
+import { Map, BarChart3, Sparkles, Camera, Layers, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type ShareStyle = 'none' | 'map' | 'stats' | 'ai' | 'photo';
+export type ShareStyle = 'none' | 'map' | 'stats' | 'ai' | 'photo' | 'transparent' | 'story';
 
 interface ShareOptionsGridProps {
   hasMap: boolean;
@@ -23,6 +23,22 @@ const getOptions = (hasMap: boolean) => [
     icon: BarChart3,
     label: 'Stats Card',
     desc: hasMap ? 'Route + stats' : 'Dark branded card',
+    badge: 'Instant',
+    needsMap: false,
+  },
+  {
+    key: 'transparent' as const,
+    icon: Layers,
+    label: 'Transparent',
+    desc: 'Layer over your photos',
+    badge: 'Instant',
+    needsMap: false,
+  },
+  {
+    key: 'story' as const,
+    icon: Smartphone,
+    label: 'Story Card',
+    desc: 'Instagram / TikTok',
     badge: 'Instant',
     needsMap: false,
   },

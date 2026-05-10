@@ -277,6 +277,259 @@ export async function generateRouteCard(
   return canvas.toDataURL('image/png');
 }
 
+// ── Shared projection helper ────────────────────────────────────────
+
+interface ProjectionContext {
+  toXY: (lat: number, lng: number) => [number, number];
+  positions: RoutePoint[];
+}
+
+function buildProjection(
+  positions: RoutePoint[],
+  areaX: number, areaY: number, areaW: number, areaH: number,
+  pad = 80,
+): ProjectionContext {
+  const lats = positions.map(p => p.lat);
+  const lngs = positions.map(p => p.lng);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const lngSpan = maxLng - minLng || 0.001;
+
+  const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+  const minMerc = mercY(minLat), maxMerc = mercY(maxLat);
+  const mercSpan = maxMerc - minMerc || 0.001;
+
+  const scaleX = (areaW - pad * 2) / lngSpan;
+  const scaleY = (areaH - pad * 2) / mercSpan;
+  const s = Math.min(scaleX, scaleY);
+  const projW = lngSpan * s, projH = mercSpan * s;
+
+  const toXY = (lat: number, lng: number): [number, number] => [
+    areaX + (areaW - projW) / 2 + (lng - minLng) * s,
+    // Flip Y: minLat → bottom of area, maxLat → top
+    areaY + (areaH + projH) / 2 - (mercY(lat) - minMerc) * s,
+  ];
+
+  return { toXY, positions };
+}
+
+function drawRouteLine(ctx: CanvasRenderingContext2D, proj: ProjectionContext) {
+  const { toXY, positions } = proj;
+  ctx.strokeStyle = 'hsl(24,90%,55%)';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.globalAlpha = 0.10; ctx.lineWidth = 22;
+  ctx.beginPath();
+  positions.forEach((p, i) => { const [x, y] = toXY(p.lat, p.lng); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.22; ctx.lineWidth = 12;
+  ctx.beginPath();
+  positions.forEach((p, i) => { const [x, y] = toXY(p.lat, p.lng); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.stroke();
+
+  ctx.globalAlpha = 1; ctx.lineWidth = 4.5;
+  ctx.beginPath();
+  positions.forEach((p, i) => { const [x, y] = toXY(p.lat, p.lng); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.stroke();
+
+  const [sx, sy] = toXY(positions[0].lat, positions[0].lng);
+  ctx.beginPath(); ctx.arc(sx, sy, 11, 0, Math.PI * 2);
+  ctx.fillStyle = '#22c55e'; ctx.fill();
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke();
+
+  const last = positions[positions.length - 1];
+  const [ex, ey] = toXY(last.lat, last.lng);
+  ctx.beginPath(); ctx.arc(ex, ey, 14, 0, Math.PI * 2);
+  ctx.fillStyle = 'hsl(24,90%,55%)'; ctx.fill();
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/** Transparent card — route + stats on transparent background for Story compositing */
+export async function generateTransparentCard(
+  positions: RoutePoint[],
+  activityTitle: string,
+  stats: Array<{ label: string; value: string | number; unit?: string }>,
+): Promise<string> {
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d')!;
+  // No background fill — canvas is transparent by default
+
+  const mapH = SIZE - 260;
+
+  if (positions.length >= 2) {
+    const proj = buildProjection(positions, 0, 0, SIZE, mapH);
+    drawRouteLine(ctx, proj);
+  } else {
+    ctx.globalAlpha = 0.5;
+    ctx.font = '140px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('🗺️', SIZE / 2, mapH / 2 + 50);
+    ctx.globalAlpha = 1;
+  }
+
+  await stampWatermark(ctx);
+
+  // Semi-transparent gradient bar — legible on any background colour
+  const barH = 260;
+  const barY = SIZE - barH;
+  const grad = ctx.createLinearGradient(0, barY, 0, SIZE);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(0.35, 'rgba(0,0,0,0.55)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.78)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, barY, SIZE, barH);
+  drawStatsBar(ctx, activityTitle, stats);
+
+  return canvas.toDataURL('image/png');
+}
+
+/** Story card — 1080×1920 portrait template for Instagram/TikTok Stories */
+export async function generateStoryCard(
+  positions: RoutePoint[],
+  activityTitle: string,
+  activityType: string,
+  stats: Array<{ label: string; value: string | number; unit?: string }>,
+): Promise<string> {
+  const W = 1080, H = 1920;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+
+  // ── Background ──
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, W, H);
+
+  // ── HITT orange diagonal brand stripes ──
+  function stripe(tx: number, ty: number, angle: number, w: number, h: number, solid: boolean, alpha: number) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(tx, ty);
+    ctx.rotate(angle);
+    if (solid) {
+      const g = ctx.createLinearGradient(0, 0, w, 0);
+      g.addColorStop(0, 'hsl(24,90%,58%)');
+      g.addColorStop(1, 'hsl(24,90%,38%)');
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = 'rgba(255,110,15,0.7)';
+    }
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
+  // Top-right
+  stripe(W + 30, -30, 0.58, 170, 740, true, 1);
+  stripe(W + 30, -30, 0.58, 58, 740, false, 1);
+  // Bottom-left
+  stripe(-30, H + 30, 0.58, 170, 740, true, 1);
+  stripe(-30, H + 30, 0.58, 58, 740, false, 1);
+
+  // ── Route card ──
+  const cPad = 56, cW = W - cPad * 2, cH = 680, cX = cPad, cY = 230, r = 32;
+
+  // Card shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur = 60;
+  ctx.fillStyle = '#1a1a1a';
+  roundRectPath(ctx, cX, cY, cW, cH, r);
+  ctx.fill();
+  ctx.restore();
+
+  // Clip to card
+  ctx.save();
+  roundRectPath(ctx, cX, cY, cW, cH, r);
+  ctx.clip();
+
+  if (positions.length >= 2) {
+    // Subtle grid
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 7; i++) {
+      ctx.beginPath(); ctx.moveTo(cX + (cW * i) / 7, cY); ctx.lineTo(cX + (cW * i) / 7, cY + cH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cX, cY + (cH * i) / 7); ctx.lineTo(cX + cW, cY + (cH * i) / 7); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    const proj = buildProjection(positions, cX, cY, cW, cH, 60);
+    drawRouteLine(ctx, proj);
+  } else {
+    const typeIcons: Record<string, string> = {
+      running: '🏃', cycling: '🚴', walking: '🚶', swimming: '🏊',
+      yoga: '🧘', hiit: '🔥', workout: '💪', gym: '🏋️',
+    };
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cX, cY, cW, cH);
+    ctx.globalAlpha = 1;
+    ctx.font = '170px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(typeIcons[activityType?.toLowerCase()] || '💪', cX + cW / 2, cY + cH / 2 + 65);
+  }
+  ctx.restore();
+
+  // ── Stats row ──
+  const statsY = cY + cH + 72;
+  const visStats = stats.slice(0, 3);
+  const colW = (W - 80) / visStats.length;
+
+  visStats.forEach((stat, i) => {
+    const cx = 40 + colW * i + colW / 2;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 70px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${stat.value}${stat.unit ? ` ${stat.unit}` : ''}`, cx, statsY + 70);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = '500 28px system-ui, -apple-system, sans-serif';
+    ctx.fillText(stat.label.toUpperCase(), cx, statsY + 114);
+  });
+
+  // Separator
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(80, statsY + 148); ctx.lineTo(W - 80, statsY + 148); ctx.stroke();
+
+  // ── Activity title ──
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 56px system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  let title = activityTitle;
+  while (ctx.measureText(title).width > W - 140 && title.length > 1) title = title.slice(0, -1);
+  if (title !== activityTitle) title = title.trim() + '…';
+  ctx.fillText(title, W / 2, statsY + 218);
+
+  // ── HITT branding ──
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '500 30px system-ui, -apple-system, sans-serif';
+  ctx.fillText('Check out this activity on', W / 2, H - 178);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 56px system-ui, -apple-system, sans-serif';
+  ctx.fillText('HITT', W / 2, H - 110);
+
+  await stampWatermark(ctx);
+  return canvas.toDataURL('image/png');
+}
+
 /** Map card — captures a DOM element and overlays stats */
 export async function generateMapCard(
   mapElement: HTMLElement,
