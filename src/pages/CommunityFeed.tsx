@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
   Flame, Users, TrendingUp, Loader2, Share2, Sparkles,
-  Send, Pencil, Trash2, EyeOff, Bell,
+  Send, Pencil, Trash2, EyeOff, Bell, Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -224,6 +224,24 @@ const CommunityFeed = () => {
             <h1 className="text-lg font-bold tracking-tight">Feed</h1>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full touch-manipulation"
+              onClick={() => navigate("/community/chatroom")}
+              aria-label="Chat"
+            >
+              <MessageCircle className="w-[18px] h-[18px]" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full touch-manipulation"
+              onClick={() => navigate("/leaderboard")}
+              aria-label="Leaderboard"
+            >
+              <Trophy className="w-[18px] h-[18px]" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"

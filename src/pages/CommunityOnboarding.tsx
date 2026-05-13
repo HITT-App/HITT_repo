@@ -1,19 +1,28 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const ACCEPTED_KEY = "hitt-community-guidelines-accepted";
+
 const CommunityOnboarding = () => {
   const navigate = useNavigate();
-  const [hasAcceptedGuidelines, setHasAcceptedGuidelines] = useState(false);
+
+  // Skip straight to feed if guidelines already accepted
+  useEffect(() => {
+    if (localStorage.getItem(ACCEPTED_KEY)) {
+      navigate("/community/feed", { replace: true });
+    }
+  }, [navigate]);
 
   const guidelines = [
-    { id: "kind", label: "Be kind to other" },
-    { id: "follow", label: "Follow Guideline" },
-    { id: "toxic", label: "Don't be toxic" },
+    { id: "kind", label: "Be kind to others" },
+    { id: "follow", label: "Follow community guidelines" },
+    { id: "toxic", label: "No toxic behaviour" },
   ];
 
   const handleContinue = () => {
+    localStorage.setItem(ACCEPTED_KEY, "1");
     navigate("/community/feed");
   };
 

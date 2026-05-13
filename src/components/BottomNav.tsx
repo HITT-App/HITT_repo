@@ -21,7 +21,7 @@ export const BottomNav = ({ onAddClick }: BottomNavProps) => {
     { id: "add", icon: Plus, label: "Add", path: null as string | null },
     // Centre HIIT logo — opens Jarvis directly
     { id: "center", icon: null as any, label: "Jarvis", path: null as string | null },
-    ...(flags.community_enabled ? [{ id: "community", icon: MessageCircle, label: "Social", path: "/community" }] : []),
+    ...(flags.community_enabled ? [{ id: "community", icon: MessageCircle, label: "Social", path: "/community/onboarding" }] : []),
     { id: "profile", icon: User, label: "You", path: "/profile" },
   ];
 
@@ -38,7 +38,7 @@ export const BottomNav = ({ onAddClick }: BottomNavProps) => {
     }
     if (!item.path) return;
     if (item.id === "community" && unreadCount > 0) {
-      navigate("/community/notifications");
+      navigate("/community/notifications"); return;
     } else {
       navigate(item.path);
     }
