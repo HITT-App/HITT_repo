@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const CommunityOnboarding = () => {
@@ -19,6 +19,12 @@ const CommunityOnboarding = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center px-4 py-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <h1 className="text-lg font-semibold ml-2">Community Guidelines</h1>
+      </header>
       {/* Hero Image */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="relative w-64 h-64">
