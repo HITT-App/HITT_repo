@@ -404,7 +404,6 @@ export default function NutritionDashboard() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }
