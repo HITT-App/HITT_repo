@@ -298,12 +298,18 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         rows.map(r => ({ user_id: userId, workout_id: r.workout_id, scheduled_date: r.scheduled_date }))
       );
 
-      const confirmation = `✅ Done! Added ${rows.length} workouts to your schedule. Check the Schedule tab to see them.`;
+      const confirmation = `✅ Your schedule is set! Taking you there now…`;
       const withConfirm = [...historyRef.current, { role: 'assistant' as const, content: confirmation }];
       historyRef.current = withConfirm;
       setConversationHistory(withConfirm);
       await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
       if (!isMutedRef.current) await speakResponse(confirmation);
+
+      // Close Jarvis and navigate to the Schedule tab so the user sees their new plan
+      setTimeout(() => {
+        onClose();
+        navigate('/schedule');
+      }, 1800);
     } catch (err) {
       console.error('[Jarvis] Schedule creation failed:', err);
       const msg = `Sorry, I couldn't add the schedule right now. You can add workouts manually from the Schedule tab.`;
@@ -761,7 +767,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
         {/* Schedule confirmation card — shown when Jarvis proposes a plan */}
         {pendingSchedule && (
           <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
-            <p className="text-sm font-semibold text-foreground">Add to your schedule?</p>
+            <p className="text-sm font-semibold text-foreground">Your plan is ready 🗓️</p>
             <p className="text-xs text-muted-foreground">
               {pendingSchedule.daysPerWeek}× per week · {pendingSchedule.sessionMinutes} min sessions · {pendingSchedule.goal}
             </p>
@@ -772,7 +778,9 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
                 onClick={confirmSchedule}
                 disabled={isAddingSchedule}
               >
-                {isAddingSchedule ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add to schedule'}
+                {isAddingSchedule
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : 'Add to my schedule calendar'}
               </Button>
               <Button
                 size="sm"
