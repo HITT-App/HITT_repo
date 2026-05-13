@@ -6,18 +6,6 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
-### Navigation restructure — HIIT button opens Jarvis, AI tab becomes Add (IMPLEMENTED Build 75+)
-
-**Decision confirmed 2026-05-13.**
-
-- The centre HIIT logo button in the bottom nav now opens Jarvis directly (same as saying "Ok HIIT")
-- The AI tab has been replaced with an "Add" tab (Plus icon) which opens the full navigation menu
-- "Ok HIIT" wake word, the HIIT button, and any future `hitt:open-jarvis` event all use the same code path in VoiceController — one Jarvis, not two separate entry points
-- The `/ai-coach` route still exists but is no longer linked from the bottom nav
-
-**For future consideration:**
-- Should the "Add" quick-action sheet be simplified to just the most common add-type actions (add workout, log meal, log activity) rather than the full nav menu?
-- Should the `/ai-coach` route be removed entirely or repurposed?
 
 ### V2: Fitness Coach Sessions
 
@@ -185,6 +173,32 @@ Open questions:
 
 ---
 
+### ✅ Goals button in Jarvis (2026-05-13, build 37)
+
+**Decision confirmed 2026-05-13.**
+
+A "Goals" button (Target icon, labelled "Goals") sits to the left of the mic button inside Jarvis. Tapping it:
+- If the user has `workout_preferences` set: Jarvis summarises their current goal, days/week, and session length, then asks if they want to adjust anything
+- If no goals are set: Jarvis runs the full onboarding intake (goal → days → session length → schedule proposal)
+
+**For future consideration:** add a second small button on the right side (e.g. "Today" to pull up today's schedule, or "Progress" to show recent stats) to balance the layout.
+
+---
+
+### ✅ Navigation restructure (2026-05-13, builds 35–36)
+
+**Decision confirmed 2026-05-13.**
+
+- The centre HIIT logo button in the bottom nav now opens Jarvis directly (same as saying "Ok HIIT")
+- The AI tab has been replaced with an "Add" tab (Plus icon) which opens the full navigation menu
+- "Ok HIIT" wake word, the HIIT button, and the `hitt:open-jarvis` custom event all use the same code path in VoiceController
+
+**For future consideration:**
+- Simplify the "Add" sheet to just the most common actions (add workout, log meal, log activity)?
+- Remove or repurpose the `/ai-coach` route entirely?
+
+---
+
 ### ✅ TestFlight — live as of 2026-04-30
 
 App is on TestFlight. Current build: **24** (version 1.0). Add testers via App Store Connect → TestFlight → Internal Testing.
@@ -213,6 +227,9 @@ App is on TestFlight. Current build: **24** (version 1.0). Add testers via App S
 | 32 | 2026-05-03 | Body scan photos resized before upload (6 MB limit fix); story keyboard fix; duplicate greeting removed |
 | 33 | 2026-05-03 | Body scan: second-person AI output, camera flip button, AI disclaimer visible above nav |
 | 34 | 2026-05-03 | Body scan rear-camera fix (capture gate); workout library seeded (175 exercises, 28 thumbnails) |
+| 35 | 2026-05-13 | Welcome message reliability fixes; nav restructure (HIIT logo → Jarvis, Add tab replaces AI); social screen sticky headers; community onboarding flow; chat + leaderboard in feed header; mic chime on app exit fixed |
+| 36 | 2026-05-13 | Hotfix: missing useEffect import in VoiceController caused startup crash on build 35 |
+| 37 | 2026-05-13 | Goals button added to Jarvis — reviews current goals or runs full onboarding if none set |
 
 ### ✅ Google OAuth on iOS — rebuilt with native plugin (2026-05-01, build 24)
 
