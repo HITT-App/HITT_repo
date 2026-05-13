@@ -696,7 +696,7 @@ export default function CommunityChatroom() {
   return (
     <div className="flex flex-col h-[100svh] bg-background overflow-hidden overscroll-none">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-card/80 backdrop-blur-xl z-10 shrink-0">
+      <header className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-background/90 backdrop-blur-sm z-20 shrink-0" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => navigate("/community")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -741,7 +741,7 @@ export default function CommunityChatroom() {
             )}
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Active broadcast notice */}
       {activeNotice && !noticeDismissed && (
