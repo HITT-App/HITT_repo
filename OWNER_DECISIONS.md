@@ -173,7 +173,7 @@ Open questions:
 
 ---
 
-### ✅ Goals button in Jarvis (2026-05-13, build 37)
+### ✅ Goals button in Jarvis (2026-05-13, build 71)
 
 **Decision confirmed 2026-05-13.**
 
@@ -185,7 +185,7 @@ A "Goals" button (Target icon, labelled "Goals") sits to the left of the mic but
 
 ---
 
-### ✅ Navigation restructure (2026-05-13, builds 35–36)
+### ✅ Navigation restructure (2026-05-13, build 69)
 
 **Decision confirmed 2026-05-13.**
 
@@ -227,9 +227,26 @@ App is on TestFlight. Current build: **24** (version 1.0). Add testers via App S
 | 32 | 2026-05-03 | Body scan photos resized before upload (6 MB limit fix); story keyboard fix; duplicate greeting removed |
 | 33 | 2026-05-03 | Body scan: second-person AI output, camera flip button, AI disclaimer visible above nav |
 | 34 | 2026-05-03 | Body scan rear-camera fix (capture gate); workout library seeded (175 exercises, 28 thumbnails) |
-| 35 | 2026-05-13 | Welcome message reliability fixes; nav restructure (HIIT logo → Jarvis, Add tab replaces AI); social screen sticky headers; community onboarding flow; chat + leaderboard in feed header; mic chime on app exit fixed |
-| 36 | 2026-05-13 | Hotfix: missing useEffect import in VoiceController caused startup crash on build 35 |
-| 37 | 2026-05-13 | Goals button added to Jarvis — reviews current goals or runs full onboarding if none set |
+| 35 | 2026-05-03 | Body scan "expecting ; or )" error fixed; session token fetched safely before request |
+| 36 | 2026-05-03 | Body scan camera flip works in one tap; Watch health data syncs automatically on app open |
+| 37 | 2026-05-03 | Home workouts section spacing fixed; category filters work; workout detail sticky header; player controls fixed |
+| 38 | 2026-05-04 | Ironman triathlon Watch integration — race setup screen, send plan to Watch, Race tab, leg transitions |
+| 45 | 2026-05-05 | AI coach speaks responses (ElevenLabs TTS); 6 voice choices; mute toggle in chat; voice preference saved |
+| 57 | 2026-05-08 | All 9 missing Watch screens added; persistent Jarvis chat history; welcome back greeting; streaming fix |
+| 58 | 2026-05-08 | Jarvis hardened — 5 bugs: response bleed, rapid speech, duplicate message, mute toggle, single conversation |
+| 59 | 2026-05-08 | Jarvis builds real schedules from workout library; schedule confirmation in chat; welcome greeting fixed; Watch icon |
+| 60 | 2026-05-08 | HealthKit refreshes on every app open; voice food logging (log what you ate to Jarvis) |
+| 61 | 2026-05-08 | Voice picker redesigned with preview cards; HIIT pronunciation fixed (now sounds like "hit") |
+| 62 | 2026-05-09 | Interrupt coach mid-speech; voice preview fixed on iOS; schedule updates live when Jarvis creates plan |
+| 63 | 2026-05-09 | Jarvis shows confirmation card before saving schedule; nothing saved without user tapping "Add to schedule" |
+| 64 | 2026-05-09 | Watch navigates to Race screen automatically when plan arrives; reliable delivery when Watch is out of range |
+| 65 | 2026-05-09 | WebSocket not connected Sentry error fixed; voice mic stability improved |
+| 66 | 2026-05-09 | AI coach TTS fixed (speaks every response); schedule date picker extended to 14 days; Add to Schedule button |
+| 67 | 2026-05-08 | Watch triathlon plan persists across app restarts; plan-arrival observer moved to top level |
+| 68 | 2026-05-09 | Jarvis onboarding flow — goal intake on first open, auto schedule proposal, body scan offer |
+| 69 | 2026-05-13 | Welcome message reliability + echo fix; nav restructure; social sticky headers; onboarding flow; mic chime fix |
+| 70 | 2026-05-13 | Hotfix: missing useEffect import in VoiceController caused startup crash on build 69 |
+| 71 | 2026-05-13 | Goals button added to Jarvis — reviews current goals or runs full onboarding if none set |
 
 ### ✅ Google OAuth on iOS — rebuilt with native plugin (2026-05-01, build 24)
 
