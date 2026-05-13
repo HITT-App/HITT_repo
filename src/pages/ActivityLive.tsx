@@ -307,9 +307,18 @@ const ActivityLive = () => {
 
   // ========== COMPLETED SCREEN ==========
   if (showCompleted) {
+    // Use human-readable duration so the AI insight doesn't mistake "00:42" (MM:SS) for 42 minutes
+    const formatDuration = (secs: number) => {
+      if (secs < 60) return `${secs} sec`;
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = secs % 60;
+      if (h > 0) return s > 0 ? `${h} hr ${m} min ${s} sec` : `${h} hr ${m} min`;
+      return s > 0 ? `${m} min ${s} sec` : `${m} min`;
+    };
     const completionStats = [
       { label: 'Distance', value: distanceKm.toFixed(2), unit: 'km' },
-      { label: 'Duration', value: formatTime(elapsed) },
+      { label: 'Duration', value: formatDuration(elapsed) },
       { label: 'Calories', value: calories, unit: 'kcal' },
       { label: 'Avg Pace', value: pace, unit: 'min/km' },
     ];
