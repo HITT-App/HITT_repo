@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -139,53 +138,54 @@ export default function NutritionDashboard() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <ScrollArea className="h-[calc(100vh-80px)]">
-        <div className="px-5 pt-6 pb-8 space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-1.5">
-                  <h1 className="text-2xl font-bold text-foreground">
-                    {isToday(selectedDate) ? "Today" : format(selectedDate, "MMM d")}
-                  </h1>
-                  {calendarOpen ? (
-                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(date);
-                      setCalendarOpen(false);
-                    }
-                  }}
-                  disabled={(date) => date > new Date()}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-            <div className="flex items-center gap-3">
-              <Button
-                size="sm"
-                className="rounded-full bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 border-0 font-semibold text-xs px-4 h-8"
-                onClick={() => navigate("/subscription")}
-              >
-                Go Premium
-              </Button>
-              <div className="flex items-center gap-1 text-foreground">
-                <span className="font-semibold text-sm">0</span>
-                <Zap className="w-4 h-4 text-primary" />
-              </div>
+      {/* Sticky header — date picker + quick actions always visible */}
+      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 px-5 pb-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+        <div className="flex items-center justify-between">
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <button className="flex items-center gap-1.5">
+                <h1 className="text-2xl font-bold text-foreground">
+                  {isToday(selectedDate) ? "Today" : format(selectedDate, "MMM d")}
+                </h1>
+                {calendarOpen ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedDate(date);
+                    setCalendarOpen(false);
+                  }
+                }}
+                disabled={(date) => date > new Date()}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              className="rounded-full bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 border-0 font-semibold text-xs px-4 h-8"
+              onClick={() => navigate("/subscription")}
+            >
+              Go Premium
+            </Button>
+            <div className="flex items-center gap-1 text-foreground">
+              <span className="font-semibold text-sm">0</span>
+              <Zap className="w-4 h-4 text-primary" />
             </div>
           </div>
+        </div>
+      </header>
+      <div className="px-5 pt-4 pb-8 space-y-6">
 
           {/* Week Day Selector */}
           <div className="flex justify-between px-1">
@@ -404,9 +404,7 @@ export default function NutritionDashboard() {
             </div>
           </div>
         </div>
-      </ScrollArea>
-
-      
+      </div>
     </div>
   );
 }

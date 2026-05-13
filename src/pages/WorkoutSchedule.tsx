@@ -220,7 +220,7 @@ export default function WorkoutSchedule() {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-border">
+      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4 py-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>

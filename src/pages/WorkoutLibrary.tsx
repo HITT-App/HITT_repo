@@ -136,13 +136,13 @@ export default function WorkoutLibrary() {
 
   return (
     <div className="min-h-screen bg-background pb-24 flex justify-center overflow-x-hidden">
-      <div className="w-full max-w-md h-[calc(100vh-96px)] overflow-y-auto overflow-x-hidden">
+      <div className="w-full max-w-md overflow-x-hidden">
+        {/* Sticky header with logo */}
+        <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4 py-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+          <HIITLogo size="sm" />
+          <p className="text-xs text-muted-foreground">Workouts</p>
+        </header>
         <div className="px-4 py-3 pr-5 space-y-4 overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <HIITLogo size="sm" />
-            <p className="text-xs text-muted-foreground">Workouts</p>
-          </div>
 
           {/* AI Greeting */}
           <Card className="bg-card border-border/50">
