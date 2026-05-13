@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-05-13] — Build 69: Welcome message fixes, nav restructure, social screen improvements
+
+- **Welcome message reliability** — greeting voice now plays correctly every time you open the app; fixed a bug where it would stay silent after returning from the background, and another where it would echo (play twice) if the screen was tapped at the same moment as the auto-trigger
+- **Mic chime on app exit fixed** — wake word listener now stops cleanly when you leave the app and restarts when you return, preventing the iOS mic-off sound from playing on every exit
+- **Nav restructure** — the HIIT logo button in the bottom nav now opens Jarvis directly; the old AI tab has been replaced with an Add tab
+- **Social onboarding** — tapping Social now shows the community guidelines screen first before taking you to the feed
+- **Social feed header** — Chat and Leaderboard buttons added to the top of the community feed
+- **Sticky headers** — Social screen, Explore Community screen, and Chat Room all have proper sticky headers with safe-area padding so content no longer hides under the notch
+
 ## [2026-05-09] — Build 68: Jarvis onboarding flow
 
 - **First open intake** — if Jarvis opens and you have no schedule yet, it runs a quick goal intake: asks your main fitness goal, what specifically you want to achieve, how many days a week you can train, and how long each session should be — one question at a time

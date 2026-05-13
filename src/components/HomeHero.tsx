@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { App } from "@capacitor/app";
 import heroVideo from "@/assets/hiit-hero.mp4";
 import { Mic, Volume2, VolumeX } from "lucide-react";
 import { Button } from "./ui/button";
@@ -24,8 +25,9 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
   const navigate = useNavigate();
   const { enabled: wakeWordEnabled } = useWakeWordPreference();
 
-  const [isPlaying, setIsPlaying]   = useState(false);
-  const [hasPlayed, setHasPlayed]   = useState(() => sessionStorage.getItem('voice_greeting_played') === 'true');
+  const isPlayingRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hasPlayed, setHasPlayed]   = useState(false);
   const [isMuted, setIsMuted]       = useState(false);
   const [customVideoUrl, setCustomVideoUrl] = useState<string | undefined>(undefined);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -42,9 +44,19 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
     load();
   }, []);
 
+  // Reset the played flag when the app comes back to the foreground so the
+  // greeting fires again each time the user returns to the home screen.
+  useEffect(() => {
+    let listener: { remove: () => void } | null = null;
+    App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) setHasPlayed(false);
+    }).then(l => { listener = l; }).catch(() => {});
+    return () => { listener?.remove(); };
+  }, []);
+
   const playVoiceGreeting = async () => {
-    if (hasPlayed || isPlaying) return;
-    setIsPlaying(true);
+    if (hasPlayed || isPlayingRef.current) return;
+    isPlayingRef.current = true;
     try {
       // Greeting includes Ok HIIT prompt if wake word is on
       // "HIIT" reads as individual letters — replace with phonetic "hit" for TTS
@@ -62,7 +74,7 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
       } else {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        if (!token) { setIsPlaying(false); return; }
+        if (!token) { isPlayingRef.current = false; return; }
 
         const voiceId = localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb';
         const res = await fetch(
@@ -78,7 +90,7 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
           }
         );
 
-        if (!res.ok) { setIsPlaying(false); return; }
+        if (!res.ok) { isPlayingRef.current = false; return; }
 
         const blob = await res.blob();
         const reader = new FileReader();
@@ -93,13 +105,12 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       audio.volume = isMuted ? 0 : 1;
-      audio.onended = () => setIsPlaying(false);
+      audio.onended = () => { isPlayingRef.current = false; };
       await audio.play();
       setHasPlayed(true);
-      sessionStorage.setItem('voice_greeting_played', 'true');
     } catch (err) {
       console.error("[HomeHero] Voice greeting error:", err);
-      setIsPlaying(false);
+      isPlayingRef.current = false;
     }
   };
 
@@ -115,16 +126,17 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
     const handleInteraction = () => {
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("touchstart", handleInteraction);
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
       playVoiceGreeting();
     };
     document.addEventListener("click", handleInteraction, { passive: true });
     document.addEventListener("touchstart", handleInteraction, { passive: true });
 
     // Also attempt autoplay after 800ms — works if the user already interacted
-    const t = setTimeout(() => { playVoiceGreeting(); }, 800);
+    timerRef.current = setTimeout(() => { playVoiceGreeting(); }, 800);
 
     return () => {
-      clearTimeout(t);
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("touchstart", handleInteraction);
     };

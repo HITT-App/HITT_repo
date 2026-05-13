@@ -31,7 +31,7 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
     const scheduleRestart = (delayMs = 400) => {
       clearTimeout(restartTimerRef.current);
       restartTimerRef.current = setTimeout(() => {
-        if (enabledRef.current && !detectedRef.current) start();
+        if (enabledRef.current && !detectedRef.current && !document.hidden) start();
       }, delayMs);
     };
 
@@ -110,9 +110,21 @@ export function WakeWordListener({ enabled, onWakeWordDetected }: WakeWordListen
       window.addEventListener('pointerdown', handleGesture, { once: true, passive: true });
     }
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        clearTimeout(restartTimerRef.current);
+        try { recognitionRef.current?.abort(); } catch {}
+        recognitionRef.current = null;
+      } else if (enabledRef.current && !detectedRef.current) {
+        scheduleRestart(500);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       clearTimeout(restartTimerRef.current);
       window.removeEventListener('pointerdown', handleGesture);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       try { recognitionRef.current?.abort(); } catch {}
       recognitionRef.current = null;
     };
