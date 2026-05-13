@@ -299,6 +299,8 @@ serve(async (req) => {
       { data: latestHeartRate },
       { data: latestSteps },
       { data: userWorkoutPrefs },
+      { data: workoutsCatalogue },
+      { data: recipesCatalogue },
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
@@ -313,6 +315,8 @@ serve(async (req) => {
       supabase.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('health_metrics').select('value').eq('user_id', userId).eq('metric_type', 'steps').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
+      supabase.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g').limit(50),
     ]);
 
     // Build user context string
@@ -428,8 +432,24 @@ serve(async (req) => {
       }
     }
 
+    if (workoutsCatalogue && workoutsCatalogue.length > 0) {
+      userContext += `\n═══ WORKOUTS CATALOGUE — only recommend workouts from this exact list ═══\n`;
+      for (const w of workoutsCatalogue) {
+        const bodyAreas = Array.isArray(w.body_areas) ? w.body_areas.join('/') : (w.body_areas ?? 'general');
+        userContext += `[${w.id}] ${w.title} — ${w.category ?? 'general'}, ${w.difficulty ?? 'all levels'}, ${w.duration_minutes ?? '?'} min, targets: ${bodyAreas}\n`;
+      }
+    }
+
+    if (recipesCatalogue && recipesCatalogue.length > 0) {
+      userContext += `\n═══ RECIPES CATALOGUE — only recommend recipes from this exact list ═══\n`;
+      for (const r of recipesCatalogue) {
+        userContext += `[${r.id}] ${r.name} — ${r.meal_type}, ${r.category}, ${r.calories}cal, ${r.protein_g}g protein\n`;
+      }
+    }
+
     userContext += "\nUse this context to personalise your responses. Address the user by name when appropriate. Reference their goals, fitness level, and recent activity. If data is missing, ask them about it naturally.\n";
     userContext += "\n⚠️ WORKOUT CALIBRATION: When recommending workouts, consider the user's weight for calorie calculations (MET × weight_kg × duration_hours). Recommend workout types that match their preferences and fitness level.\n";
+    userContext += "\n⚠️ CATALOGUE RULE: When you mention a specific workout or recipe by name, it MUST come from the WORKOUTS CATALOGUE or RECIPES CATALOGUE above. Never invent workout or recipe names. If the catalogue doesn't contain something suitable, say so honestly rather than making one up.\n";
 
     // ─── Process request ───
     const { messages, imageData, hasImage, customResponse, customMemory, healthProfile } = await req.json();
