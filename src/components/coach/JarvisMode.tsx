@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Volume2, VolumeX, X, Loader2, StopCircle } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, X, Loader2, StopCircle, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -594,6 +594,56 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     responseEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [response, transcript, conversationHistory]);
 
+  const triggerGoalsFlow = useCallback(async () => {
+    streamAbortRef.current?.abort();
+    const abort = new AbortController();
+    streamAbortRef.current = abort;
+    setIsProcessing(true);
+    setResponse('');
+
+    let prompt = '';
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (userId) {
+        const { data: prefs } = await supabase
+          .from('workout_preferences')
+          .select('workout_goal, days_per_week, session_duration, fitness_level')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (prefs?.workout_goal) {
+          prompt = `[GOALS_REVIEW] The user tapped "Goals". Their current settings: goal="${prefs.workout_goal}", ${prefs.days_per_week} days/week, ${prefs.session_duration}-minute sessions, fitness level="${prefs.fitness_level}". Summarise these back to them in a warm, encouraging 2-sentence way, then ask if they'd like to adjust anything — different goal, more/fewer days, or longer/shorter sessions. Keep it brief and conversational.`;
+        }
+      }
+    } catch {}
+
+    if (!prompt) {
+      prompt = `[ONBOARDING] The user wants to set up their fitness goals. They have no goals set yet. Introduce yourself as Coach HIIT in one warm sentence, then ask: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`;
+    }
+
+    try {
+      const messagesForAI = [
+        ...historyRef.current.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: prompt },
+      ];
+      let full = '';
+      await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); }, abort.signal);
+      if (full && !abort.signal.aborted) {
+        const { displayText, scheduleMatch, foodMatches, showBodyScan } = parseAIResponse(full);
+        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
+        setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
+        if (!isMutedRef.current) await speakResponse(displayText);
+        if (scheduleMatch) { try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {} }
+        if (foodMatches.length) { try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {} }
+        if (showBodyScan) setPendingBodyScan(true);
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') console.error('Goals flow error:', err);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [conversationId]);
+
   // Pre-unlock iOS WKWebView audio on mount. JarvisMode is always opened by a user tap,
   // so this runs within the gesture window. Without it, play() calls after async AI work
   // are blocked by iOS autoplay policy and the greeting + all responses are silent.
@@ -808,39 +858,58 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           {isProcessing ? 'Thinking…' : isListening ? 'Listening…' : isSpeaking ? 'Tap to interrupt' : 'Tap to speak'}
         </p>
 
-        {/* Mic / interrupt button */}
-        <Button
-          size="lg"
-          className={cn(
-            "w-16 h-16 rounded-full shadow-lg transition-all",
-            isListening
-              ? "bg-destructive hover:bg-destructive/90"
-              : isSpeaking
-                ? "bg-secondary hover:bg-secondary/90 border-2 border-primary"
-                : "bg-primary hover:bg-primary/90"
-          )}
-          onClick={() => {
-            if (isListening) {
-              stopListening();
-            } else if (isSpeaking) {
-              // Interrupt: stop audio, ready to listen
-              if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.src = '';
+        {/* Controls row: Goals | Mic | (spacer) */}
+        <div className="flex items-center justify-center gap-6">
+          {/* Goals button */}
+          <div className="flex flex-col items-center gap-1">
+            <Button
+              size="icon"
+              variant="outline"
+              className="w-12 h-12 rounded-full border-border/60 bg-background/40 backdrop-blur-sm"
+              onClick={triggerGoalsFlow}
+              disabled={isProcessing || isListening}
+            >
+              <Target className="w-5 h-5 text-primary" />
+            </Button>
+            <span className="text-[10px] text-muted-foreground font-medium">Goals</span>
+          </div>
+
+          {/* Mic / interrupt button */}
+          <Button
+            size="lg"
+            className={cn(
+              "w-16 h-16 rounded-full shadow-lg transition-all",
+              isListening
+                ? "bg-destructive hover:bg-destructive/90"
+                : isSpeaking
+                  ? "bg-secondary hover:bg-secondary/90 border-2 border-primary"
+                  : "bg-primary hover:bg-primary/90"
+            )}
+            onClick={() => {
+              if (isListening) {
+                stopListening();
+              } else if (isSpeaking) {
+                if (audioRef.current) {
+                  audioRef.current.pause();
+                  audioRef.current.src = '';
+                }
+                setIsSpeaking(false);
+              } else {
+                startListening();
               }
-              setIsSpeaking(false);
-            } else {
-              startListening();
-            }
-          }}
-          disabled={isProcessing}
-        >
-          {isListening
-            ? <MicOff className="w-6 h-6" />
-            : isSpeaking
-              ? <StopCircle className="w-6 h-6 text-primary" />
-              : <Mic className="w-6 h-6" />}
-        </Button>
+            }}
+            disabled={isProcessing}
+          >
+            {isListening
+              ? <MicOff className="w-6 h-6" />
+              : isSpeaking
+                ? <StopCircle className="w-6 h-6 text-primary" />
+                : <Mic className="w-6 h-6" />}
+          </Button>
+
+          {/* Spacer to keep mic centred */}
+          <div className="w-12 h-12" />
+        </div>
       </div>
     </div>
   );
