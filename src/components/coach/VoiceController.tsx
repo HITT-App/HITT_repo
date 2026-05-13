@@ -48,25 +48,23 @@ export function VoiceController() {
     }
   }, [user]);
 
-  // Handle wake word detection
+  // Opens Jarvis — shared by wake word, HIIT button tap, and the hitt:open-jarvis event
   const handleWakeWordDetected = useCallback(async () => {
-    console.log('[VoiceController] Wake word detected!');
-    
-    // Get or create conversation
     const convoId = await getOrCreateConversation();
     if (!convoId) {
       toast.error('Failed to start voice mode');
       return;
     }
-
     setConversationId(convoId);
     setShowJarvisMode(true);
-    
-    // Play activation sound/haptic feedback
-    if ('vibrate' in navigator) {
-      navigator.vibrate(100);
-    }
+    if ('vibrate' in navigator) navigator.vibrate(100);
   }, [getOrCreateConversation]);
+
+  // The centre HIIT button dispatches this event — same path as the wake word
+  useEffect(() => {
+    window.addEventListener('hitt:open-jarvis', handleWakeWordDetected);
+    return () => window.removeEventListener('hitt:open-jarvis', handleWakeWordDetected);
+  }, [handleWakeWordDetected]);
 
   // Handle Jarvis Mode close
   const handleJarvisModeClose = useCallback(() => {

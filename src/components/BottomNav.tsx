@@ -1,15 +1,15 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Bot, MessageCircle, User } from "lucide-react";
+import { Home, Plus, MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
 import hiitLogo from "@/assets/hiit-logo.webp";
 
 interface BottomNavProps {
-  onCenterClick: () => void;
+  onAddClick: () => void;
 }
 
-export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
+export const BottomNav = ({ onAddClick }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { flags } = useFeatureFlags();
@@ -17,8 +17,10 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
 
   const navItems = [
     { id: "home", icon: Home, label: "Home", path: "/" },
-    ...(flags.ai_coach_enabled ? [{ id: "hiit-ai", icon: Bot, label: "AI", path: "/ai-coach" }] : []),
-    { id: "center", icon: null as any, label: "Menu", path: null as string | null },
+    // Add button — opens the full nav menu to select what to add
+    { id: "add", icon: Plus, label: "Add", path: null as string | null },
+    // Centre HIIT logo — opens Jarvis directly
+    { id: "center", icon: null as any, label: "Jarvis", path: null as string | null },
     ...(flags.community_enabled ? [{ id: "community", icon: MessageCircle, label: "Social", path: "/community" }] : []),
     { id: "profile", icon: User, label: "You", path: "/profile" },
   ];
@@ -29,6 +31,11 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
   };
 
   const handleNavClick = (item: typeof navItems[0]) => {
+    if (item.id === "add") { onAddClick(); return; }
+    if (item.id === "center") {
+      window.dispatchEvent(new CustomEvent("hitt:open-jarvis"));
+      return;
+    }
     if (!item.path) return;
     if (item.id === "community" && unreadCount > 0) {
       navigate("/community/notifications");
@@ -50,9 +57,9 @@ export const BottomNav = ({ onCenterClick }: BottomNavProps) => {
                 return (
                   <button
                     key={item.id}
-                    onClick={onCenterClick}
+                    onClick={() => window.dispatchEvent(new CustomEvent("hitt:open-jarvis"))}
                     className="relative -mt-5 transition-transform duration-200 active:scale-95 touch-manipulation"
-                    aria-label="Open quick actions menu"
+                    aria-label="Open Jarvis"
                   >
                     <div className="w-14 h-14 rounded-full border-2 border-primary shadow-card overflow-hidden bg-white">
                       <img src={hiitLogo} alt="HIIT" className="w-full h-full object-cover" />

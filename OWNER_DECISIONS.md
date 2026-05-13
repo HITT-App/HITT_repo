@@ -6,6 +6,19 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
+### Navigation restructure — HIIT button opens Jarvis, AI tab becomes Add (IMPLEMENTED Build 75+)
+
+**Decision confirmed 2026-05-13.**
+
+- The centre HIIT logo button in the bottom nav now opens Jarvis directly (same as saying "Ok HIIT")
+- The AI tab has been replaced with an "Add" tab (Plus icon) which opens the full navigation menu
+- "Ok HIIT" wake word, the HIIT button, and any future `hitt:open-jarvis` event all use the same code path in VoiceController — one Jarvis, not two separate entry points
+- The `/ai-coach` route still exists but is no longer linked from the bottom nav
+
+**For future consideration:**
+- Should the "Add" quick-action sheet be simplified to just the most common add-type actions (add workout, log meal, log activity) rather than the full nav menu?
+- Should the `/ai-coach` route be removed entirely or repurposed?
+
 ### V2: Fitness Coach Sessions
 
 Removed from v1 at owner request. The full infrastructure (BrowseCoaches, BookCoach, CoachAppointments pages, coach profiles, session booking DB tables) is preserved in the codebase but hidden from navigation.

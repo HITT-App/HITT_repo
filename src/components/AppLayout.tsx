@@ -44,7 +44,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
       {!shouldHideNav && (
         <>
-          <BottomNav onCenterClick={() => setNavMenuOpen(true)} />
+          <BottomNav onAddClick={() => setNavMenuOpen(true)} />
           <FullNavMenu open={navMenuOpen} onOpenChange={setNavMenuOpen} />
         </>
       )}
