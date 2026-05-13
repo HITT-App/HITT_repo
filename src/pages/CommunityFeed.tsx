@@ -208,7 +208,7 @@ const CommunityFeed = () => {
   return (
     <div className="min-h-screen bg-background pb-4 overflow-x-hidden">
       {/* Sticky header */}
-      <header className="sticky top-0 bg-background/80 backdrop-blur-xl z-20 border-b border-border/40">
+      <header className="sticky top-0 bg-background/90 backdrop-blur-sm z-20 border-b border-border/40" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 0px)" }}>
         {/* Top row */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="flex items-center gap-2.5">
