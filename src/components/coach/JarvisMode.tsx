@@ -65,6 +65,28 @@ type ConversationMessage = {
   content: string;
 };
 
+type RecommendedWorkout = {
+  id: string;
+  title: string;
+  category: string | null;
+  difficulty: string | null;
+  duration_minutes: number | null;
+  body_areas: string[] | null;
+  thumbnail_url?: string | null;
+};
+
+type RecommendedRecipe = {
+  id: string;
+  name: string;
+  emoji: string | null;
+  category: string;
+  meal_type: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+};
+
 export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisModeProps) {
   const navigate = useNavigate();
   const [isListening, setIsListening] = useState(false);
@@ -80,6 +102,8 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   const [pendingSchedule, setPendingSchedule] = useState<{
     goal: string; daysPerWeek: number; selectedDays: number[]; sessionMinutes: number;
   } | null>(null);
+  const [recommendedWorkout, setRecommendedWorkout] = useState<RecommendedWorkout | null>(null);
+  const [recommendedRecipe, setRecommendedRecipe] = useState<RecommendedRecipe | null>(null);
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -216,6 +240,30 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     }));
   };
 
+  const fetchRecommendedWorkout = async (id: string): Promise<RecommendedWorkout | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('workouts')
+        .select('id, title, category, difficulty, duration_minutes, body_areas, thumbnail_url')
+        .eq('id', id)
+        .maybeSingle();
+      if (error || !data) { console.warn('[Jarvis] Failed to fetch recommended workout:', id, error); return null; }
+      return data as RecommendedWorkout;
+    } catch (err) { console.error('[Jarvis] fetchRecommendedWorkout error:', err); return null; }
+  };
+
+  const fetchRecommendedRecipe = async (id: string): Promise<RecommendedRecipe | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('recipes')
+        .select('id, name, emoji, category, meal_type, calories, protein_g, carbs_g, fat_g')
+        .eq('id', id)
+        .maybeSingle();
+      if (error || !data) { console.warn('[Jarvis] Failed to fetch recommended recipe:', id, error); return null; }
+      return data as RecommendedRecipe;
+    } catch (err) { console.error('[Jarvis] fetchRecommendedRecipe error:', err); return null; }
+  };
+
   // Called when AI response contains one or more [LOG_FOOD:{...}] markers
   const logFoodFromJarvis = async (items: {
     name: string; category: string; calories: number;
@@ -331,13 +379,17 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   const parseAIResponse = (raw: string) => {
     const scheduleMatch = raw.match(/\[SCHEDULE_PLAN:({.*?})\]/s);
     const foodMatches = [...raw.matchAll(/\[LOG_FOOD:({.*?})\]/gs)];
+    const workoutMatch = raw.match(/\[RECOMMEND_WORKOUT:({.*?})\]/s);
+    const recipeMatch = raw.match(/\[RECOMMEND_RECIPE:({.*?})\]/s);
     const showBodyScan = raw.includes('[BODY_SCAN_PROMPT]');
     const displayText = raw
       .replace(/\[SCHEDULE_PLAN:{.*?}\]/gs, '')
       .replace(/\[LOG_FOOD:{.*?}\]/gs, '')
+      .replace(/\[RECOMMEND_WORKOUT:{.*?}\]/gs, '')
+      .replace(/\[RECOMMEND_RECIPE:{.*?}\]/gs, '')
       .replace(/\[BODY_SCAN_PROMPT\]/g, '')
       .trim();
-    return { displayText, scheduleMatch, foodMatches, showBodyScan };
+    return { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan };
   };
 
   const streamAIResponse = async (
@@ -448,7 +500,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); }, abort.signal);
 
       if (full && !abort.signal.aborted) {
-        const { displayText, scheduleMatch, foodMatches, showBodyScan } = parseAIResponse(full);
+        const { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan } = parseAIResponse(full);
 
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
@@ -461,6 +513,12 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
         }
         if (showBodyScan) setPendingBodyScan(true);
+        if (workoutMatch) {
+          try { const { id } = JSON.parse(workoutMatch[1]); const w = await fetchRecommendedWorkout(id); if (w) setRecommendedWorkout(w); } catch (err) { console.error('[Jarvis] workout marker parse failed:', err); }
+        }
+        if (recipeMatch) {
+          try { const { id } = JSON.parse(recipeMatch[1]); const r = await fetchRecommendedRecipe(id); if (r) setRecommendedRecipe(r); } catch (err) { console.error('[Jarvis] recipe marker parse failed:', err); }
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') console.error('Greeting error:', err);
@@ -495,7 +553,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       );
 
       if (full && !abort.signal.aborted) {
-        const { displayText, scheduleMatch, foodMatches, showBodyScan } = parseAIResponse(full);
+        const { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan } = parseAIResponse(full);
 
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         const withReply = [...updatedHistory, { role: 'assistant' as const, content: displayText }];
@@ -510,6 +568,12 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
         }
         if (showBodyScan) setPendingBodyScan(true);
+        if (workoutMatch) {
+          try { const { id } = JSON.parse(workoutMatch[1]); const w = await fetchRecommendedWorkout(id); if (w) setRecommendedWorkout(w); } catch (err) { console.error('[Jarvis] workout marker parse failed:', err); }
+        }
+        if (recipeMatch) {
+          try { const { id } = JSON.parse(recipeMatch[1]); const r = await fetchRecommendedRecipe(id); if (r) setRecommendedRecipe(r); } catch (err) { console.error('[Jarvis] recipe marker parse failed:', err); }
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -629,13 +693,19 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       let full = '';
       await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); }, abort.signal);
       if (full && !abort.signal.aborted) {
-        const { displayText, scheduleMatch, foodMatches, showBodyScan } = parseAIResponse(full);
+        const { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan } = parseAIResponse(full);
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
         if (!isMutedRef.current) await speakResponse(displayText);
         if (scheduleMatch) { try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {} }
         if (foodMatches.length) { try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {} }
         if (showBodyScan) setPendingBodyScan(true);
+        if (workoutMatch) {
+          try { const { id } = JSON.parse(workoutMatch[1]); const w = await fetchRecommendedWorkout(id); if (w) setRecommendedWorkout(w); } catch (err) { console.error('[Jarvis] workout marker parse failed:', err); }
+        }
+        if (recipeMatch) {
+          try { const { id } = JSON.parse(recipeMatch[1]); const r = await fetchRecommendedRecipe(id); if (r) setRecommendedRecipe(r); } catch (err) { console.error('[Jarvis] recipe marker parse failed:', err); }
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') console.error('Goals flow error:', err);
@@ -749,7 +819,12 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
           <div className="bg-secondary/40 rounded-2xl px-4 py-3">
             <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>
             <div className="text-sm text-foreground leading-relaxed space-y-2">
-              {formatResponse(response.replace(/\[SCHEDULE_PLAN:{.*?}\]/gs, '').replace(/\[LOG_FOOD:{.*?}\]/gs, '').trim())}
+              {formatResponse(response
+        .replace(/\[SCHEDULE_PLAN:{.*?}\]/gs, '')
+        .replace(/\[LOG_FOOD:{.*?}\]/gs, '')
+        .replace(/\[RECOMMEND_WORKOUT:{.*?}\]/gs, '')
+        .replace(/\[RECOMMEND_RECIPE:{.*?}\]/gs, '')
+        .trim())}
             </div>
           </div>
         )}
