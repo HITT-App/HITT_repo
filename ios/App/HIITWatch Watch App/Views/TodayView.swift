@@ -11,10 +11,8 @@ struct TodayView: View {
     @ObservedObject private var coordinator = WorkoutCoordinator.shared
     @State private var showPicker = false
     @State private var dayType: WatchDayType = WatchSessionManager.shared.todayDayType
-
-    private var scheduledName: String? {
-        WatchSessionManager.shared.todayWorkout?.name
-    }
+    // State-backed so SwiftUI re-renders when a workout arrives (computed props don't trigger updates)
+    @State private var scheduledName: String? = WatchSessionManager.shared.todayWorkout?.name
 
     var body: some View {
         ZStack {
@@ -48,6 +46,13 @@ struct TodayView: View {
             } else {
                 NothingScheduledScreen { showPicker = true }
             }
+        }
+        .onAppear {
+            // Reload from manager in case it was restored from UserDefaults before the view appeared
+            scheduledName = WatchSessionManager.shared.todayWorkout?.name
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .watchWorkoutReceived)) { note in
+            scheduledName = (note.object as? WatchWorkout)?.name
         }
         .onReceive(NotificationCenter.default.publisher(for: .watchDayTypeChanged)) { note in
             if let dt = note.object as? WatchDayType { dayType = dt }

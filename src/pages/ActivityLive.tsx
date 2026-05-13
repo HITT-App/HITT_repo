@@ -48,6 +48,9 @@ const ActivityLive = () => {
   const { logActivity } = useActivity();
   const { recordWorkout } = useStreaksAndBadges();
 
+  // Pre-start setup phase — timer and recording don't begin until user taps Start
+  const [started, setStarted] = useState(false);
+
   // Core state
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -103,14 +106,14 @@ const ActivityLive = () => {
   };
 
 
-  // --- Timer ---
+  // --- Timer — only runs after user taps Start ---
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (!isPaused && !showCompleted) {
+    if (started && !isPaused && !showCompleted) {
       interval = setInterval(() => setElapsed((p) => p + 1), 1000);
     }
     return () => clearInterval(interval);
-  }, [isPaused, showCompleted]);
+  }, [started, isPaused, showCompleted]);
 
   // --- Wake Lock ---
   useEffect(() => {
@@ -150,6 +153,12 @@ const ActivityLive = () => {
 
         if (!result.accepted) return;
 
+        // Always update GPS status indicator so the pre-start screen shows "Ready"
+        setGpsStatus("active");
+
+        // Only record positions and update stats after the user taps Start
+        if (!started) return;
+
         const positions = positionsRef.current;
 
         if (result.distanceDelta > 0) {
@@ -169,7 +178,6 @@ const ActivityLive = () => {
         if (result.point.alt !== null && result.point.alt !== undefined) {
           setElevation(Math.round(result.point.alt));
         }
-        setGpsStatus("active");
       },
       onError: (code) => {
         if (cancelled) return;
@@ -329,6 +337,52 @@ const ActivityLive = () => {
           type: activityType,
         }}
       />
+    );
+  }
+
+  // ========== PRE-START SCREEN ==========
+  if (!started) {
+    const sportIcons: Record<string, string> = {
+      running: '🏃', cycling: '🚴', walking: '🚶', swimming: '🏊',
+      hiking: '🥾', yoga: '🧘', hiit: '🔥', workout: '💪', jogging: '🏃',
+    };
+    const icon = sportIcons[activityType.toLowerCase()] || '🏃';
+    const label = activityType.charAt(0).toUpperCase() + activityType.slice(1);
+    const gpsLabel = gpsStatus === 'active' ? '🟢 GPS ready' : gpsStatus === 'denied' ? '🔴 GPS denied' : '🟡 Acquiring GPS…';
+
+    return (
+      <div className="h-[100dvh] bg-background flex flex-col" style={{ paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 0.5rem)' }}>
+        <div className="flex items-center px-4 pb-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 px-8">
+          <div className="text-8xl">{icon}</div>
+          <div className="text-center">
+            <h1 className="text-3xl font-black text-foreground">{label}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{gpsLabel}</p>
+          </div>
+
+          <div className="w-full space-y-3 pt-4">
+            <Button
+              className="w-full h-16 text-xl font-black rounded-2xl"
+              onClick={() => {
+                setStarted(true);
+                // Reset filter so early positions from setup don't affect recording
+                gpsFilterRef.current.reset();
+                positionsRef.current = [];
+              }}
+            >
+              Start
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Hold your phone steady for a few seconds while GPS locks on
+            </p>
+          </div>
+        </div>
+      </div>
     );
   }
 

@@ -52,11 +52,17 @@ final class WatchSessionManager: NSObject {
     private(set) var triathlonPlan: TriathlonPlan?
     private(set) var todayDayType: WatchDayType = .open
 
-    private static let planKey = "hiit.triathlonPlan"
+    private static let planKey    = "hiit.triathlonPlan"
+    private static let workoutKey = "hiit.todayWorkout"
 
     private override init() {
         super.init()
-        // Restore plan that arrived while the app was closed
+        // Restore today's workout that arrived while the app was closed
+        if let data = UserDefaults.standard.data(forKey: Self.workoutKey),
+           let saved = try? JSONDecoder().decode(WatchWorkout.self, from: data) {
+            todayWorkout = saved
+        }
+        // Restore triathlon plan that arrived while the app was closed
         if let data = UserDefaults.standard.data(forKey: Self.planKey),
            let saved = try? JSONDecoder().decode(TriathlonPlan.self, from: data) {
             triathlonPlan = saved
@@ -70,17 +76,21 @@ final class WatchSessionManager: NSObject {
     }
 
     private func applyMessage(_ message: [String: Any]) {
-        // Standard workout
+        // Standard workout — persist so it survives Watch app restarts
         if let workoutData = message["workout"] as? [String: Any],
            let data = try? JSONSerialization.data(withJSONObject: workoutData),
            let decoded = try? JSONDecoder().decode(WatchWorkout.self, from: data) {
             todayWorkout = decoded
+            if let encoded = try? JSONEncoder().encode(decoded) {
+                UserDefaults.standard.set(encoded, forKey: Self.workoutKey)
+            }
             NotificationCenter.default.post(name: .watchWorkoutReceived, object: decoded)
         }
 
         // Clear workout
         if let cleared = message["clearWorkout"] as? Bool, cleared {
             todayWorkout = nil
+            UserDefaults.standard.removeObject(forKey: Self.workoutKey)
             NotificationCenter.default.post(name: .watchWorkoutReceived, object: nil)
         }
 

@@ -421,12 +421,17 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     const isOnboarding = !hasHistory && !hasSchedule;
     try {
       const greetingPrompt = isOnboarding
+        // First ever open — full onboarding intake
         ? `[ONBOARDING] This user has no schedule yet. Introduce yourself as Coach HIIT in one warm sentence, then say you want to ask a couple of quick questions to build their perfect plan, then ask just this: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`
-        : hasHistory
-          ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
-          : healthProfile?.trim()
-            ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
-            : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
+        : hasHistory && !hasSchedule
+          // Returning user who still has no schedule — pick up where they left off
+          ? `[GREETING] Welcome this user back in one warm sentence. Then immediately say you notice they haven't set up a workout schedule yet and ask if they want to do that now. Keep it brief and positive — do not repeat questions already in the chat history above.`
+          : hasHistory
+            // Returning user with a schedule — normal welcome back
+            ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
+            : healthProfile?.trim()
+              ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
+              : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
 
       const messagesForAI = [
         ...loadedHistory.map(m => ({ role: m.role, content: m.content })),

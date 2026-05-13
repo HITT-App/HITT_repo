@@ -378,11 +378,11 @@ const MealDetail = () => {
 
       {/* Fixed Bottom Actions */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border space-y-2">
-        <Button 
+        <Button
           onClick={handleAddMeal}
           className="w-full h-12 rounded-xl gap-2"
         >
-          Add Meal <Plus className="w-4 h-4" />
+          Log this meal <Plus className="w-4 h-4" />
         </Button>
         <Button 
           variant="outline"
