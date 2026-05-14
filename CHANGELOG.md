@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-05-14] — Phase 4: Jarvis now shows workout and recipe recommendation cards
+
+- **Workout card** — when Jarvis recommends a workout, a card appears in chat showing the thumbnail (or 💪), name, duration, category and difficulty, with three buttons: Start now (opens the workout), Add to schedule (adds it to tomorrow's schedule and confirms in chat), or Skip
+- **Recipe card** — when Jarvis recommends a recipe, a card appears with the recipe emoji, name, meal type, calories and protein, with three buttons: View recipe (opens the recipe detail), Log it (logs the meal now and confirms in chat), or Skip
+- **One-tap schedule** — "Add to schedule" on a workout card saves directly for tomorrow — no date picker needed; the workout appears in the Schedule tab immediately
+
 ## [2026-05-13] — Build 69: Welcome message fixes, nav restructure, social screen improvements
 
 - **Welcome message reliability** — greeting voice now plays correctly every time you open the app; fixed a bug where it would stay silent after returning from the background, and another where it would echo (play twice) if the screen was tapped at the same moment as the auto-trigger

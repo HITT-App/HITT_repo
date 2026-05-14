@@ -300,6 +300,74 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     setIsAddingSchedule(false);
   };
 
+  const scheduleRecommendedWorkout = async (workoutId: string) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const scheduledDate = tomorrow.toISOString().split('T')[0];
+
+      const { error } = await supabase.from('scheduled_workouts').insert({
+        user_id: userId,
+        workout_id: workoutId,
+        scheduled_date: scheduledDate,
+      });
+      if (error) throw error;
+
+      const confirmation = `✅ Added to tomorrow's schedule. See you then!`;
+      const withConfirm = [...historyRef.current, { role: 'assistant' as const, content: confirmation }];
+      historyRef.current = withConfirm;
+      setConversationHistory(withConfirm);
+      await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
+
+      setRecommendedWorkout(null);
+    } catch (err) {
+      console.error('[Jarvis] Schedule workout failed:', err);
+      const msg = `Sorry, I couldn't add that to your schedule. You can add it manually from the workout page.`;
+      const withErr = [...historyRef.current, { role: 'assistant' as const, content: msg }];
+      historyRef.current = withErr;
+      setConversationHistory(withErr);
+    }
+  };
+
+  const logRecommendedRecipe = async (recipe: RecommendedRecipe) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      const { error } = await supabase.from('meal_logs').insert({
+        user_id: userId,
+        custom_name: recipe.name,
+        category: recipe.meal_type,
+        calories: recipe.calories,
+        protein_grams: recipe.protein_g,
+        carbs_grams: recipe.carbs_g,
+        fat_grams: recipe.fat_g,
+        fiber_grams: 0,
+        logged_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+
+      const confirmation = `✅ Logged ${recipe.name} as ${recipe.meal_type}.`;
+      const withConfirm = [...historyRef.current, { role: 'assistant' as const, content: confirmation }];
+      historyRef.current = withConfirm;
+      setConversationHistory(withConfirm);
+      await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
+
+      setRecommendedRecipe(null);
+    } catch (err) {
+      console.error('[Jarvis] Recipe log failed:', err);
+      const msg = `Sorry, I couldn't log that meal. You can log it manually from the Nutrition tab.`;
+      const withErr = [...historyRef.current, { role: 'assistant' as const, content: msg }];
+      historyRef.current = withErr;
+      setConversationHistory(withErr);
+    }
+  };
+
   // Called when AI response contains [SCHEDULE_PLAN:{...}]
   const createScheduleFromJarvis = async (params: {
     goal: string; daysPerWeek: number; selectedDays: number[]; sessionMinutes: number;
@@ -915,6 +983,110 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
                 disabled={isAddingSchedule}
               >
                 Maybe later
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Workout recommendation card */}
+        {recommendedWorkout && (
+          <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
+            <div className="flex items-start gap-3">
+              {recommendedWorkout.thumbnail_url ? (
+                <img
+                  src={recommendedWorkout.thumbnail_url}
+                  alt={recommendedWorkout.title}
+                  className="w-12 h-12 rounded-xl object-cover shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                  <span className="text-2xl">💪</span>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{recommendedWorkout.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {recommendedWorkout.duration_minutes ?? '?'} min
+                  {recommendedWorkout.category ? ` · ${recommendedWorkout.category}` : ''}
+                  {recommendedWorkout.difficulty ? ` · ${recommendedWorkout.difficulty}` : ''}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-primary text-primary-foreground text-xs h-9"
+                onClick={() => {
+                  const id = recommendedWorkout.id;
+                  setRecommendedWorkout(null);
+                  onClose();
+                  navigate(`/workout/${id}`);
+                }}
+              >
+                Start now
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-xs h-9"
+                onClick={() => scheduleRecommendedWorkout(recommendedWorkout.id)}
+              >
+                Add to schedule
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs h-9 text-muted-foreground"
+                onClick={() => setRecommendedWorkout(null)}
+              >
+                Skip
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Recipe recommendation card */}
+        {recommendedRecipe && (
+          <div className="bg-accent/10 border border-accent/30 rounded-2xl px-4 py-3 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
+                <span className="text-2xl">{recommendedRecipe.emoji ?? '🍽️'}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{recommendedRecipe.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {recommendedRecipe.meal_type} · {recommendedRecipe.calories} cal · {recommendedRecipe.protein_g}g protein
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-accent text-accent-foreground text-xs h-9"
+                onClick={() => {
+                  const id = recommendedRecipe.id;
+                  setRecommendedRecipe(null);
+                  onClose();
+                  navigate(`/meal/${id}`);
+                }}
+              >
+                View recipe
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-xs h-9"
+                onClick={() => logRecommendedRecipe(recommendedRecipe)}
+              >
+                Log it
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs h-9 text-muted-foreground"
+                onClick={() => setRecommendedRecipe(null)}
+              >
+                Skip
               </Button>
             </div>
           </div>

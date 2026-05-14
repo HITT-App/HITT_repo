@@ -44,9 +44,9 @@ from display and triggers app behaviour. The exact regex patterns:
 /\[SCHEDULE_PLAN:({.*?})\]/s   // → shows confirm card → createScheduleFromJarvis()
 /\[LOG_FOOD:({.*?})\]/gs       // → inserts into meal_logs immediately
 /\[BODY_SCAN_PROMPT\]/          // → shows "Open Body Scan" CTA card
-// Planned:
-/\[RECOMMEND_WORKOUT:({.*?})\]/s  // → renders rich workout card (T1-01, not yet built)
-/\[RECOMMEND_MEAL:({.*?})\]/s     // → renders rich meal card (T1-02, not yet built)
+// Phase 4 (Build 72):
+/\[RECOMMEND_WORKOUT:({.*?})\]/s  // → renders rich workout card → Start now / Add to schedule / Skip
+/\[RECOMMEND_RECIPE:({.*?})\]/s   // → renders rich recipe card → View recipe (/meal/:id) / Log it / Skip
 ```
 
 SCHEDULE_PLAN JSON shape: `{"goal":"fat loss","daysPerWeek":3,"selectedDays":[1,3,5],"sessionMinutes":30}`
