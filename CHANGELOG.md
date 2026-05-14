@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-05-14] — Phase 5: Jarvis proactive recommendations and post-workout share nudge
+
+- **Proactive workout suggestion** — on days you have nothing scheduled, Jarvis now opens with a workout recommendation in the greeting rather than a generic welcome
+- **Post-workout share nudge** — 8 seconds after finishing a workout, Jarvis automatically opens with a personalised congratulations and a "Share your win" card showing your duration, calories, and workout name
+- **Push notification fix** — the completion push notification was sending "You finished undefined" — fixed to use the correct workout title field
+
 ## [2026-05-14] — Build 81: Recipe card and nutrition dashboard fixes
 
 - **"View recipe" fixed** — tapping View recipe on a Jarvis suggestion now opens Browse Meals instead of showing "meal not found"

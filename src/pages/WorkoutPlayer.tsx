@@ -180,8 +180,20 @@ export default function WorkoutPlayer() {
         // Push notification — sent after a delay so it arrives when app is backgrounded
         setTimeout(() => {
           notifyUser(user.id, "workout", "Workout complete! 💪",
-            `You finished ${workout.name}. Great work!`, "/workout-library");
+            `You finished ${workout.title}. Great work!`, "/workout-library");
         }, 3000);
+
+        // Open Jarvis with post-workout share nudge — delayed so user sees completion summary first
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('hitt:open-jarvis-share', {
+            detail: {
+              workoutId: workout.id,
+              workoutTitle: workout.title,
+              durationMin: workoutDurationMin,
+              calories: workoutCalories,
+            }
+          }));
+        }, 8000);
       } catch (error) {
         console.error('Error saving progress:', error);
       }

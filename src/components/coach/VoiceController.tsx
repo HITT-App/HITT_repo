@@ -8,6 +8,13 @@ import { toast } from 'sonner';
 import { useWakeWordPreference } from '@/hooks/useWakeWordPreference';
 import { useHealthProfile } from '@/hooks/useHealthProfile';
 
+type SharePromptDetail = {
+  workoutId: string;
+  workoutTitle: string;
+  durationMin: number;
+  calories: number;
+};
+
 export function VoiceController() {
   const { user } = useAuth();
   const location = useLocation();
@@ -15,6 +22,7 @@ export function VoiceController() {
   const { profile: healthProfile } = useHealthProfile();
   const [showJarvisMode, setShowJarvisMode] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [sharePromptDetail, setSharePromptDetail] = useState<SharePromptDetail | null>(null);
 
   // Always use one permanent "Jarvis" conversation per user so history persists
   const getOrCreateConversation = useCallback(async () => {
@@ -66,10 +74,27 @@ export function VoiceController() {
     return () => window.removeEventListener('hitt:open-jarvis', handleWakeWordDetected);
   }, [handleWakeWordDetected]);
 
+  // Post-workout share nudge — fired by WorkoutPlayer after completion
+  const handleSharePrompt = useCallback(async (e: Event) => {
+    const detail = (e as CustomEvent).detail as SharePromptDetail;
+    if (!detail) return;
+    const convoId = await getOrCreateConversation();
+    if (!convoId) return;
+    setConversationId(convoId);
+    setSharePromptDetail(detail);
+    setShowJarvisMode(true);
+  }, [getOrCreateConversation]);
+
+  useEffect(() => {
+    window.addEventListener('hitt:open-jarvis-share', handleSharePrompt as EventListener);
+    return () => window.removeEventListener('hitt:open-jarvis-share', handleSharePrompt as EventListener);
+  }, [handleSharePrompt]);
+
   // Handle Jarvis Mode close
   const handleJarvisModeClose = useCallback(() => {
     setShowJarvisMode(false);
     setConversationId(null);
+    setSharePromptDetail(null);
   }, []);
 
   // Don't render anything if user is not logged in
@@ -95,6 +120,7 @@ export function VoiceController() {
           conversationId={conversationId}
           healthProfile={healthProfile}
           onClose={handleJarvisModeClose}
+          sharePromptDetail={sharePromptDetail}
         />
       )}
     </>

@@ -58,6 +58,12 @@ interface JarvisModeProps {
   onClose: () => void;
   conversationId: string;
   healthProfile?: string;
+  sharePromptDetail?: {
+    workoutId: string;
+    workoutTitle: string;
+    durationMin: number;
+    calories: number;
+  } | null;
 }
 
 type ConversationMessage = {
@@ -87,7 +93,7 @@ type RecommendedRecipe = {
   fat_g: number;
 };
 
-export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisModeProps) {
+export function JarvisMode({ onClose, conversationId, healthProfile, sharePromptDetail }: JarvisModeProps) {
   const navigate = useNavigate();
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -535,7 +541,11 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
   }, [conversationId]);
 
   // Greets on open. Runs onboarding flow if user has no history and no schedule yet.
-  const triggerGreeting = useCallback(async (loadedHistory: ConversationMessage[], hasSchedule = true) => {
+  const triggerGreeting = useCallback(async (
+    loadedHistory: ConversationMessage[],
+    hasSchedule = true,
+    hasWorkoutToday = true,
+  ) => {
     // Fix #2: abort any in-flight stream before starting
     streamAbortRef.current?.abort();
     const abort = new AbortController();
@@ -546,18 +556,24 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     const hasHistory = loadedHistory.length > 0;
     const isOnboarding = !hasHistory && !hasSchedule;
     try {
-      const greetingPrompt = isOnboarding
-        // First ever open — full onboarding intake
-        ? `[ONBOARDING] This user has no schedule yet. Introduce yourself as Coach HIIT in one warm sentence, then say you want to ask a couple of quick questions to build their perfect plan, then ask just this: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`
-        : hasHistory && !hasSchedule
-          // Returning user who still has no schedule — pick up where they left off
-          ? `[GREETING] Welcome this user back in one warm sentence. Then immediately say you notice they haven't set up a workout schedule yet and ask if they want to do that now. Keep it brief and positive — do not repeat questions already in the chat history above.`
-          : hasHistory
-            // Returning user with a schedule — normal welcome back
-            ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
-            : healthProfile?.trim()
-              ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
-              : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
+      const greetingPrompt = sharePromptDetail
+        // Post-workout share nudge — Jarvis opened automatically after a workout
+        ? `[POST_WORKOUT_SHARE] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} workout, burning around ${sharePromptDetail.calories} calories. Congratulate them warmly in one sentence — be specific about what they just did, not generic. Then ask if they want to share it on the community feed. Keep it to 2 sentences total, encouraging tone, no follow-up questions beyond the share question.`
+        : isOnboarding
+          // First ever open — full onboarding intake
+          ? `[ONBOARDING] This user has no schedule yet. Introduce yourself as Coach HIIT in one warm sentence, then say you want to ask a couple of quick questions to build their perfect plan, then ask just this: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`
+          : hasHistory && !hasSchedule
+            // Returning user who still has no schedule — pick up where they left off
+            ? `[GREETING] Welcome this user back in one warm sentence. Then immediately say you notice they haven't set up a workout schedule yet and ask if they want to do that now. Keep it brief and positive — do not repeat questions already in the chat history above.`
+            : hasHistory && hasSchedule && !hasWorkoutToday
+              // Returning user with a schedule but nothing on for today — proactive recommendation
+              ? `[GREETING_NO_TODAY] The user has just re-opened our conversation. They have a schedule but no workout planned for today. In one warm sentence, welcome them back. Then suggest ONE specific workout from the WORKOUTS CATALOGUE that fits their goal and emit the [RECOMMEND_WORKOUT:{...}] marker at the end. Keep the whole response to 2 sentences max — let the card do the talking.`
+              : hasHistory
+                // Returning user with a schedule and something on for today — normal welcome back
+                ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
+                : healthProfile?.trim()
+                  ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
+                  : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
 
       const messagesForAI = [
         ...loadedHistory.map(m => ({ role: m.role, content: m.content })),
@@ -593,7 +609,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
     } finally {
       setIsProcessing(false);
     }
-  }, [healthProfile, conversationId]);
+  }, [healthProfile, conversationId, sharePromptDetail]);
 
   const handleUserMessage = useCallback(async (text: string) => {
     // Fix #2: abort any in-flight stream before starting a new one
@@ -799,30 +815,38 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
       const history = await loadHistory();
       if (cancelled) return;
 
-      // On first open (no history), check whether a schedule already exists.
-      // If not, Jarvis runs the onboarding flow instead of a normal greeting.
       let hasSchedule = true;
-      if (history.length === 0) {
-        try {
-          const { data: session } = await supabase.auth.getSession();
-          const userId = session?.session?.user?.id;
-          if (userId) {
-            const { count } = await supabase
-              .from('scheduled_workouts')
-              .select('id', { count: 'exact', head: true })
-              .eq('user_id', userId)
-              .gte('scheduled_date', new Date().toISOString().split('T')[0]);
-            hasSchedule = (count ?? 0) > 0;
-          }
-        } catch {
-          hasSchedule = true; // default to normal greeting if check fails
+      let hasWorkoutToday = true;
+
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const userId = session?.session?.user?.id;
+        if (userId) {
+          const today = new Date().toISOString().split('T')[0];
+
+          const { count: futureCount } = await supabase
+            .from('scheduled_workouts')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .gte('scheduled_date', today);
+          hasSchedule = (futureCount ?? 0) > 0;
+
+          const { count: todayCount } = await supabase
+            .from('scheduled_workouts')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('scheduled_date', today);
+          hasWorkoutToday = (todayCount ?? 0) > 0;
         }
+      } catch {
+        hasSchedule = true;
+        hasWorkoutToday = true;
       }
 
       // Brief pause so the UI renders before greeting starts
       await new Promise(r => setTimeout(r, 400));
       if (cancelled) return;
-      triggerGreeting(history, hasSchedule);
+      triggerGreeting(history, hasSchedule, hasWorkoutToday);
     };
 
     init();
@@ -981,6 +1005,33 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
                 className="flex-1 text-xs h-9 text-muted-foreground"
                 onClick={() => setPendingSchedule(null)}
                 disabled={isAddingSchedule}
+              >
+                Maybe later
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Post-workout share card — shown when Jarvis auto-opens after workout completion */}
+        {sharePromptDetail && (
+          <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
+            <p className="text-sm font-semibold text-foreground">🎉 Share your win</p>
+            <p className="text-xs text-muted-foreground">
+              {sharePromptDetail.durationMin} min · {sharePromptDetail.calories} cal · {sharePromptDetail.workoutTitle}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-primary text-primary-foreground text-xs h-9"
+                onClick={onClose}
+              >
+                Share now
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1 text-xs h-9 text-muted-foreground"
+                onClick={onClose}
               >
                 Maybe later
               </Button>
