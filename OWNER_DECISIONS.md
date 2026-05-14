@@ -6,6 +6,11 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
+### Calorie goal setting in Nutrition Dashboard
+
+Users currently have no way to set their daily calorie target from within the app. The dashboard shows "X / 3320 kcal" but 3320 is a hardcoded default. A "Set goal" button or editable field on the Nutrition Dashboard (or in Profile/Settings) should let users enter their own daily calorie, protein, carbs, and fat targets, which would save to `nutrition_goals`.
+
+**Action needed:** confirm where this should live (inline on dashboard, or in a settings screen?) and whether the values should be manually entered or calculated from age/weight/activity level.
 
 ### V2: Fitness Coach Sessions
 

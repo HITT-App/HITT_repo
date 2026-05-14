@@ -90,6 +90,20 @@ export default function NutritionDashboard() {
     fetchData();
   }, [user, selectedDate]);
 
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('nutrition-dashboard-meal-logs')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'meal_logs',
+        filter: `user_id=eq.${user.id}`,
+      }, () => fetchData())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, selectedDate]);
+
   const fetchData = async () => {
     if (!user) return;
 

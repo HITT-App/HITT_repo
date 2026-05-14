@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-14] — Build 81: Recipe card and nutrition dashboard fixes
+
+- **"View recipe" fixed** — tapping View recipe on a Jarvis suggestion now opens Browse Meals instead of showing "meal not found"
+- **Calories update instantly** — logging a meal via Jarvis now refreshes the Nutrition Dashboard in real time; totals no longer stay stale until you leave and return
+
 ## [2026-05-14] — Phase 4: Jarvis now shows workout and recipe recommendation cards
 
 - **Workout card** — when Jarvis recommends a workout, a card appears in chat showing the thumbnail (or 💪), name, duration, category and difficulty, with three buttons: Start now (opens the workout), Add to schedule (adds it to tomorrow's schedule and confirms in chat), or Skip

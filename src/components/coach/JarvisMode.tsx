@@ -1064,10 +1064,9 @@ export function JarvisMode({ onClose, conversationId, healthProfile }: JarvisMod
                 size="sm"
                 className="flex-1 bg-accent text-accent-foreground text-xs h-9"
                 onClick={() => {
-                  const id = recommendedRecipe.id;
                   setRecommendedRecipe(null);
                   onClose();
-                  navigate(`/meal/${id}`);
+                  navigate('/browse-meals');
                 }}
               >
                 View recipe
