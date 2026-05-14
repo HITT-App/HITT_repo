@@ -76,6 +76,7 @@ export async function generateStatsCard(
   activityType: string,
   stats: Array<{ label: string; value: string | number; unit?: string }>,
   mapElement?: HTMLElement | null,
+  pbLabel?: string,
 ): Promise<string> {
   const canvas = document.createElement('canvas');
   canvas.width = SIZE;
@@ -123,16 +124,30 @@ export async function generateStatsCard(
       running: '🏃', cycling: '🚴', walking: '🚶', swimming: '🏊',
       yoga: '🧘', hiit: '🔥', workout: '💪', gym: '🏋️',
     };
-    const emoji = typeIcons[activityType?.toLowerCase()] || '💪';
+    const emoji = pbLabel ? '🏆' : (typeIcons[activityType?.toLowerCase()] || '💪');
     ctx.font = '120px system-ui';
     ctx.textAlign = 'center';
     ctx.fillText(emoji, SIZE / 2, SIZE / 2 - 40);
 
-    // "COMPLETED" label
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = '600 28px system-ui, -apple-system, sans-serif';
-    ctx.letterSpacing = '6px';
-    ctx.fillText('COMPLETED', SIZE / 2, SIZE / 2 + 40);
+    if (pbLabel) {
+      // Gold "NEW PB" banner
+      ctx.fillStyle = 'rgba(245,158,11,0.15)';
+      ctx.fillRect(0, SIZE / 2 + 10, SIZE, 80);
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '700 30px system-ui, -apple-system, sans-serif';
+      ctx.letterSpacing = '2px';
+      ctx.fillText('NEW PERSONAL BEST', SIZE / 2, SIZE / 2 + 44);
+      ctx.fillStyle = 'rgba(245,158,11,0.7)';
+      ctx.font = '400 22px system-ui, -apple-system, sans-serif';
+      ctx.letterSpacing = '0px';
+      ctx.fillText(pbLabel, SIZE / 2, SIZE / 2 + 76);
+    } else {
+      // "COMPLETED" label
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.font = '600 28px system-ui, -apple-system, sans-serif';
+      ctx.letterSpacing = '6px';
+      ctx.fillText('COMPLETED', SIZE / 2, SIZE / 2 + 40);
+    }
   }
 
   await stampWatermark(ctx);

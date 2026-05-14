@@ -13,6 +13,7 @@ type SharePromptDetail = {
   workoutTitle: string;
   durationMin: number;
   calories: number;
+  pbs?: Array<{ kind: 'duration' | 'calories' | 'streak'; label: string; value: number; previousBest: number }>;
 };
 
 export function VoiceController() {

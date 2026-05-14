@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -34,10 +35,16 @@ export function useNativePush() {
       );
     });
 
-    // Handle notification tapped while app is in background/closed
+    // Handle remote push tapped while app is in background/closed
     const actionListener = PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
       const data = action.notification.data;
       if (data?.url) window.location.href = data.url;
+    });
+
+    // Handle local notification (PB share reminders) tapped
+    const localActionListener = LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
+      const deepLink = action.notification.extra?.deepLink;
+      if (typeof deepLink === 'string') window.location.href = deepLink;
     });
 
     register();
@@ -45,6 +52,7 @@ export function useNativePush() {
     return () => {
       tokenListener.then((l) => l.remove());
       actionListener.then((l) => l.remove());
+      localActionListener.then((l) => l.remove());
     };
   }, [user, register]);
 }

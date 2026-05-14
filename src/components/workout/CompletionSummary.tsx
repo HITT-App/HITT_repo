@@ -26,6 +26,7 @@ interface CompletionSummaryProps {
   activityType?: string;
   stats: CompletionStat[];
   achievementMessage?: string;
+  pbLabel?: string;
   badges?: Array<{ name: string; icon: string }>;
   mapComponent?: React.ReactNode;
   routePositions?: RoutePoint[];
@@ -41,6 +42,7 @@ export function CompletionSummary({
   activityType,
   stats,
   achievementMessage,
+  pbLabel,
   badges = [],
   mapComponent,
   routePositions,
@@ -109,14 +111,14 @@ export function CompletionSummary({
           await new Promise(r => setTimeout(r, 800));
           dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
         } else {
-          dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
+          dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
         }
         setGenProgress(100);
         await new Promise(r => setTimeout(r, 200));
         setGeneratedImageUrl(dataUrl);
       } catch {
         try {
-          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
+          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
           setGeneratedImageUrl(dataUrl);
         } catch {}
       } finally {
@@ -153,14 +155,14 @@ export function CompletionSummary({
             setGeneratedImageUrl(data.imageUrl);
           }
         } else {
-          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
+          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
           setGenProgress(100);
           await new Promise(r => setTimeout(r, 300));
           setGeneratedImageUrl(dataUrl);
         }
       } catch {
         try {
-          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
+          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
           setGeneratedImageUrl(dataUrl);
         } catch {}
       } finally {
@@ -243,14 +245,14 @@ export function CompletionSummary({
         } else if (effectiveMapRef.current) {
           dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
         } else {
-          dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null);
+          dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
         }
       } else if (style === 'transparent') {
         dataUrl = await generateTransparentCard(routePositions ?? [], activityTitle, stats);
       } else if (style === 'story') {
         dataUrl = await generateStoryCard(routePositions ?? [], activityTitle, activityType || 'workout', stats);
       } else {
-        dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, effectiveMapRef.current);
+        dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, effectiveMapRef.current, pbLabel);
       }
 
       setGeneratedImageUrl(dataUrl);

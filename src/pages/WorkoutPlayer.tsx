@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { HIITLogo } from '@/components/HIITLogo';
-import { notifyUser } from '@/lib/notify';
+import { notifyUser, schedulePBShareReminder } from '@/lib/notify';
 import { AIFormAnalysis } from '@/components/workout/AIFormAnalysis';
 import { NewBadgeModal } from '@/components/gamification/NewBadgeModal';
 import { CompletionSummary } from '@/components/workout/CompletionSummary';
@@ -38,6 +38,15 @@ type Exercise = {
 
 type PlayerState = 'countdown' | 'playing' | 'paused' | 'completed';
 
+type PBKind = 'duration' | 'calories' | 'streak';
+
+type DetectedPB = {
+  kind: PBKind;
+  label: string;
+  value: number;
+  previousBest: number;
+};
+
 export default function WorkoutPlayer() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -58,6 +67,7 @@ export default function WorkoutPlayer() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [showFormAnalysis, setShowFormAnalysis] = useState(false);
   const [rating, setRating] = useState(0);
+  const [detectedPBs, setDetectedPBs] = useState<DetectedPB[]>([]);
   
   const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -160,6 +170,46 @@ export default function WorkoutPlayer() {
     }
   };
 
+  const detectPBs = async (userId: string, newDurationSec: number, newCalories: number): Promise<DetectedPB[]> => {
+    const pbs: DetectedPB[] = [];
+    try {
+      const { data: durationMax } = await supabase
+        .from('workout_progress')
+        .select('duration_seconds')
+        .eq('user_id', userId)
+        .order('duration_seconds', { ascending: false })
+        .limit(2);
+      const previousDurationMax = durationMax?.[1]?.duration_seconds ?? 0;
+      if (previousDurationMax > 0 && newDurationSec > previousDurationMax) {
+        pbs.push({ kind: 'duration', label: 'longest workout', value: Math.round(newDurationSec / 60), previousBest: Math.round(previousDurationMax / 60) });
+      }
+
+      const { data: calorieMax } = await supabase
+        .from('workout_progress')
+        .select('calories_burned')
+        .eq('user_id', userId)
+        .not('calories_burned', 'is', null)
+        .order('calories_burned', { ascending: false })
+        .limit(2);
+      const previousCalorieMax = calorieMax?.[1]?.calories_burned ?? 0;
+      if (previousCalorieMax > 0 && newCalories > previousCalorieMax) {
+        pbs.push({ kind: 'calories', label: 'biggest calorie burn', value: Math.round(newCalories), previousBest: Math.round(previousCalorieMax) });
+      }
+
+      const { data: streaks } = await supabase
+        .from('user_streaks')
+        .select('current_streak, longest_streak')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (streaks && streaks.longest_streak > 0 && streaks.current_streak > streaks.longest_streak) {
+        pbs.push({ kind: 'streak', label: `${streaks.current_streak}-day streak`, value: streaks.current_streak, previousBest: streaks.longest_streak });
+      }
+    } catch (err) {
+      console.error('[PB Detection] failed:', err);
+    }
+    return pbs;
+  };
+
   const completeWorkout = async () => {
     setPlayerState('completed');
     setShowCompleted(true);
@@ -177,6 +227,22 @@ export default function WorkoutPlayer() {
         const pts = await recordWorkout();
         setPointsEarned(pts);
 
+        // Detect PBs now that streak + progress rows are committed
+        const pbs = await detectPBs(user.id, totalElapsed, workoutCalories);
+        setDetectedPBs(pbs);
+
+        // Schedule a local push reminder to fire in 30 min if user hasn't shared yet
+        if (pbs.length > 0 && workout) {
+          const notifId = await schedulePBShareReminder(
+            workout.id,
+            workout.title,
+            pbs.map(pb => ({ kind: pb.kind, label: pb.label, value: pb.value }))
+          );
+          if (notifId !== null) {
+            sessionStorage.setItem(`pb_notif_${workout.id}`, String(notifId));
+          }
+        }
+
         // Push notification — sent after a delay so it arrives when app is backgrounded
         setTimeout(() => {
           notifyUser(user.id, "workout", "Workout complete! 💪",
@@ -191,6 +257,7 @@ export default function WorkoutPlayer() {
               workoutTitle: workout.title,
               durationMin: workoutDurationMin,
               calories: workoutCalories,
+              pbs,
             }
           }));
         }, 8000);
@@ -274,7 +341,12 @@ export default function WorkoutPlayer() {
         <CompletionSummary
           activityTitle={workout?.title || 'Workout'}
           stats={completionStats}
-          achievementMessage={newBadges.length > 0 ? 'New achievement unlocked!' : undefined}
+          achievementMessage={
+            detectedPBs.length > 0
+              ? `🏆 New PB — ${detectedPBs.map(pb => pb.label).join(' + ')}!`
+              : newBadges.length > 0 ? 'New achievement unlocked!' : undefined
+          }
+          pbLabel={detectedPBs.length > 0 ? detectedPBs.map(pb => pb.label).join(' + ') : undefined}
           badges={newBadges.map(b => ({ name: b.name, icon: b.icon }))}
           pointsEarned={pointsEarned}
           onDone={handleFinish}

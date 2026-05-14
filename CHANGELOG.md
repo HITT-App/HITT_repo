@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-05-14] — Phases 6 & 7: PB detection, PB share cards, and push reminders
+
+- **Personal best detection** — after every workout the app checks for three PB types: longest duration, biggest calorie burn, and longest streak. First-ever workouts don't count — you need a previous one to beat
+- **PB celebration** — when you hit a PB, the completion screen shows "🏆 New PB" and the share card image switches to a gold "NEW PERSONAL BEST" banner; Jarvis calls out the specific PB by name with a gold card
+- **Non-PB workouts unchanged** — generic workouts still get the normal "share your win" prompt, not the gold treatment
+- **30-minute push reminder** — if you background the app after a PB workout without sharing, a local push notification fires 30 minutes later nudging you to share while the moment still feels fresh; tapping it opens the workout library
+- **Auto-cancel** — if you tap "Share now" inside Jarvis before the 30 minutes are up, the pending notification is cancelled so you're not nudged about something you already did
+
 ## [2026-05-14] — Phase 5: Jarvis proactive recommendations and post-workout share nudge
 
 - **Proactive workout suggestion** — on days you have nothing scheduled, Jarvis now opens with a workout recommendation in the greeting rather than a generic welcome

@@ -63,6 +63,7 @@ interface JarvisModeProps {
     workoutTitle: string;
     durationMin: number;
     calories: number;
+    pbs?: Array<{ kind: 'duration' | 'calories' | 'streak'; label: string; value: number; previousBest: number }>;
   } | null;
 }
 
@@ -557,8 +558,10 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
     const isOnboarding = !hasHistory && !hasSchedule;
     try {
       const greetingPrompt = sharePromptDetail
-        // Post-workout share nudge — Jarvis opened automatically after a workout
-        ? `[POST_WORKOUT_SHARE] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} workout, burning around ${sharePromptDetail.calories} calories. Congratulate them warmly in one sentence — be specific about what they just did, not generic. Then ask if they want to share it on the community feed. Keep it to 2 sentences total, encouraging tone, no follow-up questions beyond the share question.`
+        // Post-workout share nudge — PB version or normal version
+        ? (sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0
+            ? `[POST_WORKOUT_PB] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} and hit a new personal best: ${sharePromptDetail.pbs.map(pb => `${pb.label} (${pb.value}, previous best ${pb.previousBest})`).join('; ')}. Celebrate this specifically and enthusiastically — name the PB. Then say they should share it because this one matters. Keep it to 2-3 sentences, genuinely excited tone, use one 🏆 emoji.`
+            : `[POST_WORKOUT_SHARE] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} workout, burning around ${sharePromptDetail.calories} calories. Congratulate them warmly in one sentence — be specific about what they just did, not generic. Then ask if they want to share it on the community feed. Keep it to 2 sentences total, encouraging tone, no follow-up questions beyond the share question.`)
         : isOnboarding
           // First ever open — full onboarding intake
           ? `[ONBOARDING] This user has no schedule yet. Introduce yourself as Coach HIIT in one warm sentence, then say you want to ask a couple of quick questions to build their perfect plan, then ask just this: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`
@@ -1012,18 +1015,36 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
           </div>
         )}
 
-        {/* Post-workout share card — shown when Jarvis auto-opens after workout completion */}
+        {/* Post-workout share card — PB style (amber) or normal style (primary) */}
         {sharePromptDetail && (
-          <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
-            <p className="text-sm font-semibold text-foreground">🎉 Share your win</p>
+          <div className={
+            sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0
+              ? "bg-amber-500/10 border border-amber-500/40 rounded-2xl px-4 py-3 space-y-3"
+              : "bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3"
+          }>
+            <p className="text-sm font-semibold text-foreground">
+              {sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0 ? '🏆 New personal best!' : '🎉 Share your win'}
+            </p>
             <p className="text-xs text-muted-foreground">
               {sharePromptDetail.durationMin} min · {sharePromptDetail.calories} cal · {sharePromptDetail.workoutTitle}
+              {sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0 && (
+                <><br /><span className="text-amber-500 font-medium">{sharePromptDetail.pbs.map(pb => pb.label).join(' + ')}</span></>
+              )}
             </p>
             <div className="flex gap-2">
               <Button
                 size="sm"
                 className="flex-1 bg-primary text-primary-foreground text-xs h-9"
-                onClick={onClose}
+                onClick={() => {
+                  const storedId = sessionStorage.getItem(`pb_notif_${sharePromptDetail.workoutId}`);
+                  if (storedId) {
+                    import('@/lib/notify').then(({ cancelPBShareReminder }) => {
+                      cancelPBShareReminder(parseInt(storedId, 10));
+                    });
+                    sessionStorage.removeItem(`pb_notif_${sharePromptDetail.workoutId}`);
+                  }
+                  onClose();
+                }}
               >
                 Share now
               </Button>
