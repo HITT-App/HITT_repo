@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-14] — Fix: Jarvis voice echo when navigating between screens
+
+- **Echo fixed** — tapping Start now, View recipe, Body scan, Share now, or the schedule confirm inside Jarvis now properly stops any in-progress speech before closing; previously the audio kept playing in the background and overlapped with the next greeting
+
 ## [2026-05-14] — Phases 6 & 7: PB detection, PB share cards, and push reminders
 
 - **Personal best detection** — after every workout the app checks for three PB types: longest duration, biggest calorie burn, and longest streak. First-ever workouts don't count — you need a previous one to beat

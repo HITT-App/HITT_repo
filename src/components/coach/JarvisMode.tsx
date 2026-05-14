@@ -430,7 +430,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
 
       // Close Jarvis and navigate to the Schedule tab so the user sees their new plan
       setTimeout(() => {
-        onClose();
+        handleClose();
         navigate('/schedule');
       }, 1800);
     } catch (err) {
@@ -857,6 +857,8 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
     return () => {
       cancelled = true;
       stopListening();
+      streamAbortRef.current?.abort();
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
       if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -966,7 +968,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
                 className="flex-1 bg-primary text-primary-foreground text-xs h-9"
                 onClick={() => {
                   setPendingBodyScan(false);
-                  onClose();
+                  handleClose();
                   navigate('/body-scan');
                 }}
               >
@@ -1043,7 +1045,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
                     });
                     sessionStorage.removeItem(`pb_notif_${sharePromptDetail.workoutId}`);
                   }
-                  onClose();
+                  handleClose();
                 }}
               >
                 Share now
@@ -1091,7 +1093,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
                 onClick={() => {
                   const id = recommendedWorkout.id;
                   setRecommendedWorkout(null);
-                  onClose();
+                  handleClose();
                   navigate(`/workout/${id}`);
                 }}
               >
@@ -1137,7 +1139,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
                 className="flex-1 bg-accent text-accent-foreground text-xs h-9"
                 onClick={() => {
                   setRecommendedRecipe(null);
-                  onClose();
+                  handleClose();
                   navigate('/browse-meals');
                 }}
               >
