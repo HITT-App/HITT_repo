@@ -40,10 +40,7 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
   };
 
   return (
-    <div 
-      className="bg-background px-4 pt-4 pb-3 space-y-4"
-      style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 16px)" }}
-    >
+    <div className="bg-background px-4 pt-4 pb-3 space-y-4">
       {/* Top Row: Logo + Greeting + Notifications */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
