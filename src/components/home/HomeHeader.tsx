@@ -40,7 +40,7 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
   };
 
   return (
-    <div className="bg-background px-4 pt-4 pb-3 space-y-4">
+    <div className="bg-background px-4 pt-2 pb-3 space-y-4">
       {/* Top Row: Logo + Greeting + Notifications */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -50,7 +50,6 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
               <img src={hiitLogo} alt="HIIT Logo" className="w-full h-full object-cover" />
             </AvatarFallback>
           </Avatar>
-          <p className="text-base font-semibold text-foreground">HIIT Fitness</p>
         </div>
         
         <Button
