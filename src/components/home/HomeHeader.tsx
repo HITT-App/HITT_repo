@@ -44,12 +44,18 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
       {/* Top Row: Logo + Greeting + Notifications */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Avatar className="w-10 h-10 rounded-xl">
-            <AvatarImage src={avatarUrl || undefined} alt={userName} className="rounded-xl" />
-            <AvatarFallback className="rounded-xl">
-              <img src={hiitLogo} alt="HIIT Logo" className="w-full h-full object-cover" />
-            </AvatarFallback>
-          </Avatar>
+          <button
+            onClick={() => navigate('/profile')}
+            className="rounded-xl active:opacity-70 transition-opacity"
+            aria-label="Go to profile"
+          >
+            <Avatar className="w-10 h-10 rounded-xl">
+              <AvatarImage src={avatarUrl || undefined} alt={userName} className="rounded-xl" />
+              <AvatarFallback className="rounded-xl">
+                <img src={hiitLogo} alt="HIIT Logo" className="w-full h-full object-cover" />
+              </AvatarFallback>
+            </Avatar>
+          </button>
         </div>
         
         <Button

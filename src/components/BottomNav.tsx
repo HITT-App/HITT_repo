@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Plus, MessageCircle, User } from "lucide-react";
+import { Home, Plus, MessageCircle, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
@@ -22,7 +22,7 @@ export const BottomNav = ({ onAddClick }: BottomNavProps) => {
     // Centre HIIT logo — opens Jarvis directly
     { id: "center", icon: null as any, label: "Jarvis", path: null as string | null },
     ...(flags.community_enabled ? [{ id: "community", icon: MessageCircle, label: "Social", path: "/community/onboarding" }] : []),
-    { id: "profile", icon: User, label: "You", path: "/profile" },
+    { id: "schedule", icon: Calendar, label: "Schedule", path: "/workout-schedule" },
   ];
 
   const getActiveTab = () => {

@@ -19,6 +19,7 @@ import { useHiitScore } from "@/hooks/useHiitScore";
 
 import {
   HomeHeader,
+  BodyScanCard,
   FitnessMetricsCard,
   ActivitySection,
   WorkoutsSection,
@@ -137,6 +138,7 @@ const Index = () => {
           <HealthSyncPrompt />
           <SmartDailyBriefing />
           <StatsGrid />
+          <BodyScanCard />
           {flags.nutrition_enabled && <NutritionSection hasData={true} />}
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
           {flags.activity_enabled && <ActivitySection />}
@@ -155,9 +157,12 @@ const Index = () => {
         if (flagKey && !flags[flagKey]) return false;
         return true;
       })
-      .map((s) => (
-        <div key={s.section_key}>{sectionComponents[s.section_key]}</div>
-      ));
+      .flatMap((s) => {
+        const el = <div key={s.section_key}>{sectionComponents[s.section_key]}</div>
+        return s.section_key === 'stats_grid'
+          ? [el, <BodyScanCard key="body-scan-card" />]
+          : [el]
+      });
   };
 
   return (
