@@ -39,20 +39,6 @@ Current icon is an orange gradient placeholder. Replace with final branded artwo
 
 **Action needed:** Provide a 1024×1024 PNG of the final icon. Drop it into `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png` and rebuild.
 
-### YouTube API key — workout video links
-
-All 28 workouts are seeded with exercises and thumbnails. Video links are the last missing piece. A script is ready (`scripts/populate_videos.py`) that will auto-search YouTube and populate a video URL for every workout.
-
-**Action needed (2 minutes):**
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) → select project **hiit api**
-2. Search "YouTube Data API v3" → Enable
-3. APIs & Services → Credentials → Create Credentials → API Key
-4. Paste the key here or in `.env` as `YOUTUBE_API_KEY`, then run:
-   ```bash
-   YOUTUBE_API_KEY=<key> python3 scripts/populate_videos.py | supabase db query --linked
-   ```
-Owners can swap any video later by updating `video_url` on the `workouts` row directly.
-
 ### Apple Watch companion app
 
 Framework is built and registered in the Xcode project (`ios/App/HIITWatch/`). The Watch app shows today's workout, tracks live HR/calories during an active session, and sends workout events back to the iPhone. One manual Xcode step is required before it can be built and deployed.
@@ -264,6 +250,10 @@ Info.plist contains all required Apple privacy usage strings: camera, photo libr
 ---
 
 ## Resolved
+
+### ✅ Workout video links — owner-provided (2026-05-15)
+
+The YouTube API approach is no longer needed. The owner is providing video files directly for each workout. Videos should be uploaded and their URLs added to the `video_url` column on the `workouts` table directly. The `scripts/populate_videos.py` script (YouTube auto-search) can be ignored.
 
 ### ✅ Explainable score breakdown
 **Decided:** Yes — tapping the HIIT Score badge opens a bottom sheet showing the breakdown (workouts, streak, nutrition, sleep, intensity), raw input counts, and a "how is this calculated?" explainer.

@@ -1,0 +1,134 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2869
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 # Recommendation Reasons\
+\
+## What this does\
+\
+When Jarvis recommends a workout or recipe, it currently outputs the marker and a brief framing sentence. The user sees a tappable card with title, duration, category. The intelligence that *chose* this workout \'97 the user's sleep, mood, recent training, HRV, history \'97 is completely invisible.\
+\
+This change adds one sentence to every recommendation that names *why* this specific workout was picked, grounded in the user's actual data. The shift is from "an AI that picks workouts" to "a coach who's clearly watching everything."\
+\
+This is the single highest-leverage change to how Jarvis feels, and it's entirely prompt-based \'97 no UI changes, no database changes, no new components.\
+\
+## Why this matters for launch\
+\
+The app already has the data. The AI already considers the data. The user just doesn't see any of it. Adding the explanation closes the loop visibly without building anything new. It's the difference between:\
+\
+**Before:** *"How about Upper Body Strength? Solid pick for what you said you wanted."*\
+\
+**After:** *"Your HRV is low this morning and you've trained 4 days running \'97 let's go light. Upper Body Strength is 25 minutes, mostly bodyweight, won't tax your nervous system."*\
+\
+Same recommendation. Same code. Completely different *feeling*.\
+\
+## File to edit\
+\
+`supabase/functions/ai-coach/index.ts`\
+\
+Single file. Single section. System prompt update.\
+\
+## What to change\
+\
+Find the `RECOMMENDATIONS` section in `SYSTEM_PROMPT` (added in Phase 2). It currently covers the markers, the hard rules, and when to recommend.\
+\
+Add a new sub-section just before the `WHEN TO RECOMMEND` block:\
+\
+```\
+\uc0\u9552 \u9552 \u9552  RECOMMENDATION REASONS \'97 CRITICAL \u9552 \u9552 \u9552 \
+\
+Every workout or recipe recommendation MUST include a one-sentence reason that names specifically WHY this choice fits THIS user RIGHT NOW. The reason draws on the user's actual data in your context \'97 sleep, mood, recent workouts, energy, training load, recent PBs, body composition, weather, time of day, anything specific to them.\
+\
+The reason goes in the text BEFORE the marker, in the same response. It is the framing line for the card.\
+\
+GENERIC REASONS ARE FORBIDDEN. The point of this app is that Jarvis sees everything about the user. Generic reasons reveal that the AI isn't actually paying attention to specifics. Examples of what NOT to say:\
+\
+\uc0\u10060  "Here's one that fits your goal"\
+\uc0\u10060  "This is a great workout for fat loss"\
+\uc0\u10060  "Try this \'97 it'll help build strength"\
+\uc0\u10060  "Perfect for someone at your fitness level"\
+\uc0\u10060  "This matches what you asked for"\
+\
+SPECIFIC REASONS NAME THE DATA. Examples of what TO say:\
+\
+\uc0\u9989  "Your HRV is low this morning and you've trained 4 days running \'97 let's keep it light."\
+\uc0\u9989  "Your sleep was poor last night (under 6 hours) \'97 let's go gentler. This 20-minute mobility flow will move you without taxing recovery."\
+\uc0\u9989  "You've been logging 'low mood' for 3 days straight \'97 sometimes a short walk or stretch resets things faster than another HIIT session."\
+\uc0\u9989  "You PB'd that 30-min HIIT yesterday \'97 incredible. Today let's do active recovery to lock in the gains."\
+\uc0\u9989  "You said you wanted more cardio, you've only done 1 cardio session this week, and you've got energy \'97 this 25-min run interval session is exactly what's missing from your week."\
+\uc0\u9989  "It's 7am and your check-in says you're 'fired up' \'97 let's harness that with a heavy strength session before the day catches up with you."\
+\uc0\u9989  "You haven't done anything for legs in 9 days and your latest workout history is all upper-body \'97 let's balance it out."\
+\
+PATTERNS THAT MAKE A GOOD REASON:\
+- Reference a specific data point (sleep hours, mood word, HRV trend, days since something, count of recent workouts of a type)\
+- Connect that data point to the recommendation choice\
+- Keep it to ONE sentence. Two at most.\
+- Sound like a coach noticing something specific, not an AI summarising data.\
+\
+WHEN THE DATA IS LIMITED:\
+If the user is brand new and the only data you have is what they stated in onboarding (goal, days/week, session length), reference THAT instead of pretending you know more:\
+\
+\uc0\u9989  "You said you want to focus on stamina with 3 weekly sessions \'97 this run interval set is the cleanest match."\
+\uc0\u9989  "First workout for you, and you wanted strength-focused \'97 let's start with the basics so I can see how you handle the load."\
+\
+The reason must be TRUE. If you can't find a specific data point to justify the choice, just give an honest neutral framing without inventing data ("This one looked like the closest fit to what you described"). DON'T fabricate facts.\
+\
+THE REASON GOES BEFORE THE MARKER:\
+"Your sleep was poor last night (under 6 hours) \'97 let's go gentler. This 20-minute mobility flow will move you without taxing recovery.\
+[RECOMMEND_WORKOUT:\{"id":"abc-123-...","name":"Morning Mobility Flow"\}]"\
+\
+Same rules apply to recipe recommendations. Reference whatever's relevant: what they've eaten today, their protein target progress, the time of day, their mood, what they said they wanted.\
+\
+\uc0\u9989  "You're 40g short of your protein target with 6 hours left in the day \'97 this dinner gets you there with room to spare."\
+\uc0\u9989  "It's 11am, you only had coffee for breakfast, and your mood was 'flat' on check-in \'97 this snack has the carbs and protein to lift your energy in 20 minutes."\
+```\
+\
+That's the entire change. Nothing else needs editing.\
+\
+## Testing\
+\
+After deploying:\
+\
+1. **Open Jarvis. Ask: *"Suggest a workout for me."***\
+2. **Look at the response.** It should start with a sentence that names something specific from your data. Not "here's a good one" \'97 something like "your steps are low today" or "you trained yesterday so let's recover" or whatever fits your actual current state.\
+3. **Repeat the test 3-5 times across different conditions** to see variety:\
+   - Right after a workout (Jarvis should reference the recent session)\
+   - In the morning (should reference sleep)\
+   - After a check-in with low mood (should reference mood)\
+   - As a new account with minimal data (should reference what little is known, not invent)\
+4. **Negative test:** if Jarvis is giving generic reasons ("here's one that fits your goal"), the prompt isn't holding. Add more explicit forbidden examples to the system prompt and redeploy.\
+\
+## Risks and watch-outs\
+\
+1. **Gemini may slip into generic reasons.** The prompt has explicit "FORBIDDEN" examples but the model occasionally drifts. If you see this in testing, the fix is usually adding more concrete bad examples to the prompt \'97 the model learns more from "don't say this exact thing" than from "be specific."\
+\
+2. **The model might fabricate data.** If it doesn't have HRV data but invents an HRV-based reason, that's worse than a generic reason. The prompt explicitly warns against this \'97 keep an eye on it. If you see fabrication, the fix is to be more explicit about what data is and isn't in the context.\
+\
+3. **Reasons might be too long.** "One sentence, two at most" is in the prompt but Gemini sometimes runs on. If responses feel verbose, tighten the rule.\
+\
+4. **The reason should match the recommendation.** If Jarvis says "your HRV is low, let's go light" but then recommends a 45-minute high-intensity HIIT, the contradiction is more damaging than no reason at all. The recommendation must follow the reason logically. The prompt structure already handles this because the AI generates both together, but it's worth verifying in testing.\
+\
+## Deploy\
+\
+```bash\
+git add supabase/functions/ai-coach/index.ts\
+git commit -m "Recommendation reasons: every Jarvis suggestion names why"\
+supabase functions deploy ai-coach\
+```\
+\
+No frontend changes. No new dependencies. No migrations. Test on the next Jarvis interaction.\
+\
+## Why this is half a day\
+\
+- 30 min to add the section to the system prompt and deploy\
+- 1-2 hours of testing with various queries and account states\
+- 30 min to tighten the prompt based on what you see\
+- 30 min to re-deploy and retest\
+\
+Total: 2-4 hours of actual work, but you should test it in different contexts (morning, after workout, low mood day, fresh account) which is what stretches it to half a day.\
+\
+This is the cheapest, highest-leverage launch improvement on the entire list.\
+}
