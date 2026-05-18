@@ -523,12 +523,12 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         .from('messages')
         .select('role, content, created_at')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(40);
 
       if (!data || data.length === 0) return [];
 
-      const history: ConversationMessage[] = data.map(m => ({
+      const history: ConversationMessage[] = data.reverse().map(m => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
       }));
