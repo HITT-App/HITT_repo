@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +67,12 @@ export default function WorkoutLibrary() {
   const { profile } = useProfile();
   const displayName = profile?.display_name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Athlete";
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Read ?maxDuration=N from URL. Invalid or missing → null (show all workouts).
+  const rawMax = searchParams.get('maxDuration');
+  const maxDuration = rawMax !== null && Number.isFinite(parseInt(rawMax, 10))
+    ? parseInt(rawMax, 10)
+    : null;
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,8 +113,9 @@ export default function WorkoutLibrary() {
     const matchesEquipment = selectedEquipment.length === 0 ||
       workout.equipment?.some(eq => selectedEquipment.includes(eq));
     const matchesDifficulty = !selectedDifficulty || workout.difficulty === selectedDifficulty;
-    
-    return matchesSearch && matchesCategory && matchesBodyArea && matchesEquipment && matchesDifficulty;
+    const matchesDuration = maxDuration === null || workout.duration_minutes <= maxDuration;
+
+    return matchesSearch && matchesCategory && matchesBodyArea && matchesEquipment && matchesDifficulty && matchesDuration;
   });
 
   const featuredWorkouts = filteredWorkouts.filter(w => w.is_featured);

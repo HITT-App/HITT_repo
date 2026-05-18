@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
-import { FullNavMenu } from "@/components/FullNavMenu";
+import { QuickAddSheet } from "@/components/QuickAddSheet";
 import { useAuth } from "@/hooks/useAuth";
 
 // Pages where the bottom nav should be hidden (full-screen experiences)
@@ -27,7 +27,7 @@ const HIDDEN_NAV_ROUTES = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const location = useLocation();
-  const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   const shouldHideNav = !user || HIDDEN_NAV_ROUTES.some(
     (route) => location.pathname.startsWith(route)
@@ -44,8 +44,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
       {!shouldHideNav && (
         <>
-          <BottomNav onAddClick={() => setNavMenuOpen(true)} />
-          <FullNavMenu open={navMenuOpen} onOpenChange={setNavMenuOpen} />
+          <BottomNav onAddClick={() => setQuickAddOpen(true)} />
+          <QuickAddSheet open={quickAddOpen} onOpenChange={setQuickAddOpen} />
         </>
       )}
     </>
