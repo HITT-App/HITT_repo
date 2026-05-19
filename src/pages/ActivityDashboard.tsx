@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { HEmoji } from "@/components/HEmoji";
 import { 
   Calendar, 
   ChevronRight, 
@@ -171,7 +172,7 @@ const ActivityDashboard = () => {
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-xl">{activityIcons[log.activity_type] || "⚡"}</span>
+                      {(activityIcons[log.activity_type] || "⚡") === '💪' ? <HEmoji name="workouts" size={16}/> : <span className="text-xl">{activityIcons[log.activity_type] || "⚡"}</span>}
                     </div>
                     <div className="flex-1">
                       <h3 className="font-medium capitalize">{log.activity_type.replace("-", " ")}</h3>
@@ -182,7 +183,7 @@ const ActivityDashboard = () => {
                     <div className="text-right text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <span>{Math.round((log.duration_seconds || 0) / 60)} min</span>
-                        <span>🔥 {log.calories_burned || 0} kcal</span>
+                        <span><HEmoji name="streak" size={14} style={{verticalAlign:'middle'}}/> {log.calories_burned || 0} kcal</span>
                       </div>
                       <div className="text-primary text-xs">+{log.score_impact} score</div>
                     </div>

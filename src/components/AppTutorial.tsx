@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Home, Bot, FileText, User, LayoutGrid } from "lucide-react";
+import { HEmoji } from "@/components/HEmoji";
 
 interface TutorialStep {
   title: string;
@@ -98,7 +99,7 @@ export const AppTutorial = ({ onComplete }: AppTutorialProps) => {
               ].map((item) => (
                 <div key={item.label} className="flex flex-col items-center gap-1 py-2">
                   <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-lg">
-                    {item.icon}
+                    {item.icon === '💪' ? <HEmoji name="workouts" size={24}/> : item.icon === '👥' ? <HEmoji name="social" size={24}/> : item.icon === '🤖' ? <HEmoji name="ai" size={24}/> : <span className="text-2xl">{item.icon}</span>}
                   </div>
                   <span className="text-[10px] text-muted-foreground truncate max-w-[70px]">{item.label}</span>
                 </div>

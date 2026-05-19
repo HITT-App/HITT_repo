@@ -1,4 +1,5 @@
-import { Flame, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { HEmoji } from "@/components/HEmoji";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
@@ -36,14 +37,14 @@ export function StreakUrgencyBanner() {
       <div className="relative flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-            <Flame className="w-5 h-5 text-white animate-pulse" />
+            <HEmoji name="streak" size={20}/>
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">
               Your {streak?.current_streak}-day streak ends at midnight!
             </p>
             <p className="text-xs text-muted-foreground">
-              Start a quick workout to keep it going 🔥
+              Start a quick workout to keep it going
             </p>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
+import { HEmoji } from "@/components/HEmoji";
 import { ArrowLeft, Calendar, Share2, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -166,7 +167,7 @@ const AchievementDetail = () => {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
-                <span className="text-muted-foreground">🏆</span>
+                <span className="text-muted-foreground"><HEmoji name="leaderboard" size={20}/></span>
               </div>
               <span className="text-sm font-medium">
                 {isEarned ? 'Completed' : 'In Progress'}

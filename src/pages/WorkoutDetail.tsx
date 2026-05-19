@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { HEmoji } from '@/components/HEmoji';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -265,7 +266,7 @@ export default function WorkoutDetail() {
                 </div>
                 <Progress value={Math.min(completionCount * 20, 100)} className="h-2" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {completionCount >= 5 ? "🏆 Mastered!" : `${5 - completionCount} more to master`}
+                  {completionCount >= 5 ? <><HEmoji name="leaderboard" size={16} style={{verticalAlign:'middle'}}/> Mastered!</> : `${5 - completionCount} more to master`}
                 </p>
               </CardContent>
             </Card>

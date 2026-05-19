@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import heroImage from "@/assets/hero-runner.jpg";
+import { HEmoji } from "@/components/HEmoji";
 
 interface OnboardingSlide {
   id: number;
@@ -41,7 +42,7 @@ const slides: OnboardingSlide[] = [
     id: 5,
     title: "Meet Your Empowering AI Coach Companion",
     description: "Your AI powered coach is here to guide, motivate, and support your journey.",
-    icon: "🤖",
+    icon: "ai",
   },
   {
     id: 6,
@@ -59,7 +60,7 @@ const slides: OnboardingSlide[] = [
     id: 8,
     title: "Nutrition & Meal Management For You",
     description: "Get personalized meal plans and nutrition insights to fuel your progress.",
-    icon: "🥗",
+    icon: "nutrition",
   },
   {
     id: 9,
@@ -71,7 +72,7 @@ const slides: OnboardingSlide[] = [
     id: 10,
     title: "Unlock Achievements & Health Challenges",
     description: "Stay motivated with rewards, challenges, and milestone achievements.",
-    icon: "🏆",
+    icon: "leaderboard",
   },
 ];
 
@@ -127,8 +128,10 @@ export const OnboardingScreen = () => {
         ) : (
           // Feature slides with icon
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-            <div className="text-8xl mb-8 animate-scale-in">
-              {slide.icon}
+            <div className="mb-8 animate-scale-in flex justify-center">
+              {slide.icon === 'ai' || slide.icon === 'leaderboard' || slide.icon === 'nutrition'
+                ? <HEmoji name={slide.icon as any} size={120}/>
+                : <div className="text-8xl">{slide.icon}</div>}
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-4 animate-fade-up">
               {slide.title}

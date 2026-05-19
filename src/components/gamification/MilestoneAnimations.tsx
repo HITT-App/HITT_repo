@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { HEmoji } from "@/components/HEmoji";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Flame, Trophy, Crown, Star, Sparkles, Share2 } from "lucide-react";
@@ -25,7 +26,7 @@ interface MilestoneConfig {
 const milestoneConfigs: Record<MilestoneType, MilestoneConfig> = {
   streak_7: {
     icon: Flame,
-    title: "🔥 7-Day Streak!",
+    title: "7-Day Streak!",
     subtitle: "One Week Strong",
     gradient: "from-orange-500 via-red-500 to-orange-600",
     confettiColors: ["#f97316", "#ef4444", "#fb923c"],
@@ -43,7 +44,7 @@ const milestoneConfigs: Record<MilestoneType, MilestoneConfig> = {
   },
   streak_100: {
     icon: Trophy,
-    title: "🏆 100-Day Streak!",
+    title: "100-Day Streak!",
     subtitle: "Platinum Legend",
     gradient: "from-slate-300 via-white to-slate-400",
     confettiColors: ["#e2e8f0", "#f1f5f9", "#cbd5e1"],
@@ -237,7 +238,7 @@ export function MilestoneModal({ milestone, value, onClose }: MilestoneModalProp
 
             {/* Title & subtitle */}
             <h2 className="text-2xl font-bold text-foreground mb-1">
-              {config.title}
+              {milestone === 'streak_7' ? <HEmoji name="streak" size={20}/> : milestone === 'streak_100' ? <HEmoji name="leaderboard" size={20}/> : null} {config.title}
             </h2>
             <p className="text-sm text-muted-foreground mb-4">{config.subtitle}</p>
 
@@ -276,7 +277,7 @@ export function MilestoneModal({ milestone, value, onClose }: MilestoneModalProp
                 )}
                 onClick={onClose}
               >
-                Celebrate! 🎉
+                Celebrate!
               </Button>
               <Button
                 variant="ghost"

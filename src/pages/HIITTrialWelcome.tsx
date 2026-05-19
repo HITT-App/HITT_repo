@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Dumbbell } from "lucide-react";
+import { HEmoji } from "@/components/HEmoji";
 
 const HIITTrialWelcome = () => {
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ const HIITTrialWelcome = () => {
           <div className="bg-foreground text-background rounded-2xl px-6 py-4 flex items-center gap-2 shadow-elevated">
             <div className="flex items-center gap-1">
               <span className="text-2xl font-bold">H</span>
-              <Dumbbell className="w-5 h-5" />
+              <HEmoji name="workouts" size={20}/>
             </div>
             <span className="text-xl font-bold">plus</span>
           </div>
@@ -44,8 +44,9 @@ const HIITTrialWelcome = () => {
       </div>
 
       {/* Title */}
+      <HEmoji name="announcement" size={80} style={{display:'block', margin:'0 auto 16px'}} />
       <h1 className="text-2xl font-bold text-foreground mb-3 animate-fade-up">
-        Your HIIT plus free trial<br />has begun! 🎉
+        Your HIIT plus free trial<br />has begun!
       </h1>
 
       {/* Description */}
@@ -59,7 +60,7 @@ const HIITTrialWelcome = () => {
         className="w-full max-w-xs h-14 rounded-xl gap-2 text-base font-semibold animate-fade-up stagger-2"
       >
         Let's get fit!
-        <Dumbbell className="w-5 h-5" />
+        <HEmoji name="workouts" size={20}/>
       </Button>
     </div>
   );

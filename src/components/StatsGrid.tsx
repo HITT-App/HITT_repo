@@ -1,4 +1,5 @@
-import { TrendingUp, Flame, Clock, Target, Share2 } from "lucide-react";
+import { Flame, Clock, Target, Share2 } from "lucide-react";
+import { HEmoji } from "@/components/HEmoji";
 import { cn } from "@/lib/utils";
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { useEffect, useState } from "react";
@@ -67,10 +68,11 @@ export const StatsGrid = () => {
       glowColor: "#0ea5e9",
       glow: "shadow-sky-500/30",
     },
-    { 
-      id: "streak", 
-      icon: TrendingUp, 
-      value: streak?.current_streak?.toString() || "0", 
+    {
+      id: "streak",
+      icon: Clock,
+      hEmoji: 'streak',
+      value: streak?.current_streak?.toString() || "0",
       label: "Day Streak",
       glassBg: "rgba(16,185,129,0.55), rgba(13,148,136,0.4)",
       glowColor: "#10b981",
@@ -134,7 +136,9 @@ export const StatsGrid = () => {
                   <p className="text-[11px] text-white/70 mt-1 font-semibold uppercase tracking-widest">{stat.label}</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
-                  <Icon size={20} className="text-white/90" strokeWidth={2} />
+                  {stat.hEmoji
+                    ? <HEmoji name={stat.hEmoji as any} size={20}/>
+                    : <Icon size={20} className="text-white/90" strokeWidth={2}/>}
                 </div>
               </div>
               

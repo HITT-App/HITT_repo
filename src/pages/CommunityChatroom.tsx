@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
+import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Send, Loader2, ChevronDown, MessageCircle, Users,
@@ -897,7 +898,7 @@ export default function CommunityChatroom() {
                             {getUserDisplay(replyMsg.user_id, replyMsg.display_name).name}
                           </p>
                           <p className="text-[11px] text-muted-foreground truncate">
-                            {replyMsg.message_type === "image" ? "📷 Photo" :
+                            {replyMsg.message_type === "image" ? <><HEmoji name="camera" size={14} style={{verticalAlign:'middle'}}/>{" Photo"}</> :
                              replyMsg.message_type === "voice" ? "🎤 Voice" :
                              replyMsg.message_type === "gif" ? "GIF" :
                              replyMsg.content.slice(0, 50)}

@@ -1,4 +1,5 @@
 import { ArrowLeft, ChevronRight, Calendar, Target, Plus } from "lucide-react";
+import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -110,7 +111,7 @@ const Challenges = () => {
             </div>
             {/* Decorative trophy icon */}
             <div className="absolute -bottom-4 -right-4 text-8xl opacity-20">
-              🏆
+              <HEmoji name="leaderboard" size={16}/>
             </div>
           </Card>
         </section>
@@ -131,7 +132,7 @@ const Challenges = () => {
                 onClick={() => navigate(`/challenge/${challenge.id}`)}
               >
                 <div className={`w-12 h-12 rounded-xl ${challenge.iconBg} flex items-center justify-center text-2xl`}>
-                  {challenge.icon}
+                  {challenge.icon === '🏆' ? <HEmoji name="leaderboard" size={20}/> : challenge.icon === '💪' ? <HEmoji name="workouts" size={20}/> : challenge.icon}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-foreground">{challenge.title}</h3>

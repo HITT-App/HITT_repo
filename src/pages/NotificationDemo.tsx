@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,7 +91,7 @@ const NotificationDemo = () => {
                       {notification.type === "steps" && "👟"}
                       {notification.type === "hydration" && "💧"}
                       {notification.type === "calories-intake" && "🍽️"}
-                      {notification.type === "calories-burned" && "🔥"}
+                      {notification.type === "calories-burned" && <HEmoji name="streak" size={18}/>}
                       {notification.type === "coaching" && "🏋️"}
                     </span>
                   </div>

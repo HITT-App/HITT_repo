@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { HEmoji } from '@/components/HEmoji';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useProfile } from '@/hooks/useProfile';
@@ -429,7 +430,7 @@ export default function Profile() {
           {/* Badges */}
           <div className="space-y-3">
             <h3 className="font-semibold text-foreground flex items-center gap-2">
-              🏆 Badges & Achievements
+              <><HEmoji name="leaderboard" size={16} style={{verticalAlign:'middle', marginRight:6}}/> Badges & Achievements</>
             </h3>
             <BadgesDisplay allBadges={allBadges} earnedBadgeIds={earnedBadgeIds} showLocked />
           </div>

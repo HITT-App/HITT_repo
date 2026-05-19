@@ -1,4 +1,5 @@
 import { Utensils, Clock, Flame } from 'lucide-react';
+import { HEmoji } from '@/components/HEmoji';
 
 interface RecipeCardProps {
   title?: string;
@@ -28,7 +29,7 @@ export function RecipeCard({
         {imageUrl ? (
           <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
         ) : (
-          <div className="text-4xl">🍎</div>
+          <HEmoji name="nutrition" size={40}/>
         )}
       </div>
 

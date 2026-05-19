@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Calendar, Search, Filter, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -132,9 +133,7 @@ const ActivityHistory = () => {
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-xl">
-                                  {activityIcons[log.activity_type] || "⚡"}
-                                </span>
+                                {(activityIcons[log.activity_type] || "⚡") === '💪' ? <HEmoji name="workouts" size={16}/> : <span className="text-xl">{activityIcons[log.activity_type] || "⚡"}</span>}
                               </div>
                               <div className="flex-1">
                                 <h4 className="font-medium capitalize">
@@ -147,7 +146,7 @@ const ActivityHistory = () => {
                               </div>
                               <div className="text-right text-sm">
                                 <div className="text-muted-foreground">
-                                  🔥 {log.calories_burned || 0} kcal
+                                  <HEmoji name="streak" size={14} style={{verticalAlign:'middle'}}/> {log.calories_burned || 0} kcal
                                 </div>
                                 <div className="text-primary">+{log.score_impact} score</div>
                               </div>

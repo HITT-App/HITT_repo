@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { HEmoji } from "@/components/HEmoji";
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, X, Loader2, CheckCircle2, Dumbbell } from 'lucide-react';
@@ -101,7 +102,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
             <CheckCircle2 className="w-10 h-10 text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-bold mb-2">Your plan is ready 🎉</h2>
+            <h2 className="text-xl font-bold mb-2"><><HEmoji name="announcement" size={20} style={{verticalAlign:'middle', marginRight:6}}/>Your plan is ready</></h2>
             <p className="text-sm text-muted-foreground">
               {scheduledItems.length} workouts added to your schedule. Push notifications will fire on each session day.
             </p>
@@ -188,7 +189,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
             <div className="grid grid-cols-1 gap-3">
               {GOALS.map(g => (
                 <Chip key={g.id} selected={goal === g.id} onClick={() => setGoal(g.id)}>
-                  <span className="text-xl">{g.emoji}</span>
+                  {g.emoji === '💪' ? <HEmoji name="workouts" size={28}/> : g.emoji === '🔥' ? <HEmoji name="streak" size={28}/> : <span className="text-2xl">{g.emoji}</span>}
                   <span className="font-medium">{g.id}</span>
                 </Chip>
               ))}

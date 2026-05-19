@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from 'react-router-dom';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
@@ -958,7 +959,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         {/* Body scan CTA — shown when Jarvis recommends a scan during onboarding */}
         {pendingBodyScan && (
           <div className="bg-accent/10 border border-accent/30 rounded-2xl px-4 py-3 space-y-3">
-            <p className="text-sm font-semibold text-foreground">📷 Body Scan</p>
+            <p className="text-sm font-semibold text-foreground"><HEmoji name="camera" size={16} style={{verticalAlign:'middle', marginRight:4}}/>Body Scan</p>
             <p className="text-xs text-muted-foreground">
               Take 3 photos (front, side, back) — I'll analyse your physique and personalise your plan around what I find.
             </p>
@@ -1025,7 +1026,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
               : "bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3"
           }>
             <p className="text-sm font-semibold text-foreground">
-              {sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0 ? '🏆 New personal best!' : '🎉 Share your win'}
+              {sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0 ? <><HEmoji name="leaderboard" size={16} style={{verticalAlign:'middle', marginRight:4}}/>New personal best!</> : <><HEmoji name="announcement" size={16} style={{verticalAlign:'middle', marginRight:4}}/>Share your win</>}
             </p>
             <p className="text-xs text-muted-foreground">
               {sharePromptDetail.durationMin} min · {sharePromptDetail.calories} cal · {sharePromptDetail.workoutTitle}
@@ -1074,7 +1075,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
                 />
               ) : (
                 <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                  <span className="text-2xl">💪</span>
+                  <HEmoji name="workouts" size={24}/>
                 </div>
               )}
               <div className="flex-1 min-w-0">

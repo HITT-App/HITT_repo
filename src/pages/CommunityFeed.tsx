@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
@@ -528,7 +529,7 @@ const CommunityFeed = () => {
                     )}
                     {post.workout_data.calories && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        🔥 <span className="font-bold text-foreground">{post.workout_data.calories}</span> kcal
+                        <HEmoji name="streak" size={16} style={{verticalAlign:'middle'}}/> <span className="font-bold text-foreground">{post.workout_data.calories}</span> kcal
                       </div>
                     )}
                   </div>

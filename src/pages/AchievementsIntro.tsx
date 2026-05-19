@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HEmoji } from "@/components/HEmoji";
 
 const AchievementsIntro = () => {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ const AchievementsIntro = () => {
         <div className="w-48 h-48 relative">
           {/* Trophy glow effect */}
           <div className="absolute inset-0 bg-gradient-to-b from-yellow-300/20 to-transparent rounded-full blur-2xl" />
-          <div className="relative text-[140px] leading-none">🏆</div>
+          <div className="relative text-[140px] leading-none"><HEmoji name="leaderboard" size={140}/></div>
         </div>
       </div>
 

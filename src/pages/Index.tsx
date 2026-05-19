@@ -1,4 +1,5 @@
 import { useState, useEffect, ReactNode } from "react";
+import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
 
 import { OnboardingFlow } from "@/components/coach/OnboardingFlow";
@@ -224,7 +225,7 @@ const Index = () => {
               className="w-full rounded-2xl bg-primary/10 border border-primary/30 p-4 text-left flex items-center gap-4 active:bg-primary/20 transition-colors"
             >
               <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 text-xl">
-                {activityLevel === 'none' || activityLevel === 'light' ? '🤖' : '💪'}
+                {activityLevel === 'none' || activityLevel === 'light' ? <HEmoji name="ai" size={20}/> : <HEmoji name="workouts" size={20}/>}
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-sm">
