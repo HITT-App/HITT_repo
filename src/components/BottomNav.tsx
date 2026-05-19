@@ -1,9 +1,10 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, MessageCircle, Dumbbell, Apple } from "lucide-react";
+import { Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
 import hiitLogo from "@/assets/hiit-logo.webp";
+import { HEmoji } from "@/components/HEmoji";
 
 interface BottomNavProps {}
 
@@ -14,12 +15,11 @@ export const BottomNav = () => {
   const { unreadCount } = useCommunityNotifications();
 
   const navItems = [
-    { id: "home",      icon: Home,        label: "Home",     path: "/" },
-    { id: "workouts",  icon: Dumbbell,    label: "Workouts", path: "/workout-library" },
-    // Centre HIIT logo — opens Jarvis directly
-    { id: "center",    icon: null as any, label: "Jarvis",   path: null as string | null },
-    { id: "nutrition", icon: Apple,       label: "Nutrition",path: "/nutrition" },
-    ...(flags.community_enabled ? [{ id: "community", icon: MessageCircle, label: "Social", path: "/community/onboarding" }] : []),
+    { id: "home",      label: "Home",      path: "/" },
+    { id: "workouts",  label: "Workouts",  path: "/workout-library" },
+    { id: "center",    label: "Jarvis",    path: null as string | null },
+    { id: "nutrition", label: "Nutrition", path: "/nutrition-dashboard" },
+    ...(flags.community_enabled ? [{ id: "community", label: "Social", path: "/community/onboarding" }] : []),
   ];
 
   const getActiveTab = () => {
@@ -64,7 +64,6 @@ export const BottomNav = () => {
                 );
               }
 
-              const Icon = item.icon!;
               const isActive = getActiveTab() === item.id;
 
               return (
@@ -78,11 +77,15 @@ export const BottomNav = () => {
                   aria-label={item.label}
                   aria-current={isActive ? "page" : undefined}
                 >
-                  <Icon 
-                    size={22} 
-                    strokeWidth={isActive ? 2 : 1.5}
-                    className="transition-all duration-200"
-                  />
+                  {item.id === 'home'
+                    ? <Home size={22} strokeWidth={isActive ? 2 : 1.5} className="transition-all duration-200"/>
+                    : item.id === 'workouts'
+                    ? <HEmoji name="workouts" size={22}/>
+                    : item.id === 'nutrition'
+                    ? <HEmoji name="nutrition" size={22}/>
+                    : item.id === 'community'
+                    ? <HEmoji name="social" size={22}/>
+                    : null}
                   {item.id === "community" && unreadCount > 0 && (
                     <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
