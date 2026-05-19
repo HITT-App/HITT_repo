@@ -40,7 +40,7 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
   };
 
   return (
-    <div className="bg-background px-4 pt-2 pb-3 space-y-4">
+    <div className="bg-background px-6 pt-2 pb-3 space-y-4">
       {/* Top Row: Logo + Greeting + Notifications */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -49,7 +49,7 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
             className="rounded-xl active:opacity-70 transition-opacity"
             aria-label="Go to profile"
           >
-            <Avatar className="w-10 h-10 rounded-xl">
+            <Avatar className="w-11 h-11 rounded-xl">
               <AvatarImage src={avatarUrl || undefined} alt={userName} className="rounded-xl" />
               <AvatarFallback className="rounded-xl">
                 <img src={hiitLogo} alt="HIIT Logo" className="w-full h-full object-cover" />
