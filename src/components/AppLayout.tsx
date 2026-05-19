@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { QuickAddSheet } from "@/components/QuickAddSheet";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { useAuth } from "@/hooks/useAuth";
 
 // Pages where the bottom nav should be hidden (full-screen experiences)
@@ -44,7 +45,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
       {!shouldHideNav && (
         <>
-          <BottomNav onAddClick={() => setQuickAddOpen(true)} />
+          <BottomNav />
+          <FloatingActionButton onClick={() => setQuickAddOpen(true)} />
           <QuickAddSheet open={quickAddOpen} onOpenChange={setQuickAddOpen} />
         </>
       )}

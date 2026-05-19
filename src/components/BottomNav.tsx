@@ -1,28 +1,25 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Plus, MessageCircle, Calendar } from "lucide-react";
+import { Home, MessageCircle, Dumbbell, Apple } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
 import hiitLogo from "@/assets/hiit-logo.webp";
 
-interface BottomNavProps {
-  onAddClick: () => void;
-}
+interface BottomNavProps {}
 
-export const BottomNav = ({ onAddClick }: BottomNavProps) => {
+export const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { flags } = useFeatureFlags();
   const { unreadCount } = useCommunityNotifications();
 
   const navItems = [
-    { id: "home", icon: Home, label: "Home", path: "/" },
-    // Add button — opens the full nav menu to select what to add
-    { id: "add", icon: Plus, label: "Add", path: null as string | null },
+    { id: "home",      icon: Home,        label: "Home",     path: "/" },
+    { id: "workouts",  icon: Dumbbell,    label: "Workouts", path: "/workout-library" },
     // Centre HIIT logo — opens Jarvis directly
-    { id: "center", icon: null as any, label: "Jarvis", path: null as string | null },
+    { id: "center",    icon: null as any, label: "Jarvis",   path: null as string | null },
+    { id: "nutrition", icon: Apple,       label: "Nutrition",path: "/nutrition" },
     ...(flags.community_enabled ? [{ id: "community", icon: MessageCircle, label: "Social", path: "/community/onboarding" }] : []),
-    { id: "schedule", icon: Calendar, label: "Schedule", path: "/workout-schedule" },
   ];
 
   const getActiveTab = () => {
@@ -31,7 +28,6 @@ export const BottomNav = ({ onAddClick }: BottomNavProps) => {
   };
 
   const handleNavClick = (item: typeof navItems[0]) => {
-    if (item.id === "add") { onAddClick(); return; }
     if (item.id === "center") {
       window.dispatchEvent(new CustomEvent("hitt:open-jarvis"));
       return;
