@@ -111,7 +111,8 @@ def load_stills_by_folder():
                 continue
             folder = row.get("Workout", "").strip()
             if folder:
-                out.setdefault(folder, []).append(fn)
+                # Store as full manifest key to match upload_workout_assets.py format
+                out.setdefault(folder, []).append(f"{folder}/{fn}")
     return out
 
 
