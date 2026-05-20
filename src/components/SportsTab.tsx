@@ -1,25 +1,29 @@
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
-import { Activity, Map, Timer, ChevronRight } from 'lucide-react'
+import triathlonImg from '@/assets/sports-triathlon.webp.jpeg'
+import gymImg from '@/assets/sports-gym.webp.jpeg'
+import routesImg from '@/assets/sports-routes.webp.jpeg'
 
 const SPORTS = [
   {
-    icon: Activity,
     title: 'Triathlon',
-    subtitle: 'Train for swim, bike, run — track every leg',
+    eyebrow: 'Multi-sport',
+    subtitle: 'Swim · bike · run',
     path: '/triathlon',
+    image: triathlonImg,
   },
   {
-    icon: Map,
-    title: 'Routes',
-    subtitle: 'Discover and follow GPS routes',
-    path: '/routes',
-  },
-  {
-    icon: Timer,
-    title: 'Gym Timer',
-    subtitle: 'Timed sets for strength and circuits',
+    title: 'Gym',
+    eyebrow: 'Strength',
+    subtitle: 'Sets · circuits · timers',
     path: '/gym-timer',
+    image: gymImg,
+  },
+  {
+    title: 'Routes',
+    eyebrow: 'Outdoor',
+    subtitle: 'GPS · trails · paths',
+    path: '/routes',
+    image: routesImg,
   },
 ]
 
@@ -28,22 +32,44 @@ export function SportsTab() {
   return (
     <div className="space-y-3 pt-2">
       {SPORTS.map(sport => (
-        <Card
+        <button
           key={sport.path}
-          className="cursor-pointer active:bg-secondary/50 transition-colors touch-manipulation"
           onClick={() => navigate(sport.path)}
+          aria-label={`Open ${sport.title}`}
+          className="relative w-full overflow-hidden rounded-lg aspect-[2/1] active:scale-[0.98] transition-transform duration-150 touch-manipulation bg-muted"
         >
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <sport.icon className="w-6 h-6 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm">{sport.title}</p>
-              <p className="text-xs text-muted-foreground">{sport.subtitle}</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          </CardContent>
-        </Card>
+          <img
+            src={sport.image}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.35) 33%, rgba(0,0,0,0) 60%)',
+            }}
+            aria-hidden="true"
+          />
+
+          <div className="relative h-full flex flex-col justify-center px-5 py-4 text-left">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-white/80">
+              {sport.eyebrow}
+            </p>
+            <h3 className="text-2xl font-semibold text-white mt-1">
+              {sport.title}
+            </h3>
+            <p className="text-sm text-white/85 mt-1">
+              {sport.subtitle}
+            </p>
+            <span className="inline-flex items-center gap-1 mt-3 self-start px-3 py-1 rounded-full bg-white text-primary text-xs font-medium">
+              Get started <span aria-hidden="true">→</span>
+            </span>
+          </div>
+        </button>
       ))}
     </div>
   )
