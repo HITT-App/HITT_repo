@@ -16,6 +16,7 @@ import {
   Dumbbell, Heart, Zap, Play, Users, ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SportsTab } from '@/components/SportsTab';
 
 type Workout = {
   id: string;
@@ -81,6 +82,7 @@ export default function WorkoutLibrary() {
   const [selectedBodyAreas, setSelectedBodyAreas] = useState<string[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'workouts' | 'sports'>('workouts');
 
   useEffect(() => {
     fetchWorkouts();
@@ -150,6 +152,30 @@ export default function WorkoutLibrary() {
           <p className="text-xs text-muted-foreground">Workouts</p>
         </header>
         <div className="px-4 py-3 pr-5 space-y-4 overflow-hidden">
+
+          {/* Tab switcher */}
+          <div className="flex gap-2">
+            <Button
+              variant={activeTab === 'workouts' ? 'default' : 'outline'}
+              size="sm"
+              className="flex-1 rounded-full h-8 text-xs touch-manipulation"
+              onClick={() => setActiveTab('workouts')}
+            >
+              Workouts
+            </Button>
+            <Button
+              variant={activeTab === 'sports' ? 'default' : 'outline'}
+              size="sm"
+              className="flex-1 rounded-full h-8 text-xs touch-manipulation"
+              onClick={() => setActiveTab('sports')}
+            >
+              Sports
+            </Button>
+          </div>
+
+          {activeTab === 'sports' && <SportsTab />}
+
+          {activeTab === 'workouts' && <>
 
           {/* AI Greeting */}
           <Card className="bg-card border-border/50">
@@ -387,6 +413,7 @@ export default function WorkoutLibrary() {
               ))}
             </div>
           </div>
+          </>}
         </div>
       </div>
 
