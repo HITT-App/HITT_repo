@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-05-20] — Build 93: T14 Workouts/Sports tab + trademark compliance
+
+- **Workouts/Sports tab system** — the Workouts page now has a tab switcher at the top; "Workouts" (default) shows the existing library, "Sports" shows three tappable tiles: Triathlon, Routes, Gym Timer — rescuing three orphaned features
+- Renamed triathlon race labels from "Full Ironman" / "Half Ironman" to "Long Course" / "Middle Distance" for trademark compliance
+
 ## [2026-05-14] — Fix: Jarvis voice echo when navigating between screens
 
 - **Echo fixed** — tapping Start now, View recipe, Body scan, Share now, or the schedule confirm inside Jarvis now properly stops any in-progress speech before closing; previously the audio kept playing in the background and overlapped with the next greeting

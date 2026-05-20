@@ -34,8 +34,8 @@ const fmt = (s: number) => {
 };
 
 const PRESETS = [
-  { label: "Full Ironman",  distances: [3.8, 180, 42.2] },
-  { label: "Half Ironman",  distances: [1.9, 90,  21.1] },
+  { label: "Long Course",    distances: [3.8, 180, 42.2] },
+  { label: "Middle Distance", distances: [1.9, 90,  21.1] },
   { label: "Olympic",       distances: [1.5, 40,  10.0] },
   { label: "Sprint",        distances: [0.75, 20,  5.0] },
   { label: "Custom",        distances: null },
@@ -51,7 +51,7 @@ const Triathlon = () => {
 
   // Race setup
   const [targetKm, setTargetKm] = useState([3.8, 180, 42.2]);
-  const [raceName, setRaceName] = useState("Full Ironman");
+  const [raceName, setRaceName] = useState("Long Course");
   const [showSetup, setShowSetup] = useState(true);
   const [watchSent, setWatchSent] = useState(false);
   const [watchSending, setWatchSending] = useState(false);

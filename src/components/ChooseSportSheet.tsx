@@ -78,7 +78,7 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-foreground">Ironman / Triathlon</p>
+                      <p className="text-sm font-bold text-foreground">Triathlon</p>
                       <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 border border-yellow-500/30">FLAGSHIP</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Swim → Bike → Run • Multi-stage tracker</p>
