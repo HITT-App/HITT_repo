@@ -43,7 +43,7 @@ export function SleepSection({
   };
 
   return (
-    <div className="px-4 py-2">
+    <div className="px-6 py-2">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-foreground">Sleep</h2>
         <Button 

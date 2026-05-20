@@ -54,7 +54,7 @@ export function ScheduleCard() {
   // State C — no upcoming workouts
   if (items.length === 0) {
     return (
-      <div className="mx-4 mt-4 mb-2">
+      <div className="mx-6 mt-4 mb-2">
         <div className="bg-card border border-border/60 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -77,7 +77,7 @@ export function ScheduleCard() {
 
   // State A (2–3 items) or State B (1 item)
   return (
-    <div className="mx-4 mt-4 mb-2">
+    <div className="mx-6 mt-4 mb-2">
       <div className="bg-card border border-border/60 rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">

@@ -14,7 +14,7 @@ export function BodyScanCard() {
 
   if (isRecent) {
     return (
-      <div className="mx-4 mt-4 mb-2">
+      <div className="mx-6 mt-4 mb-2">
         <button
           onClick={() => navigate('/body-scan')}
           className="w-full flex items-center gap-3 bg-card border border-border/60 rounded-2xl p-4 active:bg-secondary transition-colors text-left"
@@ -35,7 +35,7 @@ export function BodyScanCard() {
   }
 
   return (
-    <div className="mx-4 mb-2">
+    <div className="mx-6 mb-2">
       <button
         onClick={() => navigate('/body-scan')}
         className="w-full rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 p-4 text-left active:bg-primary/25 transition-colors"

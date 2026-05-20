@@ -16,7 +16,7 @@ export function AICoachSection({
   const navigate = useNavigate();
 
   return (
-    <div className="px-4 py-2">
+    <div className="px-6 py-2">
       <Card className="p-4 bg-card border border-border/60">
         <div className="flex items-start gap-3">
           <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">

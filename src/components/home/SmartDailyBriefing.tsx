@@ -53,7 +53,7 @@ export function SmartDailyBriefing() {
   if (!user) return null;
 
   return (
-    <div className="px-4 py-2">
+    <div className="px-6 py-2">
       <div
         className={cn(
           "relative overflow-hidden rounded-2xl",
