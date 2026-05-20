@@ -15,9 +15,9 @@ interface HEmojiProps {
   style?: React.CSSProperties
 }
 
-const OR      = '#FF8A26'
-const OR_LITE = '#FFB066'
-const OR_DEEP = '#D86310'
+const OR      = '#f97316'   // HIIT brand orange — main body / deepest (sampled from logo PNG)
+const OR_LITE = '#fdba74'   // lightest highlight tint (orange-300)
+const OR_DEEP = '#f97316'   // alias = brand — nothing goes darker than brand
 const DARK    = '#1a0d04'
 const CREAM   = '#FFE9D2'
 
