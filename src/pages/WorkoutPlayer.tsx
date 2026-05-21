@@ -18,6 +18,7 @@ import {
   MoreHorizontal, Volume2, Settings, Download, Share2, Camera
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getYouTubeEmbedUrl } from '@/lib/video';
 
 type Workout = {
   id: string;
@@ -34,6 +35,8 @@ type Exercise = {
   duration_seconds: number;
   body_area: string;
   order_index: number;
+  thumbnail_url: string | null;
+  video_url: string | null;
 };
 
 type PlayerState = 'countdown' | 'playing' | 'paused' | 'completed';
@@ -46,6 +49,93 @@ type DetectedPB = {
   value: number;
   previousBest: number;
 };
+
+type ExerciseMediaProps = {
+  exercise: Exercise | undefined;
+  isPaused: boolean;
+};
+
+function ExerciseMedia({ exercise, isPaused }: ExerciseMediaProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoUrl = exercise?.video_url;
+  const embedUrl = videoUrl ? getYouTubeEmbedUrl(videoUrl) : null;
+  const isDirectVideo = videoUrl && !embedUrl;
+
+  // Pause/resume direct video in sync with player state
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (isPaused) {
+      v.pause();
+    } else {
+      v.play().catch(() => {});
+    }
+  }, [isPaused]);
+
+  // Reset video when exercise changes
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v && isDirectVideo) {
+      v.currentTime = 0;
+      if (!isPaused) {
+        v.play().catch(() => {});
+      }
+    }
+  }, [exercise?.id, isDirectVideo, isPaused]);
+
+  // YouTube — iframe with key to force reload on exercise change
+  if (embedUrl) {
+    return (
+      <div className="absolute inset-0 bg-black">
+        <iframe
+          key={exercise?.id}
+          src={embedUrl}
+          className="w-full h-full"
+          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          title={exercise?.title || 'Exercise video'}
+        />
+      </div>
+    );
+  }
+
+  // Direct video — muted so AI Coach voice isn't overlaid; loops so short clips fill the timer
+  // Note: workout-level video (workouts.video_url) not implemented here — no data to test against yet
+  if (isDirectVideo) {
+    return (
+      <div className="absolute inset-0 bg-black">
+        <video
+          ref={videoRef}
+          src={videoUrl!}
+          className="w-full h-full object-cover"
+          poster={exercise?.thumbnail_url || undefined}
+          autoPlay
+          loop
+          muted
+          playsInline
+          aria-label={exercise?.title || 'Exercise video'}
+        />
+      </div>
+    );
+  }
+
+  // Fallback — thumbnail with gradient, or solid background
+  return (
+    <div className="absolute inset-0 bg-gradient-to-b from-secondary to-background">
+      {exercise?.thumbnail_url && (
+        <>
+          <img
+            src={exercise.thumbnail_url}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover opacity-40"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function WorkoutPlayer() {
   const navigate = useNavigate();
@@ -377,19 +467,19 @@ export default function WorkoutPlayer() {
           </Button>
         </div>
 
-        {/* Exercise Display */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-6xl font-bold mb-2">{formatTime(timeRemaining)}</p>
-            <p className="text-muted-foreground">
-              {currentExercise?.body_area ? `Target: ${currentExercise.body_area}` : 'Focus on your form'}
-            </p>
-          </div>
+        {/* Exercise Display — video with timer overlay */}
+        <ExerciseMedia exercise={currentExercise} isPaused={playerState === 'paused'} />
+
+        <div className="absolute top-20 left-0 right-0 flex flex-col items-center pointer-events-none">
+          <p className="text-5xl font-bold text-white drop-shadow-lg">{formatTime(timeRemaining)}</p>
+          <p className="text-white/80 text-sm mt-1 drop-shadow">
+            {currentExercise?.body_area ? `Target: ${currentExercise.body_area}` : 'Focus on your form'}
+          </p>
         </div>
 
-        {/* Paused Overlay */}
+        {/* Paused Overlay — must be on top so it covers video */}
         {playerState === 'paused' && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur flex items-center justify-center z-20">
             <p className="text-2xl font-bold">Paused</p>
           </div>
         )}

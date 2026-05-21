@@ -15,6 +15,7 @@ import {
   ChevronRight, Calendar, Bookmark, Dumbbell, Target, Repeat, Timer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getYouTubeEmbedUrl } from '@/lib/video';
 
 type Workout = {
   id: string;
@@ -47,17 +48,6 @@ type Exercise = {
   video_url: string | null;
   order_index: number;
 };
-
-function getYouTubeEmbedUrl(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return `https://www.youtube.com/embed/${match[1]}?rel=0`;
-  }
-  return null;
-}
 
 export default function WorkoutDetail() {
   const navigate = useNavigate();
@@ -205,6 +195,7 @@ export default function WorkoutDetail() {
               src={workout.video_url!}
               className="w-full h-full object-cover"
               controls
+              playsInline
               poster={workout.thumbnail_url || undefined}
             />
           </div>
