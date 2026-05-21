@@ -38,21 +38,41 @@ MANIFEST_PATH = Path(os.environ.get("MANIFEST", DEFAULT_MANIFEST))
 # Namespace for deterministic UUIDs — never change once seeded
 WORKOUT_NS = uuid.UUID("d3f8c2e0-1234-5678-9abc-def012345678")
 
+# Canonical category slugs — must match CATEGORIES ids in WorkoutLibrary.tsx
+CATEGORY_NORMALISE = {
+    "Strength": "strength",
+    "HIIT": "hiit",
+    "Cardio": "cardio",
+    "Mobility": "mobility",
+    "Recovery": "recovery",
+    "Warm-up": "warm-up",
+}
+
 # Fallbacks when CSV has blanks (category is NOT NULL in the schema)
 CATEGORY_FALLBACK = {
-    "Boxing": "Cardio",
-    "Full Body Flow": "Mobility",
-    "full body burner": "HIIT",
+    "Boxing": "cardio",
+    "Full Body Flow": "mobility",
+    "full body burner": "hiit",
+}
+
+# Canonical body_area slugs — must match BODY_AREAS ids in WorkoutLibrary.tsx
+BODY_AREA_NORMALISE = {
+    "Core": "core",
+    "Lower body": "lower-body",
+    "Upper body": "upper-body",
+    "Full body": "full-body",
+    "Mobility": "mobility",
+    "Cardio system": "cardio-system",
 }
 
 # Map CSV body_areas pre-fills to the singular body_area used on workout_exercises
 EXERCISE_BODY_AREA = {
     "Core": "core",
-    "Lower body": "legs",
-    "Upper body": "full-body",
+    "Lower body": "lower-body",
+    "Upper body": "upper-body",
     "Full body": "full-body",
-    "Mobility": "full-body",
-    "Cardio system": "full-body",
+    "Mobility": "mobility",
+    "Cardio system": "cardio-system",
 }
 
 
@@ -150,15 +170,17 @@ def main() -> int:
         first = video_rows[0]
         wid = workout_id(folder)
         title = first.get("Title", "").strip() or folder
-        category = first.get("Category", "").strip() or CATEGORY_FALLBACK.get(folder, "Unassigned")
+        raw_category = first.get("Category", "").strip()
+        category = CATEGORY_NORMALISE.get(raw_category) or CATEGORY_FALLBACK.get(folder, "unassigned")
         difficulty = (first.get("Difficulty", "").strip() or "beginner").lower()
         duration_minutes = first.get("Duration (minutes)", "").strip()
         if not duration_minutes:
             duration_minutes = "20"  # schema default
-        body_areas = parse_body_areas(first.get("Body areas", ""))
+        raw_body_areas = parse_body_areas(first.get("Body areas", ""))
+        body_areas = [BODY_AREA_NORMALISE.get(a, a) for a in raw_body_areas]
 
         description = "Pending owner review."
-        if category == "Unassigned":
+        if category == "unassigned":
             description = "Category pending owner confirmation."
 
         # Parent thumbnail: first still in folder if any

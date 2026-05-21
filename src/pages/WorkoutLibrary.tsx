@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SportsTab } from '@/components/SportsTab';
+import { normaliseSlug } from '@/lib/workout-filters';
 
 type Workout = {
   id: string;
@@ -38,20 +39,20 @@ type Workout = {
 const CATEGORIES = [
   { id: 'all', label: 'All', icon: null },
   { id: 'strength', label: 'Strength', icon: Dumbbell },
-  { id: 'cardio', label: 'Cardio', icon: Heart },
   { id: 'hiit', label: 'HIIT', icon: Zap },
-  { id: 'flexibility', label: 'Flexibility', icon: null },
+  { id: 'cardio', label: 'Cardio', icon: Heart },
+  { id: 'mobility', label: 'Mobility', icon: null },
+  { id: 'recovery', label: 'Recovery', icon: null },
+  { id: 'warm-up', label: 'Warm-Up', icon: null },
 ];
 
 const BODY_AREAS = [
-  { id: 'legs', label: 'Lower Leg' },
-  { id: 'upper-leg', label: 'Upper Leg' },
-  { id: 'chest', label: 'Chest' },
-  { id: 'arms', label: 'Arms' },
-  { id: 'back', label: 'Back' },
-  { id: 'shoulders', label: 'Shoulders' },
-  { id: 'abs', label: 'Abs' },
   { id: 'full-body', label: 'Full Body' },
+  { id: 'upper-body', label: 'Upper Body' },
+  { id: 'lower-body', label: 'Lower Body' },
+  { id: 'core', label: 'Core' },
+  { id: 'mobility', label: 'Mobility' },
+  { id: 'cardio-system', label: 'Cardio System' },
 ];
 
 const EQUIPMENT_LIST = [
@@ -109,12 +110,12 @@ export default function WorkoutLibrary() {
   const filteredWorkouts = workouts.filter(workout => {
     const matchesSearch = workout.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       workout.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || workout.category === selectedCategory;
-    const matchesBodyArea = selectedBodyAreas.length === 0 || 
-      workout.body_areas?.some(area => selectedBodyAreas.includes(area));
+    const matchesCategory = selectedCategory === 'all' || normaliseSlug(workout.category) === selectedCategory;
+    const matchesBodyArea = selectedBodyAreas.length === 0 ||
+      workout.body_areas?.some(area => selectedBodyAreas.includes(normaliseSlug(area)));
     const matchesEquipment = selectedEquipment.length === 0 ||
-      workout.equipment?.some(eq => selectedEquipment.includes(eq));
-    const matchesDifficulty = !selectedDifficulty || workout.difficulty === selectedDifficulty;
+      workout.equipment?.some(eq => selectedEquipment.includes(normaliseSlug(eq)));
+    const matchesDifficulty = !selectedDifficulty || normaliseSlug(workout.difficulty) === selectedDifficulty;
     const matchesDuration = maxDuration === null || workout.duration_minutes <= maxDuration;
 
     return matchesSearch && matchesCategory && matchesBodyArea && matchesEquipment && matchesDifficulty && matchesDuration;
