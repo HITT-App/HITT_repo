@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Volume2, VolumeX, X, Loader2, StopCircle, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
 // Strips excessive emoji usage (keeps max 1 per paragraph).
@@ -55,10 +56,32 @@ function bold(str: string): string {
   return str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
+// Reads hiit-ai-voice-enabled from localStorage; defaults true if not set.
+// Reacts to changes made in ChatSettings while Jarvis is open.
+function useVoiceEnabled(): boolean {
+  const [enabled, setEnabled] = useState<boolean>(() => {
+    const stored = localStorage.getItem('hiit-ai-voice-enabled');
+    return stored === null ? true : stored === 'true';
+  });
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'hiit-ai-voice-enabled') setEnabled(e.newValue === 'true');
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+  return enabled;
+}
+
+function buildNameInstruction(name: string): string {
+  return `The user's name is ${name}. Always address them as "${name}". Never use their email address or any other variation.`;
+}
+
 interface JarvisModeProps {
   onClose: () => void;
   conversationId: string;
   healthProfile?: string;
+  firstName?: string;
   sharePromptDetail?: {
     workoutId: string;
     workoutTitle: string;
@@ -95,7 +118,7 @@ type RecommendedRecipe = {
   fat_g: number;
 };
 
-export function JarvisMode({ onClose, conversationId, healthProfile, sharePromptDetail }: JarvisModeProps) {
+export function JarvisMode({ onClose, conversationId, healthProfile, sharePromptDetail, firstName = 'there' }: JarvisModeProps) {
   const navigate = useNavigate();
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -131,6 +154,11 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
   const isListeningRef = useRef(false);
   // Guard against overlapping connect() calls (e.g. rapid mic taps)
   const isConnectingRef = useRef(false);
+  // Abort controller for the active TTS fetch — lets us cancel mid-flight if a new speak arrives
+  const ttsAbortRef = useRef<AbortController | null>(null);
+
+  // Persistent voice-enabled preference from ChatSettings
+  const voiceEnabled = useVoiceEnabled();
 
   // Keep refs in sync with state on every render
   isMutedRef.current = isMuted;
@@ -427,7 +455,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       historyRef.current = withConfirm;
       setConversationHistory(withConfirm);
       await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
-      if (!isMutedRef.current) await speakResponse(confirmation);
+      if (voiceEnabled && !isMutedRef.current) await speakResponse(confirmation);
 
       // Close Jarvis and navigate to the Schedule tab so the user sees their new plan
       setTimeout(() => {
@@ -484,7 +512,10 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         messages,
         healthProfile: healthProfile ?? '',
         customResponse: localStorage.getItem('hiit-ai-custom-response') ?? '',
-        customMemory: localStorage.getItem('hiit-ai-custom-memory') ?? '',
+        customMemory: [
+          buildNameInstruction(firstName),
+          localStorage.getItem('hiit-ai-custom-memory') ?? '',
+        ].filter(Boolean).join('\n'),
       }),
     });
 
@@ -579,9 +610,10 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
                   ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
                   : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
 
+      const greetingWithName = `${buildNameInstruction(firstName)}\n\n${greetingPrompt}`;
       const messagesForAI = [
         ...loadedHistory.map(m => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: greetingPrompt },
+        { role: 'user' as const, content: greetingWithName },
       ];
 
       let full = '';
@@ -592,7 +624,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
 
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
-        if (!isMutedRef.current) await speakResponse(displayText);
+        if (voiceEnabled && !isMutedRef.current) await speakResponse(displayText);
 
         if (scheduleMatch) {
           try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
@@ -647,7 +679,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         const withReply = [...updatedHistory, { role: 'assistant' as const, content: displayText }];
         historyRef.current = withReply;
         setConversationHistory(withReply);
-        if (!isMutedRef.current) await speakResponse(displayText);
+        if (voiceEnabled && !isMutedRef.current) await speakResponse(displayText);
 
         if (scheduleMatch) {
           try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
@@ -675,11 +707,24 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
 
 
   const speakResponse = async (text: string) => {
+    // Cancel any previous TTS fetch and stop current audio before starting a new one
+    if (ttsAbortRef.current) ttsAbortRef.current.abort();
+    const abortController = new AbortController();
+    ttsAbortRef.current = abortController;
+
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.src = '';
+      audio.load(); // releases previous blob URL
+    }
+
     setIsSpeaking(true);
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
         console.warn('[TTS] No auth token — skipping voice');
+        toast.warning('Voice unavailable — please sign in again', { id: 'tts-auth' });
         setIsSpeaking(false);
         return;
       }
@@ -696,6 +741,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
         {
           method: 'POST',
+          signal: abortController.signal,
           headers: {
             'Content-Type': 'application/json',
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -708,6 +754,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       if (!res.ok) {
         const err = await res.text().catch(() => res.status.toString());
         console.error('[TTS] Request failed:', err);
+        toast.error('Voice unavailable right now', { id: 'tts-error' });
         setIsSpeaking(false);
         return;
       }
@@ -722,6 +769,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         audioRef.current.onended = () => {
           setIsSpeaking(false);
           URL.revokeObjectURL(url);
+          if (ttsAbortRef.current === abortController) ttsAbortRef.current = null;
         };
         audioRef.current.onerror = () => { setIsSpeaking(false); };
         await audioRef.current.play().catch(e => {
@@ -730,6 +778,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         });
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return; // expected — newer speak superseded this one
       console.error('[TTS] Unexpected error:', error);
       setIsSpeaking(false);
     }
@@ -784,7 +833,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         const { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan } = parseAIResponse(full);
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
-        if (!isMutedRef.current) await speakResponse(displayText);
+        if (voiceEnabled && !isMutedRef.current) await speakResponse(displayText);
         if (scheduleMatch) { try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {} }
         if (foodMatches.length) { try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {} }
         if (showBodyScan) setPendingBodyScan(true);
@@ -876,9 +925,11 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       >
         <h2 className="text-base font-semibold text-foreground">Voice Mode</h2>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)} className="text-muted-foreground h-9 w-9">
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </Button>
+          {voiceEnabled && (
+            <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)} className="text-muted-foreground h-9 w-9">
+              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground h-9 w-9">
             <X className="w-4 h-4" />
           </Button>
