@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Search, Bookmark, Plus, LocateFixed, Home, Mountain, Ruler, Gauge } from "lucide-react";
+import { Search, Bookmark, Plus, LocateFixed, ArrowLeft, Mountain, Ruler, Gauge } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -151,8 +151,8 @@ const RoutesExplorer = () => {
       {/* Top bar */}
       <div className="sticky top-0 left-0 right-0 z-[500] safe-area-top bg-background/90 backdrop-blur-md">
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-          <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-md shrink-0" onClick={() => navigate('/')}>
-            <Home size={20} />
+          <Button variant="ghost" size="icon" aria-label="Go back" className="bg-background/80 backdrop-blur-md shrink-0" onClick={() => navigate(-1)}>
+            <ArrowLeft size={20} />
           </Button>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />

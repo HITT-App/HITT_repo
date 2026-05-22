@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, Play, Pause, SkipForward, Flag, Waves, Bike, Footprints, Trophy, Lock, Unlock, Watch, ChevronDown } from "lucide-react";
+import { ArrowLeft, Play, Pause, SkipForward, Flag, Waves, Bike, Footprints, Trophy, Lock, Unlock, Watch, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -253,8 +253,8 @@ const Triathlon = () => {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col">
         <div className="flex items-center gap-3 px-4 pb-2 sticky top-0 z-10 bg-background" style={{ paddingTop: "calc(var(--safe-area-inset-top, 44px) + 0.5rem)" }}>
-          <button onClick={() => navigate('/')} className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
-            <Home size={18} />
+          <button onClick={() => navigate(-1)} aria-label="Go back" className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
+            <ArrowLeft size={18} />
           </button>
           <h1 className="text-sm font-bold flex items-center gap-2">
             <Trophy size={14} className="text-yellow-500" /> RACE SETUP
