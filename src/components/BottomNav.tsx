@@ -6,9 +6,11 @@ import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
 import hiitLogo from "@/assets/hiit-logo.webp";
 import { HEmoji } from "@/components/HEmoji";
 
-interface BottomNavProps {}
+interface BottomNavProps {
+  onHIITClick?: () => void;
+}
 
-export const BottomNav = () => {
+export const BottomNav = ({ onHIITClick }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { flags } = useFeatureFlags();
@@ -53,9 +55,9 @@ export const BottomNav = () => {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => window.dispatchEvent(new CustomEvent("hitt:open-jarvis"))}
+                    onClick={() => onHIITClick?.()}
                     className="relative -mt-5 transition-transform duration-200 active:scale-95 touch-manipulation"
-                    aria-label="Open Jarvis"
+                    aria-label="Open HIIT menu"
                   >
                     <div className="w-14 h-14 rounded-full border-2 border-primary shadow-card overflow-hidden bg-white">
                       <img src={hiitLogo} alt="HIIT" className="w-full h-full object-cover" />
