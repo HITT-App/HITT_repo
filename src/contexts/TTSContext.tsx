@@ -2,6 +2,12 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback, Re
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 
+// FEATURE FLAG: Voice is deferred to v1.0.1.
+// To restore voice: change this to true.
+// When true, the localStorage setting `hiit-ai-voice-enabled` controls per-user state.
+// When false, voice is forcibly disabled regardless of any other setting.
+export const VOICE_FEATURE_ENABLED = false
+
 const VOICE_ENABLED_KEY = 'hiit-ai-voice-enabled'
 const VOICE_ID_KEY = 'hiit-ai-voice-id'
 const DEFAULT_VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb'
@@ -32,6 +38,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [sessionMuted, setSessionMuted] = useState(false)
   const [enabled, setEnabled] = useState<boolean>(() => {
+    if (!VOICE_FEATURE_ENABLED) return false
     const stored = localStorage.getItem(VOICE_ENABLED_KEY)
     return stored === null ? true : stored === 'true'
   })
@@ -39,6 +46,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const effectivelyEnabled = enabled && !sessionMuted
 
   useEffect(() => {
+    if (!VOICE_FEATURE_ENABLED) return
     const onStorage = (e: StorageEvent) => {
       if (e.key === VOICE_ENABLED_KEY) setEnabled(e.newValue === 'true')
     }

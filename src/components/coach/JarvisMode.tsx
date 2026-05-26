@@ -3,7 +3,7 @@ import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from 'react-router-dom';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Volume2, VolumeX, X, Loader2, StopCircle, Target } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, StopCircle, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -424,7 +424,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       historyRef.current = withConfirm;
       setConversationHistory(withConfirm);
       await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
-      await tts.speak(confirmation);
 
       // Close Jarvis and navigate to the Schedule tab so the user sees their new plan
       setTimeout(() => {
@@ -589,7 +588,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
 
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
-        await tts.speak(displayText);
 
         if (scheduleMatch) {
           try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
@@ -644,7 +642,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         const withReply = [...updatedHistory, { role: 'assistant' as const, content: displayText }];
         historyRef.current = withReply;
         setConversationHistory(withReply);
-        await tts.speak(displayText);
 
         if (scheduleMatch) {
           try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
@@ -720,7 +717,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         const { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan } = parseAIResponse(full);
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
-        await tts.speak(displayText);
         if (scheduleMatch) { try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {} }
         if (foodMatches.length) { try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {} }
         if (showBodyScan) setPendingBodyScan(true);
@@ -801,11 +797,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       >
         <h2 className="text-base font-semibold text-foreground">Voice Mode</h2>
         <div className="flex items-center gap-1">
-          {tts.enabled && (
-            <Button variant="ghost" size="icon" onClick={() => tts.setSessionMuted(!tts.sessionMuted)} className="text-muted-foreground h-9 w-9">
-              {tts.sessionMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </Button>
-          )}
           <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground h-9 w-9">
             <X className="w-4 h-4" />
           </Button>

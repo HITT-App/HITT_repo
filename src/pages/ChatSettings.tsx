@@ -10,6 +10,7 @@ import { ArrowLeft, Settings, Bot, Cat, Ghost, Sparkles, Dumbbell, Upload, Smile
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { VOICE_FEATURE_ENABLED } from '@/contexts/TTSContext';
 
 // ElevenLabs voice IDs — stock voices available on all plans
 const VOICES = [
@@ -255,7 +256,8 @@ export default function ChatSettings() {
                 </div>
               </div>
 
-              {/* Voice */}
+              {/* Voice — hidden for v1.0, restored in v1.0.1 when VOICE_FEATURE_ENABLED = true */}
+              {VOICE_FEATURE_ENABLED && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -299,6 +301,7 @@ export default function ChatSettings() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Avatar Icon */}
               <div className="space-y-2">

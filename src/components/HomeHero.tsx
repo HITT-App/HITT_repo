@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import heroVideo from "@/assets/hiit-hero.mp4";
-import { Mic, Volume2, VolumeX } from "lucide-react";
-import { Button } from "./ui/button";
+import { Mic } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import hiitLogo from "@/assets/hiit-logo.webp";
 import { useWakeWordPreference } from "@/hooks/useWakeWordPreference";
-import { useTTS } from "@/contexts/TTSContext";
-import { useFirstName } from "@/hooks/useFirstName";
 
 interface HomeHeroProps {
   userName?: string | null;
@@ -25,8 +22,6 @@ export const HomeHero = ({ userName }: HomeHeroProps) => {
   const greeting = getTimeGreeting();
   const navigate = useNavigate();
   const { enabled: wakeWordEnabled } = useWakeWordPreference();
-  const tts = useTTS();
-  const { firstName, loading: profileLoading } = useFirstName();
 
   const [customVideoUrl, setCustomVideoUrl] = useState<string | undefined>(undefined);
 
@@ -42,19 +37,7 @@ export const HomeHero = ({ userName }: HomeHeroProps) => {
     load();
   }, []);
 
-  // Prefetch the greeting blob immediately; play on next gesture if iOS blocks autoplay.
-  // Waits for profile to finish loading so the name is real, not the email fallback.
-  useEffect(() => {
-    if (profileLoading) return;
-
-    const name = firstName ?? 'there';
-    const greetingText = wakeWordEnabled
-      ? `${greeting} ${name}! Your coach is ready. Say Ok hit anytime to activate me.`
-      : `${greeting} ${name}! Your coach is ready — tap the chat to get started.`;
-
-    const cancel = tts.prepareAndPlay(greetingText, { once: 'home-welcome' });
-    return cancel;
-  }, [profileLoading, firstName]); // eslint-disable-line react-hooks/exhaustive-deps
+  // v1.0.1: restore tts.prepareAndPlay greeting call here when VOICE_FEATURE_ENABLED = true
 
   return (
     <div
@@ -108,7 +91,6 @@ export const HomeHero = ({ userName }: HomeHeroProps) => {
             {greeting}
           </span>
           <h1 className="text-[42px] leading-[1.05] font-extrabold text-white tracking-tight">
-            {/* Show "…" while profile loads rather than the email-derived fallback */}
             {userName ?? '…'}<span className="text-primary">.</span>
           </h1>
         </div>
@@ -118,12 +100,6 @@ export const HomeHero = ({ userName }: HomeHeroProps) => {
           <p className="text-[15px] text-white/45 font-light tracking-wide">
             Need a plan for today?
           </p>
-          <Button variant="ghost" size="icon"
-            onClick={() => tts.setSessionMuted(!tts.sessionMuted)}
-            className="text-white/30 hover:text-white hover:bg-white/10 transition-all rounded-full h-9 w-9"
-            aria-label={tts.sessionMuted ? "Unmute voice" : "Mute voice"}>
-            {tts.sessionMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </Button>
         </div>
       </div>
     </div>
