@@ -427,9 +427,11 @@ serve(async (req) => {
     // Build user context string
     let userContext = "\n\n═══ USER PROFILE CONTEXT ═══\n";
     
+    // Lifted out of the if(profile) block so it's available when building the message array below
+    let nameForReminder = 'there';
     if (profile) {
-      const firstName = (profile.display_name || 'there').split(' ')[0];
-      userContext += `\nUSER NAME INSTRUCTION:\nThe user's first name is "${firstName}". ALWAYS address them as "${firstName}". NEVER use their email address, username, full name, or any other variation. If you don't know the user's name, address them as "there".\n`;
+      nameForReminder = (profile.display_name || 'there').split(' ')[0];
+      userContext += `\nUSER NAME INSTRUCTION:\nThe user's first name is "${nameForReminder}". ALWAYS address them as "${nameForReminder}". NEVER use their email address, username, full name, or any other variation. If you don't know the user's name, address them as "there".\n`;
       userContext += `Fitness Goal: ${profile.fitness_goal || 'Not set'}\n`;
     }
 
@@ -589,6 +591,16 @@ serve(async (req) => {
       } else {
         apiMessages.push({ role: msg.role, content: msg.content });
       }
+    }
+
+    // Insert a name reminder as a system message immediately before the final user turn.
+    // This positions the directive after the chat history where it carries the most weight,
+    // defeating contamination from old messages that used the wrong name.
+    if (nameForReminder !== 'there' && apiMessages.length > 1) {
+      apiMessages.splice(apiMessages.length - 1, 0, {
+        role: "system",
+        content: `REMINDER: The user's name is "${nameForReminder}". ALWAYS address them as "${nameForReminder}". NEVER use their email address or username.`,
+      });
     }
 
     // Backwards compatibility for top-level imageData

@@ -47,17 +47,18 @@ const Index = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const { addXP, previousLevel } = useUserLevel();
   const { flags } = useFeatureFlags();
   const { sections, loading: layoutLoading } = useHomeLayout();
   const { score: hiitScore, components: hiitComponents } = useHiitScore();
   const { activityLevel } = useHealthProfile();
   
-  const displayName = profile?.display_name || 
-                      user?.user_metadata?.display_name || 
-                      user?.email?.split("@")[0] || 
-                      "Athlete";
+  // While profile is loading, show null rather than the email-derived fallback.
+  // HomeHero renders "…" for null; email fragment ("vanessajhutton") never flashes on screen.
+  const displayName = profile?.display_name ||
+                      user?.user_metadata?.display_name ||
+                      (profileLoading ? null : "Athlete");
 
   useEffect(() => {
     if (user && !sessionStorage.getItem("hiit_welcomed")) {

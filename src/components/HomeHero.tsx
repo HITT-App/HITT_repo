@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { App } from "@capacitor/app";
 import heroVideo from "@/assets/hiit-hero.mp4";
 import { Mic, Volume2, VolumeX } from "lucide-react";
 import { Button } from "./ui/button";
@@ -8,9 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import hiitLogo from "@/assets/hiit-logo.webp";
 import { useWakeWordPreference } from "@/hooks/useWakeWordPreference";
 import { useTTS } from "@/contexts/TTSContext";
+import { useFirstName } from "@/hooks/useFirstName";
 
 interface HomeHeroProps {
-  userName?: string;
+  userName?: string | null;
 }
 
 const getTimeGreeting = (): string => {
@@ -21,11 +21,12 @@ const getTimeGreeting = (): string => {
   return "Hey";
 };
 
-export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
+export const HomeHero = ({ userName }: HomeHeroProps) => {
   const greeting = getTimeGreeting();
   const navigate = useNavigate();
   const { enabled: wakeWordEnabled } = useWakeWordPreference();
   const tts = useTTS();
+  const { firstName, loading: profileLoading } = useFirstName();
 
   const [customVideoUrl, setCustomVideoUrl] = useState<string | undefined>(undefined);
 
@@ -41,15 +42,19 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
     load();
   }, []);
 
-  // Trigger greeting once per session — the `once` key survives component remounts
-  // (Index.tsx renders HomeHero in two branches; without the key both would speak)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Prefetch the greeting blob immediately; play on next gesture if iOS blocks autoplay.
+  // Waits for profile to finish loading so the name is real, not the email fallback.
   useEffect(() => {
+    if (profileLoading) return;
+
+    const name = firstName ?? 'there';
     const greetingText = wakeWordEnabled
-      ? `${greeting} ${userName}! Your coach is ready. Say Ok hit anytime to activate me.`
-      : `${greeting} ${userName}! Your coach is ready — tap the chat to get started.`;
-    tts.speak(greetingText, { once: 'home-welcome' });
-  }, []);
+      ? `${greeting} ${name}! Your coach is ready. Say Ok hit anytime to activate me.`
+      : `${greeting} ${name}! Your coach is ready — tap the chat to get started.`;
+
+    const cancel = tts.prepareAndPlay(greetingText, { once: 'home-welcome' });
+    return cancel;
+  }, [profileLoading, firstName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
@@ -85,7 +90,6 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
             onClick={() => navigate('/ai-coach')}
             className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 bg-black/30 backdrop-blur-md active:bg-white/10 transition-all"
           >
-            {/* Pulsing mic ring */}
             <div className="relative w-5 h-5 flex items-center justify-center">
               <div className="absolute inset-0 rounded-full bg-primary/40 animate-ping" style={{ animationDuration: '2s' }} />
               <Mic className="w-3 h-3 text-primary relative z-10" />
@@ -104,7 +108,8 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
             {greeting}
           </span>
           <h1 className="text-[42px] leading-[1.05] font-extrabold text-white tracking-tight">
-            {userName}<span className="text-primary">.</span>
+            {/* Show "…" while profile loads rather than the email-derived fallback */}
+            {userName ?? '…'}<span className="text-primary">.</span>
           </h1>
         </div>
 
