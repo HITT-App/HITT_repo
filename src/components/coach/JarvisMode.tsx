@@ -7,6 +7,7 @@ import { Mic, MicOff, Volume2, VolumeX, X, Loader2, StopCircle, Target } from 'l
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useTTS } from '@/contexts/TTSContext';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
 // Strips excessive emoji usage (keeps max 1 per paragraph).
@@ -56,32 +57,10 @@ function bold(str: string): string {
   return str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
-// Reads hiit-ai-voice-enabled from localStorage; defaults true if not set.
-// Reacts to changes made in ChatSettings while Jarvis is open.
-function useVoiceEnabled(): boolean {
-  const [enabled, setEnabled] = useState<boolean>(() => {
-    const stored = localStorage.getItem('hiit-ai-voice-enabled');
-    return stored === null ? true : stored === 'true';
-  });
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'hiit-ai-voice-enabled') setEnabled(e.newValue === 'true');
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-  return enabled;
-}
-
-function buildNameInstruction(name: string): string {
-  return `The user's name is ${name}. Always address them as "${name}". Never use their email address or any other variation.`;
-}
-
 interface JarvisModeProps {
   onClose: () => void;
   conversationId: string;
   healthProfile?: string;
-  firstName?: string;
   sharePromptDetail?: {
     workoutId: string;
     workoutTitle: string;
@@ -118,13 +97,12 @@ type RecommendedRecipe = {
   fat_g: number;
 };
 
-export function JarvisMode({ onClose, conversationId, healthProfile, sharePromptDetail, firstName = 'there' }: JarvisModeProps) {
+export function JarvisMode({ onClose, conversationId, healthProfile, sharePromptDetail }: JarvisModeProps) {
   const navigate = useNavigate();
+  const tts = useTTS();
   const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState('');
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
@@ -137,7 +115,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
   const [recommendedRecipe, setRecommendedRecipe] = useState<RecommendedRecipe | null>(null);
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number>();
@@ -148,20 +125,12 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
   const streamAbortRef = useRef<AbortController>();
   // Fix #8: Ref mirrors conversationHistory so handleUserMessage never reads a stale closure
   const historyRef = useRef<ConversationMessage[]>([]);
-  // Fix #6: Ref mirrors isMuted so closures captured before a toggle still see the current value
-  const isMutedRef = useRef(isMuted);
   // Ref mirrors isListening so transcript callbacks can guard against post-disconnect firing
   const isListeningRef = useRef(false);
   // Guard against overlapping connect() calls (e.g. rapid mic taps)
   const isConnectingRef = useRef(false);
-  // Abort controller for the active TTS fetch — lets us cancel mid-flight if a new speak arrives
-  const ttsAbortRef = useRef<AbortController | null>(null);
 
-  // Persistent voice-enabled preference from ChatSettings
-  const voiceEnabled = useVoiceEnabled();
-
-  // Keep refs in sync with state on every render
-  isMutedRef.current = isMuted;
+  // Keep ref in sync with state on every render
   historyRef.current = conversationHistory;
 
   // ElevenLabs Scribe hook for real-time transcription
@@ -455,7 +424,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       historyRef.current = withConfirm;
       setConversationHistory(withConfirm);
       await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
-      if (voiceEnabled && !isMutedRef.current) await speakResponse(confirmation);
+      await tts.speak(confirmation);
 
       // Close Jarvis and navigate to the Schedule tab so the user sees their new plan
       setTimeout(() => {
@@ -512,10 +481,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         messages,
         healthProfile: healthProfile ?? '',
         customResponse: localStorage.getItem('hiit-ai-custom-response') ?? '',
-        customMemory: [
-          buildNameInstruction(firstName),
-          localStorage.getItem('hiit-ai-custom-memory') ?? '',
-        ].filter(Boolean).join('\n'),
+        customMemory: localStorage.getItem('hiit-ai-custom-memory') ?? '',
       }),
     });
 
@@ -610,10 +576,9 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
                   ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
                   : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
 
-      const greetingWithName = `${buildNameInstruction(firstName)}\n\n${greetingPrompt}`;
       const messagesForAI = [
         ...loadedHistory.map(m => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: greetingWithName },
+        { role: 'user' as const, content: greetingPrompt },
       ];
 
       let full = '';
@@ -624,7 +589,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
 
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
-        if (voiceEnabled && !isMutedRef.current) await speakResponse(displayText);
+        await tts.speak(displayText);
 
         if (scheduleMatch) {
           try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
@@ -679,7 +644,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         const withReply = [...updatedHistory, { role: 'assistant' as const, content: displayText }];
         historyRef.current = withReply;
         setConversationHistory(withReply);
-        if (voiceEnabled && !isMutedRef.current) await speakResponse(displayText);
+        await tts.speak(displayText);
 
         if (scheduleMatch) {
           try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
@@ -706,88 +671,10 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
   }, [conversationId, stopListening]);
 
 
-  const speakResponse = async (text: string) => {
-    // Cancel any previous TTS fetch and stop current audio before starting a new one
-    if (ttsAbortRef.current) ttsAbortRef.current.abort();
-    const abortController = new AbortController();
-    ttsAbortRef.current = abortController;
-
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-      audio.src = '';
-      audio.load(); // releases previous blob URL
-    }
-
-    setIsSpeaking(true);
-    try {
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        console.warn('[TTS] No auth token — skipping voice');
-        toast.warning('Voice unavailable — please sign in again', { id: 'tts-auth' });
-        setIsSpeaking(false);
-        return;
-      }
-
-      const voiceId = localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb';
-      // Normalise acronyms that TTS reads as individual letters
-      const ttsText = text
-        .replace(/\bHIIT\b/g, 'hit')
-        .replace(/\bOk HIIT\b/gi, 'ok hit')
-        .replace(/\bOkay HIIT\b/gi, 'okay hit')
-        .substring(0, 500);
-
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
-          method: 'POST',
-          signal: abortController.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ text: ttsText, voiceId }),
-        }
-      );
-
-      if (!res.ok) {
-        const err = await res.text().catch(() => res.status.toString());
-        console.error('[TTS] Request failed:', err);
-        toast.error('Voice unavailable right now', { id: 'tts-error' });
-        setIsSpeaking(false);
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      if (audioRef.current) {
-        audioRef.current.src = url;
-        // load() must be called after changing src on iOS WKWebView —
-        // without it the element stays in its previous ended state and play() silently does nothing
-        audioRef.current.load();
-        audioRef.current.onended = () => {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(url);
-          if (ttsAbortRef.current === abortController) ttsAbortRef.current = null;
-        };
-        audioRef.current.onerror = () => { setIsSpeaking(false); };
-        await audioRef.current.play().catch(e => {
-          console.error('[TTS] Audio play failed:', e);
-          setIsSpeaking(false);
-        });
-      }
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') return; // expected — newer speak superseded this one
-      console.error('[TTS] Unexpected error:', error);
-      setIsSpeaking(false);
-    }
-  };
-
   const handleClose = () => {
     streamAbortRef.current?.abort();
     stopListening();
-    if (audioRef.current) audioRef.current.pause();
+    tts.cancel();
     onClose();
   };
 
@@ -833,7 +720,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         const { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan } = parseAIResponse(full);
         await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
         setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
-        if (voiceEnabled && !isMutedRef.current) await speakResponse(displayText);
+        await tts.speak(displayText);
         if (scheduleMatch) { try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {} }
         if (foodMatches.length) { try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {} }
         if (showBodyScan) setPendingBodyScan(true);
@@ -851,15 +738,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
     }
   }, [conversationId]);
 
-  // Pre-unlock iOS WKWebView audio on mount. JarvisMode is always opened by a user tap,
-  // so this runs within the gesture window. Without it, play() calls after async AI work
-  // are blocked by iOS autoplay policy and the greeting + all responses are silent.
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-    el.play().catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let cancelled = false;
@@ -908,7 +786,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       cancelled = true;
       stopListening();
       streamAbortRef.current?.abort();
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
+      tts.cancel();
       if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -916,8 +794,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
   return (
     // z-[100] sits above bottom nav (z-50) and all other overlays
     <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-      <audio ref={audioRef} className="hidden" />
-
       {/* Header — below Dynamic Island using native env() variable */}
       <div
         className="flex items-center justify-between px-4 pb-3 border-b border-border shrink-0"
@@ -925,9 +801,9 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       >
         <h2 className="text-base font-semibold text-foreground">Voice Mode</h2>
         <div className="flex items-center gap-1">
-          {voiceEnabled && (
-            <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)} className="text-muted-foreground h-9 w-9">
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          {tts.enabled && (
+            <Button variant="ghost" size="icon" onClick={() => tts.setSessionMuted(!tts.sessionMuted)} className="text-muted-foreground h-9 w-9">
+              {tts.sessionMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </Button>
           )}
           <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground h-9 w-9">
@@ -995,7 +871,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         )}
 
         {/* Visualizer — only while speaking/listening */}
-        {(isListening || isSpeaking) && (
+        {(isListening || tts.isSpeaking) && (
           <div className="flex items-center justify-center gap-0.5 h-6">
             {visualizerData.map((value, i) => (
               <div key={i}
@@ -1227,7 +1103,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       >
         {/* Status label */}
         <p className="text-xs text-muted-foreground">
-          {isProcessing ? 'Thinking…' : isListening ? 'Listening…' : isSpeaking ? 'Tap to interrupt' : 'Tap to speak'}
+          {isProcessing ? 'Thinking…' : isListening ? 'Listening…' : tts.isSpeaking ? 'Tap to interrupt' : 'Tap to speak'}
         </p>
 
         {/* Controls row: Goals | Mic | (spacer) */}
@@ -1253,19 +1129,15 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
               "w-16 h-16 rounded-full shadow-lg transition-all",
               isListening
                 ? "bg-destructive hover:bg-destructive/90"
-                : isSpeaking
+                : tts.isSpeaking
                   ? "bg-secondary hover:bg-secondary/90 border-2 border-primary"
                   : "bg-primary hover:bg-primary/90"
             )}
             onClick={() => {
               if (isListening) {
                 stopListening();
-              } else if (isSpeaking) {
-                if (audioRef.current) {
-                  audioRef.current.pause();
-                  audioRef.current.src = '';
-                }
-                setIsSpeaking(false);
+              } else if (tts.isSpeaking) {
+                tts.cancel();
               } else {
                 startListening();
               }
@@ -1274,7 +1146,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
           >
             {isListening
               ? <MicOff className="w-6 h-6" />
-              : isSpeaking
+              : tts.isSpeaking
                 ? <StopCircle className="w-6 h-6 text-primary" />
                 : <Mic className="w-6 h-6" />}
           </Button>

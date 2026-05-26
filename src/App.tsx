@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { TTSProvider } from "@/contexts/TTSContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/admin/AdminRoute";
 import { PushPermissionBanner } from "@/components/notifications/PushPermissionBanner";
@@ -150,6 +151,7 @@ const App = () => (
     <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+      <TTSProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -280,6 +282,7 @@ const App = () => (
           </AppLayout>
         </BrowserRouter>
       </TooltipProvider>
+    </TTSProvider>
     </AuthProvider>
   </QueryClientProvider>
     </ThemeProvider>

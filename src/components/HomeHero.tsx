@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { App } from "@capacitor/app";
 import heroVideo from "@/assets/hiit-hero.mp4";
@@ -7,6 +7,7 @@ import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import hiitLogo from "@/assets/hiit-logo.webp";
 import { useWakeWordPreference } from "@/hooks/useWakeWordPreference";
+import { useTTS } from "@/contexts/TTSContext";
 
 interface HomeHeroProps {
   userName?: string;
@@ -24,13 +25,9 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
   const greeting = getTimeGreeting();
   const navigate = useNavigate();
   const { enabled: wakeWordEnabled } = useWakeWordPreference();
+  const tts = useTTS();
 
-  const isPlayingRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [hasPlayed, setHasPlayed]   = useState(false);
-  const [isMuted, setIsMuted]       = useState(false);
   const [customVideoUrl, setCustomVideoUrl] = useState<string | undefined>(undefined);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -44,103 +41,15 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
     load();
   }, []);
 
-  // Reset the played flag when the app comes back to the foreground so the
-  // greeting fires again each time the user returns to the home screen.
+  // Trigger greeting once per session — the `once` key survives component remounts
+  // (Index.tsx renders HomeHero in two branches; without the key both would speak)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    let listener: { remove: () => void } | null = null;
-    App.addListener('appStateChange', ({ isActive }) => {
-      if (isActive) setHasPlayed(false);
-    }).then(l => { listener = l; }).catch(() => {});
-    return () => { listener?.remove(); };
+    const greetingText = wakeWordEnabled
+      ? `${greeting} ${userName}! Your coach is ready. Say Ok hit anytime to activate me.`
+      : `${greeting} ${userName}! Your coach is ready — tap the chat to get started.`;
+    tts.speak(greetingText, { once: 'home-welcome' });
   }, []);
-
-  const playVoiceGreeting = async () => {
-    if (hasPlayed || isPlayingRef.current) return;
-    isPlayingRef.current = true;
-    try {
-      // Greeting includes Ok HIIT prompt if wake word is on
-      // "HIIT" reads as individual letters — replace with phonetic "hit" for TTS
-      const rawText = wakeWordEnabled
-        ? `${greeting} ${userName}! Your coach is ready. Say Ok hit anytime to activate me.`
-        : `${greeting} ${userName}! Your coach is ready — tap the chat to get started.`;
-      const text = rawText;
-
-      const cacheKey = `tts_cache_${text}`;
-      let audioUrl: string;
-      const cached = sessionStorage.getItem(cacheKey);
-
-      if (cached) {
-        audioUrl = cached;
-      } else {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) { isPlayingRef.current = false; return; }
-
-        const voiceId = localStorage.getItem('hiit-ai-voice-id') ?? 'JBFqnCBsd6RMkjVDRZzb';
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ text, voiceId }),
-          }
-        );
-
-        if (!res.ok) { isPlayingRef.current = false; return; }
-
-        const blob = await res.blob();
-        const reader = new FileReader();
-        audioUrl = await new Promise<string>(resolve => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        try { sessionStorage.setItem(cacheKey, audioUrl); } catch {}
-      }
-
-      if (audioRef.current) audioRef.current.pause();
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      audio.volume = isMuted ? 0 : 1;
-      audio.onended = () => { isPlayingRef.current = false; };
-      await audio.play();
-      setHasPlayed(true);
-    } catch (err) {
-      console.error("[HomeHero] Voice greeting error:", err);
-      isPlayingRef.current = false;
-    }
-  };
-
-  const toggleMute = () => {
-    setIsMuted(m => !m);
-    if (audioRef.current) audioRef.current.volume = isMuted ? 1 : 0;
-  };
-
-  useEffect(() => {
-    if (hasPlayed) return;
-
-    // Always register interaction fallback first — iOS blocks autoplay until user touches
-    const handleInteraction = () => {
-      document.removeEventListener("click", handleInteraction);
-      document.removeEventListener("touchstart", handleInteraction);
-      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-      playVoiceGreeting();
-    };
-    document.addEventListener("click", handleInteraction, { passive: true });
-    document.addEventListener("touchstart", handleInteraction, { passive: true });
-
-    // Also attempt autoplay after 800ms — works if the user already interacted
-    timerRef.current = setTimeout(() => { playVoiceGreeting(); }, 800);
-
-    return () => {
-      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-      document.removeEventListener("click", handleInteraction);
-      document.removeEventListener("touchstart", handleInteraction);
-    };
-  }, [hasPlayed]);
 
   return (
     <div
@@ -204,10 +113,11 @@ export const HomeHero = ({ userName = "Athlete" }: HomeHeroProps) => {
           <p className="text-[15px] text-white/45 font-light tracking-wide">
             Need a plan for today?
           </p>
-          <Button variant="ghost" size="icon" onClick={toggleMute}
+          <Button variant="ghost" size="icon"
+            onClick={() => tts.setSessionMuted(!tts.sessionMuted)}
             className="text-white/30 hover:text-white hover:bg-white/10 transition-all rounded-full h-9 w-9"
-            aria-label={isMuted ? "Unmute voice" : "Mute voice"}>
-            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            aria-label={tts.sessionMuted ? "Unmute voice" : "Mute voice"}>
+            {tts.sessionMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </Button>
         </div>
       </div>

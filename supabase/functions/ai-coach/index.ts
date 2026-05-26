@@ -428,7 +428,8 @@ serve(async (req) => {
     let userContext = "\n\n═══ USER PROFILE CONTEXT ═══\n";
     
     if (profile) {
-      userContext += `Name: ${profile.display_name || 'Unknown'}\n`;
+      const firstName = (profile.display_name || 'there').split(' ')[0];
+      userContext += `\nUSER NAME INSTRUCTION:\nThe user's first name is "${firstName}". ALWAYS address them as "${firstName}". NEVER use their email address, username, full name, or any other variation. If you don't know the user's name, address them as "there".\n`;
       userContext += `Fitness Goal: ${profile.fitness_goal || 'Not set'}\n`;
     }
 

@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
 import { WakeWordListener } from './WakeWordListener';
 import { JarvisMode } from './JarvisMode';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,17 +18,9 @@ type SharePromptDetail = {
 
 export function VoiceController() {
   const { user } = useAuth();
-  const { profile } = useProfile();
   const location = useLocation();
   const { enabled: wakeWordEnabled } = useWakeWordPreference();
   const { profile: healthProfile } = useHealthProfile();
-
-  const firstName = (
-    profile?.display_name ||
-    user?.user_metadata?.display_name ||
-    user?.email?.split('@')[0] ||
-    'there'
-  ).split(' ')[0];
   const [showJarvisMode, setShowJarvisMode] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [sharePromptDetail, setSharePromptDetail] = useState<SharePromptDetail | null>(null);
@@ -129,7 +120,6 @@ export function VoiceController() {
         <JarvisMode
           conversationId={conversationId}
           healthProfile={healthProfile}
-          firstName={firstName}
           onClose={handleJarvisModeClose}
           sharePromptDetail={sharePromptDetail}
         />
