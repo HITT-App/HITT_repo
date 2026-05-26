@@ -8,7 +8,7 @@ import {
   Clock, X, Crown, Shield, Sun, ScanLine, Crosshair,
   Barcode,
 } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -117,11 +117,9 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
   ];
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      {/* [&>button]:hidden suppresses SheetContent's default close button; we render our own */}
-      <SheetContent
-        side="bottom"
-        className="h-[90vh] p-0 flex flex-col [&>button]:hidden"
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
+        className="h-[90vh] p-0 flex flex-col"
         style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}
       >
         {/* Header: avatar + name + email + theme toggle + close */}
@@ -253,7 +251,7 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
             <div className="h-8" />
           </div>
         </ScrollArea>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
