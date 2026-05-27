@@ -5,7 +5,7 @@ import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-response-format",
 };
 
 const SYSTEM_PROMPT = `You are Coach HIIT — a friendly, motivating HIIT fitness coach inside a fitness app.
@@ -337,10 +337,269 @@ const IMAGE_ANALYSIS_PROMPT = `You're analyzing an image shared by the user. Ple
 4. If exercise form: analyse technique and provide corrections
 5. Include safety tips where relevant`;
 
+// ─── Structured response mode (5B) ──────────────────────────────────────────
+// Opt-in via X-Response-Format: structured-v1 request header.
+// The existing JarvisMode and AICoach surfaces send no header and get marker
+// text as before — backwards-compatible by design.
+
+const STRUCTURED_MODE_OVERRIDE = `
+
+═══ STRUCTURED RESPONSE MODE — TOOL USAGE ═══
+You are in structured response mode. Do NOT include any [MARKER:{...}] text in your response.
+Instead, use the provided tools:
+• Use the schedule_plan tool instead of [SCHEDULE_PLAN:{...}]
+• Use the log_food tool instead of [LOG_FOOD:{...}]
+• Use the recommend_workout tool instead of [RECOMMEND_WORKOUT:{...}]
+• Use the recommend_recipe tool instead of [RECOMMEND_RECIPE:{...}]
+• Use the body_scan_prompt tool instead of [BODY_SCAN_PROMPT]
+
+You CAN call a tool alongside your text response in the same turn.
+All other coaching guidelines above remain unchanged.
+
+CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool.
+═══ END STRUCTURED MODE ═══
+`;
+
+const STRUCTURED_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "schedule_plan",
+      description: "Propose a workout schedule for the user to confirm. Use when the user has provided goal, days per week, and session length.",
+      parameters: {
+        type: "object",
+        properties: {
+          goal: { type: "string", description: "Training goal: fat loss | muscle gain | endurance | strength | general fitness" },
+          daysPerWeek: { type: "integer", minimum: 1, maximum: 7 },
+          selectedDays: { type: "array", items: { type: "integer", minimum: 0, maximum: 6 }, description: "0=Sunday, 6=Saturday" },
+          sessionMinutes: { type: "integer", minimum: 5, maximum: 180 },
+        },
+        required: ["goal", "daysPerWeek", "selectedDays", "sessionMinutes"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "log_food",
+      description: "Log a food item the user has consumed. Call when the user describes a meal they just ate or asks you to log food.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          category: { type: "string", description: "breakfast | lunch | dinner | snack" },
+          calories: { type: "number" },
+          protein: { type: "number" },
+          carbs: { type: "number" },
+          fat: { type: "number" },
+          fiber: { type: "number" },
+        },
+        required: ["name", "category", "calories", "protein", "carbs", "fat", "fiber"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "recommend_workout",
+      description: "Recommend a specific workout from the catalogue. Use when suggesting a workout the user could start now or schedule.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Exact UUID from the WORKOUTS CATALOGUE" },
+          name: { type: "string" },
+        },
+        required: ["id", "name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "recommend_recipe",
+      description: "Recommend a specific recipe from the catalogue.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Exact UUID from the RECIPES CATALOGUE" },
+          name: { type: "string" },
+        },
+        required: ["id", "name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "body_scan_prompt",
+      description: "Suggest the user complete a body scan. Use when they ask about body composition, measurements, or progress photos.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+];
+
+function mapToolCallToAction(
+  tc: { name: string; arguments: string },
+  validWorkoutIds: Set<string>,
+  validRecipeIds: Set<string>,
+): object | null {
+  try {
+    const args = tc.arguments ? JSON.parse(tc.arguments) : {};
+
+    switch (tc.name) {
+      case "schedule_plan": {
+        if (
+          typeof args.goal !== "string" ||
+          typeof args.daysPerWeek !== "number" ||
+          !Array.isArray(args.selectedDays) ||
+          typeof args.sessionMinutes !== "number"
+        ) {
+          console.warn("[ai-coach] Invalid schedule_plan payload:", args);
+          return null;
+        }
+        return { type: "schedule_plan", payload: args };
+      }
+      case "log_food": {
+        if (typeof args.name !== "string" || typeof args.calories !== "number" ||
+          args.calories < 0 || args.calories > 10000) {
+          console.warn("[ai-coach] Invalid log_food payload:", args);
+          return null;
+        }
+        return {
+          type: "log_food",
+          payload: {
+            name: args.name,
+            category: args.category || "snack",
+            calories: args.calories,
+            protein: args.protein ?? 0,
+            carbs: args.carbs ?? 0,
+            fat: args.fat ?? 0,
+            fiber: args.fiber ?? 0,
+          },
+        };
+      }
+      case "recommend_workout": {
+        if (typeof args.id !== "string" || !validWorkoutIds.has(args.id)) {
+          console.warn("[ai-coach] Hallucinated workout UUID:", args.id);
+          return null;
+        }
+        return { type: "recommend_workout", payload: { id: args.id, name: args.name } };
+      }
+      case "recommend_recipe": {
+        if (typeof args.id !== "string" || !validRecipeIds.has(args.id)) {
+          console.warn("[ai-coach] Hallucinated recipe UUID:", args.id);
+          return null;
+        }
+        return { type: "recommend_recipe", payload: { id: args.id, name: args.name } };
+      }
+      case "body_scan_prompt":
+        return { type: "body_scan_prompt" };
+      default:
+        console.warn("[ai-coach] Unknown tool call:", tc.name);
+        return null;
+    }
+  } catch (err) {
+    console.error("[ai-coach] Tool call parse error:", tc.name, err);
+    return null;
+  }
+}
+
+function buildStructuredStream(
+  gatewayBody: ReadableStream<Uint8Array>,
+  validWorkoutIds: Set<string>,
+  validRecipeIds: Set<string>,
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = gatewayBody.getReader();
+      let buffer = "";
+      // Map of tool call index → accumulated data
+      const toolCalls = new Map<number, { id: string; name: string; arguments: string }>();
+
+      const emit = (chunk: object) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      };
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          let idx: number;
+          while ((idx = buffer.indexOf("\n")) !== -1) {
+            let line = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 1);
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (!line.startsWith("data: ")) continue;
+
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              const choice = parsed.choices?.[0];
+              if (!choice) continue;
+
+              const delta = choice.delta;
+              if (!delta) continue;
+
+              // Text content — emit immediately as it streams
+              if (delta.content) {
+                emit({ type: "text", delta: delta.content });
+              }
+
+              // Tool call deltas — accumulate until the stream ends
+              if (delta.tool_calls) {
+                for (const tc of delta.tool_calls) {
+                  const tcIdx = typeof tc.index === "number" ? tc.index : 0;
+                  if (!toolCalls.has(tcIdx)) {
+                    toolCalls.set(tcIdx, { id: "", name: "", arguments: "" });
+                  }
+                  const existing = toolCalls.get(tcIdx)!;
+                  if (tc.id) existing.id = tc.id;
+                  if (tc.function?.name) existing.name += tc.function.name;
+                  if (tc.function?.arguments) existing.arguments += tc.function.arguments;
+                }
+              }
+            } catch {
+              // Malformed SSE chunk — skip
+            }
+          }
+        }
+
+        // Emit validated tool calls as action chunks after text has fully streamed
+        for (const [, tc] of toolCalls) {
+          const action = mapToolCallToAction(tc, validWorkoutIds, validRecipeIds);
+          if (action) {
+            emit({ type: "action", action });
+          }
+        }
+
+        emit({ type: "done" });
+        controller.close();
+      } catch (err) {
+        console.error("[ai-coach] Stream transform error:", err);
+        // Ensure done is always emitted so the client doesn't hang
+        try { emit({ type: "done" }); } catch { /* ignore */ }
+        controller.close();
+      }
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const useStructuredFormat = req.headers.get("x-response-format") === "structured-v1";
 
   try {
     // Verify authentication
@@ -560,7 +819,12 @@ serve(async (req) => {
     userContext += "\n⚠️ CATALOGUE RULE: When you mention a specific workout or recipe by name, it MUST come from the WORKOUTS CATALOGUE or RECIPES CATALOGUE above. Never invent workout or recipe names. If the catalogue doesn't contain something suitable, say so honestly rather than making one up.\n";
 
     // ─── Process request ───
-    const { messages, imageData, hasImage, customResponse, customMemory, healthProfile } = await req.json();
+    const reqBody = await req.json();
+    const { messages, imageData, hasImage } = reqBody;
+    // Accept both field names: customResponse (JarvisMode/useAIChat) and customResponseStyle (useAI hook)
+    const customResponse: string = reqBody.customResponse || reqBody.customResponseStyle || '';
+    const customMemory: string = reqBody.customMemory || '';
+    const healthProfile: string = reqBody.healthProfile || '';
 
     let extraContext = '';
     if (healthProfile && healthProfile.trim()) {
@@ -618,6 +882,67 @@ serve(async (req) => {
       }
     }
 
+    // ─── Structured response path (X-Response-Format: structured-v1) ───
+    if (useStructuredFormat) {
+      const validWorkoutIds = new Set<string>((workoutsCatalogue ?? []).map((w: any) => w.id));
+      const validRecipeIds = new Set<string>((recipesCatalogue ?? []).map((r: any) => r.id));
+
+      // Append tool-usage override to the system prompt, then re-inject the log_food
+      // estimation mandate as a standalone system message just before the last user turn
+      // so it carries maximum positional weight against the model's cautious defaults.
+      const baseStructured = [
+        { role: "system", content: (apiMessages[0] as any).content + STRUCTURED_MODE_OVERRIDE },
+        ...apiMessages.slice(1),
+      ];
+      const lastUserIdx = baseStructured.findLastIndex((m: any) => m.role === "user");
+      const structuredMessages = lastUserIdx !== -1
+        ? [
+            ...baseStructured.slice(0, lastUserIdx),
+            { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool." },
+            baseStructured[lastUserIdx],
+          ]
+        : baseStructured;
+
+      const gatewayResponse = await aiChatCompletion({
+        model: "gemini-2.5-flash",
+        messages: structuredMessages,
+        stream: true,
+        tools: STRUCTURED_TOOLS,
+        tool_choice: "auto",
+      });
+
+      if (!gatewayResponse.ok) {
+        if (gatewayResponse.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (gatewayResponse.status === 402) {
+          return new Response(
+            JSON.stringify({ error: "AI credits exhausted. Please add funds to continue." }),
+            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        const errText = await gatewayResponse.text();
+        console.error("[ai-coach] Gateway error (structured):", gatewayResponse.status, errText);
+        return new Response(
+          JSON.stringify({ error: "AI service error" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const structuredStream = buildStructuredStream(
+        gatewayResponse.body!,
+        validWorkoutIds,
+        validRecipeIds
+      );
+      return new Response(structuredStream, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // ─── Marker path (existing behaviour — unchanged) ───
     const response = await aiChatCompletion({
       model: "gemini-2.5-flash",
       messages: apiMessages,

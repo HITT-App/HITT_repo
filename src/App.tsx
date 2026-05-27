@@ -26,6 +26,7 @@ import Welcome from "./pages/Welcome";
 import NotFound from "./pages/NotFound";
 
 // Lazy-loaded pages
+const DebugAI = lazy(() => import("./pages/DebugAI"));
 const Assessment = lazy(() => import("./pages/Assessment"));
 const AICoach = lazy(() => import("./pages/AICoach"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -275,6 +276,8 @@ const App = () => (
             <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
             <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
             <Route path="/admin/layout" element={<AdminRoute><AdminHomeLayout /></AdminRoute>} />
+            {/* DEBUG — remove before 5C ships */}
+            <Route path="/debug-ai" element={<ProtectedRoute><DebugAI /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

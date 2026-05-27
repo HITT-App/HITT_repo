@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-05-27] — Build 106: 5A+5B — unified AI hook + structured action streaming
+
+- **New `useAI` hook** (5A) — single hook manages the Jarvis conversation: loads history, streams responses, exposes typed `Action` objects to consumers, and writes `meal_logs` silently on `log_food` actions without user confirmation
+- **Structured response branch** (5B) — `ai-coach` edge function now branches on `X-Response-Format: structured-v1`; new path uses tool calling with 5 tools (`log_food`, `schedule_plan`, `recommend_workout`, `recommend_recipe`, `body_scan_prompt`) and emits structured SSE `{type:text/action/done}` chunks; existing marker path completely unchanged
+- **AI food estimation** — model now estimates macros for casual food-log prompts ("I just ate a caesar salad") instead of asking the user for nutrition data; restores behaviour from the original marker system
+- **Debug route** at `/debug-ai` (Profile → Debug AI) for on-device verification of streaming, action chunks, and meal_logs writes — temporary, removed before next release
+
 ## [2026-05-20] — Build 93: T14 Workouts/Sports tab + trademark compliance
 
 - **Workouts/Sports tab system** — the Workouts page now has a tab switcher at the top; "Workouts" (default) shows the existing library, "Sports" shows three tappable tiles: Triathlon, Routes, Gym Timer — rescuing three orphaned features
