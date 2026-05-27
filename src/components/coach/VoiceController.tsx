@@ -3,8 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { WakeWordListener } from './WakeWordListener';
 import { JarvisMode } from './JarvisMode';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { useWakeWordPreference } from '@/hooks/useWakeWordPreference';
 import { useHealthProfile } from '@/hooks/useHealthProfile';
 
@@ -22,52 +20,13 @@ export function VoiceController() {
   const { enabled: wakeWordEnabled } = useWakeWordPreference();
   const { profile: healthProfile } = useHealthProfile();
   const [showJarvisMode, setShowJarvisMode] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const [sharePromptDetail, setSharePromptDetail] = useState<SharePromptDetail | null>(null);
 
-  // Always use one permanent "Jarvis" conversation per user so history persists
-  const getOrCreateConversation = useCallback(async () => {
-    if (!user) return null;
-
-    try {
-      // Fix #5: order by created_at so duplicate "Jarvis" conversations
-      // (if they ever exist) always resolve to the oldest — the canonical one
-      const { data: existing } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('title', 'Jarvis')
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (existing) return existing.id;
-
-      const { data: newConvo, error } = await supabase
-        .from('conversations')
-        .insert({ user_id: user.id, title: 'Jarvis' })
-        .select('id')
-        .single();
-
-      if (error) throw error;
-      return newConvo?.id ?? null;
-    } catch (error) {
-      console.error('Failed to get/create conversation:', error);
-      return null;
-    }
-  }, [user]);
-
   // Opens Jarvis — shared by wake word, HIIT button tap, and the hitt:open-jarvis event
-  const handleWakeWordDetected = useCallback(async () => {
-    const convoId = await getOrCreateConversation();
-    if (!convoId) {
-      toast.error('Failed to start voice mode');
-      return;
-    }
-    setConversationId(convoId);
+  const handleWakeWordDetected = useCallback(() => {
     setShowJarvisMode(true);
     if ('vibrate' in navigator) navigator.vibrate(100);
-  }, [getOrCreateConversation]);
+  }, []);
 
   // The centre HIIT button dispatches this event — same path as the wake word
   useEffect(() => {
@@ -76,15 +35,12 @@ export function VoiceController() {
   }, [handleWakeWordDetected]);
 
   // Post-workout share nudge — fired by WorkoutPlayer after completion
-  const handleSharePrompt = useCallback(async (e: Event) => {
+  const handleSharePrompt = useCallback((e: Event) => {
     const detail = (e as CustomEvent).detail as SharePromptDetail;
     if (!detail) return;
-    const convoId = await getOrCreateConversation();
-    if (!convoId) return;
-    setConversationId(convoId);
     setSharePromptDetail(detail);
     setShowJarvisMode(true);
-  }, [getOrCreateConversation]);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('hitt:open-jarvis-share', handleSharePrompt as EventListener);
@@ -94,7 +50,6 @@ export function VoiceController() {
   // Handle Jarvis Mode close
   const handleJarvisModeClose = useCallback(() => {
     setShowJarvisMode(false);
-    setConversationId(null);
     setSharePromptDetail(null);
   }, []);
 
@@ -116,9 +71,8 @@ export function VoiceController() {
       />
 
       {/* Full-screen Jarvis Mode */}
-      {showJarvisMode && conversationId && (
+      {showJarvisMode && (
         <JarvisMode
-          conversationId={conversationId}
           healthProfile={healthProfile}
           onClose={handleJarvisModeClose}
           sharePromptDetail={sharePromptDetail}

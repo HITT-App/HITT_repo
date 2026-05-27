@@ -20,10 +20,10 @@ export function useAI(): UseAIReturn {
   const [error, setError] = useState<Error | null>(null);
   const [streamingText, setStreamingText] = useState('');
   const [pendingActions, setPendingActions] = useState<Action[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const conversationIdRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  // Mirrors messages state so send() never reads a stale closure
   const messagesRef = useRef<AIMessage[]>([]);
   messagesRef.current = messages;
 
@@ -33,7 +33,6 @@ export function useAI(): UseAIReturn {
 
     const init = async () => {
       try {
-        // Use the oldest Jarvis conversation if duplicates somehow exist
         const { data: existing } = await supabase
           .from('conversations')
           .select('id')
@@ -64,7 +63,7 @@ export function useAI(): UseAIReturn {
 
         const { data: msgs, error: msgsError } = await supabase
           .from('messages')
-          .select('id, role, content, created_at')
+          .select('id, role, content, created_at, synthetic')
           .eq('conversation_id', conversationId)
           .order('created_at', { ascending: true })
           .limit(40);
@@ -81,11 +80,14 @@ export function useAI(): UseAIReturn {
               role: m.role as 'user' | 'assistant',
               content: m.content,
               created_at: m.created_at,
+              synthetic: (m as any).synthetic ?? false,
             }))
           );
         }
       } catch (err) {
         console.error('[useAI] Init error:', err);
+      } finally {
+        setIsInitialized(true);
       }
     };
 
@@ -115,6 +117,82 @@ export function useAI(): UseAIReturn {
     }
   }, []);
 
+  // Shared SSE stream executor. Reads chunks, updates streamingText + pendingActions.
+  // Returns assembled text and collected actions when the stream ends.
+  const runStream = useCallback(
+    async (
+      messages: Array<{ role: string; content: string }>,
+      accessToken: string,
+      signal: AbortSignal,
+    ): Promise<{ text: string; actions: Action[] }> => {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+            'X-Response-Format': 'structured-v1',
+          },
+          body: JSON.stringify({
+            messages,
+            customMemory: localStorage.getItem('hiit-ai-custom-memory') || '',
+            customResponseStyle: localStorage.getItem('hiit-ai-custom-response') || '',
+          }),
+          signal,
+        }
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(errData.error || `AI request failed: ${response.status}`);
+      }
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let text = '';
+      const actions: Action[] = [];
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        let idx: number;
+        while ((idx = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (!line.startsWith('data: ')) continue;
+
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+
+          try {
+            const chunk = JSON.parse(data) as StreamChunk;
+            if (chunk.type === 'text') {
+              text += chunk.delta;
+              setStreamingText(text);
+            } else if (chunk.type === 'action') {
+              actions.push(chunk.action);
+              setPendingActions(prev => [...prev, chunk.action]);
+              if (chunk.action.type === 'log_food') {
+                logFoodSilent(chunk.action.payload);
+              }
+            }
+          } catch {
+            // Malformed SSE chunk — skip
+          }
+        }
+      }
+
+      return { text, actions };
+    },
+    [logFoodSilent]
+  );
+
   const send = useCallback(
     async (text: string) => {
       const conversationId = conversationIdRef.current;
@@ -124,10 +202,7 @@ export function useAI(): UseAIReturn {
         return;
       }
 
-      // Cancel any in-flight stream
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
+      if (abortRef.current) abortRef.current.abort();
 
       const { data: sessionData } = await supabase.auth.getSession();
       const session = sessionData?.session;
@@ -137,7 +212,6 @@ export function useAI(): UseAIReturn {
         return;
       }
 
-      // Optimistic user message
       const tempId = crypto.randomUUID();
       const optimisticMsg: AIMessage = {
         id: tempId,
@@ -152,7 +226,6 @@ export function useAI(): UseAIReturn {
       setStreamingText('');
       setError(null);
 
-      // Persist user message to DB
       const { data: persistedUser, error: persistError } = await supabase
         .from('messages')
         .insert({ conversation_id: conversationId, role: 'user', content: text })
@@ -174,84 +247,22 @@ export function useAI(): UseAIReturn {
         );
       }
 
-      // Build context: current history + new message (last 40 for context window)
       const recentMessages = [
-        ...messagesRef.current.map(({ role, content }) => ({ role, content })),
+        ...messagesRef.current
+          .filter(m => !m.synthetic)
+          .map(({ role, content }) => ({ role, content })),
         { role: 'user' as const, content: text },
       ].slice(-40);
-
-      const customMemory = localStorage.getItem('hiit-ai-custom-memory') || '';
-      const customResponseStyle = localStorage.getItem('hiit-ai-custom-response') || '';
 
       abortRef.current = new AbortController();
 
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
-              'X-Response-Format': 'structured-v1',
-            },
-            body: JSON.stringify({
-              messages: recentMessages,
-              customMemory,
-              customResponseStyle,
-            }),
-            signal: abortRef.current.signal,
-          }
+        const { text: assembledText, actions: emittedActions } = await runStream(
+          recentMessages,
+          session.access_token,
+          abortRef.current.signal,
         );
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-          throw new Error(errData.error || `AI request failed: ${response.status}`);
-        }
-
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let assembledText = '';
-        const emittedActions: Action[] = [];
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-
-          let idx: number;
-          while ((idx = buffer.indexOf('\n')) !== -1) {
-            let line = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 1);
-            if (line.endsWith('\r')) line = line.slice(0, -1);
-            if (!line.startsWith('data: ')) continue;
-
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') continue;
-
-            try {
-              const chunk = JSON.parse(data) as StreamChunk;
-
-              if (chunk.type === 'text') {
-                assembledText += chunk.delta;
-                setStreamingText(assembledText);
-              } else if (chunk.type === 'action') {
-                emittedActions.push(chunk.action);
-                setPendingActions(prev => [...prev, chunk.action]);
-                // log_food is silent — handle immediately without user confirmation
-                if (chunk.action.type === 'log_food') {
-                  logFoodSilent(chunk.action.payload);
-                }
-              }
-            } catch {
-              // Malformed SSE chunk — skip
-            }
-          }
-        }
-
-        // Persist assistant message
         const { data: persistedAssistant } = await supabase
           .from('messages')
           .insert({ conversation_id: conversationId, role: 'assistant', content: assembledText })
@@ -281,7 +292,73 @@ export function useAI(): UseAIReturn {
         abortRef.current = null;
       }
     },
-    [logFoodSilent]
+    [runStream]
+  );
+
+  // Like send(), but the prompt is not persisted or shown as a user message.
+  // Used for system-driven triggers (greeting, goals flow) where the prompt is internal.
+  const greet = useCallback(
+    async (prompt: string) => {
+      const conversationId = conversationIdRef.current;
+      if (!conversationId) return;
+
+      if (abortRef.current) abortRef.current.abort();
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      if (!session) return;
+
+      setPendingActions([]);
+      setStatus('streaming');
+      setStreamingText('');
+      setError(null);
+
+      const recentMessages = [
+        ...messagesRef.current
+          .filter(m => !m.synthetic)
+          .map(({ role, content }) => ({ role, content })),
+        { role: 'user' as const, content: prompt },
+      ].slice(-40);
+
+      abortRef.current = new AbortController();
+
+      try {
+        const { text: assembledText, actions: emittedActions } = await runStream(
+          recentMessages,
+          session.access_token,
+          abortRef.current.signal,
+        );
+
+        const { data: persistedAssistant } = await supabase
+          .from('messages')
+          .insert({ conversation_id: conversationId, role: 'assistant', content: assembledText })
+          .select('id, created_at')
+          .single();
+
+        const assistantMsg: AIMessage = {
+          id: persistedAssistant?.id ?? crypto.randomUUID(),
+          role: 'assistant',
+          content: assembledText,
+          created_at: persistedAssistant?.created_at ?? new Date().toISOString(),
+          actions: emittedActions.length > 0 ? emittedActions : undefined,
+        };
+
+        setMessages(prev => [...prev, assistantMsg]);
+        setStreamingText('');
+        setStatus('idle');
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') {
+          setStatus('idle');
+          return;
+        }
+        console.error('[useAI] Greet error:', err);
+        setStatus('error');
+        setError(err as Error);
+      } finally {
+        abortRef.current = null;
+      }
+    },
+    [runStream]
   );
 
   const abort = useCallback(() => {
@@ -296,5 +373,39 @@ export function useAI(): UseAIReturn {
     setPendingActions(prev => prev.filter((_, i) => i !== actionIndex));
   }, []);
 
-  return { messages, status, error, streamingText, pendingActions, send, abort, dismissAction };
+  // Persists a synthetic assistant message to DB + state.
+  // Visible in chat history across sessions, but excluded from AI context window.
+  const appendAssistantMessage = useCallback(async (text: string) => {
+    const conversationId = conversationIdRef.current;
+    if (!conversationId) return;
+
+    const { data: persisted } = await supabase
+      .from('messages')
+      .insert({ conversation_id: conversationId, role: 'assistant', content: text, synthetic: true })
+      .select('id, created_at')
+      .single();
+
+    const msg: AIMessage = {
+      id: persisted?.id ?? crypto.randomUUID(),
+      role: 'assistant',
+      content: text,
+      created_at: persisted?.created_at ?? new Date().toISOString(),
+      synthetic: true,
+    };
+    setMessages(prev => [...prev, msg]);
+  }, []);
+
+  return {
+    messages,
+    status,
+    error,
+    streamingText,
+    pendingActions,
+    isInitialized,
+    send,
+    greet,
+    abort,
+    dismissAction,
+    appendAssistantMessage,
+  };
 }

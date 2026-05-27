@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-05-27] — Build 107: 5C — JarvisMode migrated to useAI hook
+
+- **JarvisMode refactor** (5C) — JarvisMode is now a pure UI surface over the `useAI` hook; ~500 lines of local streaming, conversation history, message persistence, and regex marker parsing deleted
+- **Conversation lifecycle simplified** — `VoiceController` no longer does an async DB lookup on every Jarvis open; the hook manages conversation creation and history loading on mount
+- **Synthetic message architecture** — action confirmation messages (schedule created, workout added, recipe logged) now persist to the `messages` table with a `synthetic` flag so they survive across sessions, but are excluded from the AI context window so the model never misreads them as its own prior responses
+- **`messages` schema migration** — new `synthetic boolean DEFAULT false` column added
+
 ## [2026-05-27] — Build 106: 5A+5B — unified AI hook + structured action streaming
 
 - **New `useAI` hook** (5A) — single hook manages the Jarvis conversation: loads history, streams responses, exposes typed `Action` objects to consumers, and writes `meal_logs` silently on `log_food` actions without user confirmation

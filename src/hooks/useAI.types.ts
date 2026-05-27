@@ -6,6 +6,9 @@ export type AIMessage = {
   content: string;
   created_at: string;
   actions?: Action[];
+  // In-memory only — consumer-injected confirmation messages.
+  // Visible in UI, but excluded from AI context and not persisted to DB.
+  synthetic?: boolean;
 };
 
 export type Action =
@@ -56,7 +59,15 @@ export type UseAIReturn = {
   streamingText: string;
   // Actions emitted during the latest stream; cleared when a new send() begins
   pendingActions: Action[];
+  // True once the mount-time conversation + history load has resolved
+  isInitialized: boolean;
   send: (text: string) => Promise<void>;
+  // Like send(), but the prompt is not added as a visible user message or persisted.
+  // Use for system-driven triggers (greeting, goals flow) where the prompt is internal.
+  greet: (prompt: string) => Promise<void>;
   abort: () => void;
   dismissAction: (actionIndex: number) => void;
+  // Inserts a synthetic assistant message into the conversation (DB + state).
+  // Use for confirmation messages from action handlers (schedule created, recipe logged, etc.)
+  appendAssistantMessage: (text: string) => Promise<void>;
 };

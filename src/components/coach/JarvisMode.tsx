@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTTS } from '@/contexts/TTSContext';
+import { useAI } from '@/hooks/useAI';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
 // Strips excessive emoji usage (keeps max 1 per paragraph).
@@ -52,14 +53,12 @@ function formatResponse(text: string): React.ReactNode[] {
   });
 }
 
-// Convert **text** to <strong>
 function bold(str: string): string {
   return str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
 interface JarvisModeProps {
   onClose: () => void;
-  conversationId: string;
   healthProfile?: string;
   sharePromptDetail?: {
     workoutId: string;
@@ -69,11 +68,6 @@ interface JarvisModeProps {
     pbs?: Array<{ kind: 'duration' | 'calories' | 'streak'; label: string; value: number; previousBest: number }>;
   } | null;
 }
-
-type ConversationMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
 
 type RecommendedWorkout = {
   id: string;
@@ -97,15 +91,13 @@ type RecommendedRecipe = {
   fat_g: number;
 };
 
-export function JarvisMode({ onClose, conversationId, healthProfile, sharePromptDetail }: JarvisModeProps) {
+export function JarvisMode({ onClose, healthProfile, sharePromptDetail }: JarvisModeProps) {
   const navigate = useNavigate();
   const tts = useTTS();
+  const ai = useAI();
+
   const [isListening, setIsListening] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [transcript, setTranscript] = useState('');
-  const [response, setResponse] = useState('');
-  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [visualizerData, setVisualizerData] = useState<number[]>(new Array(32).fill(4));
   const [pendingBodyScan, setPendingBodyScan] = useState(false);
   const [pendingSchedule, setPendingSchedule] = useState<{
@@ -114,44 +106,21 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
   const [recommendedWorkout, setRecommendedWorkout] = useState<RecommendedWorkout | null>(null);
   const [recommendedRecipe, setRecommendedRecipe] = useState<RecommendedRecipe | null>(null);
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
-  
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number>();
   const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const responseEndRef = useRef<HTMLDivElement | null>(null);
-
-  // Fix #2: AbortController kills stale streams before new ones start
-  const streamAbortRef = useRef<AbortController>();
-  // Fix #8: Ref mirrors conversationHistory so handleUserMessage never reads a stale closure
-  const historyRef = useRef<ConversationMessage[]>([]);
-  // Ref mirrors isListening so transcript callbacks can guard against post-disconnect firing
   const isListeningRef = useRef(false);
-  // Guard against overlapping connect() calls (e.g. rapid mic taps)
   const isConnectingRef = useRef(false);
+  // Tracks how many pendingActions have been dispatched to prevent re-dispatch on re-render.
+  // Reset to 0 when pendingActions is cleared (start of each new send/greet).
+  const dispatchedCountRef = useRef(0);
+  // Prevents the greeting from firing more than once per JarvisMode mount
+  const greetingFiredRef = useRef(false);
 
-  // Keep ref in sync with state on every render
-  historyRef.current = conversationHistory;
-
-  // ElevenLabs Scribe hook for real-time transcription
-  const scribe = useScribe({
-    modelId: 'scribe_v2_realtime',
-    commitStrategy: CommitStrategy.VAD,
-    onPartialTranscript: (data) => {
-      // Guard: don't process after disconnect — prevents "WebSocket not connected" errors
-      if (!isListeningRef.current) return;
-      setTranscript(data.text);
-      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
-    },
-    onCommittedTranscript: async (data) => {
-      // Guard: skip if disconnected or already processing
-      if (!isListeningRef.current) return;
-      const finalTranscript = data.text.trim();
-      if (!finalTranscript || isProcessing) return;
-      setTranscript(finalTranscript);
-      await handleUserMessage(finalTranscript);
-    },
-  });
+  // ─── Voice (keep unchanged) ──────────────────────────────────────────────
 
   const updateVisualizer = useCallback(() => {
     if (analyserRef.current) {
@@ -163,7 +132,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
   }, []);
 
   const startListening = useCallback(async () => {
-    // Prevent double-connect — the source of "WebSocket not connected" errors
     if (isListeningRef.current || isConnectingRef.current) return;
     isConnectingRef.current = true;
     try {
@@ -184,7 +152,6 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       setIsListening(true);
       setTranscript('');
 
-      // Start visualizer
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioContextRef.current = new AudioContext();
@@ -202,25 +169,38 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       isConnectingRef.current = false;
       setIsListening(false);
     }
-  }, [scribe, updateVisualizer]);
+  }, [updateVisualizer]); // scribe added below after declaration
 
   const stopListening = useCallback(() => {
-    // Mark as not listening before disconnect so callbacks fired during teardown are ignored
     isListeningRef.current = false;
     isConnectingRef.current = false;
-    try { scribe.disconnect(); } catch { /* already disconnected — safe to ignore */ }
+    try { scribe.disconnect(); } catch { /* already disconnected */ }
     setIsListening(false);
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     if (audioContextRef.current) audioContextRef.current.close().catch(() => {});
     setVisualizerData(new Array(32).fill(4));
-  }, [scribe]);
+  }, []); // scribe added below after declaration
 
-  const getAccessToken = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    return sessionData?.session?.access_token ?? null;
-  };
+  const scribe = useScribe({
+    modelId: 'scribe_v2_realtime',
+    commitStrategy: CommitStrategy.VAD,
+    onPartialTranscript: (data) => {
+      if (!isListeningRef.current) return;
+      setTranscript(data.text);
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+    },
+    onCommittedTranscript: async (data) => {
+      if (!isListeningRef.current) return;
+      const finalTranscript = data.text.trim();
+      if (!finalTranscript || ai.status === 'streaming') return;
+      setTranscript(finalTranscript);
+      stopListening();
+      ai.send(finalTranscript);
+    },
+  });
 
-  // Maps plan items to upcoming dates based on user's preferred days of week
+  // ─── Schedule helpers ─────────────────────────────────────────────────────
+
   const mapToScheduleDates = (
     planItems: { workout_id: string }[],
     selectedDays: number[]
@@ -244,6 +224,15 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       scheduled_date: upcomingDates[i].toISOString().split('T')[0],
     }));
   };
+
+  const defaultDays = (n: number): number[] => {
+    const presets: Record<number, number[]> = {
+      1: [1], 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5], 6: [1, 2, 3, 4, 5, 6],
+    };
+    return presets[Math.max(1, Math.min(6, n))] ?? [1, 3, 5];
+  };
+
+  // ─── DB fetch helpers ─────────────────────────────────────────────────────
 
   const fetchRecommendedWorkout = async (id: string): Promise<RecommendedWorkout | null> => {
     try {
@@ -269,33 +258,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
     } catch (err) { console.error('[Jarvis] fetchRecommendedRecipe error:', err); return null; }
   };
 
-  // Called when AI response contains one or more [LOG_FOOD:{...}] markers
-  const logFoodFromJarvis = async (items: {
-    name: string; category: string; calories: number;
-    protein: number; carbs: number; fat: number; fiber: number;
-  }[]) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (!userId || !items.length) return;
-
-      await supabase.from('meal_logs').insert(
-        items.map(item => ({
-          user_id: userId,
-          custom_name: item.name,
-          category: item.category,
-          calories: Math.round(item.calories),
-          protein_grams: item.protein,
-          carbs_grams: item.carbs,
-          fat_grams: item.fat,
-          fiber_grams: item.fiber,
-          logged_at: new Date().toISOString(),
-        }))
-      );
-    } catch (err) {
-      console.error('[Jarvis] Food log failed:', err);
-    }
-  };
+  // ─── Action handlers ──────────────────────────────────────────────────────
 
   const confirmSchedule = async () => {
     if (!pendingSchedule || isAddingSchedule) return;
@@ -305,80 +268,12 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
     setIsAddingSchedule(false);
   };
 
-  const scheduleRecommendedWorkout = async (workoutId: string) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (!userId) throw new Error('Not authenticated');
-
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const scheduledDate = tomorrow.toISOString().split('T')[0];
-
-      const { error } = await supabase.from('scheduled_workouts').insert({
-        user_id: userId,
-        workout_id: workoutId,
-        scheduled_date: scheduledDate,
-      });
-      if (error) throw error;
-
-      const confirmation = `✅ Added to tomorrow's schedule. See you then!`;
-      const withConfirm = [...historyRef.current, { role: 'assistant' as const, content: confirmation }];
-      historyRef.current = withConfirm;
-      setConversationHistory(withConfirm);
-      await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
-
-      setRecommendedWorkout(null);
-    } catch (err) {
-      console.error('[Jarvis] Schedule workout failed:', err);
-      const msg = `Sorry, I couldn't add that to your schedule. You can add it manually from the workout page.`;
-      const withErr = [...historyRef.current, { role: 'assistant' as const, content: msg }];
-      historyRef.current = withErr;
-      setConversationHistory(withErr);
-    }
-  };
-
-  const logRecommendedRecipe = async (recipe: RecommendedRecipe) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (!userId) throw new Error('Not authenticated');
-
-      const { error } = await supabase.from('meal_logs').insert({
-        user_id: userId,
-        custom_name: recipe.name,
-        category: recipe.meal_type,
-        calories: recipe.calories,
-        protein_grams: recipe.protein_g,
-        carbs_grams: recipe.carbs_g,
-        fat_grams: recipe.fat_g,
-        fiber_grams: 0,
-        logged_at: new Date().toISOString(),
-      });
-      if (error) throw error;
-
-      const confirmation = `✅ Logged ${recipe.name} as ${recipe.meal_type}.`;
-      const withConfirm = [...historyRef.current, { role: 'assistant' as const, content: confirmation }];
-      historyRef.current = withConfirm;
-      setConversationHistory(withConfirm);
-      await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
-
-      setRecommendedRecipe(null);
-    } catch (err) {
-      console.error('[Jarvis] Recipe log failed:', err);
-      const msg = `Sorry, I couldn't log that meal. You can log it manually from the Nutrition tab.`;
-      const withErr = [...historyRef.current, { role: 'assistant' as const, content: msg }];
-      historyRef.current = withErr;
-      setConversationHistory(withErr);
-    }
-  };
-
-  // Called when AI response contains [SCHEDULE_PLAN:{...}]
   const createScheduleFromJarvis = async (params: {
     goal: string; daysPerWeek: number; selectedDays: number[]; sessionMinutes: number;
   }) => {
     try {
-      const accessToken = await getAccessToken();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
       if (!accessToken) throw new Error('Not authenticated');
 
       const res = await fetch(
@@ -401,16 +296,11 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       }
 
       const data = await res.json();
-      // The edge function returns { items: [...] } — not plan_items
       const planItems: { day_index: number; workout_id: string }[] = data.items ?? [];
 
-      // If the AI didn't provide selectedDays, fall back to evenly-spaced weekdays
-      const days = params.selectedDays?.length
-        ? params.selectedDays
-        : defaultDays(params.daysPerWeek);
+      const days = params.selectedDays?.length ? params.selectedDays : defaultDays(params.daysPerWeek);
       const rows = mapToScheduleDates(planItems, days);
 
-      const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
       if (!userId) throw new Error('No user session');
       if (!rows.length) throw new Error('Plan generator returned no workouts');
@@ -419,273 +309,77 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         rows.map(r => ({ user_id: userId, workout_id: r.workout_id, scheduled_date: r.scheduled_date }))
       );
 
-      const confirmation = `✅ Your schedule is set! Taking you there now…`;
-      const withConfirm = [...historyRef.current, { role: 'assistant' as const, content: confirmation }];
-      historyRef.current = withConfirm;
-      setConversationHistory(withConfirm);
-      await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: confirmation });
+      await ai.appendAssistantMessage('✅ Your schedule is set! Taking you there now…');
 
-      // Close Jarvis and navigate to the Schedule tab so the user sees their new plan
       setTimeout(() => {
         handleClose();
         navigate('/schedule');
       }, 1800);
     } catch (err) {
       console.error('[Jarvis] Schedule creation failed:', err);
-      const msg = `Sorry, I couldn't add the schedule right now. You can add workouts manually from the Schedule tab.`;
-      const withErr = [...historyRef.current, { role: 'assistant' as const, content: msg }];
-      historyRef.current = withErr;
-      setConversationHistory(withErr);
-    }
-  };
-
-  // Fallback day selection when AI omits selectedDays
-  const defaultDays = (n: number): number[] => {
-    const presets: Record<number, number[]> = {
-      1: [1], 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5], 6: [1, 2, 3, 4, 5, 6],
-    };
-    return presets[Math.max(1, Math.min(6, n))] ?? [1, 3, 5];
-  };
-
-  // Strips action markers from text and returns clean display text + detected actions
-  const parseAIResponse = (raw: string) => {
-    const scheduleMatch = raw.match(/\[SCHEDULE_PLAN:({.*?})\]/s);
-    const foodMatches = [...raw.matchAll(/\[LOG_FOOD:({.*?})\]/gs)];
-    const workoutMatch = raw.match(/\[RECOMMEND_WORKOUT:({.*?})\]/s);
-    const recipeMatch = raw.match(/\[RECOMMEND_RECIPE:({.*?})\]/s);
-    const showBodyScan = raw.includes('[BODY_SCAN_PROMPT]');
-    const displayText = raw
-      .replace(/\[SCHEDULE_PLAN:{.*?}\]/gs, '')
-      .replace(/\[LOG_FOOD:{.*?}\]/gs, '')
-      .replace(/\[RECOMMEND_WORKOUT:{.*?}\]/gs, '')
-      .replace(/\[RECOMMEND_RECIPE:{.*?}\]/gs, '')
-      .replace(/\[BODY_SCAN_PROMPT\]/g, '')
-      .trim();
-    return { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan };
-  };
-
-  const streamAIResponse = async (
-    messages: { role: string; content: string }[],
-    onDelta: (delta: string) => void,
-    signal?: AbortSignal
-  ): Promise<string> => {
-    const accessToken = await getAccessToken();
-    if (!accessToken) throw new Error('Not authenticated');
-
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`, {
-      method: 'POST',
-      signal,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({
-        messages,
-        healthProfile: healthProfile ?? '',
-        customResponse: localStorage.getItem('hiit-ai-custom-response') ?? '',
-        customMemory: localStorage.getItem('hiit-ai-custom-memory') ?? '',
-      }),
-    });
-
-    if (!res.ok) throw new Error('AI request failed');
-    const reader = res.body?.getReader();
-    if (!reader) throw new Error('No reader');
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let full = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let idx: number;
-      while ((idx = buffer.indexOf('\n')) !== -1) {
-        let line = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 1);
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        if (!line.startsWith('data: ')) continue;
-        const json = line.slice(6).trim();
-        if (json === '[DONE]') break;
-        try {
-          const delta = JSON.parse(json).choices?.[0]?.delta?.content;
-          if (delta) { full += delta; onDelta(delta); }
-        } catch { /* partial chunk */ }
-      }
-    }
-    return full;
-  };
-
-  // Loads the last 40 messages from Supabase for this conversation
-  const loadHistory = useCallback(async (): Promise<ConversationMessage[]> => {
-    try {
-      const { data } = await supabase
-        .from('messages')
-        .select('role, content, created_at')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: false })
-        .limit(40);
-
-      if (!data || data.length === 0) return [];
-
-      const history: ConversationMessage[] = data.reverse().map(m => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      }));
-      setConversationHistory(history);
-      return history;
-    } catch {
-      return [];
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  }, [conversationId]);
-
-  // Greets on open. Runs onboarding flow if user has no history and no schedule yet.
-  const triggerGreeting = useCallback(async (
-    loadedHistory: ConversationMessage[],
-    hasSchedule = true,
-    hasWorkoutToday = true,
-  ) => {
-    // Fix #2: abort any in-flight stream before starting
-    streamAbortRef.current?.abort();
-    const abort = new AbortController();
-    streamAbortRef.current = abort;
-
-    setIsProcessing(true);
-    setResponse('');
-    const hasHistory = loadedHistory.length > 0;
-    const isOnboarding = !hasHistory && !hasSchedule;
-    try {
-      const greetingPrompt = sharePromptDetail
-        // Post-workout share nudge — PB version or normal version
-        ? (sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0
-            ? `[POST_WORKOUT_PB] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} and hit a new personal best: ${sharePromptDetail.pbs.map(pb => `${pb.label} (${pb.value}, previous best ${pb.previousBest})`).join('; ')}. Celebrate this specifically and enthusiastically — name the PB. Then say they should share it because this one matters. Keep it to 2-3 sentences, genuinely excited tone, use one 🏆 emoji.`
-            : `[POST_WORKOUT_SHARE] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} workout, burning around ${sharePromptDetail.calories} calories. Congratulate them warmly in one sentence — be specific about what they just did, not generic. Then ask if they want to share it on the community feed. Keep it to 2 sentences total, encouraging tone, no follow-up questions beyond the share question.`)
-        : isOnboarding
-          // First ever open — full onboarding intake
-          ? `[ONBOARDING] This user has no schedule yet. Introduce yourself as Coach HIIT in one warm sentence, then say you want to ask a couple of quick questions to build their perfect plan, then ask just this: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`
-          : hasHistory && !hasSchedule
-            // Returning user who still has no schedule — pick up where they left off
-            ? `[GREETING] Welcome this user back in one warm sentence. Then immediately say you notice they haven't set up a workout schedule yet and ask if they want to do that now. Keep it brief and positive — do not repeat questions already in the chat history above.`
-            : hasHistory && hasSchedule && !hasWorkoutToday
-              // Returning user with a schedule but nothing on for today — proactive recommendation
-              ? `[GREETING_NO_TODAY] The user has just re-opened our conversation. They have a schedule but no workout planned for today. In one warm sentence, welcome them back. Then suggest ONE specific workout from the WORKOUTS CATALOGUE that fits their goal and emit the [RECOMMEND_WORKOUT:{...}] marker at the end. Keep the whole response to 2 sentences max — let the card do the talking.`
-              : hasHistory
-                // Returning user with a schedule and something on for today — normal welcome back
-                ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
-                : healthProfile?.trim()
-                  ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
-                  : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
-
-      const messagesForAI = [
-        ...loadedHistory.map(m => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: greetingPrompt },
-      ];
-
-      let full = '';
-      await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); }, abort.signal);
-
-      if (full && !abort.signal.aborted) {
-        const { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan } = parseAIResponse(full);
-
-        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
-        setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
-
-        if (scheduleMatch) {
-          try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
-        }
-        if (foodMatches.length) {
-          try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
-        }
-        if (showBodyScan) setPendingBodyScan(true);
-        if (workoutMatch) {
-          try { const { id } = JSON.parse(workoutMatch[1]); const w = await fetchRecommendedWorkout(id); if (w) setRecommendedWorkout(w); } catch (err) { console.error('[Jarvis] workout marker parse failed:', err); }
-        }
-        if (recipeMatch) {
-          try { const { id } = JSON.parse(recipeMatch[1]); const r = await fetchRecommendedRecipe(id); if (r) setRecommendedRecipe(r); } catch (err) { console.error('[Jarvis] recipe marker parse failed:', err); }
-        }
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name !== 'AbortError') console.error('Greeting error:', err);
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [healthProfile, conversationId, sharePromptDetail]);
-
-  const handleUserMessage = useCallback(async (text: string) => {
-    // Fix #2: abort any in-flight stream before starting a new one
-    streamAbortRef.current?.abort();
-    const abort = new AbortController();
-    streamAbortRef.current = abort;
-
-    stopListening();
-    setIsProcessing(true);
-    setResponse('');
-
-    // Fix #8: read from ref so rapid VAD commits never see a stale closure
-    const updatedHistory = [...historyRef.current, { role: 'user' as const, content: text }];
-    historyRef.current = updatedHistory; // update ref immediately before setState flushes
-    setConversationHistory(updatedHistory);
-
-    try {
-      await supabase.from('messages').insert({ conversation_id: conversationId, role: 'user', content: text });
-
-      let full = '';
-      await streamAIResponse(
-        updatedHistory.map(m => ({ role: m.role, content: m.content })),
-        delta => { full += delta; setResponse(r => r + delta); },
-        abort.signal
+      await ai.appendAssistantMessage(
+        'Sorry, I couldn\'t add the schedule right now. You can add workouts manually from the Schedule tab.'
       );
-
-      if (full && !abort.signal.aborted) {
-        const { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan } = parseAIResponse(full);
-
-        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
-        const withReply = [...updatedHistory, { role: 'assistant' as const, content: displayText }];
-        historyRef.current = withReply;
-        setConversationHistory(withReply);
-
-        if (scheduleMatch) {
-          try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {}
-        }
-        if (foodMatches.length) {
-          try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {}
-        }
-        if (showBodyScan) setPendingBodyScan(true);
-        if (workoutMatch) {
-          try { const { id } = JSON.parse(workoutMatch[1]); const w = await fetchRecommendedWorkout(id); if (w) setRecommendedWorkout(w); } catch (err) { console.error('[Jarvis] workout marker parse failed:', err); }
-        }
-        if (recipeMatch) {
-          try { const { id } = JSON.parse(recipeMatch[1]); const r = await fetchRecommendedRecipe(id); if (r) setRecommendedRecipe(r); } catch (err) { console.error('[Jarvis] recipe marker parse failed:', err); }
-        }
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name !== 'AbortError') {
-        console.error('Error processing message:', err);
-        setResponse('Sorry, I had trouble with that. Tap the mic and try again.');
-      }
-    } finally {
-      setIsProcessing(false);
     }
-  }, [conversationId, stopListening]);
-
-
-  const handleClose = () => {
-    streamAbortRef.current?.abort();
-    stopListening();
-    tts.cancel();
-    onClose();
   };
 
-  useEffect(() => {
-    responseEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [response, transcript, conversationHistory]);
+  const scheduleRecommendedWorkout = async (workoutId: string) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const scheduledDate = tomorrow.toISOString().split('T')[0];
+
+      const { error } = await supabase.from('scheduled_workouts').insert({
+        user_id: userId,
+        workout_id: workoutId,
+        scheduled_date: scheduledDate,
+      });
+      if (error) throw error;
+
+      setRecommendedWorkout(null);
+      await ai.appendAssistantMessage('✅ Added to tomorrow\'s schedule. See you then!');
+    } catch (err) {
+      console.error('[Jarvis] Schedule workout failed:', err);
+      await ai.appendAssistantMessage(
+        'Sorry, I couldn\'t add that to your schedule. You can add it manually from the workout page.'
+      );
+    }
+  };
+
+  const logRecommendedRecipe = async (recipe: RecommendedRecipe) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      const { error } = await supabase.from('meal_logs').insert({
+        user_id: userId,
+        custom_name: recipe.name,
+        category: recipe.meal_type,
+        calories: recipe.calories,
+        protein_grams: recipe.protein_g,
+        carbs_grams: recipe.carbs_g,
+        fat_grams: recipe.fat_g,
+        fiber_grams: 0,
+        logged_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+
+      setRecommendedRecipe(null);
+      await ai.appendAssistantMessage(`✅ Logged ${recipe.name} as ${recipe.meal_type}.`);
+    } catch (err) {
+      console.error('[Jarvis] Recipe log failed:', err);
+      await ai.appendAssistantMessage(
+        'Sorry, I couldn\'t log that meal. You can log it manually from the Nutrition tab.'
+      );
+    }
+  };
 
   const triggerGoalsFlow = useCallback(async () => {
-    streamAbortRef.current?.abort();
-    const abort = new AbortController();
-    streamAbortRef.current = abort;
-    setIsProcessing(true);
-    setResponse('');
-
     let prompt = '';
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -706,42 +400,24 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
       prompt = `[ONBOARDING] The user wants to set up their fitness goals. They have no goals set yet. Introduce yourself as Coach HIIT in one warm sentence, then ask: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`;
     }
 
-    try {
-      const messagesForAI = [
-        ...historyRef.current.map(m => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: prompt },
-      ];
-      let full = '';
-      await streamAIResponse(messagesForAI, delta => { full += delta; setResponse(r => r + delta); }, abort.signal);
-      if (full && !abort.signal.aborted) {
-        const { displayText, scheduleMatch, foodMatches, workoutMatch, recipeMatch, showBodyScan } = parseAIResponse(full);
-        await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: displayText });
-        setConversationHistory(prev => [...prev, { role: 'assistant', content: displayText }]);
-        if (scheduleMatch) { try { setPendingSchedule(JSON.parse(scheduleMatch[1])); } catch {} }
-        if (foodMatches.length) { try { logFoodFromJarvis(foodMatches.map(m => JSON.parse(m[1]))); } catch {} }
-        if (showBodyScan) setPendingBodyScan(true);
-        if (workoutMatch) {
-          try { const { id } = JSON.parse(workoutMatch[1]); const w = await fetchRecommendedWorkout(id); if (w) setRecommendedWorkout(w); } catch (err) { console.error('[Jarvis] workout marker parse failed:', err); }
-        }
-        if (recipeMatch) {
-          try { const { id } = JSON.parse(recipeMatch[1]); const r = await fetchRecommendedRecipe(id); if (r) setRecommendedRecipe(r); } catch (err) { console.error('[Jarvis] recipe marker parse failed:', err); }
-        }
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name !== 'AbortError') console.error('Goals flow error:', err);
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [conversationId]);
+    ai.greet(prompt);
+  }, [ai]);
 
+  const handleClose = () => {
+    ai.abort();
+    stopListening();
+    tts.cancel();
+    onClose();
+  };
 
+  // ─── Effects ──────────────────────────────────────────────────────────────
+
+  // Fire the greeting once, after the hook has finished loading history
   useEffect(() => {
-    let cancelled = false;
+    if (!ai.isInitialized || greetingFiredRef.current) return;
+    greetingFiredRef.current = true;
 
-    const init = async () => {
-      const history = await loadHistory();
-      if (cancelled) return;
-
+    const doGreeting = async () => {
       let hasSchedule = true;
       let hasWorkoutToday = true;
 
@@ -770,27 +446,82 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         hasWorkoutToday = true;
       }
 
-      // Brief pause so the UI renders before greeting starts
       await new Promise(r => setTimeout(r, 400));
-      if (cancelled) return;
-      triggerGreeting(history, hasSchedule, hasWorkoutToday);
+
+      const hasHistory = ai.messages.length > 0;
+      const isOnboarding = !hasHistory && !hasSchedule;
+
+      const greetingPrompt = sharePromptDetail
+        ? (sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0
+            ? `[POST_WORKOUT_PB] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} and hit a new personal best: ${sharePromptDetail.pbs.map(pb => `${pb.label} (${pb.value}, previous best ${pb.previousBest})`).join('; ')}. Celebrate this specifically and enthusiastically — name the PB. Then say they should share it because this one matters. Keep it to 2-3 sentences, genuinely excited tone, use one 🏆 emoji.`
+            : `[POST_WORKOUT_SHARE] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} workout, burning around ${sharePromptDetail.calories} calories. Congratulate them warmly in one sentence — be specific about what they just did, not generic. Then ask if they want to share it on the community feed. Keep it to 2 sentences total, encouraging tone, no follow-up questions beyond the share question.`)
+        : isOnboarding
+          ? `[ONBOARDING] This user has no schedule yet. Introduce yourself as Coach HIIT in one warm sentence, then say you want to ask a couple of quick questions to build their perfect plan, then ask just this: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`
+          : hasHistory && !hasSchedule
+            ? `[GREETING] Welcome this user back in one warm sentence. Then immediately say you notice they haven't set up a workout schedule yet and ask if they want to do that now. Keep it brief and positive — do not repeat questions already in the chat history above.`
+            : hasHistory && hasSchedule && !hasWorkoutToday
+              ? `[GREETING_NO_TODAY] The user has just re-opened our conversation. They have a schedule but no workout planned for today. In one warm sentence, welcome them back. Then suggest ONE specific workout from the WORKOUTS CATALOGUE that fits their goal and emit the recommend_workout tool at the end. Keep the whole response to 2 sentences max — let the card do the talking.`
+              : hasHistory
+                ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
+                : healthProfile?.trim()
+                  ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
+                  : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
+
+      ai.greet(greetingPrompt);
     };
 
-    init();
+    doGreeting();
+  }, [ai.isInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Dispatch incoming actions to their handlers. Reset counter when actions are cleared.
+  useEffect(() => {
+    if (ai.pendingActions.length === 0) {
+      dispatchedCountRef.current = 0;
+      return;
+    }
+    const newActions = ai.pendingActions.slice(dispatchedCountRef.current);
+    for (const action of newActions) {
+      switch (action.type) {
+        case 'schedule_plan':
+          setPendingSchedule(action.payload);
+          break;
+        case 'log_food':
+          toast.success(`Logged: ${action.payload.name}`);
+          break;
+        case 'recommend_workout':
+          fetchRecommendedWorkout(action.payload.id).then(w => { if (w) setRecommendedWorkout(w); });
+          break;
+        case 'recommend_recipe':
+          fetchRecommendedRecipe(action.payload.id).then(r => { if (r) setRecommendedRecipe(r); });
+          break;
+        case 'body_scan_prompt':
+          setPendingBodyScan(true);
+          break;
+      }
+    }
+    dispatchedCountRef.current = ai.pendingActions.length;
+  }, [ai.pendingActions]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll to latest content
+  useEffect(() => {
+    responseEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [ai.streamingText, transcript, ai.messages]);
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      cancelled = true;
       stopListening();
-      streamAbortRef.current?.abort();
+      ai.abort();
       tts.cancel();
       if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
-    // z-[100] sits above bottom nav (z-50) and all other overlays
     <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-      {/* Header — below Dynamic Island using native env() variable */}
+      {/* Header */}
       <div
         className="flex items-center justify-between px-4 pb-3 border-b border-border shrink-0"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 44px) + 0.5rem)" }}
@@ -803,50 +534,45 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         </div>
       </div>
 
-      {/* Scrollable conversation — full history */}
+      {/* Scrollable conversation */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
 
         {/* Loading history indicator */}
-        {isLoadingHistory && (
+        {!ai.isInitialized && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
           </div>
         )}
 
         {/* Persisted conversation history */}
-        {conversationHistory.map((msg, i) => (
+        {ai.messages.map((msg, i) => (
           msg.role === 'assistant' ? (
-            <div key={i} className="bg-secondary/40 rounded-2xl px-4 py-3">
+            <div key={msg.id ?? i} className="bg-secondary/40 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>
               <div className="text-sm text-foreground leading-relaxed space-y-2">
                 {formatResponse(msg.content)}
               </div>
             </div>
           ) : (
-            <div key={i} className="bg-primary/10 rounded-2xl px-4 py-3 ml-8">
+            <div key={msg.id ?? i} className="bg-primary/10 rounded-2xl px-4 py-3 ml-8">
               <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-1 uppercase">You</p>
               <p className="text-sm text-foreground">{msg.content}</p>
             </div>
           )
         ))}
 
-        {/* Streaming response (in progress) — strip the schedule marker from live display */}
-        {isProcessing && response && (
+        {/* Streaming response (in progress) */}
+        {ai.status === 'streaming' && ai.streamingText && (
           <div className="bg-secondary/40 rounded-2xl px-4 py-3">
             <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>
             <div className="text-sm text-foreground leading-relaxed space-y-2">
-              {formatResponse(response
-        .replace(/\[SCHEDULE_PLAN:{.*?}\]/gs, '')
-        .replace(/\[LOG_FOOD:{.*?}\]/gs, '')
-        .replace(/\[RECOMMEND_WORKOUT:{.*?}\]/gs, '')
-        .replace(/\[RECOMMEND_RECIPE:{.*?}\]/gs, '')
-        .trim())}
+              {formatResponse(ai.streamingText)}
             </div>
           </div>
         )}
 
-        {/* Processing indicator (before first token arrives) */}
-        {isProcessing && !response && (
+        {/* Processing indicator (before first token) */}
+        {ai.status === 'streaming' && !ai.streamingText && (
           <div className="flex items-center gap-2 px-4 py-3 bg-secondary/40 rounded-2xl">
             <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
             <span className="text-sm text-muted-foreground">Thinking…</span>
@@ -861,7 +587,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
           </div>
         )}
 
-        {/* Visualizer — only while speaking/listening */}
+        {/* Visualizer */}
         {(isListening || tts.isSpeaking) && (
           <div className="flex items-center justify-center gap-0.5 h-6">
             {visualizerData.map((value, i) => (
@@ -874,7 +600,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
           </div>
         )}
 
-        {/* Body scan CTA — shown when Jarvis recommends a scan during onboarding */}
+        {/* Body scan CTA */}
         {pendingBodyScan && (
           <div className="bg-accent/10 border border-accent/30 rounded-2xl px-4 py-3 space-y-3">
             <p className="text-sm font-semibold text-foreground"><HEmoji name="camera" size={16} style={{verticalAlign:'middle', marginRight:4}}/>Body Scan</p>
@@ -905,7 +631,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
           </div>
         )}
 
-        {/* Schedule confirmation card — shown when Jarvis proposes a plan */}
+        {/* Schedule confirmation card */}
         {pendingSchedule && (
           <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
             <p className="text-sm font-semibold text-foreground">Your plan is ready 🗓️</p>
@@ -936,7 +662,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
           </div>
         )}
 
-        {/* Post-workout share card — PB style (amber) or normal style (primary) */}
+        {/* Post-workout share card */}
         {sharePromptDetail && (
           <div className={
             sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0
@@ -944,7 +670,9 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
               : "bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3"
           }>
             <p className="text-sm font-semibold text-foreground">
-              {sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0 ? <><HEmoji name="leaderboard" size={16} style={{verticalAlign:'middle', marginRight:4}}/>New personal best!</> : <><HEmoji name="announcement" size={16} style={{verticalAlign:'middle', marginRight:4}}/>Share your win</>}
+              {sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0
+                ? <><HEmoji name="leaderboard" size={16} style={{verticalAlign:'middle', marginRight:4}}/>New personal best!</>
+                : <><HEmoji name="announcement" size={16} style={{verticalAlign:'middle', marginRight:4}}/>Share your win</>}
             </p>
             <p className="text-xs text-muted-foreground">
               {sharePromptDetail.durationMin} min · {sharePromptDetail.calories} cal · {sharePromptDetail.workoutTitle}
@@ -1087,17 +815,15 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
         <div ref={responseEndRef} />
       </div>
 
-      {/* Bottom controls — mic button above safe area, status label above it */}
+      {/* Bottom controls */}
       <div
         className="shrink-0 flex flex-col items-center gap-3 pt-3 pb-4 border-t border-border/40"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 24px) + 1rem)" }}
       >
-        {/* Status label */}
         <p className="text-xs text-muted-foreground">
-          {isProcessing ? 'Thinking…' : isListening ? 'Listening…' : tts.isSpeaking ? 'Tap to interrupt' : 'Tap to speak'}
+          {ai.status === 'streaming' ? 'Thinking…' : isListening ? 'Listening…' : tts.isSpeaking ? 'Tap to interrupt' : 'Tap to speak'}
         </p>
 
-        {/* Controls row: Goals | Mic | (spacer) */}
         <div className="flex items-center justify-center gap-6">
           {/* Goals button */}
           <div className="flex flex-col items-center gap-1">
@@ -1106,7 +832,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
               variant="outline"
               className="w-12 h-12 rounded-full border-border/60 bg-background/40 backdrop-blur-sm"
               onClick={triggerGoalsFlow}
-              disabled={isProcessing || isListening}
+              disabled={ai.status === 'streaming' || isListening}
             >
               <Target className="w-5 h-5 text-primary" />
             </Button>
@@ -1133,7 +859,7 @@ export function JarvisMode({ onClose, conversationId, healthProfile, sharePrompt
                 startListening();
               }
             }}
-            disabled={isProcessing}
+            disabled={ai.status === 'streaming'}
           >
             {isListening
               ? <MicOff className="w-6 h-6" />
