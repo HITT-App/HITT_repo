@@ -111,7 +111,7 @@ serve(async (req) => {
           }
         ]
       }],
-      max_tokens: 1500,
+      max_tokens: 5000,
       response_format: { type: "json_object" },
     });
 

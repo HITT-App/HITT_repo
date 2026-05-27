@@ -197,6 +197,7 @@ Based on this data, provide 3-4 personalized activity recommendations. Consider:
           },
       ],
       tool_choice: { type: "function", function: { name: "generate_recommendations" } },
+      max_tokens: 4000,
     });
 
     if (!aiResponse.ok) {

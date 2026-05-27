@@ -152,6 +152,7 @@ Based on this data, provide 3-4 actionable sleep improvement recommendations. Co
           },
       ],
       tool_choice: { type: "function", function: { name: "generate_sleep_recommendations" } },
+      max_tokens: 3000,
     });
 
     if (!aiResponse.ok) {

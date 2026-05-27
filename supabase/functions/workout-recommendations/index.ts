@@ -141,7 +141,7 @@ serve(async (req) => {
               content: `User preferences: Goal: ${preferences.workout_goal}, Fitness level: ${preferences.fitness_level}, Days per week: ${preferences.days_per_week}. Top recommended workout: ${recommendations[0]?.title}. Generate an encouraging message.`
             }
           ],
-          max_tokens: 100,
+          max_tokens: 1000,
         });
 
         if (aiResponse.ok) {

@@ -156,7 +156,7 @@ RULES:
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      max_tokens: 500,
+      max_tokens: 2000,
     });
 
     if (!aiResponse.ok) {

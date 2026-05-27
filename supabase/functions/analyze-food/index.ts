@@ -116,6 +116,7 @@ serve(async (req) => {
           ],
         },
       ],
+      max_tokens: 3000,
     });
 
     if (!response.ok) {
