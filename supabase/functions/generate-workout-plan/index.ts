@@ -103,6 +103,14 @@ serve(async (req) => {
       workouts,
     });
 
+    // Pre-log before AI call so AbortError / network failures are always traceable.
+    await admin.from("ai_generation_log").insert({
+      user_id: user.id,
+      generation_type: "workout_plan",
+      model: "gemini-2.5-flash",
+      prompt: { system: systemPrompt, user: userPrompt },
+    });
+
     const aiResponse = await aiChatCompletion({
       model: "gemini-2.5-flash",
       messages: [
@@ -111,6 +119,7 @@ serve(async (req) => {
       ],
       response_format: { type: "json_object" },
       max_tokens: 6000,
+      thinking: { budget_tokens: 512 },
     });
 
     const aiResponseText = await aiResponse.text();

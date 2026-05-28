@@ -39,7 +39,7 @@ export async function aiChatCompletion(
 ): Promise<Response> {
   const { url, apiKey } = getConfig();
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 55000);
   try {
     return await fetch(`${url}/chat/completions`, {
       method: "POST",
