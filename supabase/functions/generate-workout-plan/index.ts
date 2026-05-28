@@ -119,7 +119,7 @@ serve(async (req) => {
       ],
       response_format: { type: "json_object" },
       max_tokens: 6000,
-      thinking: { budget_tokens: 512 },
+      thinkingConfig: { thinkingBudget: 512 },
     });
 
     const aiResponseText = await aiResponse.text();

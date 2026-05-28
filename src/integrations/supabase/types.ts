@@ -6,6 +6,18 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+export type ExerciseSnapshot = {
+  title: string
+  description: string | null
+  duration_seconds: number | null
+  sets: number | null
+  reps: number | null
+  order_index: number
+  body_area: string | null
+  thumbnail_url: string | null
+  video_url: string | null
+}
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -2172,39 +2184,57 @@ export type Database = {
           completed_at: string | null
           created_at: string
           duration_minutes: number | null
+          estimated_calories: number | null
+          estimated_duration_minutes: number | null
+          exercises_snapshot: ExerciseSnapshot[] | null
           id: string
           rating: number | null
           scheduled_date: string
           scheduled_time: string | null
           status: string | null
           user_id: string
-          workout_id: string
+          workout_description: string | null
+          workout_id: string | null
+          workout_source: string
+          workout_title: string | null
         }
         Insert: {
           calories_burned?: number | null
           completed_at?: string | null
           created_at?: string
           duration_minutes?: number | null
+          estimated_calories?: number | null
+          estimated_duration_minutes?: number | null
+          exercises_snapshot?: ExerciseSnapshot[] | null
           id?: string
           rating?: number | null
           scheduled_date: string
           scheduled_time?: string | null
           status?: string | null
           user_id: string
-          workout_id: string
+          workout_description?: string | null
+          workout_id?: string | null
+          workout_source?: string
+          workout_title?: string | null
         }
         Update: {
           calories_burned?: number | null
           completed_at?: string | null
           created_at?: string
           duration_minutes?: number | null
+          estimated_calories?: number | null
+          estimated_duration_minutes?: number | null
+          exercises_snapshot?: ExerciseSnapshot[] | null
           id?: string
           rating?: number | null
           scheduled_date?: string
           scheduled_time?: string | null
           status?: string | null
           user_id?: string
-          workout_id?: string
+          workout_description?: string | null
+          workout_id?: string | null
+          workout_source?: string
+          workout_title?: string | null
         }
         Relationships: [
           {
@@ -2739,6 +2769,9 @@ export type Database = {
         Row: {
           completed_at: string | null
           day_index: number
+          estimated_calories: number | null
+          estimated_duration_minutes: number | null
+          exercises_snapshot: ExerciseSnapshot[] | null
           id: string
           notes: string | null
           plan_id: string
@@ -2746,11 +2779,17 @@ export type Database = {
           sequence_in_day: number
           status: string
           user_id: string
-          workout_id: string
+          workout_description: string | null
+          workout_id: string | null
+          workout_source: string
+          workout_title: string | null
         }
         Insert: {
           completed_at?: string | null
           day_index: number
+          estimated_calories?: number | null
+          estimated_duration_minutes?: number | null
+          exercises_snapshot?: ExerciseSnapshot[] | null
           id?: string
           notes?: string | null
           plan_id: string
@@ -2758,11 +2797,17 @@ export type Database = {
           sequence_in_day?: number
           status?: string
           user_id: string
-          workout_id: string
+          workout_description?: string | null
+          workout_id?: string | null
+          workout_source?: string
+          workout_title?: string | null
         }
         Update: {
           completed_at?: string | null
           day_index?: number
+          estimated_calories?: number | null
+          estimated_duration_minutes?: number | null
+          exercises_snapshot?: ExerciseSnapshot[] | null
           id?: string
           notes?: string | null
           plan_id?: string
@@ -2770,7 +2815,10 @@ export type Database = {
           sequence_in_day?: number
           status?: string
           user_id?: string
-          workout_id?: string
+          workout_description?: string | null
+          workout_id?: string | null
+          workout_source?: string
+          workout_title?: string | null
         }
         Relationships: [
           {
@@ -2984,13 +3032,19 @@ export type Database = {
           current_exercise_index: number | null
           duration_seconds: number | null
           elapsed_seconds: number | null
+          estimated_calories: number | null
+          estimated_duration_minutes: number | null
           exercise_id: string | null
+          exercises_snapshot: ExerciseSnapshot[] | null
           id: string
           notes: string | null
           paused_at: string | null
           status: string | null
           user_id: string
-          workout_id: string
+          workout_description: string | null
+          workout_id: string | null
+          workout_source: string
+          workout_title: string | null
         }
         Insert: {
           calories_burned?: number | null
@@ -2999,13 +3053,19 @@ export type Database = {
           current_exercise_index?: number | null
           duration_seconds?: number | null
           elapsed_seconds?: number | null
+          estimated_calories?: number | null
+          estimated_duration_minutes?: number | null
           exercise_id?: string | null
+          exercises_snapshot?: ExerciseSnapshot[] | null
           id?: string
           notes?: string | null
           paused_at?: string | null
           status?: string | null
           user_id: string
-          workout_id: string
+          workout_description?: string | null
+          workout_id?: string | null
+          workout_source?: string
+          workout_title?: string | null
         }
         Update: {
           calories_burned?: number | null
@@ -3014,13 +3074,19 @@ export type Database = {
           current_exercise_index?: number | null
           duration_seconds?: number | null
           elapsed_seconds?: number | null
+          estimated_calories?: number | null
+          estimated_duration_minutes?: number | null
           exercise_id?: string | null
+          exercises_snapshot?: ExerciseSnapshot[] | null
           id?: string
           notes?: string | null
           paused_at?: string | null
           status?: string | null
           user_id?: string
-          workout_id?: string
+          workout_description?: string | null
+          workout_id?: string | null
+          workout_source?: string
+          workout_title?: string | null
         }
         Relationships: [
           {

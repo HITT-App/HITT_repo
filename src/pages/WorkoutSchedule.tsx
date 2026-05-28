@@ -20,7 +20,10 @@ import { format, startOfWeek, addDays, isSameDay, parseISO, addWeeks } from 'dat
 
 type ScheduledWorkout = {
   id: string;
-  workout_id: string;
+  workout_id: string | null;
+  workout_source: string;
+  workout_title: string | null;
+  estimated_duration_minutes: number | null;
   scheduled_date: string;
   scheduled_time: string | null;
   status: string;
@@ -30,7 +33,7 @@ type ScheduledWorkout = {
     duration_minutes: number;
     category: string;
     thumbnail_url: string | null;
-  };
+  } | null;
 };
 
 export default function WorkoutSchedule() {
@@ -94,6 +97,9 @@ export default function WorkoutSchedule() {
         .select(`
           id,
           workout_id,
+          workout_source,
+          workout_title,
+          estimated_duration_minutes,
           scheduled_date,
           scheduled_time,
           status,
@@ -300,10 +306,10 @@ export default function WorkoutSchedule() {
                     </div>
                     <div className="flex-1 py-2 px-2 relative">
                       {workoutsAtHour.map(workout => (
-                        <Card 
+                        <Card
                           key={workout.id}
                           className="mb-2 bg-primary/10 border-primary/20 cursor-pointer"
-                          onClick={() => navigate(`/workout/${workout.workout_id}`)}
+                          onClick={() => workout.workout_id && navigate(`/workout/${workout.workout_id}`)}
                         >
                           <CardContent className="p-3 flex items-center gap-3">
                             <div className="w-12 h-12 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
@@ -316,9 +322,10 @@ export default function WorkoutSchedule() {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{workout.workout?.title}</p>
+                              <p className="font-medium truncate">{workout.workout_title ?? workout.workout?.title}</p>
                               <p className="text-xs text-muted-foreground">
-                                {workout.workout?.duration_minutes}min · {workout.workout?.category}
+                                {(workout.estimated_duration_minutes ?? workout.workout?.duration_minutes) ?? '—'}min
+                                {workout.workout?.category ? ` · ${workout.workout.category}` : ''}
                               </p>
                             </div>
                             <Button
@@ -373,10 +380,10 @@ export default function WorkoutSchedule() {
                     {dayWorkouts.length > 0 ? (
                       <div className="space-y-2">
                         {dayWorkouts.map(workout => (
-                          <Card 
+                          <Card
                             key={workout.id}
                             className="cursor-pointer"
-                            onClick={() => navigate(`/workout/${workout.workout_id}`)}
+                            onClick={() => workout.workout_id && navigate(`/workout/${workout.workout_id}`)}
                           >
                             <CardContent className="p-3 flex items-center gap-3">
                               <div className="w-14 h-14 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
@@ -389,12 +396,11 @@ export default function WorkoutSchedule() {
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{workout.workout?.title}</p>
+                                <p className="font-medium truncate">{workout.workout_title ?? workout.workout?.title}</p>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                   <Clock className="w-3 h-3" />
-                                  <span>{workout.workout?.duration_minutes}min</span>
-                                  <span>·</span>
-                                  <span className="capitalize">{workout.workout?.category}</span>
+                                  <span>{(workout.estimated_duration_minutes ?? workout.workout?.duration_minutes) ?? '—'}min</span>
+                                  {workout.workout?.category && <><span>·</span><span className="capitalize">{workout.workout.category}</span></>}
                                 </div>
                               </div>
                               <Button variant="ghost" size="icon" onClick={(e) => openActions(workout, e)}>
@@ -420,7 +426,7 @@ export default function WorkoutSchedule() {
         <SheetContent side="bottom" className="rounded-t-3xl pb-10">
           {activeWorkout && (
             <div className="pt-2">
-              <p className="font-semibold text-base mb-1 px-1">{activeWorkout.workout?.title}</p>
+              <p className="font-semibold text-base mb-1 px-1">{activeWorkout.workout_title ?? activeWorkout.workout?.title}</p>
               <p className="text-xs text-muted-foreground px-1 mb-5">
                 {format(parseISO(activeWorkout.scheduled_date), 'EEEE d MMMM')}
               </p>
@@ -429,7 +435,7 @@ export default function WorkoutSchedule() {
                 <div className="space-y-2">
                   <button
                     className="w-full flex items-center gap-4 p-4 rounded-2xl bg-secondary/50 active:bg-secondary transition-colors text-left"
-                    onClick={() => navigate(`/workout-player/${activeWorkout.workout_id}`)}
+                    onClick={() => activeWorkout.workout_id && navigate(`/workout-player/${activeWorkout.workout_id}`)}
                   >
                     <Play className="w-5 h-5 text-primary" />
                     <span className="font-medium">Start now</span>

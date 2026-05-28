@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-05-28] — Build 108: 5E — AI-generated workout schema foundation
+
+- **Exercise snapshot on completion** — completing a catalogue workout now saves the full exercise list (title, description, duration, sets, reps, order, media) to `workout_progress`, so history is durable even if the catalogue changes
+- **AI workout support in schedule and progress tables** — `scheduled_workouts`, `workout_progress`, and `user_workout_plan_items` now hold inline workout content (title, description, exercises, estimated duration and calories) alongside the optional catalogue FK
+- **Schedule view null-safe** — workout cards read from inline fields first, falling back to the catalogue join; navigate calls guarded against null `workout_id` so AI workouts won't crash the view
+- **TypeScript types updated** — new `ExerciseSnapshot` type; six new columns added to all three table types; `workout_id` correctly typed as nullable
+
 ## [2026-05-27] — Build 107: 5C — JarvisMode migrated to useAI hook
 
 - **JarvisMode refactor** (5C) — JarvisMode is now a pure UI surface over the `useAI` hook; ~500 lines of local streaming, conversation history, message persistence, and regex marker parsing deleted

@@ -307,10 +307,29 @@ export default function WorkoutPlayer() {
 
     if (user && workout) {
       try {
+        const exercisesSnapshot = exercises.map(ex => ({
+          title: ex.title,
+          description: ex.description ?? null,
+          duration_seconds: ex.duration_seconds ?? null,
+          sets: (ex as any).sets ?? null,
+          reps: (ex as any).reps ?? null,
+          order_index: ex.order_index,
+          body_area: ex.body_area ?? null,
+          thumbnail_url: ex.thumbnail_url ?? null,
+          video_url: ex.video_url ?? null,
+        }))
+
         await supabase.from('workout_progress').insert({
           user_id: user.id,
           workout_id: workout.id,
+          workout_source: 'catalogue',
+          workout_title: workout.title,
+          workout_description: workout.description ?? null,
+          exercises_snapshot: exercisesSnapshot,
+          estimated_duration_minutes: workout.duration_minutes ?? null,
+          estimated_calories: workout.calories_burned ?? null,
           duration_seconds: totalElapsed,
+          calories_burned: workoutCalories,
         });
         
         // Update streak and check for new badges
