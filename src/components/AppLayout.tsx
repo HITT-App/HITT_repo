@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { QuickAddSheet } from "@/components/QuickAddSheet";
 import { HIITMenu } from "@/components/HIITMenu";
@@ -30,6 +30,7 @@ const HIDDEN_NAV_ROUTES = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [hiitMenuOpen, setHiitMenuOpen] = useState(false);
 
@@ -49,7 +50,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {!shouldHideNav && (
         <>
           <BottomNav onHIITClick={() => setHiitMenuOpen(true)} onQuickAddClick={() => setQuickAddOpen(true)} />
-          <FloatingActionButton onClick={() => setQuickAddOpen(true)} />
+          <FloatingActionButton onClick={() => navigate('/ai')} />
           <QuickAddSheet open={quickAddOpen} onOpenChange={setQuickAddOpen} />
           <HIITMenu open={hiitMenuOpen} onOpenChange={setHiitMenuOpen} />
         </>

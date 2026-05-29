@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-05-29] — Fix: Home FAB navigates to AI surface
+
+- **Home FAB** — the floating "+" button on the home screen now opens the AI Coach surface (/ai) instead of the quick-add log sheet; Quick Add in the bottom nav remains the entry point for logging
+
 ## [2026-05-29] — A2: Three-tab AI surface + bottom nav restructure
 
 - **New AI surface** — /ai route hosts a three-tab shell: Chat (Jarvis), Coach (4 upcoming tools, "Coming next"), and Settings (placeholder)
