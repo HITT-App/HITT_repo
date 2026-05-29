@@ -47,7 +47,7 @@ export const schedulePBShareReminder = async (
         title: `🏆 New PB — ${pbLabels}!`,
         body: `Your ${workoutTitle} was a personal best. Share it with the community?`,
         schedule: { at: fireAt, allowWhileIdle: true },
-        extra: { deepLink: `/workout-library`, workoutId },
+        extra: { deepLink: `/home`, workoutId },
       }]
     });
     return notificationId;

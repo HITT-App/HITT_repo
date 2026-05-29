@@ -1,5 +1,4 @@
 import { Play, ChevronRight, Clock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 interface Workout {
   id: string;
@@ -20,8 +19,6 @@ const defaultWorkouts: Workout[] = [
 ];
 
 export function WorkoutListCard({ workouts = defaultWorkouts }: WorkoutListCardProps) {
-  const navigate = useNavigate();
-
   return (
     <div className="bg-card rounded-2xl border border-border p-4 animate-fade-up">
       <div className="flex items-center gap-2 mb-4">
@@ -56,12 +53,6 @@ export function WorkoutListCard({ workouts = defaultWorkouts }: WorkoutListCardP
         ))}
       </div>
 
-      <button 
-        onClick={() => navigate('/workouts')}
-        className="w-full text-center text-sm text-primary font-medium mt-4 hover:underline"
-      >
-        View All
-      </button>
     </div>
   );
 }

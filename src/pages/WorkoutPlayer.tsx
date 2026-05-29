@@ -355,7 +355,7 @@ export default function WorkoutPlayer() {
         // Push notification — sent after a delay so it arrives when app is backgrounded
         setTimeout(() => {
           notifyUser(user.id, "workout", "Workout complete! 💪",
-            `You finished ${workout.title}. Great work!`, "/workout-library");
+            `You finished ${workout.title}. Great work!`, "/home");
         }, 3000);
 
         // Open Jarvis with post-workout share nudge — delayed so user sees completion summary first
@@ -379,7 +379,7 @@ export default function WorkoutPlayer() {
   const handleFinish = () => {
     clearNewBadges();
     toast({ title: 'Great workout!', description: 'Your progress has been saved.' });
-    navigate('/workout-library');
+    navigate('/home');
   };
 
   const workoutDurationMin = Math.floor(totalElapsed / 60);

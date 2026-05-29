@@ -9,6 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTTS } from '@/contexts/TTSContext';
 import { useAI } from '@/hooks/useAI';
+import { AIWorkoutCard } from './AIWorkoutCard';
+import { AIWorkoutPlanCard } from './AIWorkoutPlanCard';
+import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload } from '@/hooks/useAI.types';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
 // Strips excessive emoji usage (keeps max 1 per paragraph).
@@ -60,6 +63,7 @@ function bold(str: string): string {
 interface JarvisModeProps {
   onClose: () => void;
   healthProfile?: string;
+  prefillMessage?: string | null;
   sharePromptDetail?: {
     workoutId: string;
     workoutTitle: string;
@@ -91,7 +95,7 @@ type RecommendedRecipe = {
   fat_g: number;
 };
 
-export function JarvisMode({ onClose, healthProfile, sharePromptDetail }: JarvisModeProps) {
+export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillMessage }: JarvisModeProps) {
   const navigate = useNavigate();
   const tts = useTTS();
   const ai = useAI();
@@ -106,6 +110,8 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail }: Jarvis
   const [recommendedWorkout, setRecommendedWorkout] = useState<RecommendedWorkout | null>(null);
   const [recommendedRecipe, setRecommendedRecipe] = useState<RecommendedRecipe | null>(null);
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
+  const [aiWorkout, setAIWorkout] = useState<(RecommendWorkoutPayload & { source: 'ai_generated' }) | null>(null);
+  const [aiWorkoutPlan, setAIWorkoutPlan] = useState<RecommendWorkoutPlanPayload | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -448,6 +454,11 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail }: Jarvis
 
       await new Promise(r => setTimeout(r, 400));
 
+      if (prefillMessage) {
+        ai.send(prefillMessage);
+        return;
+      }
+
       const hasHistory = ai.messages.length > 0;
       const isOnboarding = !hasHistory && !hasSchedule;
 
@@ -489,7 +500,14 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail }: Jarvis
           toast.success(`Logged: ${action.payload.name}`);
           break;
         case 'recommend_workout':
-          fetchRecommendedWorkout(action.payload.id).then(w => { if (w) setRecommendedWorkout(w); });
+          if (action.payload.source === 'catalogue') {
+            fetchRecommendedWorkout(action.payload.id).then(w => { if (w) setRecommendedWorkout(w); });
+          } else {
+            setAIWorkout(action.payload as RecommendWorkoutPayload & { source: 'ai_generated' });
+          }
+          break;
+        case 'recommend_workout_plan':
+          setAIWorkoutPlan(action.payload);
           break;
         case 'recommend_recipe':
           fetchRecommendedRecipe(action.payload.id).then(r => { if (r) setRecommendedRecipe(r); });
@@ -707,6 +725,37 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail }: Jarvis
               </Button>
             </div>
           </div>
+        )}
+
+        {/* AI-generated workout card */}
+        {aiWorkout && (
+          <AIWorkoutCard
+            title={aiWorkout.title}
+            description={aiWorkout.description}
+            exercises_snapshot={aiWorkout.exercises_snapshot}
+            estimated_duration_minutes={aiWorkout.estimated_duration_minutes}
+            estimated_calories={aiWorkout.estimated_calories}
+            onDismiss={() => setAIWorkout(null)}
+            onScheduled={(date, title) => {
+              setAIWorkout(null);
+              ai.appendAssistantMessage(`✓ "${title}" added to your schedule for ${new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}.`);
+            }}
+          />
+        )}
+
+        {/* AI workout plan card */}
+        {aiWorkoutPlan && (
+          <AIWorkoutPlanCard
+            title={aiWorkoutPlan.title}
+            goal={aiWorkoutPlan.goal}
+            start_date={aiWorkoutPlan.start_date}
+            workouts={aiWorkoutPlan.workouts}
+            onDismiss={() => setAIWorkoutPlan(null)}
+            onScheduled={(count) => {
+              setAIWorkoutPlan(null);
+              ai.appendAssistantMessage(`✓ ${count} workouts added to your schedule. Your ${aiWorkoutPlan.title} starts ${new Date(aiWorkoutPlan.start_date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}.`);
+            }}
+          />
         )}
 
         {/* Workout recommendation card */}

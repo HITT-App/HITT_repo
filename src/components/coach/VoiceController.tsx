@@ -21,18 +21,27 @@ export function VoiceController() {
   const { profile: healthProfile } = useHealthProfile();
   const [showJarvisMode, setShowJarvisMode] = useState(false);
   const [sharePromptDetail, setSharePromptDetail] = useState<SharePromptDetail | null>(null);
+  const [prefillMessage, setPrefillMessage] = useState<string | null>(null);
 
-  // Opens Jarvis — shared by wake word, HIIT button tap, and the hitt:open-jarvis event
+  // Opens Jarvis — used by wake word and HIIT button tap (no prefill)
   const handleWakeWordDetected = useCallback(() => {
+    setPrefillMessage(null);
     setShowJarvisMode(true);
     if ('vibrate' in navigator) navigator.vibrate(100);
   }, []);
 
-  // The centre HIIT button dispatches this event — same path as the wake word
+  // hitt:open-jarvis — optionally carries a prefillMessage in detail
+  const handleOpenJarvis = useCallback((e: Event) => {
+    const detail = (e as CustomEvent).detail as { prefillMessage?: string } | null;
+    setPrefillMessage(detail?.prefillMessage ?? null);
+    setShowJarvisMode(true);
+    if ('vibrate' in navigator) navigator.vibrate(100);
+  }, []);
+
   useEffect(() => {
-    window.addEventListener('hitt:open-jarvis', handleWakeWordDetected);
-    return () => window.removeEventListener('hitt:open-jarvis', handleWakeWordDetected);
-  }, [handleWakeWordDetected]);
+    window.addEventListener('hitt:open-jarvis', handleOpenJarvis as EventListener);
+    return () => window.removeEventListener('hitt:open-jarvis', handleOpenJarvis as EventListener);
+  }, [handleOpenJarvis]);
 
   // Post-workout share nudge — fired by WorkoutPlayer after completion
   const handleSharePrompt = useCallback((e: Event) => {
@@ -51,6 +60,7 @@ export function VoiceController() {
   const handleJarvisModeClose = useCallback(() => {
     setShowJarvisMode(false);
     setSharePromptDetail(null);
+    setPrefillMessage(null);
   }, []);
 
   // Don't render anything if user is not logged in
@@ -76,6 +86,7 @@ export function VoiceController() {
           healthProfile={healthProfile}
           onClose={handleJarvisModeClose}
           sharePromptDetail={sharePromptDetail}
+          prefillMessage={prefillMessage}
         />
       )}
     </>

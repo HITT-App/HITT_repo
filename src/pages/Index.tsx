@@ -24,7 +24,6 @@ import {
   ScheduleCard,
   FitnessMetricsCard,
   ActivitySection,
-  WorkoutsSection,
   NutritionSection,
   SleepSection,
   AICoachSection,
@@ -109,7 +108,6 @@ const Index = () => {
     stats_grid: null,
     fitness_metrics: "health_metrics_enabled",
     activity: "activity_enabled",
-    workouts: "workouts_enabled",
     nutrition: "nutrition_enabled",
     sleep: "sleep_enabled",
     ai_coach: "ai_coach_enabled",
@@ -124,7 +122,6 @@ const Index = () => {
     stats_grid: <StatsGrid />,
     fitness_metrics: <FitnessMetricsCard hasData={true} />,
     activity: <ActivitySection />,
-    workouts: <WorkoutsSection />,
     nutrition: <NutritionSection hasData={true} />,
     sleep: <SleepSection hasData={true} />,
     ai_coach: <AICoachSection />,
@@ -146,7 +143,6 @@ const Index = () => {
           {flags.nutrition_enabled && <NutritionSection hasData={true} />}
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
           {flags.activity_enabled && <ActivitySection />}
-          {flags.workouts_enabled && <WorkoutsSection />}
           {flags.sleep_enabled && <SleepSection hasData={true} />}
           {flags.ai_coach_enabled && <AICoachSection />}
           {flags.resources_enabled && <ResourcesSection />}

@@ -18,7 +18,6 @@ export const BottomNav = ({ onHIITClick }: BottomNavProps) => {
 
   const navItems = [
     { id: "home",      label: "Home",      path: "/" },
-    { id: "workouts",  label: "Workouts",  path: "/workout-library" },
     { id: "center",    label: "Jarvis",    path: null as string | null },
     { id: "nutrition", label: "Nutrition", path: "/nutrition-dashboard" },
     ...(flags.community_enabled ? [{ id: "community", label: "Social", path: "/community/onboarding" }] : []),
@@ -81,8 +80,6 @@ export const BottomNav = ({ onHIITClick }: BottomNavProps) => {
                 >
                   {item.id === 'home'
                     ? <Home size={22} strokeWidth={isActive ? 2 : 1.5} className="transition-all duration-200"/>
-                    : item.id === 'workouts'
-                    ? <HEmoji name="workouts" size={22}/>
                     : item.id === 'nutrition'
                     ? <HEmoji name="nutrition" size={22}/>
                     : item.id === 'community'
