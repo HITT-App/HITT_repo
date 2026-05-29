@@ -5,10 +5,65 @@ import type {
   AIMessage,
   Action,
   LogFoodPayload,
+  RecommendWorkoutPayload,
+  RecommendWorkoutPlanPayload,
   StreamChunk,
   StreamStatus,
   UseAIReturn,
 } from './useAI.types';
+
+// ─── Action payload validators ────────────────────────────────────────────────
+// Server-side already validates, but we guard again here so a malformed payload
+// never makes it into pendingActions and then crashes a card render.
+
+function validateRecommendWorkout(payload: unknown): payload is RecommendWorkoutPayload {
+  if (!payload || typeof payload !== 'object') return false
+  const p = payload as Record<string, unknown>
+  if (p.source === 'catalogue') {
+    return typeof p.id === 'string' && typeof p.name === 'string'
+  }
+  if (p.source === 'ai_generated') {
+    return (
+      typeof p.title === 'string' &&
+      typeof p.description === 'string' &&
+      Array.isArray(p.exercises_snapshot) &&
+      (p.exercises_snapshot as unknown[]).length > 0 &&
+      typeof p.estimated_duration_minutes === 'number'
+    )
+  }
+  return false
+}
+
+function validateRecommendWorkoutPlan(payload: unknown): payload is RecommendWorkoutPlanPayload {
+  if (!payload || typeof payload !== 'object') return false
+  const p = payload as Record<string, unknown>
+  return (
+    typeof p.title === 'string' &&
+    Array.isArray(p.workouts) &&
+    (p.workouts as unknown[]).length > 0 &&
+    (p.workouts as Record<string, unknown>[]).every(
+      w => typeof w.title === 'string' && typeof w.scheduled_date === 'string' && Array.isArray(w.exercises)
+    )
+  )
+}
+
+function validateAction(action: unknown): action is Action {
+  if (!action || typeof action !== 'object') return false
+  const a = action as Record<string, unknown>
+  switch (a.type) {
+    case 'schedule_plan':
+    case 'log_food':
+    case 'recommend_recipe':
+    case 'body_scan_prompt':
+      return true // server-validated; trust
+    case 'recommend_workout':
+      return validateRecommendWorkout(a.payload)
+    case 'recommend_workout_plan':
+      return validateRecommendWorkoutPlan(a.payload)
+    default:
+      return false
+  }
+}
 
 export type { AIMessage, Action, StreamStatus, UseAIReturn };
 export * from './useAI.types';
@@ -176,6 +231,10 @@ export function useAI(): UseAIReturn {
               text += chunk.delta;
               setStreamingText(text);
             } else if (chunk.type === 'action') {
+              if (!validateAction(chunk.action)) {
+                console.warn('[useAI] Dropping invalid action:', chunk.action);
+                continue;
+              }
               actions.push(chunk.action);
               setPendingActions(prev => [...prev, chunk.action]);
               if (chunk.action.type === 'log_food') {

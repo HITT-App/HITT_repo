@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-05-29] — A1 + 5F: AI workout planner + catalogue hidden
+
+- **AI workout generation** — Jarvis can now generate a single custom workout or a full multi-day training plan on demand; workouts are built by Gemini 2.5 Flash using your health metrics, goals, and recent activity as context
+- **"Do it now" mode** — AI-generated workouts can be started immediately from Jarvis; GymTimer supports ad-hoc AI workouts alongside scheduled ones
+- **Add to schedule** — AI workouts and plans can be scheduled directly from Jarvis cards with an optimistic "Added to [date]" confirmation
+- **Workout catalogue hidden** — catalogue entry points removed from bottom nav, home dashboard, FAB, and schedule page for v1.0; routes preserved for future use
+- **Schedule page → Jarvis** — "Add" buttons on the schedule now open Jarvis with a pre-filled message so you can ask for a workout recommendation naturally
+
 ## [2026-05-28] — Build 108: 5E — AI-generated workout schema foundation
 
 - **Exercise snapshot on completion** — completing a catalogue workout now saves the full exercise list (title, description, duration, sets, reps, order, media) to `workout_progress`, so history is durable even if the catalogue changes

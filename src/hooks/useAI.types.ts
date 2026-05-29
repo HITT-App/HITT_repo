@@ -15,6 +15,7 @@ export type Action =
   | { type: 'schedule_plan'; payload: SchedulePlanPayload }
   | { type: 'log_food'; payload: LogFoodPayload }
   | { type: 'recommend_workout'; payload: RecommendWorkoutPayload }
+  | { type: 'recommend_workout_plan'; payload: RecommendWorkoutPlanPayload }
   | { type: 'recommend_recipe'; payload: RecommendRecipePayload }
   | { type: 'body_scan_prompt' };
 
@@ -35,10 +36,44 @@ export type LogFoodPayload = {
   fiber: number;
 };
 
-export type RecommendWorkoutPayload = {
-  id: string;
-  name: string;
-};
+export type RecommendWorkoutPayload =
+  | { source: 'catalogue'; id: string; name: string }
+  | {
+      source: 'ai_generated'
+      title: string
+      description: string
+      exercises_snapshot: ExerciseSnapshot[]
+      estimated_duration_minutes: number
+      estimated_calories: number
+    }
+
+export type ExerciseSnapshot = {
+  title: string
+  description: string | null
+  duration_seconds: number | null
+  sets: number | null
+  reps: number | null
+  order_index: number
+  body_area: string | null
+  thumbnail_url: null
+  video_url: null
+}
+
+export type WorkoutInPlan = {
+  scheduled_date: string
+  title: string
+  description: string
+  estimated_duration_minutes: number
+  estimated_calories: number
+  exercises: ExerciseSnapshot[]
+}
+
+export type RecommendWorkoutPlanPayload = {
+  title: string
+  goal: string
+  start_date: string
+  workouts: WorkoutInPlan[]
+}
 
 export type RecommendRecipePayload = {
   id: string;

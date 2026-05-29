@@ -1,16 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Plus, Minus, Settings } from "lucide-react";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { ArrowLeft, Pause, Play, Plus, Minus, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { useActivity } from "@/hooks/useActivity";
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { CompletionSummary } from "@/components/workout/CompletionSummary";
 import { getSportConfig } from "@/lib/sports";
+import type { ExerciseSnapshot } from "@/hooks/useAI.types";
 
 const DEFAULT_WEIGHT_KG = 70;
 
@@ -23,14 +26,49 @@ function formatTime(s: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+// ─── AI workout state passed via location.state.aiWorkout ─────────────────────
+type AIWorkoutPayload = {
+  title: string;
+  description?: string;
+  exercises_snapshot: ExerciseSnapshot[];
+  estimated_duration_minutes: number;
+  estimated_calories: number;
+};
+
+// ─── Scheduled workout row shape (after 5E migration) ────────────────────────
+type ScheduledWorkoutRow = {
+  id: string;
+  workout_source: string;
+  workout_title: string | null;
+  workout_description: string | null;
+  exercises_snapshot: ExerciseSnapshot[] | null;
+  estimated_duration_minutes: number | null;
+  estimated_calories: number | null;
+};
+
 const GymTimer = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const { user } = useAuth();
+
+  // ─── Mode detection ──────────────────────────────────────────────────────
+  const scheduledId = searchParams.get("scheduled_id");
+  const adhocWorkout = (location.state as { aiWorkout?: AIWorkoutPayload } | null)?.aiWorkout;
+  const isAIMode = !!(scheduledId || adhocWorkout);
+
+  // Mode C: existing freeform sport (unchanged)
   const activityType = searchParams.get("sport") || "Workout";
   const sport = getSportConfig(activityType);
+
   const { logActivity } = useActivity();
   const { recordWorkout } = useStreaksAndBadges();
 
+  // ─── Scheduled row (Mode A only) ─────────────────────────────────────────
+  const [scheduledRow, setScheduledRow] = useState<ScheduledWorkoutRow | null>(null);
+  const [showExercises, setShowExercises] = useState(false);
+
+  // ─── Timer state ─────────────────────────────────────────────────────────
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isHolding, setIsHolding] = useState(false);
@@ -45,9 +83,37 @@ const GymTimer = () => {
   const pausedAtRef = useRef(0);
   const holdTimerRef = useRef<ReturnType<typeof setInterval>>();
 
-  const calories = Math.round((sport.met * DEFAULT_WEIGHT_KG * elapsed) / 3600);
+  // Resolved AI workout content (from either Mode A scheduled row or Mode B adhoc)
+  const aiContent: AIWorkoutPayload | null = scheduledRow
+    ? {
+        title: scheduledRow.workout_title ?? "Workout",
+        description: scheduledRow.workout_description ?? undefined,
+        exercises_snapshot: scheduledRow.exercises_snapshot ?? [],
+        estimated_duration_minutes: scheduledRow.estimated_duration_minutes ?? 30,
+        estimated_calories: scheduledRow.estimated_calories ?? 0,
+      }
+    : adhocWorkout ?? null;
+
+  const calories = isAIMode
+    ? Math.round(((aiContent?.estimated_calories ?? 200) / ((aiContent?.estimated_duration_minutes ?? 30) * 60)) * elapsed)
+    : Math.round((sport.met * DEFAULT_WEIGHT_KG * elapsed) / 3600);
+
   const IconComp = sport.icon;
   const counterLabel = sport.counterLabel;
+
+  // ─── Load scheduled row (Mode A) ─────────────────────────────────────────
+  useEffect(() => {
+    if (!scheduledId) return;
+    supabase
+      .from("scheduled_workouts")
+      .select("id, workout_source, workout_title, workout_description, exercises_snapshot, estimated_duration_minutes, estimated_calories")
+      .eq("id", scheduledId)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) { toast.error("Couldn't load workout"); return; }
+        setScheduledRow(data as ScheduledWorkoutRow);
+      });
+  }, [scheduledId]);
 
   // Timer
   useEffect(() => {
@@ -84,7 +150,7 @@ const GymTimer = () => {
         finishActivity();
       }
     }, 30);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleHoldEnd = useCallback(() => {
     setIsHolding(false);
@@ -98,39 +164,74 @@ const GymTimer = () => {
     confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
 
     try {
-      await logActivity.mutateAsync({
-        activity_type: activityType,
-        duration_seconds: elapsed,
-        calories_burned: calories,
-        notes: counter > 0 ? `${counter} ${counterLabel.toLowerCase()} completed` : undefined,
-      });
+      if (isAIMode && aiContent && user) {
+        // ─── Mode A or B: write workout_progress ───────────────────────────
+        await supabase.from("workout_progress").insert({
+          user_id: user.id,
+          workout_id: null,
+          workout_source: "ai_generated",
+          workout_title: aiContent.title,
+          workout_description: aiContent.description ?? null,
+          exercises_snapshot: aiContent.exercises_snapshot,
+          estimated_duration_minutes: aiContent.estimated_duration_minutes,
+          estimated_calories: aiContent.estimated_calories,
+          duration_seconds: elapsed,
+          calories_burned: calories,
+        });
+
+        // ─── Mode A only: mark scheduled row complete ──────────────────────
+        if (scheduledId) {
+          await supabase
+            .from("scheduled_workouts")
+            .update({
+              status: "completed",
+              completed_at: new Date().toISOString(),
+              duration_minutes: Math.round(elapsed / 60),
+              calories_burned: calories,
+            })
+            .eq("id", scheduledId);
+        }
+      } else {
+        // ─── Mode C: existing activity_logs path (unchanged) ──────────────
+        await logActivity.mutateAsync({
+          activity_type: activityType,
+          duration_seconds: elapsed,
+          calories_burned: calories,
+          notes: counter > 0 ? `${counter} ${counterLabel.toLowerCase()} completed` : undefined,
+        });
+      }
+
       const pts = await recordWorkout();
       setPointsEarned(pts);
     } catch {
       toast.error("Failed to save activity");
     }
-  }, [activityType, elapsed, calories, counter, counterLabel, logActivity, settings.autoVibrate, recordWorkout]);
+  }, [isAIMode, aiContent, user, elapsed, calories, scheduledId, activityType, counter, counterLabel, logActivity, settings.autoVibrate, recordWorkout]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Heart rate zone visual (decorative)
   const hrZone = elapsed < 300 ? "Warm Up" : elapsed < 1200 ? "Fat Burn" : elapsed < 2400 ? "Cardio" : "Peak";
   const hrColor = elapsed < 300 ? "text-blue-400" : elapsed < 1200 ? "text-green-400" : elapsed < 2400 ? "text-orange-400" : "text-red-400";
 
+  const displayTitle = isAIMode ? (aiContent?.title ?? "Workout") : activityType;
+
   if (showCompleted) {
     const completionStats = [
       { label: "Duration", value: formatTime(elapsed) },
       { label: "Calories", value: calories, unit: "kcal" },
-      ...(counter > 0 ? [{ label: counterLabel, value: counter }] : []),
+      ...(counter > 0 && !isAIMode ? [{ label: counterLabel, value: counter }] : []),
     ];
     return (
       <CompletionSummary
-        activityTitle={activityType}
-        activityType={activityType.toLowerCase()}
+        activityTitle={displayTitle}
+        activityType={isAIMode ? "workout" : activityType.toLowerCase()}
         stats={completionStats}
         pointsEarned={pointsEarned}
         onDone={() => navigate("/activity-dashboard")}
       />
     );
   }
+
+  const exercises = aiContent?.exercises_snapshot ?? [];
 
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
@@ -142,13 +243,48 @@ const GymTimer = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex items-center gap-2">
-          <IconComp className={cn("w-4 h-4", sport.color)} />
-          <span className="text-xs font-semibold uppercase tracking-wider text-foreground">{activityType}</span>
+          {!isAIMode && <IconComp className={cn("w-4 h-4", sport.color)} />}
+          <span className="text-xs font-semibold uppercase tracking-wider text-foreground truncate max-w-[180px]">
+            {displayTitle}
+          </span>
         </div>
         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowSettings(true)}>
           <Settings className="w-5 h-5" />
         </Button>
       </header>
+
+      {/* AI exercise list (Modes A and B only) */}
+      {isAIMode && exercises.length > 0 && (
+        <div className="px-4 z-10">
+          <button
+            className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5"
+            onClick={() => setShowExercises(v => !v)}
+          >
+            <span>{exercises.length} exercises · tap to {showExercises ? "hide" : "view"}</span>
+            {showExercises ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+          {showExercises && (
+            <div className="bg-card/80 border border-border/30 rounded-2xl px-3 py-2 space-y-1.5 mb-2">
+              {exercises.map(ex => (
+                <div key={ex.order_index} className="flex items-start gap-2">
+                  <span className="text-[10px] text-muted-foreground mt-0.5 w-4 shrink-0">{ex.order_index}.</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">{ex.title}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {ex.sets && ex.reps
+                        ? `${ex.sets}×${ex.reps}`
+                        : ex.duration_seconds
+                        ? `${ex.duration_seconds}s`
+                        : ""}
+                      {ex.body_area ? ` · ${ex.body_area.replace("_", " ")}` : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Heart rate zone indicator */}
       <div className="flex justify-center z-10">
@@ -175,14 +311,18 @@ const GymTimer = () => {
 
         {/* Stats row */}
         <div className="flex items-center gap-8">
-          <div className="flex flex-col items-center">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <IconComp className={cn("w-3.5 h-3.5", sport.color)} />
-              <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{counterLabel}</span>
-            </div>
-            <span className="text-2xl font-bold text-foreground font-mono">{counter}</span>
-          </div>
-          <div className="h-10 w-px bg-border/30" />
+          {!isAIMode && (
+            <>
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <IconComp className={cn("w-3.5 h-3.5", sport.color)} />
+                  <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{counterLabel}</span>
+                </div>
+                <span className="text-2xl font-bold text-foreground font-mono">{counter}</span>
+              </div>
+              <div className="h-10 w-px bg-border/30" />
+            </>
+          )}
           <div className="flex flex-col items-center">
             <div className="flex items-center gap-1.5 mb-0.5">
               <span className="text-[10px] uppercase text-muted-foreground tracking-wider">Calories</span>
@@ -191,26 +331,28 @@ const GymTimer = () => {
           </div>
         </div>
 
-        {/* Counter buttons */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="icon"
-            className="w-12 h-12 rounded-full"
-            onClick={() => { setCounter((s) => Math.max(0, s - 1)); if (settings.autoVibrate) navigator.vibrate?.(20); }}
-          >
-            <Minus className="w-5 h-5" />
-          </Button>
-          <span className="text-sm font-medium text-muted-foreground w-20 text-center">Log {counterLabel.slice(0, -1)}</span>
-          <Button
-            variant="outline"
-            size="icon"
-            className="w-12 h-12 rounded-full border-primary/50 text-primary"
-            onClick={() => { setCounter((s) => s + 1); if (settings.autoVibrate) navigator.vibrate?.(50); toast.success(`${counterLabel.slice(0, -1)} ${counter + 1} logged!`); }}
-          >
-            <Plus className="w-5 h-5" />
-          </Button>
-        </div>
+        {/* Counter buttons (Mode C only) */}
+        {!isAIMode && (
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              className="w-12 h-12 rounded-full"
+              onClick={() => { setCounter((s) => Math.max(0, s - 1)); if (settings.autoVibrate) navigator.vibrate?.(20); }}
+            >
+              <Minus className="w-5 h-5" />
+            </Button>
+            <span className="text-sm font-medium text-muted-foreground w-20 text-center">Log {counterLabel.slice(0, -1)}</span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="w-12 h-12 rounded-full border-primary/50 text-primary"
+              onClick={() => { setCounter((s) => s + 1); if (settings.autoVibrate) navigator.vibrate?.(50); toast.success(`${counterLabel.slice(0, -1)} ${counter + 1} logged!`); }}
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Bottom controls */}

@@ -349,14 +349,36 @@ You are in structured response mode. Do NOT include any [MARKER:{...}] text in y
 Instead, use the provided tools:
 • Use the schedule_plan tool instead of [SCHEDULE_PLAN:{...}]
 • Use the log_food tool instead of [LOG_FOOD:{...}]
-• Use the recommend_workout tool instead of [RECOMMEND_WORKOUT:{...}]
+• Use the recommend_workout tool (source-aware — see below) instead of [RECOMMEND_WORKOUT:{...}]
 • Use the recommend_recipe tool instead of [RECOMMEND_RECIPE:{...}]
 • Use the body_scan_prompt tool instead of [BODY_SCAN_PROMPT]
+• Use the recommend_workout_plan tool when the user asks for a multi-day plan
 
 You CAN call a tool alongside your text response in the same turn.
 All other coaching guidelines above remain unchanged.
 
 CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool.
+
+═══ WORKOUT RECOMMENDATIONS — SOURCE RULES ═══
+
+recommend_workout has two modes — choose based on what the user wants:
+
+source="catalogue": Use ONLY when you want to pick an existing workout from the WORKOUTS CATALOGUE above. The id must be an exact UUID from that list. Never invent a UUID.
+
+source="ai_generated": Use when the user wants a custom workout (e.g. "build me a workout", "create something for my knee", "generate a 20-min session"). Provide an intent string describing what to generate. The system will generate the full workout content — you do NOT provide exercises.
+
+WHEN TO USE ai_generated:
+- User asks to "build", "create", "generate", or "make" a workout
+- User describes specific constraints the catalogue may not cover (injury, time, equipment)
+- User says "something tailored to me" or similar
+- No catalogue workout is a close fit
+
+WHEN TO USE recommend_workout_plan:
+- User asks for a training plan, weekly schedule, or multi-day program
+- Always AI-generated (no catalogue equivalent)
+- startDate MUST be an absolute YYYY-MM-DD date. If the user says "starting tomorrow", compute the actual date. If unspecified, default to tomorrow. Never pass relative strings like "tomorrow" or "next Monday".
+
+IMPORTANT: Keep your text response short when calling these tools — one sentence framing why this fits the user. The card shows all the details.
 ═══ END STRUCTURED MODE ═══
 `;
 
@@ -402,14 +424,32 @@ const STRUCTURED_TOOLS = [
     type: "function",
     function: {
       name: "recommend_workout",
-      description: "Recommend a specific workout from the catalogue. Use when suggesting a workout the user could start now or schedule.",
+      description: "Recommend a workout. Use source='catalogue' to pick an existing workout by UUID from the WORKOUTS CATALOGUE. Use source='ai_generated' to generate a custom workout — provide an intent string and the system generates the content.",
       parameters: {
         type: "object",
         properties: {
-          id: { type: "string", description: "Exact UUID from the WORKOUTS CATALOGUE" },
-          name: { type: "string" },
+          source: { type: "string", enum: ["catalogue", "ai_generated"], description: "catalogue: pick from catalogue. ai_generated: generate custom workout." },
+          id: { type: "string", description: "Catalogue UUID — required if source=catalogue" },
+          name: { type: "string", description: "Catalogue workout name — required if source=catalogue" },
+          intent: { type: "string", description: "Natural-language description of what to generate — required if source=ai_generated. E.g. 'a 30-min lower body session'" },
         },
-        required: ["id", "name"],
+        required: ["source"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "recommend_workout_plan",
+      description: "Generate and recommend a multi-day AI workout plan. Use when the user asks for a training plan, weekly program, or multi-day schedule. Always AI-generated.",
+      parameters: {
+        type: "object",
+        properties: {
+          intent: { type: "string", description: "Natural-language description of the plan goal, e.g. '4-day muscle building week'" },
+          daysPerWeek: { type: "integer", minimum: 1, maximum: 7, description: "Number of training days per week" },
+          startDate: { type: "string", description: "YYYY-MM-DD start date. MUST be an absolute date — compute from context. Default to tomorrow if not specified." },
+        },
+        required: ["intent", "daysPerWeek", "startDate"],
       },
     },
   },
@@ -438,11 +478,14 @@ const STRUCTURED_TOOLS = [
   },
 ];
 
-function mapToolCallToAction(
+async function mapToolCallToAction(
   tc: { name: string; arguments: string },
   validWorkoutIds: Set<string>,
   validRecipeIds: Set<string>,
-): object | null {
+  authHeader: string,
+  supabaseUrl: string,
+  clientContext: { customMemory?: string; customResponseStyle?: string },
+): Promise<object | null> {
   try {
     const args = tc.arguments ? JSON.parse(tc.arguments) : {};
 
@@ -479,11 +522,108 @@ function mapToolCallToAction(
         };
       }
       case "recommend_workout": {
-        if (typeof args.id !== "string" || !validWorkoutIds.has(args.id)) {
-          console.warn("[ai-coach] Hallucinated workout UUID:", args.id);
+        const source = args.source;
+
+        if (source === "catalogue") {
+          if (typeof args.id !== "string" || !validWorkoutIds.has(args.id)) {
+            console.warn("[ai-coach] Hallucinated workout UUID:", args.id);
+            return null;
+          }
+          return { type: "recommend_workout", payload: { source: "catalogue", id: args.id, name: args.name } };
+        }
+
+        if (source === "ai_generated") {
+          if (!args.intent || typeof args.intent !== "string") {
+            console.warn("[ai-coach] recommend_workout ai_generated missing intent");
+            return null;
+          }
+          try {
+            const genRes = await fetch(`${supabaseUrl}/functions/v1/generate-ai-workout`, {
+              method: "POST",
+              headers: { Authorization: authHeader, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                intent: args.intent,
+                customMemory: clientContext.customMemory ?? "",
+                customResponseStyle: clientContext.customResponseStyle ?? "",
+              }),
+            });
+            if (!genRes.ok) {
+              console.warn("[ai-coach] generate-ai-workout failed:", genRes.status);
+              return null;
+            }
+            const { workout } = await genRes.json();
+            if (!workout?.title || !Array.isArray(workout?.exercises)) {
+              console.warn("[ai-coach] generate-ai-workout returned invalid shape");
+              return null;
+            }
+            return {
+              type: "recommend_workout",
+              payload: {
+                source: "ai_generated",
+                title: workout.title,
+                description: workout.description ?? "",
+                exercises_snapshot: workout.exercises,
+                estimated_duration_minutes: workout.estimated_duration_minutes,
+                estimated_calories: workout.estimated_calories,
+              },
+            };
+          } catch (err) {
+            console.error("[ai-coach] generate-ai-workout fetch error:", err);
+            return null;
+          }
+        }
+
+        // No valid source
+        console.warn("[ai-coach] recommend_workout missing or unknown source:", source);
+        return null;
+      }
+      case "recommend_workout_plan": {
+        if (!args.intent || typeof args.intent !== "string") {
+          console.warn("[ai-coach] recommend_workout_plan missing intent");
           return null;
         }
-        return { type: "recommend_workout", payload: { id: args.id, name: args.name } };
+        if (typeof args.daysPerWeek !== "number" || args.daysPerWeek < 1 || args.daysPerWeek > 7) {
+          console.warn("[ai-coach] recommend_workout_plan invalid daysPerWeek:", args.daysPerWeek);
+          return null;
+        }
+        if (!args.startDate || !/^\d{4}-\d{2}-\d{2}$/.test(args.startDate)) {
+          console.warn("[ai-coach] recommend_workout_plan invalid startDate:", args.startDate);
+          return null;
+        }
+        try {
+          const planRes = await fetch(`${supabaseUrl}/functions/v1/generate-ai-workout-plan`, {
+            method: "POST",
+            headers: { Authorization: authHeader, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              intent: args.intent,
+              daysPerWeek: args.daysPerWeek,
+              startDate: args.startDate,
+              customMemory: clientContext.customMemory ?? "",
+              customResponseStyle: clientContext.customResponseStyle ?? "",
+            }),
+          });
+          if (!planRes.ok) {
+            console.warn("[ai-coach] generate-ai-workout-plan failed:", planRes.status);
+            return null;
+          }
+          const { plan } = await planRes.json();
+          if (!plan?.title || !Array.isArray(plan?.workouts) || plan.workouts.length === 0) {
+            console.warn("[ai-coach] generate-ai-workout-plan returned invalid shape");
+            return null;
+          }
+          return {
+            type: "recommend_workout_plan",
+            payload: {
+              title: plan.title,
+              goal: plan.goal ?? "",
+              start_date: plan.start_date,
+              workouts: plan.workouts,
+            },
+          };
+        } catch (err) {
+          console.error("[ai-coach] generate-ai-workout-plan fetch error:", err);
+          return null;
+        }
       }
       case "recommend_recipe": {
         if (typeof args.id !== "string" || !validRecipeIds.has(args.id)) {
@@ -508,6 +648,9 @@ function buildStructuredStream(
   gatewayBody: ReadableStream<Uint8Array>,
   validWorkoutIds: Set<string>,
   validRecipeIds: Set<string>,
+  authHeader: string,
+  supabaseUrl: string,
+  clientContext: { customMemory?: string; customResponseStyle?: string },
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -572,9 +715,10 @@ function buildStructuredStream(
           }
         }
 
-        // Emit validated tool calls as action chunks after text has fully streamed
+        // Emit validated tool calls as action chunks after text has fully streamed.
+        // mapToolCallToAction is async because ai_generated sources make internal fetches.
         for (const [, tc] of toolCalls) {
-          const action = mapToolCallToAction(tc, validWorkoutIds, validRecipeIds);
+          const action = await mapToolCallToAction(tc, validWorkoutIds, validRecipeIds, authHeader, supabaseUrl, clientContext);
           if (action) {
             emit({ type: "action", action });
           }
@@ -935,7 +1079,10 @@ serve(async (req) => {
       const structuredStream = buildStructuredStream(
         gatewayResponse.body!,
         validWorkoutIds,
-        validRecipeIds
+        validRecipeIds,
+        authHeader,
+        supabaseUrl,
+        { customMemory, customResponseStyle: customResponse },
       );
       return new Response(structuredStream, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
