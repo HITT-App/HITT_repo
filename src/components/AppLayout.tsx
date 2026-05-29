@@ -24,6 +24,7 @@ const HIDDEN_NAV_ROUTES = [
   "/routes",
   "/route/",
   "/ai-coach",
+  "/ai",
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -47,7 +48,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
       {!shouldHideNav && (
         <>
-          <BottomNav onHIITClick={() => setHiitMenuOpen(true)} />
+          <BottomNav onHIITClick={() => setHiitMenuOpen(true)} onQuickAddClick={() => setQuickAddOpen(true)} />
           <FloatingActionButton onClick={() => setQuickAddOpen(true)} />
           <QuickAddSheet open={quickAddOpen} onOpenChange={setQuickAddOpen} />
           <HIITMenu open={hiitMenuOpen} onOpenChange={setHiitMenuOpen} />

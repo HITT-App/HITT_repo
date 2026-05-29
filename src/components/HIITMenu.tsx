@@ -55,7 +55,7 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
       title: "Main",
       items: [
         { icon: Home, label: "Home", path: "/" },
-        ...(flags.ai_coach_enabled ? [{ icon: Bot, label: "HIIT AI Coach", path: "/ai-coach" }] : []),
+        ...(flags.ai_coach_enabled ? [{ icon: Bot, label: "HIIT AI Coach", path: "/ai" }] : []),
         { icon: Search, label: "Search", path: "/search" },
         { icon: Bell, label: "Notifications", path: "/notifications" },
       ],

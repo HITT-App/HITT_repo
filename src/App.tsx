@@ -29,6 +29,7 @@ import NotFound from "./pages/NotFound";
 const DebugAI = lazy(() => import("./pages/DebugAI"));
 const Assessment = lazy(() => import("./pages/Assessment"));
 const AICoach = lazy(() => import("./pages/AICoach"));
+const AISurface = lazy(() => import("./components/AISurface").then(m => ({ default: m.AISurface })));
 const Profile = lazy(() => import("./pages/Profile"));
 const ProfileSetup = lazy(() => import("./pages/ProfileSetup"));
 const AssessmentResults = lazy(() => import("./pages/AssessmentResults"));
@@ -173,6 +174,7 @@ const App = () => (
             <Route path="/assessment" element={<ProtectedRoute><Assessment /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/ai-coach" element={<ProtectedRoute><AICoach /></ProtectedRoute>} />
+            <Route path="/ai" element={<ProtectedRoute><AISurface /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/health-metrics" element={<ProtectedRoute><HealthMetrics /></ProtectedRoute>} />
             <Route path="/activity" element={<ProtectedRoute><ActivityTracker /></ProtectedRoute>} />

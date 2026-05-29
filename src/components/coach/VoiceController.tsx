@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { WakeWordListener } from './WakeWordListener';
 import { JarvisMode } from './JarvisMode';
@@ -17,38 +17,36 @@ type SharePromptDetail = {
 export function VoiceController() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { enabled: wakeWordEnabled } = useWakeWordPreference();
   const { profile: healthProfile } = useHealthProfile();
-  const [showJarvisMode, setShowJarvisMode] = useState(false);
+  const [showShareNudge, setShowShareNudge] = useState(false);
   const [sharePromptDetail, setSharePromptDetail] = useState<SharePromptDetail | null>(null);
-  const [prefillMessage, setPrefillMessage] = useState<string | null>(null);
 
-  // Opens Jarvis — used by wake word and HIIT button tap (no prefill)
   const handleWakeWordDetected = useCallback(() => {
-    setPrefillMessage(null);
-    setShowJarvisMode(true);
+    navigate('/ai');
     if ('vibrate' in navigator) navigator.vibrate(100);
-  }, []);
+  }, [navigate]);
 
-  // hitt:open-jarvis — optionally carries a prefillMessage in detail
+  // hitt:open-jarvis — navigate to /ai, passing optional prefillMessage via location state
   const handleOpenJarvis = useCallback((e: Event) => {
     const detail = (e as CustomEvent).detail as { prefillMessage?: string } | null;
-    setPrefillMessage(detail?.prefillMessage ?? null);
-    setShowJarvisMode(true);
+    const prefillMessage = detail?.prefillMessage ?? undefined;
+    navigate('/ai', { state: { tab: 'chat', prefillMessage } });
     if ('vibrate' in navigator) navigator.vibrate(100);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     window.addEventListener('hitt:open-jarvis', handleOpenJarvis as EventListener);
     return () => window.removeEventListener('hitt:open-jarvis', handleOpenJarvis as EventListener);
   }, [handleOpenJarvis]);
 
-  // Post-workout share nudge — fired by WorkoutPlayer after completion
+  // Post-workout share nudge — rendered as a full-screen overlay (not /ai route)
   const handleSharePrompt = useCallback((e: Event) => {
     const detail = (e as CustomEvent).detail as SharePromptDetail;
     if (!detail) return;
     setSharePromptDetail(detail);
-    setShowJarvisMode(true);
+    setShowShareNudge(true);
   }, []);
 
   useEffect(() => {
@@ -56,40 +54,31 @@ export function VoiceController() {
     return () => window.removeEventListener('hitt:open-jarvis-share', handleSharePrompt as EventListener);
   }, [handleSharePrompt]);
 
-  // Handle Jarvis Mode close
-  const handleJarvisModeClose = useCallback(() => {
-    setShowJarvisMode(false);
+  const handleShareNudgeClose = useCallback(() => {
+    setShowShareNudge(false);
     setSharePromptDetail(null);
-    setPrefillMessage(null);
   }, []);
 
-  // Don't render anything if user is not logged in
   if (!user) return null;
 
-  // Don't listen during Jarvis Mode or on auth/welcome pages
-  const shouldListenForWakeWord = wakeWordEnabled && 
-    !showJarvisMode && 
-    !location.pathname.startsWith('/auth') && 
+  const shouldListenForWakeWord = wakeWordEnabled &&
+    !showShareNudge &&
+    !location.pathname.startsWith('/auth') &&
     !location.pathname.startsWith('/welcome');
 
   return (
     <>
-      {/* Background wake word listener */}
-      <WakeWordListener 
+      <WakeWordListener
         enabled={shouldListenForWakeWord}
         onWakeWordDetected={handleWakeWordDetected}
       />
-
-      {/* Full-screen Jarvis Mode */}
-      {showJarvisMode && (
+      {showShareNudge && (
         <JarvisMode
           healthProfile={healthProfile}
-          onClose={handleJarvisModeClose}
+          onClose={handleShareNudgeClose}
           sharePromptDetail={sharePromptDetail}
-          prefillMessage={prefillMessage}
         />
       )}
     </>
   );
 }
-

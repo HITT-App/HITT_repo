@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-05-29] — A2: Three-tab AI surface + bottom nav restructure
+
+- **New AI surface** — /ai route hosts a three-tab shell: Chat (Jarvis), Coach (4 upcoming tools, "Coming next"), and Settings (placeholder)
+- **Bottom nav restructured** — now shows Home | Quick Add | HIIT centre button | Schedule | Social; Nutrition tab removed
+- **Quick Add from nav** — tapping Quick Add in the nav bar opens the log sheet directly (meal, water, weight)
+- **All Jarvis entry points unified** — "Ok HIIT" pill, wake word, HIITMenu AI Coach, and hitt:open-jarvis all navigate to /ai; post-workout share nudge remains a full-screen overlay
+
 ## [2026-05-29] — A1 + 5F: AI workout planner + catalogue hidden
 
 - **AI workout generation** — Jarvis can now generate a single custom workout or a full multi-day training plan on demand; workouts are built by Gemini 2.5 Flash using your health metrics, goals, and recent activity as context
