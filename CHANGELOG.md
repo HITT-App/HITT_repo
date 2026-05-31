@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-05-31] — A5: 24-hour rolling chat history
+
+- **Chat history capped at 24 hours** — messages older than a day no longer appear in the chat view; Jarvis starts fresh each day
+- **AI prompt context trimmed** — the AI only sees the last 24 hours of conversation, preventing stale or incorrect context from old sessions contaminating responses
+- **Automatic cleanup on write** — sending a new message silently deletes any messages older than 24 hours from the database in the background
+- **Performance index** — new database index on `(conversation_id, created_at)` makes time-windowed history queries efficient
+
 ## [2026-05-29] — Fix: Home FAB navigates to AI surface
 
 - **Home FAB** — the floating "+" button on the home screen now opens the AI Coach surface (/ai) instead of the quick-add log sheet; Quick Add in the bottom nav remains the entry point for logging

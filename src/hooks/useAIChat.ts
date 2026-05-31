@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { CHAT_RETENTION_HOURS } from '@/lib/constants';
 
 export type { ActivityLevel } from './useHealthProfile';
 
@@ -78,10 +79,12 @@ export function useAIChat(conversationId: string | null, healthProfile?: string)
   const [error, setError] = useState<string | null>(null);
 
   const loadMessages = useCallback(async (convId: string) => {
+    const cutoff = new Date(Date.now() - CHAT_RETENTION_HOURS * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', convId)
+      .gte('created_at', cutoff)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -127,6 +130,17 @@ export function useAIChat(conversationId: string | null, healthProfile?: string)
       role: 'user',
       content: userMessage.content,
     });
+
+    // Fire-and-forget cleanup of stale messages for this conversation.
+    const cutoff = new Date(Date.now() - CHAT_RETENTION_HOURS * 60 * 60 * 1000).toISOString();
+    supabase
+      .from('messages')
+      .delete()
+      .eq('conversation_id', convId)
+      .lt('created_at', cutoff)
+      .then(({ error }) => {
+        if (error) console.error('Chat history cleanup failed:', error);
+      });
 
     let assistantContent = '';
     let imageBase64: string | undefined;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { CHAT_RETENTION_HOURS } from '@/lib/constants';
 import type {
   AIMessage,
   Action,
@@ -116,10 +117,12 @@ export function useAI(): UseAIReturn {
 
         conversationIdRef.current = conversationId;
 
+        const cutoff = new Date(Date.now() - CHAT_RETENTION_HOURS * 60 * 60 * 1000).toISOString();
         const { data: msgs, error: msgsError } = await supabase
           .from('messages')
           .select('id, role, content, created_at, synthetic')
           .eq('conversation_id', conversationId)
+          .gte('created_at', cutoff)
           .order('created_at', { ascending: true })
           .limit(40);
 
@@ -306,9 +309,20 @@ export function useAI(): UseAIReturn {
         );
       }
 
+      // Fire-and-forget cleanup of stale messages for this conversation.
+      const cutoff = new Date(Date.now() - CHAT_RETENTION_HOURS * 60 * 60 * 1000).toISOString();
+      supabase
+        .from('messages')
+        .delete()
+        .eq('conversation_id', conversationId)
+        .lt('created_at', cutoff)
+        .then(({ error }) => {
+          if (error) console.error('Chat history cleanup failed:', error);
+        });
+
       const recentMessages = [
         ...messagesRef.current
-          .filter(m => !m.synthetic)
+          .filter(m => !m.synthetic && (m.created_at ?? '') >= cutoff)
           .map(({ role, content }) => ({ role, content })),
         { role: 'user' as const, content: text },
       ].slice(-40);
@@ -372,9 +386,10 @@ export function useAI(): UseAIReturn {
       setStreamingText('');
       setError(null);
 
+      const greetCutoff = new Date(Date.now() - CHAT_RETENTION_HOURS * 60 * 60 * 1000).toISOString();
       const recentMessages = [
         ...messagesRef.current
-          .filter(m => !m.synthetic)
+          .filter(m => !m.synthetic && (m.created_at ?? '') >= greetCutoff)
           .map(({ role, content }) => ({ role, content })),
         { role: 'user' as const, content: prompt },
       ].slice(-40);
@@ -393,6 +408,16 @@ export function useAI(): UseAIReturn {
           .insert({ conversation_id: conversationId, role: 'assistant', content: assembledText })
           .select('id, created_at')
           .single();
+
+        // Fire-and-forget cleanup
+        supabase
+          .from('messages')
+          .delete()
+          .eq('conversation_id', conversationId)
+          .lt('created_at', greetCutoff)
+          .then(({ error }) => {
+            if (error) console.error('Chat history cleanup failed:', error);
+          });
 
         const assistantMsg: AIMessage = {
           id: persistedAssistant?.id ?? crypto.randomUUID(),
@@ -443,6 +468,17 @@ export function useAI(): UseAIReturn {
       .insert({ conversation_id: conversationId, role: 'assistant', content: text, synthetic: true })
       .select('id, created_at')
       .single();
+
+    // Fire-and-forget cleanup
+    const appendCutoff = new Date(Date.now() - CHAT_RETENTION_HOURS * 60 * 60 * 1000).toISOString();
+    supabase
+      .from('messages')
+      .delete()
+      .eq('conversation_id', conversationId)
+      .lt('created_at', appendCutoff)
+      .then(({ error }) => {
+        if (error) console.error('Chat history cleanup failed:', error);
+      });
 
     const msg: AIMessage = {
       id: persisted?.id ?? crypto.randomUUID(),
