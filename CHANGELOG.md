@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-01] — A21: Edit and delete logged foods in diary
+
+- **Edit a logged entry** — tap the three-dot icon on any diary entry to open an action sheet, then choose Edit; a bottom drawer opens pre-filled with the entry's name, category, calories, servings, protein, carbs, fat, and fiber — save writes back to the database instantly
+- **Delete a logged entry** — choose Delete from the same action sheet; a confirmation dialog names the entry before soft-deleting it; the diary and macro totals refresh automatically
+- **Per-entry actions** — the three-dot icon now lives on each individual food item (not the category header) so you can act on exactly the entry you want
+
 ## [2026-06-01] — A18: Nutrition preferences + Home meals carousel
 
 - **Recommended meals carousel on Home** — horizontal scroll of meals appears below the Schedule card; tapping any card opens a detail sheet with macros, ingredients, and a one-tap log button

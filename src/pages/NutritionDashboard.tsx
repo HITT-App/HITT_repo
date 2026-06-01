@@ -7,6 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import {
   ChevronUp,
@@ -25,6 +30,8 @@ import {
   UtensilsCrossed,
   CookingPot,
   Apple,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfDay, endOfDay, getDay, isToday } from "date-fns";
@@ -37,9 +44,18 @@ type MealLog = {
   protein_grams: number;
   fat_grams: number;
   carbs_grams: number;
+  fiber_grams?: number;
+  servings?: number;
   logged_at: string;
   meals?: { name: string; image_url?: string };
 };
+
+const DIARY_CATEGORIES = [
+  { id: 'breakfast', label: 'Breakfast' },
+  { id: 'lunch', label: 'Lunch' },
+  { id: 'dinner', label: 'Dinner' },
+  { id: 'snack', label: 'Snack' },
+];
 
 type NutritionGoals = {
   daily_calories: number;
@@ -82,6 +98,21 @@ export default function NutritionDashboard() {
     daily_fat_grams: 111,
     daily_carbs_grams: 415,
   });
+  const [actionLog, setActionLog] = useState<MealLog | null>(null);
+  const [editLog, setEditLog] = useState<MealLog | null>(null);
+  const [deleteLog, setDeleteLog] = useState<MealLog | null>(null);
+  const [editForm, setEditForm] = useState({
+    custom_name: '',
+    category: 'breakfast',
+    calories: 0,
+    protein_grams: 0,
+    fat_grams: 0,
+    carbs_grams: 0,
+    fiber_grams: 0,
+    servings: 1,
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
 
   const currentDayIndex = getDay(selectedDate);
 
@@ -139,6 +170,49 @@ export default function NutritionDashboard() {
       .order("logged_at", { ascending: false });
 
     if (logsData) setMealLogs(logsData as MealLog[]);
+  };
+
+  const openEdit = (log: MealLog) => {
+    setEditForm({
+      custom_name: log.custom_name ?? log.meals?.name ?? '',
+      category: log.category.toLowerCase(),
+      calories: log.calories,
+      protein_grams: log.protein_grams,
+      fat_grams: log.fat_grams,
+      carbs_grams: log.carbs_grams,
+      fiber_grams: log.fiber_grams ?? 0,
+      servings: log.servings ?? 1,
+    });
+    setEditLog(log);
+    setActionLog(null);
+  };
+
+  const handleSave = async () => {
+    if (!editLog) return;
+    setEditSaving(true);
+    await supabase.from('meal_logs').update({
+      custom_name: editForm.custom_name.trim() || null,
+      category: editForm.category,
+      calories: editForm.calories,
+      protein_grams: editForm.protein_grams,
+      fat_grams: editForm.fat_grams,
+      carbs_grams: editForm.carbs_grams,
+      fiber_grams: editForm.fiber_grams,
+      servings: editForm.servings,
+    }).eq('id', editLog.id);
+    setEditSaving(false);
+    setEditLog(null);
+    fetchData();
+  };
+
+  const handleDelete = async () => {
+    if (!deleteLog) return;
+    setDeleteConfirming(true);
+    await supabase.from('meal_logs').update({ deleted_at: new Date().toISOString() }).eq('id', deleteLog.id);
+    setDeleteConfirming(false);
+    setDeleteLog(null);
+    setActionLog(null);
+    fetchData();
   };
 
   const todayTotals = mealLogs.reduce(
@@ -400,11 +474,6 @@ export default function NutritionDashboard() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          {logs.length > 0 && (
-                            <button className="text-muted-foreground">
-                              <MoreHorizontal className="w-5 h-5" />
-                            </button>
-                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -420,8 +489,16 @@ export default function NutritionDashboard() {
                         <div className="px-5 pb-3 space-y-1">
                           {logs.map((log) => (
                             <div key={log.id} className="flex items-center justify-between py-1.5 text-xs text-muted-foreground">
-                              <span>{log.custom_name || log.meals?.name || "Meal"}</span>
-                              <span>{log.calories} kcal</span>
+                              <span className="flex-1 truncate">{log.custom_name || log.meals?.name || "Meal"}</span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span>{log.calories} kcal</span>
+                                <button
+                                  className="text-muted-foreground/60 hover:text-muted-foreground active:scale-90 transition-transform touch-manipulation"
+                                  onClick={() => setActionLog(log)}
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -433,6 +510,149 @@ export default function NutritionDashboard() {
             </div>
           </div>
         </div>
+
+      {/* Action sheet — Edit or Delete */}
+      <Drawer open={!!actionLog && !editLog && !deleteLog} onOpenChange={(open) => { if (!open) setActionLog(null); }}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle className="text-base">{actionLog?.custom_name || actionLog?.meals?.name || "Meal"}</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-8 space-y-2">
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-muted/50 active:bg-muted transition-colors text-sm font-medium touch-manipulation"
+              onClick={() => actionLog && openEdit(actionLog)}
+            >
+              <Pencil className="w-4 h-4 text-muted-foreground" />
+              Edit entry
+            </button>
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-muted/50 active:bg-muted transition-colors text-sm font-medium text-destructive touch-manipulation"
+              onClick={() => { setDeleteLog(actionLog); setActionLog(null); }}
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete entry
+            </button>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Edit drawer */}
+      <Drawer open={!!editLog} onOpenChange={(open) => { if (!open) setEditLog(null); }}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Edit entry</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-5 pb-4 space-y-4 overflow-y-auto max-h-[65vh]">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Name</Label>
+              <Input
+                value={editForm.custom_name}
+                onChange={(e) => setEditForm(f => ({ ...f, custom_name: e.target.value }))}
+                placeholder="Meal name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Category</Label>
+              <Select value={editForm.category} onValueChange={(v) => setEditForm(f => ({ ...f, category: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DIARY_CATEGORIES.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Calories (kcal)</Label>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={editForm.calories}
+                  onChange={(e) => setEditForm(f => ({ ...f, calories: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Servings</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.5"
+                  value={editForm.servings}
+                  onChange={(e) => setEditForm(f => ({ ...f, servings: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Protein (g)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={editForm.protein_grams}
+                  onChange={(e) => setEditForm(f => ({ ...f, protein_grams: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Carbs (g)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={editForm.carbs_grams}
+                  onChange={(e) => setEditForm(f => ({ ...f, carbs_grams: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Fat (g)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={editForm.fat_grams}
+                  onChange={(e) => setEditForm(f => ({ ...f, fat_grams: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Fiber (g)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={editForm.fiber_grams}
+                  onChange={(e) => setEditForm(f => ({ ...f, fiber_grams: Number(e.target.value) }))}
+                />
+              </div>
+            </div>
+          </div>
+          <DrawerFooter className="px-5 pb-8 pt-2 flex-row gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => setEditLog(null)}>Cancel</Button>
+            <Button className="flex-1" disabled={editSaving} onClick={handleSave}>
+              {editSaving ? "Saving…" : "Save changes"}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Delete confirm dialog */}
+      <AlertDialog open={!!deleteLog} onOpenChange={(open) => { if (!open) setDeleteLog(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{deleteLog?.custom_name || deleteLog?.meals?.name || "This entry"}" will be removed from your diary. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDelete}
+              disabled={deleteConfirming}
+            >
+              {deleteConfirming ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
