@@ -1,0 +1,1616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HIIT — Coming Soon · The all-in-one AI fitness companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#0B0A08;
+  --bg-2:#16130E;
+  --bg-3:#1C1812;
+  --violet:#FF8A26;
+  --violet-2:#FFA24D;
+  --blue:#FF5A1F;
+  --lime:#FF8A26;
+  --lime-2:#FFB873;
+  --white:#FFFFFF;
+  --grey:#A1A1AA;
+  --grey-2:#71717A;
+  --border:rgba(255,255,255,0.08);
+  --border-2:rgba(255,255,255,0.14);
+  --glass:rgba(255,255,255,0.04);
+  --glass-2:rgba(255,255,255,0.06);
+  --grad:linear-gradient(135deg,#FF8A26 0%,#FF5A1F 100%);
+  --grad-text:linear-gradient(180deg,#FFFFFF 0%,#A1A1AA 110%);
+  --grad-accent:linear-gradient(135deg,#FFB873 0%,#FF5A1F 90%);
+  --radius:18px;
+  --radius-sm:12px;
+  --radius-lg:28px;
+  --shadow-violet:0 30px 80px -20px rgba(255,138,38,0.45);
+  --shadow-lime:0 20px 60px -20px rgba(255,138,38,0.4);
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--white);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+  line-height:1.55;
+}
+
+/* Ambient orbs */
+.orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:0.5}
+.orb.v{width:600px;height:600px;background:#FF8A26;top:-200px;left:-200px;opacity:0.35}
+.orb.b{width:520px;height:520px;background:#FF5A1F;top:30vh;right:-200px;opacity:0.28}
+.orb.l{width:420px;height:420px;background:#FF8A26;bottom:-200px;left:30%;opacity:0.10}
+
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+img{display:block;max-width:100%}
+
+.container{max-width:1280px;margin:0 auto;padding:0 32px;width:100%}
+
+/* ── NAV ───────────────────────────────────────────── */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  padding:18px 0;
+  transition:all .35s ease;
+}
+.nav.scrolled{
+  background:rgba(10,10,15,0.72);
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  border-bottom:1px solid var(--border);
+}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-0.02em}
+.logo-mark{
+  width:32px;height:32px;border-radius:9px;
+  background:var(--grad);
+  display:grid;place-items:center;
+  box-shadow:0 6px 20px -4px rgba(255,138,38,0.55);
+  position:relative;
+}
+.logo-mark svg{width:19px;height:19px;color:#fff}
+.logo-mark::after{
+  content:"";position:absolute;inset:0;border-radius:9px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.25),transparent 50%);
+  pointer-events:none;
+}
+.logo b{font-weight:900}
+.logo span{color:var(--lime);font-weight:700}
+.nav-links{display:flex;align-items:center;gap:36px}
+.nav-links a{color:var(--grey);font-size:14px;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:#fff}
+.nav-cta-wrap{display:flex;align-items:center;gap:14px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 22px;border-radius:999px;
+  font-weight:600;font-size:14px;letter-spacing:-0.01em;
+  transition:transform .2s ease, box-shadow .2s ease, background .2s ease;
+  white-space:nowrap;
+}
+.btn-primary{background:var(--violet);color:#fff;box-shadow:0 10px 30px -10px rgba(255,138,38,0.6)}
+.btn-primary:hover{background:var(--violet-2);transform:translateY(-1px);box-shadow:0 14px 36px -10px rgba(255,138,38,0.75)}
+.btn-lime{background:var(--lime);color:#0A0A0F;font-weight:700;box-shadow:0 10px 30px -10px rgba(255,138,38,0.45)}
+.btn-lime:hover{background:var(--lime-2);transform:translateY(-1px);box-shadow:0 14px 36px -10px rgba(255,138,38,0.6)}
+.btn-ghost{background:rgba(255,255,255,0.06);color:#fff;border:1px solid var(--border-2)}
+.btn-ghost:hover{background:rgba(255,255,255,0.1)}
+.btn-lg{padding:16px 28px;font-size:15px}
+.hamburger{display:none;width:42px;height:42px;border-radius:10px;border:1px solid var(--border);background:var(--glass);place-items:center}
+.hamburger span{display:block;width:18px;height:1.5px;background:#fff;border-radius:2px;position:relative}
+.hamburger span::before,.hamburger span::after{content:"";position:absolute;left:0;width:18px;height:1.5px;background:#fff;border-radius:2px}
+.hamburger span::before{top:-6px}.hamburger span::after{top:6px}
+
+/* ── HERO ──────────────────────────────────────────── */
+.hero{
+  position:relative;
+  padding:160px 0 60px;
+  overflow:hidden;
+}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:8px 14px;border-radius:999px;
+  background:rgba(255,138,38,0.08);
+  border:1px solid rgba(255,138,38,0.25);
+  color:var(--lime);
+  font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  font-family:var(--mono);
+}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(1.3)}}
+
+.hero-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:60px;align-items:center}
+h1.hero-title{
+  font-size:clamp(44px,7vw,96px);
+  line-height:0.96;
+  font-weight:900;
+  letter-spacing:-0.04em;
+  margin-top:24px;
+  text-wrap:balance;
+}
+.hero-title .gradient{
+  background:linear-gradient(135deg,#FFC78A 0%,#FF8A26 55%,#FF5A1F 110%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero-sub{
+  font-size:19px;color:var(--grey);
+  margin-top:24px;max-width:540px;line-height:1.6;
+  text-wrap:pretty;
+}
+.hero-sub b{color:#fff;font-weight:600}
+.hero-ctas{display:flex;gap:14px;margin-top:36px;flex-wrap:wrap}
+
+.social-bar{
+  margin-top:48px;
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  padding:20px 8px;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  max-width:560px;
+}
+.social-stat{padding:4px 16px}
+.social-stat .v{
+  font-family:var(--mono);
+  font-size:26px;font-weight:700;color:#fff;
+  letter-spacing:-0.02em;
+  display:flex;align-items:baseline;gap:4px;
+}
+.social-stat .v small{font-size:18px;color:var(--lime);font-weight:600}
+.social-stat .v .launch-short{white-space:nowrap;font-size:22px}
+.social-stat .l{font-size:11px;color:var(--grey-2);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;font-weight:500}
+.stars{color:var(--lime);font-size:14px;letter-spacing:2px}
+
+/* Hero phones cluster */
+.phones{
+  position:relative;
+  height:620px;
+}
+.phone{
+  position:absolute;
+  width:230px;height:480px;
+  border-radius:38px;
+  background:linear-gradient(180deg,#161622 0%,#0E0E16 100%);
+  border:1px solid var(--border-2);
+  padding:14px;
+  box-shadow:0 40px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  transition:transform .5s cubic-bezier(.2,.8,.2,1);
+}
+.phone-screen{
+  width:100%;height:100%;
+  border-radius:26px;
+  background:#0A0A0F;
+  overflow:hidden;
+  position:relative;
+}
+.phone-notch{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  width:80px;height:22px;border-radius:14px;background:#000;z-index:2;
+}
+.phone:nth-child(1){left:0;top:80px;transform:rotate(-8deg);z-index:1}
+.phone:nth-child(2){left:170px;top:20px;transform:rotate(-2deg);z-index:2}
+.phone:nth-child(3){left:340px;top:60px;transform:rotate(3deg);z-index:3}
+.phone:nth-child(4){left:500px;top:120px;transform:rotate(9deg);z-index:2}
+
+.phones:hover .phone{filter:saturate(1.1)}
+.phone:hover{transform:translateY(-12px) rotate(0deg) !important;z-index:5}
+
+/* Phone screen variants */
+.scr{padding:36px 14px 14px;height:100%;display:flex;flex-direction:column;gap:10px;font-size:10px}
+.scr-h{display:flex;justify-content:space-between;align-items:center;color:var(--grey)}
+.scr-h .b{color:#fff;font-weight:700;font-size:11px;letter-spacing:-0.01em}
+.scr-h .t{font-family:var(--mono);font-size:9px}
+
+/* Fitness screen */
+.scr-fit .hero-stat{
+  background:var(--grad);border-radius:14px;padding:12px;color:#fff;
+  display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;
+}
+.scr-fit .hero-stat::after{
+  content:"";position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(255,255,255,0.25),transparent 50%);
+}
+.scr-fit .hero-stat .l{font-size:9px;opacity:0.8;text-transform:uppercase;letter-spacing:0.1em;font-family:var(--mono)}
+.scr-fit .hero-stat .v{font-size:24px;font-weight:800;font-family:var(--mono);letter-spacing:-0.02em}
+.scr-fit .set{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:10px;border:1px solid var(--border)}
+.scr-fit .set .n{color:#fff;font-weight:600;font-size:10px}
+.scr-fit .set .m{font-family:var(--mono);color:var(--lime);font-size:10px;font-weight:600}
+.scr-fit .set.done .m{color:var(--grey-2);text-decoration:line-through}
+.scr-fit .set.now{border-color:var(--lime);background:rgba(255,138,38,0.06)}
+
+/* Nutrition screen */
+.ring-wrap{display:grid;place-items:center;padding:18px 0 8px}
+.ring{
+  width:100px;height:100px;border-radius:50%;
+  background:
+    conic-gradient(#FF8A26 0 65%, rgba(255,255,255,0.08) 0 100%);
+  display:grid;place-items:center;position:relative;
+}
+.ring::before{
+  content:"";position:absolute;inset:8px;border-radius:50%;background:#0A0A0F;
+}
+.ring .v{position:relative;z-index:1;font-family:var(--mono);font-weight:700;font-size:18px;color:#fff;text-align:center;line-height:1}
+.ring .v small{display:block;color:var(--grey-2);font-size:8px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;margin-top:3px}
+.macros{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.macro{padding:8px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border)}
+.macro .l{font-size:8px;text-transform:uppercase;color:var(--grey-2);letter-spacing:0.08em;font-family:var(--mono)}
+.macro .v{font-size:13px;font-weight:700;color:#fff;font-family:var(--mono);margin-top:2px}
+.macro .bar{height:3px;border-radius:3px;background:rgba(255,255,255,0.08);margin-top:6px;overflow:hidden}
+.macro .bar i{display:block;height:100%;background:var(--lime);border-radius:3px}
+.macro.p .bar i{background:#FF8A26;width:72%}
+.macro.c .bar i{background:#FF8A26;width:48%}
+.macro.f .bar i{background:#FF5A1F;width:60%}
+.meal{display:flex;justify-content:space-between;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,0.04);font-size:9px}
+.meal .n{color:#fff}
+.meal .k{font-family:var(--mono);color:var(--grey)}
+
+/* Health screen */
+.hk-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.hk{padding:9px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.03)}
+.hk .l{font-size:8px;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey-2);font-family:var(--mono)}
+.hk .v{font-size:17px;font-weight:800;font-family:var(--mono);margin-top:4px;letter-spacing:-0.02em}
+.hk .u{font-size:9px;color:var(--grey);font-family:var(--mono)}
+.hk.lime{background:rgba(255,138,38,0.08);border-color:rgba(255,138,38,0.3)}
+.hk.lime .v{color:var(--lime)}
+.hk.vio{background:rgba(255,138,38,0.12);border-color:rgba(255,138,38,0.4)}
+.hk.vio .v{color:#FFD9A8}
+.spark{margin-top:6px;height:18px;display:flex;align-items:end;gap:2px}
+.spark i{flex:1;background:currentColor;opacity:0.7;border-radius:1px}
+.recovery-card{padding:10px;border-radius:10px;background:var(--grad);color:#fff;display:flex;justify-content:space-between;align-items:center}
+.recovery-card .l{font-size:9px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.85}
+.recovery-card .v{font-family:var(--mono);font-size:22px;font-weight:800}
+
+/* Body scan screen */
+.scan-frame{
+  flex:1;border-radius:14px;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(255,138,38,0.30), transparent 70%),
+    linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));
+  border:1px solid var(--border-2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;position:relative;
+  overflow:hidden;
+}
+.scan-frame::before{
+  content:"";position:absolute;left:8%;right:8%;height:2px;background:var(--lime);
+  box-shadow:0 0 16px var(--lime);top:50%;
+  animation:scanLine 2.4s linear infinite;
+}
+@keyframes scanLine{0%{top:18%}50%{top:78%}100%{top:18%}}
+.body{
+  width:78px;height:170px;
+  background:
+    radial-gradient(ellipse 22px 22px at 50% 11%, #FFD9A8 0 60%, transparent 70%),
+    radial-gradient(ellipse 30px 50px at 50% 38%, #FFB060 0 60%, transparent 70%),
+    radial-gradient(ellipse 38px 80px at 50% 75%, #FF8A26 0 50%, transparent 70%);
+  filter:drop-shadow(0 0 20px rgba(255,138,38,0.55));
+  clip-path:polygon(40% 0,60% 0,68% 12%,62% 22%,76% 38%,82% 60%,72% 92%,55% 100%,45% 100%,28% 92%,18% 60%,24% 38%,38% 22%,32% 12%);
+}
+.scan-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.scan-stat{padding:7px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border)}
+.scan-stat .l{font-size:7px;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey-2);font-family:var(--mono)}
+.scan-stat .v{font-family:var(--mono);font-weight:700;font-size:12px;color:#fff;margin-top:2px}
+.scan-stat .v small{color:var(--lime);font-size:8px;margin-left:3px}
+
+/* ── SECTIONS ──────────────────────────────────────── */
+section{position:relative;padding:120px 0}
+.section-eyebrow{
+  display:inline-block;
+  font-family:var(--mono);font-size:12px;font-weight:600;
+  letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--lime);
+  padding-bottom:18px;
+}
+h2.section-title{
+  font-size:clamp(34px,5vw,64px);
+  font-weight:900;
+  letter-spacing:-0.03em;
+  line-height:1.02;
+  text-wrap:balance;
+  max-width:880px;
+}
+.section-lede{
+  font-size:18px;color:var(--grey);
+  max-width:640px;margin-top:20px;
+  line-height:1.6;
+}
+
+/* ── PROBLEM ───────────────────────────────────────── */
+.problem-compare{
+  margin-top:64px;
+  display:grid;grid-template-columns:1fr auto 1fr;gap:36px;align-items:stretch;
+}
+.compare-card{
+  padding:32px;border-radius:var(--radius-lg);
+  background:var(--glass);
+  border:1px solid var(--border);
+  position:relative;
+}
+.compare-card.bad{
+  background:linear-gradient(180deg,rgba(255,68,68,0.05),rgba(255,68,68,0.01));
+  border-color:rgba(255,68,68,0.2);
+}
+.compare-card.good{
+  background:linear-gradient(180deg,rgba(255,138,38,0.07),rgba(124,58,237,0.07));
+  border-color:rgba(255,138,38,0.3);
+  box-shadow:var(--shadow-lime);
+}
+.compare-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.compare-head h3{font-size:18px;font-weight:700;letter-spacing:-0.01em}
+.compare-head .tag{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:999px}
+.compare-head .tag.bad{background:rgba(255,68,68,0.12);color:#FCA5A5}
+.compare-head .tag.good{background:rgba(255,138,38,0.15);color:var(--lime)}
+.comp-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 0;border-bottom:1px dashed var(--border);
+  font-size:14px;
+}
+.comp-row:last-of-type{border-bottom:none}
+.comp-row .a{display:flex;align-items:center;gap:10px;color:var(--grey)}
+.comp-row .a .swatch{width:24px;height:24px;border-radius:7px;background:var(--grad);display:grid;place-items:center;font-weight:800;font-size:11px;color:#fff;font-family:var(--mono)}
+.comp-row .p{font-family:var(--mono);font-weight:600;color:#fff}
+.compare-total{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:18px;padding:16px;border-radius:14px;
+  background:rgba(255,68,68,0.1);
+  font-size:14px;
+}
+.compare-total b{font-family:var(--mono);font-size:24px;color:#FCA5A5;font-weight:800}
+.compare-total.good{background:rgba(255,138,38,0.12)}
+.compare-total.good b{color:var(--lime)}
+
+.versus{
+  display:grid;place-items:center;
+  font-family:var(--mono);font-size:32px;font-weight:900;
+  color:var(--grey-2);
+  letter-spacing:-0.05em;
+}
+.versus::before{content:"VS"}
+
+/* ── PILLARS ───────────────────────────────────────── */
+.pillar{
+  display:grid;grid-template-columns:1fr 1fr;gap:80px;
+  align-items:center;
+  padding:60px 0;
+}
+.pillar.flip .pillar-text{order:2}
+.pillar.flip .pillar-vis{order:1}
+.pillar-num{
+  font-family:var(--mono);font-size:13px;font-weight:600;
+  color:var(--grey-2);letter-spacing:0.18em;text-transform:uppercase;
+  display:flex;align-items:center;gap:12px;
+}
+.pillar-num::before{content:"";display:block;width:32px;height:1px;background:var(--lime)}
+.pillar-icon{
+  width:56px;height:56px;border-radius:14px;
+  background:var(--grad);
+  display:grid;place-items:center;color:#fff;
+  margin:24px 0 24px;
+  box-shadow:0 16px 40px -10px rgba(255,138,38,0.55);
+}
+.pillar-icon svg{width:28px;height:28px}
+h3.pillar-title{
+  font-size:clamp(30px,4vw,48px);
+  font-weight:900;letter-spacing:-0.03em;line-height:1.05;
+  text-wrap:balance;
+}
+.pillar-desc{font-size:17px;color:var(--grey);margin-top:18px;max-width:480px;line-height:1.6}
+.pillar-list{margin-top:28px;display:flex;flex-direction:column;gap:12px}
+.pillar-list li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:#E4E4E7;list-style:none}
+.pillar-list li svg{flex-shrink:0;width:18px;height:18px;color:var(--lime);margin-top:3px}
+.pillar-stat{
+  display:inline-flex;align-items:center;gap:12px;
+  margin-top:32px;padding:14px 20px;
+  border-radius:14px;
+  background:rgba(255,138,38,0.08);
+  border:1px solid rgba(255,138,38,0.25);
+}
+.pillar-stat .lbl{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--lime)}
+.pillar-stat .val{font-family:var(--mono);font-weight:700;color:#fff;font-size:16px}
+
+.pillar-vis{
+  display:grid;place-items:center;position:relative;height:560px;
+}
+.pillar-vis .phone{
+  position:relative;left:auto;top:auto;transform:rotate(-3deg);
+  width:280px;height:560px;
+}
+.pillar-vis::before{
+  content:"";position:absolute;inset:8%;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,138,38,0.30),transparent 60%);
+  filter:blur(40px);z-index:-1;
+}
+.pillar.flip .pillar-vis .phone{transform:rotate(3deg)}
+
+/* ── HOW IT WORKS ──────────────────────────────────── */
+.steps{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:64px;
+}
+.step{
+  padding:36px;border-radius:var(--radius-lg);
+  background:var(--glass);border:1px solid var(--border);
+  position:relative;overflow:hidden;
+  transition:border-color .3s, transform .3s;
+}
+.step:hover{border-color:var(--border-2);transform:translateY(-4px)}
+.step-num{
+  font-family:var(--mono);
+  font-size:120px;font-weight:900;
+  position:absolute;top:-28px;right:-4px;
+  color:transparent;-webkit-text-stroke:1px rgba(255,138,38,0.4);
+  letter-spacing:-0.06em;line-height:1;
+}
+.step h3{font-size:24px;font-weight:800;letter-spacing:-0.02em;margin-top:120px}
+.step p{color:var(--grey);margin-top:14px;font-size:15px;line-height:1.6}
+
+/* ── TESTIMONIALS ──────────────────────────────────── */
+.testimonials{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:64px}
+.t-card{
+  padding:28px;border-radius:var(--radius);
+  background:rgba(255,255,255,0.035);
+  border:1px solid var(--border);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  transition:transform .3s ease, border-color .3s ease;
+  display:flex;flex-direction:column;
+}
+.t-card:hover{transform:translateY(-4px);border-color:var(--border-2)}
+.t-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.avatar{
+  width:48px;height:48px;border-radius:50%;
+  display:grid;place-items:center;
+  font-weight:700;font-size:16px;color:#fff;
+  font-family:var(--mono);
+  flex-shrink:0;
+}
+.avatar.a1{background:linear-gradient(135deg,#FF8A26,#FF5A1F)}
+.avatar.a2{background:linear-gradient(135deg,#FFB873,#FF7A1A);color:#0A0A0F}
+.avatar.a3{background:linear-gradient(135deg,#F472B6,#FF8A26)}
+.avatar.a4{background:linear-gradient(135deg,#FB923C,#EF4444)}
+.avatar.a5{background:linear-gradient(135deg,#60A5FA,#FFB060)}
+.avatar.a6{background:linear-gradient(135deg,#34D399,#0EA5E9)}
+.t-meta .n{font-weight:600;font-size:15px}
+.t-meta .d{font-size:12px;color:var(--grey-2);margin-top:2px;font-family:var(--mono)}
+.t-quote{font-size:15px;color:#E4E4E7;line-height:1.6;flex:1}
+.t-card .stars{margin-top:18px;font-size:13px}
+
+.transform-row{
+  margin-top:48px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+  background:var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  border:1px solid var(--border);
+}
+.transform-stat{
+  padding:32px;background:var(--bg);
+  text-align:center;
+}
+.transform-stat .v{
+  font-family:var(--mono);font-size:44px;font-weight:800;
+  background:linear-gradient(135deg,#FFB873,#FF5A1F);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  letter-spacing:-0.03em;
+}
+.transform-stat .l{font-size:14px;color:var(--grey);margin-top:8px}
+
+/* ── PRICING ──────────────────────────────────────── */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
+.billing-toggle{display:flex;justify-content:center;gap:6px;margin-top:36px;padding:6px;border-radius:999px;background:var(--glass);border:1px solid var(--border);width:fit-content;margin-left:auto;margin-right:auto}
+.bt-pill{padding:10px 20px;border-radius:999px;font-size:14px;font-weight:600;color:var(--grey);font-family:var(--mono);letter-spacing:0.01em;transition:color .2s,background .2s}
+.bt-pill:hover{color:#fff}
+.bt-pill.on{background:var(--lime);color:#0A0A0F}
+.price-card{
+  padding:36px;border-radius:var(--radius-lg);
+  background:var(--glass);
+  border:1px solid var(--border);
+  position:relative;display:flex;flex-direction:column;gap:0;
+  transition:transform .3s ease, border-color .3s ease;
+}
+.price-card:hover{transform:translateY(-4px)}
+.price-card.featured{
+  background:linear-gradient(180deg,rgba(255,138,38,0.14),rgba(255,138,38,0.05));
+  border-color:rgba(163,230,53,0.4);
+  box-shadow:0 30px 80px -30px rgba(255,138,38,0.55);
+  transform:translateY(-12px) scale(1.02);
+}
+.price-card.featured:hover{transform:translateY(-16px) scale(1.02)}
+.popular-tag{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  background:var(--lime);color:#0A0A0F;
+  padding:6px 14px;border-radius:999px;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+}
+.tier-name{font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.15em;color:var(--grey)}
+.tier-price{display:flex;align-items:baseline;gap:6px;margin-top:18px}
+.tier-price .p{font-family:var(--mono);font-size:56px;font-weight:800;letter-spacing:-0.03em}
+.tier-price .pu{color:var(--grey);font-size:15px}
+.tier-bill{font-size:13px;color:var(--grey-2);margin-top:6px;font-family:var(--mono)}
+.tier-tag{font-size:14px;color:#E4E4E7;margin-top:18px;line-height:1.5}
+.tier-cta{margin-top:28px;width:100%;justify-content:center}
+.tier-feats{margin-top:28px;display:flex;flex-direction:column;gap:12px;flex:1}
+.tier-feats li{display:flex;align-items:flex-start;gap:10px;color:#E4E4E7;font-size:14px;list-style:none}
+.tier-feats li svg{flex-shrink:0;width:16px;height:16px;color:var(--lime);margin-top:3px}
+.tier-feats li.muted{color:var(--grey-2)}
+.tier-feats li.muted svg{color:var(--grey-2)}
+
+/* Compare table */
+.cmp-wrap{margin-top:80px}
+.cmp-wrap h3{font-size:24px;font-weight:800;letter-spacing:-0.02em;text-align:center}
+.cmp-wrap p{text-align:center;color:var(--grey);margin-top:10px;font-size:15px}
+.cmp-table{
+  margin-top:36px;
+  background:var(--glass);
+  border-radius:var(--radius-lg);
+  border:1px solid var(--border);
+  overflow:hidden;
+}
+table.cmp{
+  width:100%;border-collapse:collapse;
+  font-size:14px;
+}
+table.cmp th,table.cmp td{padding:18px 20px;text-align:center;border-bottom:1px solid var(--border)}
+table.cmp tbody tr:last-child td{border-bottom:none}
+table.cmp th{
+  font-family:var(--mono);font-size:11px;font-weight:600;
+  text-transform:uppercase;letter-spacing:0.12em;color:var(--grey);
+  background:rgba(255,255,255,0.02);
+}
+table.cmp td:first-child,table.cmp th:first-child{text-align:left;color:#fff;font-weight:500}
+table.cmp th.apex{color:var(--lime);background:rgba(255,138,38,0.06)}
+table.cmp td.apex{background:rgba(255,138,38,0.05)}
+.check{color:var(--lime);font-size:18px;font-weight:700}
+.cross{color:#52525B;font-size:18px}
+.partial{color:#FB923C;font-family:var(--mono);font-size:12px;font-weight:600}
+
+/* ── INTEGRATIONS ──────────────────────────────────── */
+.integ{
+  text-align:center;padding:80px 0;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.integ .lede{color:var(--grey);font-size:16px;margin-top:8px}
+.integ-grid{
+  margin-top:48px;
+  display:grid;grid-template-columns:repeat(7,1fr);gap:16px;
+}
+.integ-card{
+  padding:24px 12px;border-radius:14px;
+  background:var(--glass);border:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  transition:all .25s;
+}
+.integ-card:hover{border-color:var(--border-2);background:var(--glass-2);transform:translateY(-3px)}
+.integ-card .ic{width:36px;height:36px;display:grid;place-items:center;color:#fff;opacity:0.9}
+.integ-card .ic svg{width:28px;height:28px}
+.integ-card .n{font-size:12px;font-weight:500;color:var(--grey);text-align:center;line-height:1.2}
+.integ-card .plat{font-family:var(--mono);font-size:10px;color:var(--grey-2);letter-spacing:0.06em;text-transform:uppercase;text-align:center;line-height:1.2}
+
+/* ── FINAL CTA ──────────────────────────────────── */
+.final{
+  text-align:center;padding:160px 0;position:relative;overflow:hidden;
+}
+.final::before{
+  content:"";position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:900px;height:900px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,138,38,0.22),transparent 60%);
+  filter:blur(60px);z-index:-1;
+}
+.final h2{
+  font-size:clamp(40px,6.5vw,84px);
+  font-weight:900;letter-spacing:-0.04em;
+  line-height:1;
+  text-wrap:balance;
+  max-width:980px;margin:0 auto;
+}
+.final h2 .gradient{
+  background:linear-gradient(135deg,#FFC78A 10%,#FF8A26 55%,#FF5A1F 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.final p{color:var(--grey);font-size:17px;margin-top:24px}
+.store-row{display:flex;gap:14px;justify-content:center;margin-top:40px;flex-wrap:wrap}
+.store-btn{
+  display:inline-flex;align-items:center;gap:12px;
+  padding:14px 22px;border-radius:14px;
+  background:#fff;color:#0A0A0F;
+  transition:transform .2s, box-shadow .2s;
+  border:1px solid transparent;
+}
+.store-btn:hover{transform:translateY(-2px);box-shadow:0 20px 50px -10px rgba(255,255,255,0.18)}
+.store-btn.alt{background:transparent;color:#fff;border-color:var(--border-2)}
+.store-btn.alt:hover{box-shadow:none;background:var(--glass)}
+.store-btn svg{width:24px;height:24px}
+.store-btn .col{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
+.store-btn .col small{font-size:10px;opacity:0.7}
+.store-btn .col span{font-size:15px;font-weight:700}
+.final-sub{
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:32px;color:var(--grey);font-family:var(--mono);font-size:13px;
+}
+.final-sub .dot{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime)}
+.wait-form{display:flex;gap:10px;max-width:540px;margin:40px auto 0;flex-wrap:wrap;justify-content:center}
+.wait-form input{flex:1;min-width:240px;padding:15px 22px;border-radius:999px;border:1px solid var(--border-2);background:var(--glass);color:#fff;font:inherit;font-size:15px;transition:border-color .2s,background .2s}
+.wait-form input::placeholder{color:var(--grey-2)}
+.wait-form input:focus{outline:none;border-color:var(--violet);background:var(--glass-2)}
+.wait-form .btn{flex-shrink:0}
+.wait-thanks{display:none;max-width:540px;margin:24px auto 0;padding:16px 22px;border-radius:14px;border:1px solid rgba(255,138,38,0.4);background:rgba(255,138,38,0.08);color:#fff;font-size:15px}
+.wait-thanks.on{display:block}
+.watch-note{margin-top:18px;font-family:var(--mono);font-size:12px;color:var(--grey-2);letter-spacing:0.02em}
+/* ── FOOTER ──────────────────────────────────── */
+footer{
+  border-top:1px solid var(--border);
+  padding:60px 0 40px;
+}
+.foot-grid{
+  display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:40px;
+}
+.foot-grid h5{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.15em;color:var(--grey-2);margin-bottom:18px}
+.foot-grid ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.foot-grid a{color:var(--grey);font-size:14px;transition:color .2s}
+.foot-grid a:hover{color:#fff}
+.foot-about{color:var(--grey);font-size:14px;margin-top:18px;max-width:300px;line-height:1.6}
+.socials{display:flex;gap:10px;margin-top:24px}
+.socials a{
+  width:36px;height:36px;border-radius:10px;
+  border:1px solid var(--border);background:var(--glass);
+  display:grid;place-items:center;
+  transition:border-color .2s, background .2s;
+}
+.socials a:hover{border-color:var(--border-2);background:var(--glass-2)}
+.socials svg{width:16px;height:16px;color:var(--grey)}
+.foot-bottom{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:60px;padding-top:24px;
+  border-top:1px solid var(--border);
+  color:var(--grey-2);font-size:13px;font-family:var(--mono);
+}
+
+/* ── Animations ───────────────────────────────────── */
+.fade-in{opacity:0;transform:translateY(24px);transition:opacity .8s ease, transform .8s ease}
+.fade-in.in{opacity:1;transform:translateY(0)}
+.fade-in.delay-1{transition-delay:.1s}
+.fade-in.delay-2{transition-delay:.2s}
+.fade-in.delay-3{transition-delay:.3s}
+
+/* ── Mobile ───────────────────────────────────────── */
+@media (max-width: 960px){
+  .nav-links{display:none}
+  .nav-cta-wrap .btn-lg{display:none}
+  .hamburger{display:grid}
+  .hero{padding:130px 0 40px}
+  .hero-grid{grid-template-columns:1fr;gap:40px}
+  .phones{height:520px;max-width:560px;margin:0 auto;transform:scale(0.85)}
+  .social-bar{grid-template-columns:repeat(3,1fr);max-width:100%}
+  .social-stat{padding:4px 8px}
+  .social-stat .v{font-size:22px}
+  section{padding:80px 0}
+  .problem-compare{grid-template-columns:1fr;gap:20px}
+  .versus{padding:8px 0}
+  .pillar{grid-template-columns:1fr;gap:40px}
+  .pillar.flip .pillar-text{order:1}
+  .pillar.flip .pillar-vis{order:2}
+  .pillar-vis{height:480px}
+  .steps,.testimonials,.pricing-grid{grid-template-columns:1fr}
+  .transform-row{grid-template-columns:1fr}
+  .integ-grid{grid-template-columns:repeat(3,1fr)}
+  .foot-grid{grid-template-columns:1fr 1fr;gap:32px}
+  .foot-bottom{flex-direction:column;gap:14px;text-align:center}
+  table.cmp{font-size:12px}
+  table.cmp th,table.cmp td{padding:12px 8px}
+  .container{padding:0 20px}
+  .price-card.featured{transform:none}
+  .price-card.featured:hover{transform:translateY(-4px)}
+}
+@media (max-width:520px){
+  .integ-grid{grid-template-columns:repeat(2,1fr)}
+  .phones{transform:scale(0.65) translateY(-40px);transform-origin:top center;height:380px}
+  .hero-ctas .btn{flex:1}
+  h1.hero-title{font-size:48px}
+}
+</style>
+</head>
+<body>
+
+<div class="orbs">
+  <div class="orb v"></div>
+  <div class="orb b"></div>
+  <div class="orb l"></div>
+</div>
+
+<!-- ── NAV ────────────────────────────────────────── -->
+<nav class="nav" id="nav">
+  <div class="container nav-inner">
+    <a href="#" class="logo">
+      <span class="logo-mark">
+        <svg viewBox="0 0 100 100" fill="#fff" aria-hidden="true"><g><path d="M28,14 L40,0 L46,0 L46,42 L54,42 L54,0 L60,0 L72,14 L72,86 L60,100 L54,100 L54,58 L46,58 L46,100 L40,100 L28,86 Z"/><path d="M4,36 L24,22 L24,78 L4,64 Z"/><path d="M76,22 L96,36 L96,64 L76,78 Z"/></g></svg>
+      </span>
+      <span><b>HIIT</b></span>
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How It Works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#reviews">Reviews</a>
+    </div>
+    <div class="nav-cta-wrap">
+      <a href="#signup" class="btn btn-primary">Join Waitlist</a>
+      <button class="hamburger" aria-label="Menu"><span></span></button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ───────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-copy fade-in">
+        <span class="eyebrow"><span class="dot"></span>Coming Soon · iPhone, Android &amp; Apple Watch · <span class="launch-long">Summer 2026</span></span>
+        <h1 class="hero-title">
+          One App.<br />
+          <span class="gradient">Four Superpowers.</span><br />
+          Zero Excuses.
+        </h1>
+        <p class="hero-sub">
+          The first all-in-one health platform that fuses <b>adaptive AI coaching</b>, <b>smart nutrition tracking</b>, <b>24/7 biometric monitoring</b>, and <b>phone-based 3D body scanning</b> — into one science-backed subscription.
+        </p>
+        <div class="hero-ctas">
+          <a href="#signup" class="btn btn-lime btn-lg">Join the Waitlist →</a>
+          <a href="#features" class="btn btn-ghost btn-lg">▶ Watch the preview</a>
+        </div>
+
+        <div class="social-bar">
+          <div class="social-stat">
+            <div class="v"><span data-count="12.8" data-decimals="1">0.0</span><small>K</small></div>
+            <div class="l">On the waitlist</div>
+          </div>
+          <div class="social-stat">
+            <div class="v" style="color:var(--lime)"><span class="launch-short">Summer '26</span></div>
+            <div class="l">Public launch</div>
+          </div>
+          <div class="social-stat">
+            <div class="v"><span data-count="500">0</span><small>+</small></div>
+            <div class="l">In closed beta</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phones fade-in delay-2">
+        <!-- Phone 1: Fitness -->
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="scr scr-fit">
+              <div class="scr-h"><span class="b">Push Day · Week 4</span><span class="t">42:18</span></div>
+              <div class="hero-stat">
+                <span class="l">Next Lift</span>
+                <span class="v">185 LB</span>
+                <span class="l">Bench Press · 5 reps</span>
+              </div>
+              <div class="set done"><span class="n">Set 1</span><span class="m">175 × 8</span></div>
+              <div class="set done"><span class="n">Set 2</span><span class="m">180 × 6</span></div>
+              <div class="set now"><span class="n">Set 3 ●</span><span class="m">185 × 5</span></div>
+              <div class="set"><span class="n">Set 4</span><span class="m">190 × 4</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- Phone 2: Nutrition -->
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="scr">
+              <div class="scr-h"><span class="b">Today's Fuel</span><span class="t">1,620 / 2,500</span></div>
+              <div class="ring-wrap">
+                <div class="ring"><div class="v">65<small>% goal</small></div></div>
+              </div>
+              <div class="macros">
+                <div class="macro p"><div class="l">Protein</div><div class="v">142g</div><div class="bar"><i></i></div></div>
+                <div class="macro c"><div class="l">Carbs</div><div class="v">180g</div><div class="bar"><i></i></div></div>
+                <div class="macro f"><div class="l">Fat</div><div class="v">62g</div><div class="bar"><i></i></div></div>
+              </div>
+              <div class="meal"><span class="n">Greek yogurt + berries</span><span class="k">280 kcal</span></div>
+              <div class="meal"><span class="n">Chicken bowl</span><span class="k">640 kcal</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- Phone 3: Health -->
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="scr">
+              <div class="scr-h"><span class="b">Vitals</span><span class="t">Live</span></div>
+              <div class="recovery-card">
+                <div><div class="l">Recovery</div><div style="font-size:9px;opacity:0.7;margin-top:2px;font-family:var(--mono)">8h 12m sleep</div></div>
+                <div class="v">87</div>
+              </div>
+              <div class="hk-grid">
+                <div class="hk lime">
+                  <div class="l">HRV</div>
+                  <div class="v">68<span class="u"> ms</span></div>
+                  <div class="spark"><i style="height:30%"></i><i style="height:55%"></i><i style="height:40%"></i><i style="height:70%"></i><i style="height:85%"></i><i style="height:65%"></i><i style="height:90%"></i></div>
+                </div>
+                <div class="hk vio">
+                  <div class="l">VO₂ Max</div>
+                  <div class="v">52.4</div>
+                  <div class="u">↑ 2.1 / 30d</div>
+                </div>
+                <div class="hk">
+                  <div class="l">Resting HR</div>
+                  <div class="v">54<span class="u"> bpm</span></div>
+                </div>
+                <div class="hk">
+                  <div class="l">Strain</div>
+                  <div class="v">14.2</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Phone 4: Body Scan -->
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="scr">
+              <div class="scr-h"><span class="b">3D Body Scan</span><span class="t">28s</span></div>
+              <div class="scan-frame">
+                <div class="body"></div>
+              </div>
+              <div class="scan-stats">
+                <div class="scan-stat"><div class="l">Body Fat</div><div class="v">14.2%<small>↓ 1.4</small></div></div>
+                <div class="scan-stat"><div class="l">Lean Mass</div><div class="v">158lb<small>↑ 2.1</small></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PROBLEM ───────────────────────────────────── -->
+<section id="problem">
+  <div class="container">
+    <div class="fade-in" style="max-width:840px">
+      <span class="section-eyebrow">The App-Switching Problem</span>
+      <h2 class="section-title">Stop paying for <span style="background:linear-gradient(135deg,#FFB873,#FF5A1F);-webkit-background-clip:text;background-clip:text;color:transparent">4 apps</span> to do 1 job.</h2>
+      <p class="section-lede">Most people stitch together a fitness tracker, a calorie counter, a wearable subscription, and a body-comp scale. Different data silos, different bills, zero coordination.</p>
+    </div>
+
+    <div class="problem-compare fade-in delay-1">
+      <div class="compare-card bad">
+        <div class="compare-head">
+          <h3>The Frankenstack</h3>
+          <span class="tag bad">CURRENT REALITY</span>
+        </div>
+        <div class="comp-row"><div class="a"><div class="swatch" style="background:#1F1F2A">FA</div>AI Workout App</div><div class="p">£9.99/mo</div></div>
+        <div class="comp-row"><div class="a"><div class="swatch" style="background:#16A34A">MF</div>Calorie Tracker Premium</div><div class="p">£9.99/mo</div></div>
+        <div class="comp-row"><div class="a"><div class="swatch" style="background:#000">WH</div>Recovery / Strain Hardware</div><div class="p">£14.08/mo</div></div>
+        <div class="comp-row"><div class="a"><div class="swatch" style="background:#EF4444">SC</div>Body Scan Device + App</div><div class="p">£16.50/mo</div></div>
+        <div class="compare-total">
+          <span>Total monthly bill</span>
+          <b>£50.56</b>
+        </div>
+      </div>
+
+      <div class="versus" aria-hidden="true"></div>
+
+      <div class="compare-card good">
+        <div class="compare-head">
+          <h3>HIIT</h3>
+          <span class="tag good">ONE SUBSCRIPTION</span>
+        </div>
+        <div class="comp-row"><div class="a"><div class="swatch">✓</div>Adaptive AI Fitness Coach</div><div class="p" style="color:var(--lime)">Included</div></div>
+        <div class="comp-row"><div class="a"><div class="swatch">✓</div>Millions of foods via Open Food Facts + Photo AI</div><div class="p" style="color:var(--lime)">Included</div></div>
+        <div class="comp-row"><div class="a"><div class="swatch">✓</div>24/7 HRV, Sleep, VO₂ Monitor</div><div class="p" style="color:var(--lime)">Included</div></div>
+        <div class="comp-row"><div class="a"><div class="swatch">✓</div>Phone-Camera 3D Body Scanner</div><div class="p" style="color:var(--lime)">Included</div></div>
+        <div class="compare-total good">
+          <span>One bill. All four pillars.</span>
+          <b id="hiit-total">£29.99</b>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PILLARS ────────────────────────────────────── -->
+<section id="features">
+  <div class="container">
+    <div class="fade-in" style="max-width:880px;margin-bottom:40px">
+      <span class="section-eyebrow">The Four Pillars</span>
+      <h2 class="section-title">A complete operating system for your body.</h2>
+      <p class="section-lede">Each pillar is best-in-class on its own. Together, they compound. Train smarter when your nutrition and recovery data inform the plan in real-time.</p>
+    </div>
+
+    <!-- Pillar 1: Fitness -->
+    <div class="pillar">
+      <div class="pillar-text fade-in">
+        <div class="pillar-num">Pillar 01 · AI Fitness</div>
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.4 14.4 9.6 9.6"></path><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.768 1.768a2 2 0 1 1-2.828-2.829l6.364-6.364a2 2 0 1 1 2.829 2.828l1.767-1.767a2 2 0 1 1 2.829 2.828z"></path><path d="m21.5 21.5-1.4-1.4"></path><path d="M3.9 3.9 2.5 2.5"></path><path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z"></path></svg>
+        </div>
+        <h3 class="pillar-title">Adaptive workouts that rewrite themselves around your last rep.</h3>
+        <p class="pillar-desc">The AI Coach watches every set: RPE, sleep, HRV, missed lifts — then rebuilds tomorrow's plan around what your body actually did.</p>
+        <ul class="pillar-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Plan rebuilds weekly using your actual logged sets, weights, and RPE</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>200+ exercises with form-check video demos</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Works with any equipment — gym, home, hotel, bodyweight</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Auto-deload when recovery scores trend down</li>
+        </ul>
+      </div>
+      <div class="pillar-vis fade-in delay-1">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="scr scr-fit" style="padding:36px 18px 18px;gap:12px;font-size:12px">
+              <div class="scr-h"><span class="b" style="font-size:13px">Push Day · Week 4</span><span class="t" style="font-size:11px">42:18</span></div>
+              <div class="hero-stat" style="padding:16px">
+                <span class="l" style="font-size:10px">Next Lift</span>
+                <span class="v" style="font-size:32px">185 LB</span>
+                <span class="l" style="font-size:10px">Bench Press · 5 reps · RPE 8</span>
+              </div>
+              <div class="set done" style="padding:11px 14px"><span class="n" style="font-size:12px">Set 1</span><span class="m" style="font-size:12px">175 × 8</span></div>
+              <div class="set done" style="padding:11px 14px"><span class="n" style="font-size:12px">Set 2</span><span class="m" style="font-size:12px">180 × 6</span></div>
+              <div class="set now" style="padding:11px 14px"><span class="n" style="font-size:12px">Set 3 ●</span><span class="m" style="font-size:12px">185 × 5</span></div>
+              <div class="set" style="padding:11px 14px"><span class="n" style="font-size:12px">Set 4</span><span class="m" style="font-size:12px">190 × 4</span></div>
+              <div class="set" style="padding:11px 14px;background:rgba(255,138,38,0.10);border-color:rgba(255,138,38,0.3)"><span class="n" style="font-size:11px;color:#FFD9A8">⚡ AI suggests +5lb next session</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 2: Nutrition -->
+    <div class="pillar flip">
+      <div class="pillar-text fade-in">
+        <div class="pillar-num">Pillar 02 · Smart Nutrition</div>
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2v20"></path><path d="M14 4v8"></path><path d="M10 2v8"></path><path d="M6 4v6"></path><path d="M2 2v4a4 4 0 0 0 4 4"></path><path d="M22 12v2a4 4 0 0 1-4 4h-4"></path><circle cx="9" cy="17" r="2"></circle></svg>
+        </div>
+        <h3 class="pillar-title">Log a meal in under 10 seconds. Skip the guesswork.</h3>
+        <p class="pillar-desc">Point your camera at the plate. The vision model identifies portions, estimates macros, and logs it. Or scan a barcode. Or speak it. Whichever's fastest right now.</p>
+        <ul class="pillar-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Millions of foods via Open Food Facts — every brand, every barcode</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Photo recognition with portion-size estimation</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Restaurant menu scanner — point at the menu, pick a dish, it's logged</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Macros and micros auto-tuned to today's training load</li>
+        </ul>
+        <div class="pillar-stat">
+          <span class="lbl">Average log time</span>
+          <span class="val">Under 10 seconds</span>
+        </div>
+      </div>
+      <div class="pillar-vis fade-in delay-1">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="scr" style="padding:36px 18px 18px;font-size:12px;gap:14px">
+              <div class="scr-h"><span class="b" style="font-size:13px">Today's Fuel</span><span class="t" style="font-size:11px">1,620 / 2,500</span></div>
+              <div class="ring-wrap" style="padding:8px 0">
+                <div class="ring" style="width:140px;height:140px"><div class="v" style="font-size:28px">65<small style="font-size:9px">% goal</small></div></div>
+              </div>
+              <div class="macros" style="gap:8px">
+                <div class="macro p" style="padding:10px"><div class="l">Protein</div><div class="v" style="font-size:15px">142g</div><div class="bar"><i></i></div></div>
+                <div class="macro c" style="padding:10px"><div class="l">Carbs</div><div class="v" style="font-size:15px">180g</div><div class="bar"><i></i></div></div>
+                <div class="macro f" style="padding:10px"><div class="l">Fat</div><div class="v" style="font-size:15px">62g</div><div class="bar"><i></i></div></div>
+              </div>
+              <div class="meal" style="font-size:11px;padding:10px 12px"><span class="n">Greek yogurt + berries</span><span class="k">280 kcal</span></div>
+              <div class="meal" style="font-size:11px;padding:10px 12px"><span class="n">Chicken rice bowl</span><span class="k">640 kcal</span></div>
+              <div class="meal" style="font-size:11px;padding:10px 12px;background:rgba(255,138,38,0.06);border:1px solid rgba(255,138,38,0.2)"><span class="n" style="color:var(--lime)">📸 Tap to scan dinner</span><span class="k">+ Log</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 3: Health -->
+    <div class="pillar">
+      <div class="pillar-text fade-in">
+        <div class="pillar-num">Pillar 03 · Health Monitor</div>
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.24 3.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4 13H2"></path></svg>
+        </div>
+        <h3 class="pillar-title">Continuous biometric intelligence. No extra hardware required.</h3>
+        <p class="pillar-desc">Sync the wearable you already own. HIIT turns raw signals into actionable scores — HRV, sleep quality, recovery readiness, strain — and feeds them straight back into your training plan.</p>
+        <ul class="pillar-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Apple Health + Google Health Connect + Garmin + Fitbit sync</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>HRV, RHR, VO₂ max, sleep stages, stress index</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Daily recovery score informs tomorrow's workout</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>90-day trend reports, exportable for your doctor</li>
+        </ul>
+        <div class="pillar-stat">
+          <span class="lbl">Always-on</span>
+          <span class="val">24/7 biometric insights</span>
+        </div>
+      </div>
+      <div class="pillar-vis fade-in delay-1">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="scr" style="padding:36px 18px 18px;font-size:12px;gap:12px">
+              <div class="scr-h"><span class="b" style="font-size:13px">Vitals · Today</span><span class="t" style="font-size:11px">Live</span></div>
+              <div class="recovery-card" style="padding:16px">
+                <div><div class="l" style="font-size:11px">Recovery Score</div><div style="font-size:11px;opacity:0.8;margin-top:4px;font-family:var(--mono)">8h 12m sleep · 95% efficiency</div></div>
+                <div class="v" style="font-size:32px">87</div>
+              </div>
+              <div class="hk-grid" style="gap:8px">
+                <div class="hk lime" style="padding:12px">
+                  <div class="l">HRV (7d)</div>
+                  <div class="v" style="font-size:22px">68<span class="u" style="font-size:11px"> ms</span></div>
+                  <div class="spark" style="height:24px"><i style="height:30%"></i><i style="height:55%"></i><i style="height:40%"></i><i style="height:70%"></i><i style="height:85%"></i><i style="height:65%"></i><i style="height:90%"></i></div>
+                </div>
+                <div class="hk vio" style="padding:12px">
+                  <div class="l">VO₂ Max</div>
+                  <div class="v" style="font-size:22px">52.4</div>
+                  <div class="u" style="font-size:11px">↑ 2.1 / 30d</div>
+                </div>
+                <div class="hk" style="padding:12px">
+                  <div class="l">Resting HR</div>
+                  <div class="v" style="font-size:22px">54<span class="u" style="font-size:11px"> bpm</span></div>
+                </div>
+                <div class="hk" style="padding:12px">
+                  <div class="l">Strain</div>
+                  <div class="v" style="font-size:22px">14.2</div>
+                  <div class="u" style="font-size:11px">Optimal</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 4: Body Scanner -->
+    <div class="pillar flip">
+      <div class="pillar-text fade-in">
+        <div class="pillar-num">Pillar 04 · AI Body Scanner</div>
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><path d="m9 21 3-6 3 6"></path><path d="m12 11-3 4h6l-3-4"></path></svg>
+        </div>
+        <h3 class="pillar-title">AI body composition analysis. Three photos. No equipment needed.</h3>
+        <p class="pillar-desc">No expensive scale. No clinic appointment. Take a front, side, and back photo. HIIT's AI analyses your body composition and tracks muscle gain vs. fat loss, week over week.</p>
+        <ul class="pillar-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>AI body composition from 3 photos — front, side, and back</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Muscle vs. fat by region — chest, arms, core, legs</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Side-by-side weekly progress comparisons</li>
+        </ul>
+        <div class="pillar-stat">
+          <span class="lbl">Accuracy</span>
+          <span class="val">comparable to skinfold calipers</span>
+        </div>
+      </div>
+      <div class="pillar-vis fade-in delay-1">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="scr" style="padding:36px 18px 18px;font-size:12px;gap:12px">
+              <div class="scr-h"><span class="b" style="font-size:13px">3D Body Scan</span><span class="t" style="font-size:11px">28s · scanning</span></div>
+              <div class="scan-frame" style="border-radius:16px">
+                <div class="body" style="width:110px;height:240px"></div>
+              </div>
+              <div class="scan-stats" style="gap:8px">
+                <div class="scan-stat" style="padding:10px"><div class="l">Body Fat</div><div class="v" style="font-size:16px">14.2%<small>↓ 1.4</small></div></div>
+                <div class="scan-stat" style="padding:10px"><div class="l">Lean Mass</div><div class="v" style="font-size:16px">158<small>↑ 2.1</small></div></div>
+                <div class="scan-stat" style="padding:10px"><div class="l">Waist</div><div class="v" style="font-size:16px">32.1"<small>↓ 0.4</small></div></div>
+                <div class="scan-stat" style="padding:10px"><div class="l">Chest</div><div class="v" style="font-size:16px">42.3"<small>↑ 0.5</small></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ───────────────────────────────── -->
+<section id="how">
+  <div class="container">
+    <div class="fade-in" style="max-width:840px">
+      <span class="section-eyebrow">How It Works</span>
+      <h2 class="section-title">From download to dialed-in plan in under 5 minutes.</h2>
+    </div>
+    <div class="steps">
+      <div class="step fade-in">
+        <div class="step-num">01</div>
+        <h3>Set your goals</h3>
+        <p>Take a two-minute onboarding quiz. Body composition target, training experience, weekly availability, equipment access, dietary preferences. Be honest — the AI gets better when you are.</p>
+      </div>
+      <div class="step fade-in delay-1">
+        <div class="step-num">02</div>
+        <h3>Let AI build your plan</h3>
+        <p>Workouts, nutrition targets, sleep baselines, and recovery checkpoints are generated in seconds. Every metric is calibrated against your starting point — not someone else's.</p>
+      </div>
+      <div class="step fade-in delay-2">
+        <div class="step-num">03</div>
+        <h3>Track, adapt, transform</h3>
+        <p>Every set, meal, and biometric flows back into the model. Your plan rewrites itself weekly — pushing harder where you're ready, backing off where you're not.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TESTIMONIALS ───────────────────────────────── -->
+<section id="reviews">
+  <div class="container">
+    <div class="fade-in" style="max-width:840px">
+      <span class="section-eyebrow">From the closed beta</span>
+      <h2 class="section-title">Real people. Real data. Real results.</h2>
+      <p class="section-lede">Early results from HIIT closed-beta testers, verified against in-app body scans and connected wearables.</p>
+    </div>
+
+    <div class="testimonials">
+      <div class="t-card fade-in">
+        <div class="t-head">
+          <div class="avatar a1">JM</div>
+          <div class="t-meta"><div class="n">Jordan M.</div><div class="d">Closed beta</div></div>
+        </div>
+        <p class="t-quote">"Lost 18 lbs of fat without losing strength. The macro auto-adjustment on training vs rest days is the unlock I didn't know I needed."</p>
+        <div class="stars">★★★★★</div>
+      </div>
+      <div class="t-card fade-in delay-1">
+        <div class="t-head">
+          <div class="avatar a2">SK</div>
+          <div class="t-meta"><div class="n">Saanvi K.</div><div class="d">Closed beta</div></div>
+        </div>
+        <p class="t-quote">"Body scan showed I added 6 lbs of lean mass over 4 months. Before this I was guessing — now I have a chart."</p>
+        <div class="stars">★★★★★</div>
+      </div>
+      <div class="t-card fade-in delay-2">
+        <div class="t-head">
+          <div class="avatar a3">EL</div>
+          <div class="t-meta"><div class="n">Elena L.</div><div class="d">Closed beta</div></div>
+        </div>
+        <p class="t-quote">"My HRV is up 22% and I'm sleeping 40 minutes longer on average. The recovery insights changed how I plan my week."</p>
+        <div class="stars">★★★★★</div>
+      </div>
+      <div class="t-card fade-in">
+        <div class="t-head">
+          <div class="avatar a4">RB</div>
+          <div class="t-meta"><div class="n">Rashid B.</div><div class="d">Closed beta · Android</div></div>
+        </div>
+        <p class="t-quote">"Switched from three separate apps on my Galaxy. The Samsung Health sync pulled my watch data in on day one — no setup faff. Everything's in one place now."</p>
+        <div class="stars">★★★★★</div>
+      </div>
+      <div class="t-card fade-in delay-1">
+        <div class="t-head">
+          <div class="avatar a5">AT</div>
+          <div class="t-meta"><div class="n">Aiko T.</div><div class="d">Closed beta</div></div>
+        </div>
+        <p class="t-quote">"VO₂ max went from 38 to 47 in six months. I never had a coach who looked at my recovery before adjusting cardio load. Wild."</p>
+        <div class="stars">★★★★★</div>
+      </div>
+      <div class="t-card fade-in delay-2">
+        <div class="t-head">
+          <div class="avatar a6">MO</div>
+          <div class="t-meta"><div class="n">Mateo O.</div><div class="d">Closed beta</div></div>
+        </div>
+        <p class="t-quote">"The photo-scan food logging actually works. I'm finally logging consistently because it takes 8 seconds instead of 60."</p>
+        <div class="stars">★★★★★</div>
+      </div>
+    </div>
+
+    <div class="transform-row fade-in">
+      <div class="transform-stat">
+        <div class="v"><span data-count="12">0</span> lbs</div>
+        <div class="l">Average fat loss in 90 days</div>
+      </div>
+      <div class="transform-stat">
+        <div class="v"><span data-count="87">0</span>%</div>
+        <div class="l">Report better sleep within 2 weeks</div>
+      </div>
+      <div class="transform-stat">
+        <div class="v"><span data-count="3.2" data-decimals="1">0.0</span>×</div>
+        <div class="l">More consistent than solo training</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ───────────────────────────────────── -->
+<section id="pricing">
+  <div class="container">
+    <div class="fade-in" style="text-align:center;max-width:760px;margin:0 auto">
+      <span class="section-eyebrow">Pricing</span>
+      <h2 class="section-title" style="margin:0 auto">One price. Four apps worth of power.</h2>
+      <p class="section-lede" style="margin:20px auto 0">Founder pricing, locked the day you join the waitlist — and kept for as long as you stay.</p>
+    </div>
+
+    <div class="billing-toggle fade-in" role="group" aria-label="Billing period">
+      <button type="button" class="bt-pill on" data-billing="monthly">Monthly</button>
+      <button type="button" class="bt-pill" data-billing="annual">Annual — save 33%</button>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="price-card fade-in">
+        <div class="tier-name">Free</div>
+        <div class="tier-price"><span class="p">£0</span><span class="pu">/forever</span></div>
+        <div class="tier-bill">No card required</div>
+        <p class="tier-tag">A real on-ramp. Track basics, log workouts, get a taste of the system.</p>
+        <a href="#signup" class="btn btn-ghost tier-cta">Get Notified</a>
+        <ul class="tier-feats">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Manual food logging (millions of foods via Open Food Facts)</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>3 generated workouts per week</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Manual health entry, basic dashboard</li>
+          <li class="muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>AI adaptive programming</li>
+          <li class="muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>3D body scanner</li>
+        </ul>
+      </div>
+
+      <div class="price-card featured fade-in delay-1">
+        <div class="popular-tag">★ Most Popular</div>
+        <div class="tier-name" style="color:var(--lime)">Pro</div>
+        <div class="tier-price"><span class="p" id="pro-price">£29.99</span><span class="pu">/mo</span></div>
+        <div class="tier-bill" id="pro-bill">or £19.99/mo billed annually · founder rate, save 33%</div>
+        <p class="tier-tag">The full stack. Every pillar, every adaptive feature, every device sync.</p>
+        <a href="#signup" class="btn btn-lime tier-cta">Reserve Founder Price</a>
+        <ul class="tier-feats">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>All four pillars unlocked</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Unlimited AI-adaptive workouts</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Photo-AI food logging, millions of foods via Open Food Facts</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>All wearable + Apple/Google Health sync</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>3D body scanner + weekly progress reports</li>
+        </ul>
+      </div>
+
+      <div class="price-card fade-in delay-2">
+        <div class="tier-name">Elite</div>
+        <div class="tier-price"><span class="p" id="elite-price">£49.99</span><span class="pu">/mo</span></div>
+        <div class="tier-bill" id="elite-bill">or £39.99/mo billed annually</div>
+        <p class="tier-tag">For serious athletes and families. Pro + concierge-grade extras.</p>
+        <a href="#signup" class="btn btn-ghost tier-cta">Reserve Elite</a>
+        <ul class="tier-feats">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Everything in Pro</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>AI meal planning + weekly grocery list</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>24/7 AI coach chat — text or voice</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Advanced health reports (clinician-ready PDFs)</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Family sharing — up to 5 accounts</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cmp-wrap fade-in">
+      <h3>How HIIT Pro stacks up</h3>
+      <p>Compared against the leading single-purpose subscriptions in each category.</p>
+      <div class="cmp-table">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th class="apex">HIIT<br/><small style="font-weight:400" id="cmp-pro">Pro · £29.99</small></th>
+              <th>Calorie Tracker<br/><small style="font-weight:400">Premium · ~£10</small></th>
+              <th>Recovery Wearable<br/><small style="font-weight:400">Sub · ~£14</small></th>
+              <th>AI Workout App<br/><small style="font-weight:400">Pro · ~£10</small></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Adaptive AI workout programming</td>
+              <td class="apex"><span class="check">●</span></td>
+              <td><span class="cross">—</span></td>
+              <td><span class="cross">—</span></td>
+              <td><span class="check">●</span></td>
+            </tr>
+            <tr>
+              <td>Photo-AI food recognition</td>
+              <td class="apex"><span class="check">●</span></td>
+              <td><span class="partial">Partial</span></td>
+              <td><span class="cross">—</span></td>
+              <td><span class="cross">—</span></td>
+            </tr>
+            <tr>
+              <td>24/7 HRV + recovery score</td>
+              <td class="apex"><span class="check">●</span></td>
+              <td><span class="cross">—</span></td>
+              <td><span class="check">●</span></td>
+              <td><span class="cross">—</span></td>
+            </tr>
+            <tr>
+              <td>Phone-camera 3D body scan</td>
+              <td class="apex"><span class="check">●</span></td>
+              <td><span class="cross">—</span></td>
+              <td><span class="cross">—</span></td>
+              <td><span class="partial">Partial</span></td>
+            </tr>
+            <tr>
+              <td>No extra hardware required</td>
+              <td class="apex"><span class="check">●</span></td>
+              <td><span class="check">●</span></td>
+              <td><span class="cross">—</span></td>
+              <td><span class="check">●</span></td>
+            </tr>
+            <tr>
+              <td>Cross-pillar adaptation (e.g. macros adjust to strain)</td>
+              <td class="apex"><span class="check">●</span></td>
+              <td><span class="cross">—</span></td>
+              <td><span class="cross">—</span></td>
+              <td><span class="cross">—</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── INTEGRATIONS ──────────────────────────────── -->
+<section class="integ">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow" style="color:var(--grey-2)">Integrations</span>
+      <h2 class="section-title" style="font-size:clamp(28px,3.5vw,40px);margin:0 auto;max-width:680px">HIIT connects with the devices you already own.</h2>
+      <p class="lede">Two-way sync. Set it once. Your data flows where it needs to go.</p>
+    </div>
+
+    <div class="integ-grid fade-in delay-1">
+      <div class="integ-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.52-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg></div>
+        <div class="n">Apple<br/>Health</div>
+        <div class="plat">iOS</div>
+      </div>
+      <div class="integ-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="3"/><rect x="9" y="6" width="6" height="12" rx="1"/></svg></div>
+        <div class="n">Apple<br/>Watch</div>
+        <div class="plat">iOS</div>
+      </div>
+      <div class="integ-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg></div>
+        <div class="n">Google Health<br/>Connect</div>
+        <div class="plat">Android</div>
+      </div>
+      <div class="integ-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10v4M11 9v6M15 11v2M19 10v4"/></svg></div>
+        <div class="n">Samsung<br/>Health</div>
+        <div class="plat">Android</div>
+      </div>
+      <div class="integ-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></div>
+        <div class="n">Garmin</div>
+        <div class="plat">iOS · Android</div>
+      </div>
+      <div class="integ-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12c2-4 5-6 9-6s7 2 9 6c-2 4-5 6-9 6s-7-2-9-6Z"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg></div>
+        <div class="n">Whoop</div>
+        <div class="plat">iOS · Android</div>
+      </div>
+      <div class="integ-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="4" r="1.6"/><circle cx="12" cy="9" r="2"/><circle cx="12" cy="15" r="2.6"/><circle cx="12" cy="21" r="1.6"/></svg></div>
+        <div class="n">Fitbit</div>
+        <div class="plat">iOS · Android</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FINAL CTA ──────────────────────────────────── -->
+<section class="final" id="signup">
+  <div class="container">
+    <h2 class="fade-in">Be first <br/><span class="gradient">through the door.</span></h2>
+    <p class="fade-in delay-1">HIIT lands on iPhone, Android &amp; Apple Watch in <b style="color:#fff">Summer 2026</b>. Join the waitlist and lock founder pricing — <b style="color:#fff" id="final-price">£19.99/mo</b>, for as long as you stay.</p>
+    <form class="wait-form fade-in delay-1" id="wait-form" novalidate>
+      <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required/>
+      <button type="submit" class="btn btn-lime btn-lg">Join the Waitlist</button>
+    </form>
+    <div class="wait-thanks" id="wait-thanks">You're on the list — we'll email you the moment HIIT goes live.</div>
+    <div class="watch-note fade-in delay-1">Apple Watch companion included with iOS.</div>
+    <div class="final-sub fade-in delay-2">
+      <span class="dot"></span>12,847 already on the waitlist · launching <span class="launch-long">Summer 2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="foot-grid">
+      <div>
+        <a href="#" class="logo">
+          <span class="logo-mark">
+            <svg viewBox="0 0 100 100" fill="#fff" aria-hidden="true"><g><path d="M28,14 L40,0 L46,0 L46,42 L54,42 L54,0 L60,0 L72,14 L72,86 L60,100 L54,100 L54,58 L46,58 L46,100 L40,100 L28,86 Z"/><path d="M4,36 L24,22 L24,78 L4,64 Z"/><path d="M76,22 L96,36 L96,64 L76,78 Z"/></g></svg>
+          </span>
+          <span><b>HIIT</b></span>
+        </a>
+        <p class="foot-about">The all-in-one AI fitness companion. Adaptive workouts, smart nutrition, biometric monitoring, and 30-second body scanning — in one subscription. Coming <span class="launch-long">Summer 2026</span> on iPhone and Android.</p>
+        <div class="socials">
+          <a href="#" aria-label="Twitter"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="18" cy="6" r="1" fill="currentColor"/></svg></a>
+          <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 7.5s-.2-1.6-.9-2.3c-.8-.9-1.7-.9-2.1-1C16.9 4 12 4 12 4s-4.9 0-8 .2c-.4 0-1.3.1-2.1 1C1.2 5.9 1 7.5 1 7.5S.8 9.4.8 11.3v1.4c0 1.9.2 3.8.2 3.8s.2 1.6.9 2.3c.8.9 1.9.9 2.4 1 1.7.2 7.7.2 7.7.2s4.9 0 8-.2c.4 0 1.3-.1 2.1-1 .7-.7.9-2.3.9-2.3s.2-1.9.2-3.8v-1.4c0-1.9-.2-3.8-.2-3.8zM10 15V8l6 3.5z"/></svg></a>
+          <a href="#" aria-label="TikTok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 5.82a4.28 4.28 0 0 1-2.78-2.13V9.4a7.6 7.6 0 0 1-4.4 6.9 7.5 7.5 0 0 1-3.55.55 7.27 7.27 0 0 1-3.36-1.62 7.4 7.4 0 0 1 4.32-12.93v3a4.27 4.27 0 0 0-2.85 7.94 4.28 4.28 0 0 0 5.62-1.21V0h3.16a4.28 4.28 0 0 0 3.86 3.78z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h5>Product</h5>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#">Integrations</a></li>
+          <li><a href="#">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Resources</h5>
+        <ul>
+          <li><a href="#">Science library</a></li>
+          <li><a href="#">Member stories</a></li>
+          <li><a href="#">Help center</a></li>
+          <li><a href="#">API for clinicians</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Company</h5>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Press</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Legal</h5>
+        <ul>
+          <li><a href="#">Privacy</a></li>
+          <li><a href="#">Terms</a></li>
+          <li><a href="#">Data policy</a></li>
+          <li><a href="#">Security</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <div>© 2026 HIIT Fitness Ltd All rights reserved.</div>
+      <div>v4.2 · Built for human performance</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Sticky nav state
+const nav = document.getElementById('nav');
+const onScroll = () => {
+  if (window.scrollY > 12) nav.classList.add('scrolled');
+  else nav.classList.remove('scrolled');
+};
+onScroll();
+window.addEventListener('scroll', onScroll, { passive: true });
+
+// IntersectionObserver fade-in
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) {
+      e.target.classList.add('in');
+      io.unobserve(e.target);
+    }
+  }
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+
+// Animated counters
+const counters = document.querySelectorAll('[data-count]');
+const countObs = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    const el = e.target;
+    const target = parseFloat(el.dataset.count);
+    const decimals = parseInt(el.dataset.decimals || '0', 10);
+    const dur = 1600;
+    const start = performance.now();
+    const initial = el.firstChild && el.firstChild.nodeType === 3 ? el.firstChild : null;
+    function tick(t) {
+      const p = Math.min(1, (t - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const val = (target * eased).toFixed(decimals);
+      if (el.children.length === 0) {
+        el.textContent = val;
+      } else {
+        // first text node is the number; trailing small/etc kept
+        if (el.firstChild && el.firstChild.nodeType === 3) {
+          el.firstChild.textContent = val;
+        } else {
+          el.insertBefore(document.createTextNode(val), el.firstChild);
+        }
+      }
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    countObs.unobserve(el);
+  }
+}, { threshold: 0.4 });
+counters.forEach(el => countObs.observe(el));
+
+// Hamburger toggles a simple mobile dropdown
+const ham = document.querySelector('.hamburger');
+if (ham) {
+  ham.addEventListener('click', () => {
+    const links = document.querySelector('.nav-links');
+    if (!links) return;
+    const open = links.style.display === 'flex';
+    links.style.display = open ? '' : 'flex';
+    links.style.flexDirection = 'column';
+    links.style.position = 'absolute';
+    links.style.top = '64px';
+    links.style.right = '20px';
+    links.style.left = '20px';
+    links.style.padding = '20px';
+    links.style.background = 'rgba(10,10,15,0.95)';
+    links.style.border = '1px solid var(--border)';
+    links.style.borderRadius = '14px';
+    links.style.backdropFilter = 'blur(20px)';
+    if (open) {
+      links.removeAttribute('style');
+    }
+  });
+}
+</script>
+
+<script>
+(function(){
+  var wf=document.getElementById('wait-form');
+  if(!wf) return;
+  wf.addEventListener('submit',function(e){
+    e.preventDefault();
+    var v=wf.email.value.trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){ wf.email.style.borderColor='#EF4444'; return; }
+    wf.style.display='none';
+    document.getElementById('wait-thanks').classList.add('on');
+  });
+})();
+</script>
+<script>
+// ── Pricing billing toggle (Monthly / Annual) ───────────
+(function(){
+  // Fixed Elite prices; Pro monthly is read live from #hiit-total (Tweaks-driven).
+  var ELITE_MONTHLY = 49.99, ELITE_ANNUAL = 39.99;
+  function curSym(){
+    var t = (document.getElementById('hiit-total')||{}).textContent || '£0';
+    var m = t.match(/[£$€]/); return m ? m[0] : '£';
+  }
+  function proMonthly(){
+    var t = (document.getElementById('hiit-total')||{}).textContent || '£29.99';
+    var v = parseFloat(t.replace(/[^0-9.]/g,'')); return isNaN(v) ? 29.99 : v;
+  }
+  function mode(){ return window.__billingMode || 'monthly'; }
+  function fmt(sym, n){ return sym + n.toFixed(2); }
+  function renderBilling(){
+    var sym = curSym(), m = mode();
+    var proM = proMonthly(), proA = proM * 2/3;
+    var set = function(id, txt){ var el = document.getElementById(id); if(el) el.textContent = txt; };
+    if(m === 'annual'){
+      set('pro-price', fmt(sym, proA));
+      set('pro-bill', 'billed ' + fmt(sym, proA*12) + ' annually · founder rate');
+      set('elite-price', fmt(sym, ELITE_ANNUAL));
+      set('elite-bill', 'billed ' + fmt(sym, ELITE_ANNUAL*12) + ' annually');
+    } else {
+      set('pro-price', fmt(sym, proM));
+      set('pro-bill', 'or ' + fmt(sym, proA) + '/mo billed annually · founder rate, save 33%');
+      set('elite-price', fmt(sym, ELITE_MONTHLY));
+      set('elite-bill', 'or ' + fmt(sym, ELITE_ANNUAL) + '/mo billed annually');
+    }
+  }
+  window.renderBilling = renderBilling;
+  document.querySelectorAll('.bt-pill').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      window.__billingMode = btn.dataset.billing;
+      document.querySelectorAll('.bt-pill').forEach(function(b){ b.classList.toggle('on', b === btn); });
+      renderBilling();
+    });
+  });
+  renderBilling();
+})();
+</script>
+<!-- ── TWEAKS ──────────────────────────────────── -->
+<div id="hiit-tweaks-root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="hiit-tweaks.jsx"></script>
+</body>
+</html>

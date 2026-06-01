@@ -300,7 +300,7 @@ These claims cannot be substantiated and must be updated on the website before i
 | Feature | Effort | Notes |
 |---|---|---|
 | Whoop API | 1–2 weeks | Self-service dev access at developer.whoop.com — no pre-approval gatekeeping. Brings Strain score (0–21), Recovery % (HRV + RHR + sleep + respiratory rate), and RMSSD HRV — none of which come through HealthKit |
-| Garmin Connect API | 2–4 weeks | Push/webhook architecture — Garmin sends data to a Supabase Edge Function endpoint. Brings Body Battery (0–100), granular stress scores, and epoch-level summaries not available in HealthKit |
+| Garmin Connect API | 2–4 weeks | Push/webhook architecture — Garmin sends data to a Supabase Edge Function endpoint. Brings Body Battery (0–100), granular stress scores (0–100 with calm/balanced/stressful/very_stressful qualifiers), and epoch-level summaries not available in HealthKit. The "stress index" shown on the website is this Garmin stress score — only available once Garmin integration is live |
 | Google Health API / Fitbit | 3–6 weeks | Apply immediately — Google's privacy review is the uncontrollable delay. Intraday HR (1-second), Active Zone Minutes, breathing rate. Note: legacy Fitbit Web API deprecated Sept 2026; target Google Health API directly |
 
 **Nutrition**
