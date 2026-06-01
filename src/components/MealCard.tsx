@@ -16,15 +16,13 @@ interface MealCardProps {
 }
 
 export function MealCard({ meal, onClick }: MealCardProps) {
-  const displayTags = [...(meal.dietary_tags ?? []), ...(meal.tags ?? [])].slice(0, 2)
-
   return (
     <div
-      className="w-40 h-52 flex-shrink-0 snap-start rounded-2xl overflow-hidden border border-border/40 bg-card cursor-pointer active:opacity-80 transition-opacity"
+      className="w-[200px] flex-shrink-0 snap-start rounded-2xl overflow-hidden border border-border/40 bg-card cursor-pointer active:opacity-80 transition-opacity"
       onClick={onClick}
     >
-      {/* Image / placeholder */}
-      <div className="relative h-24 w-full">
+      {/* Full-bleed image with overlaid name + calories */}
+      <div className="relative h-28 w-full">
         {meal.image_url ? (
           <img
             src={meal.image_url}
@@ -39,26 +37,13 @@ export function MealCard({ meal, onClick }: MealCardProps) {
             )}
           </div>
         )}
-      </div>
-
-      {/* Info */}
-      <div className="p-2.5 flex flex-col gap-1.5 h-[calc(100%-6rem)]">
-        <p className="font-semibold text-sm text-foreground truncate leading-tight">{meal.name}</p>
-        {meal.calories != null && (
-          <p className="text-xs text-muted-foreground">{meal.calories} kcal</p>
-        )}
-        {displayTags.length > 0 && (
-          <div className="flex gap-1 flex-wrap mt-auto">
-            {displayTags.map(tag => (
-              <span
-                key={tag}
-                className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-foreground"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
+          <p className="font-semibold text-sm text-white truncate leading-tight">{meal.name}</p>
+          {meal.calories != null && (
+            <p className="text-xs text-white/70 mt-0.5">{meal.calories} kcal</p>
+          )}
+        </div>
       </div>
     </div>
   )

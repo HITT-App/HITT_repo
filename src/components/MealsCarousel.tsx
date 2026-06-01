@@ -22,6 +22,7 @@ type MealRow = {
   allergens?: string[] | null
   dietary_tags?: string[] | null
   ingredients: unknown
+  instructions: unknown
 }
 
 export function MealsCarousel() {

@@ -22,6 +22,7 @@ type MealDetail = {
   allergens?: string[] | null
   dietary_tags?: string[] | null
   ingredients: unknown
+  instructions: unknown
 }
 
 interface MealDetailSheetProps {
@@ -50,6 +51,7 @@ export function MealDetailSheet({ meal, open, onClose }: MealDetailSheetProps) {
 
   type Ingredient = { amount: string; unit: string; name: string }
   const ingredients: Ingredient[] = Array.isArray(meal.ingredients) ? meal.ingredients as Ingredient[] : []
+  const instructions: string[] = Array.isArray(meal.instructions) ? meal.instructions as string[] : []
 
   return (
     <Drawer open={open} onOpenChange={open => { if (!open) onClose() }}>
@@ -134,6 +136,22 @@ export function MealDetailSheet({ meal, open, onClose }: MealDetailSheetProps) {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+            {/* Instructions */}
+            {instructions.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1.5">Instructions</p>
+                <ol className="flex flex-col gap-2">
+                  {instructions.map((step, idx) => (
+                    <li key={idx} className="text-sm text-foreground flex items-start gap-2.5">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
           </div>
