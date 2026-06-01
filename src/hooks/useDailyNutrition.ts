@@ -38,7 +38,7 @@ export function useDailyNutrition(): DailyNutrition {
     startOfDay.setHours(0, 0, 0, 0);
     const startISO = startOfDay.toISOString();
 
-    const [goalsRes, mealsRes, waterRes] = await Promise.all([
+    const [goalsRes, mealsRes, waterRes, prefsRes] = await Promise.all([
       supabase
         .from("nutrition_goals")
         .select("daily_calories, daily_protein_grams, daily_carbs_grams, daily_fat_grams")
@@ -55,6 +55,11 @@ export function useDailyNutrition(): DailyNutrition {
         .eq("user_id", user.id)
         .eq("metric_type", "hydration")
         .gte("recorded_at", startISO),
+      supabase
+        .from("nutrition_profiles")
+        .select("daily_calorie_target")
+        .eq("user_id", user.id)
+        .maybeSingle(),
     ]);
 
     const meals = mealsRes.data ?? [];
@@ -78,7 +83,7 @@ export function useDailyNutrition(): DailyNutrition {
     setState({
       consumed: { ...consumed, waterMl },
       targets: {
-        calories: goalsRes.data?.daily_calories ?? DEFAULT_TARGETS.calories,
+        calories: prefsRes.data?.daily_calorie_target ?? goalsRes.data?.daily_calories ?? DEFAULT_TARGETS.calories,
         protein: goalsRes.data?.daily_protein_grams ?? DEFAULT_TARGETS.protein,
         carbs: goalsRes.data?.daily_carbs_grams ?? DEFAULT_TARGETS.carbs,
         fat: goalsRes.data?.daily_fat_grams ?? DEFAULT_TARGETS.fat,

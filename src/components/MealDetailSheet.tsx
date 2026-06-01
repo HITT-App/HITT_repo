@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import hiitLogo from '@/assets/hiit-logo.jpg'
 import {
   Drawer,
   DrawerContent,
@@ -19,6 +20,7 @@ type MealDetail = {
   carbs_grams: number | null
   image_url: string | null
   tags: string[] | null
+  meal_type?: string | null
   allergens?: string[] | null
   dietary_tags?: string[] | null
   ingredients: unknown
@@ -63,7 +65,12 @@ export function MealDetailSheet({ meal, open, onClose }: MealDetailSheetProps) {
           </div>
         )}
         {!meal.image_url && (
-          <div className="h-32 w-full bg-gradient-to-br from-primary/30 to-secondary" />
+          <div className="h-32 w-full bg-gradient-to-br from-primary/20 to-secondary flex flex-col items-center justify-center gap-1.5">
+            <img src={hiitLogo} alt="HIIT" className="w-10 h-10 rounded-xl object-cover opacity-70" />
+            {meal.meal_type && (
+              <p className="text-xs font-medium text-muted-foreground capitalize">{meal.meal_type}</p>
+            )}
+          </div>
         )}
 
         <div className="overflow-y-auto">

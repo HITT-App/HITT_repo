@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { useDailyNutrition } from "@/hooks/useDailyNutrition";
 
 interface NutritionSectionProps {
   consumed?: number;
@@ -14,14 +15,22 @@ interface NutritionSectionProps {
 }
 
 export function NutritionSection({
-  consumed = 2181,
-  target = 2500,
-  protein = 85,
-  carbs = 180,
-  fat = 65,
+  consumed: consumedProp = 2181,
+  target: targetProp = 2500,
+  protein: proteinProp = 85,
+  carbs: carbsProp = 180,
+  fat: fatProp = 65,
   hasData = true,
 }: NutritionSectionProps) {
   const navigate = useNavigate();
+  const nutrition = useDailyNutrition();
+
+  // Use live hook values; fall back to props only while the hook hasn't loaded yet
+  const consumed = nutrition.loading ? consumedProp : nutrition.calories.consumed;
+  const target = nutrition.loading ? targetProp : nutrition.calories.target;
+  const protein = nutrition.loading ? proteinProp : nutrition.protein.consumed;
+  const carbs = nutrition.loading ? carbsProp : nutrition.carbs.consumed;
+  const fat = nutrition.loading ? fatProp : nutrition.fat.consumed;
   const percentage = Math.min((consumed / target) * 100, 100);
   const remaining = target - consumed;
 
