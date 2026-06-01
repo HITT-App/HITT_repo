@@ -142,6 +142,7 @@ When the user asks you to log food or a meal (e.g. "log that I just ate an apple
 4. Confirm to the user what was logged and which meal slot it went into. Keep it brief: "Logged an apple as a snack (95 cal) 🍎"
 5. If you're unsure about a food item's nutrition, use reasonable averages — do not ask for confirmation, just log it.
 6. Food logging does NOT need user confirmation — log it immediately.
+7. When the user asks what they've eaten today or how many calories they've consumed, answer ONLY from TODAY'S FOOD DIARY in the context block. Chat messages that say "Logged X as Y (Z cal)" are confirmation receipts — the actual data is in the diary. Never sum the chat messages separately.
 
 ═══════════════════════════════════════════
 SCHEDULE CREATION — HOW IT WORKS (READ CAREFULLY)
@@ -809,6 +810,7 @@ serve(async (req) => {
       { data: userWorkoutPrefs },
       { data: workoutsCatalogue },
       { data: recipesCatalogue },
+      { data: todayMealLogs },
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
@@ -825,6 +827,7 @@ serve(async (req) => {
       supabase.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
       supabase.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g').limit(50),
+      supabase.from('meal_logs').select('custom_name, category, calories, protein_grams, carbs_grams, fat_grams, logged_at').eq('user_id', userId).is('deleted_at', null).gte('logged_at', new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString()).order('logged_at', { ascending: true }),
     ]);
 
     // Build user context string
@@ -961,6 +964,27 @@ serve(async (req) => {
     userContext += "\nUse this context to personalise your responses. Address the user by name when appropriate. Reference their goals, fitness level, and recent activity. If data is missing, ask them about it naturally.\n";
     userContext += "\n⚠️ WORKOUT CALIBRATION: When recommending workouts, consider the user's weight for calorie calculations (MET × weight_kg × duration_hours). Recommend workout types that match their preferences and fitness level.\n";
     userContext += "\n⚠️ CATALOGUE RULE: When you mention a specific workout or recipe by name, it MUST come from the WORKOUTS CATALOGUE or RECIPES CATALOGUE above. Never invent workout or recipe names. If the catalogue doesn't contain something suitable, say so honestly rather than making one up.\n";
+
+    if (todayMealLogs && todayMealLogs.length > 0) {
+      const totals = todayMealLogs.reduce(
+        (acc: { calories: number; protein: number; carbs: number; fat: number }, m: { calories: number | null; protein_grams: number | null; carbs_grams: number | null; fat_grams: number | null }) => ({
+          calories: acc.calories + (m.calories || 0),
+          protein: acc.protein + (m.protein_grams || 0),
+          carbs: acc.carbs + (m.carbs_grams || 0),
+          fat: acc.fat + (m.fat_grams || 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+      userContext += `\n═══ TODAY'S FOOD DIARY ═══\n`;
+      for (const m of todayMealLogs) {
+        const time = m.logged_at ? m.logged_at.substring(11, 16) : '??:??';
+        userContext += `• ${time} UTC — ${m.custom_name} (${m.category}): ${m.calories || 0} cal, ${m.protein_grams || 0}g protein, ${m.carbs_grams || 0}g carbs, ${m.fat_grams || 0}g fat\n`;
+      }
+      userContext += `Daily totals so far: ${Math.round(totals.calories)} cal | ${Math.round(totals.protein)}g protein | ${Math.round(totals.carbs)}g carbs | ${Math.round(totals.fat)}g fat\n`;
+      userContext += `⚠️ THIS DIARY IS THE ONLY SOURCE OF TRUTH for what the user has eaten today. When answering questions about today's intake or calories consumed, use ONLY these entries. Chat messages that say "Logged X as Y (Z cal)" are confirmation receipts — do NOT count them as additional food; they are already included above.\n`;
+    } else {
+      userContext += `\n═══ TODAY'S FOOD DIARY ═══\nNo food logged today yet.\n`;
+    }
 
     // ─── Process request ───
     const reqBody = await req.json();

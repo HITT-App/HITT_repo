@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-06-01] — A23: Jarvis food-diary reads live data
+
+- **Jarvis now sees everything you've eaten today** — foods logged via the diary, barcode scanner, or meal scanner all appear in Jarvis's context; previously Jarvis could only see items logged through chat
+- **Deleted foods disappear from Jarvis immediately** — the live query filters soft-deleted rows; asking "what have I eaten today" after deleting an entry no longer mentions the deleted item
+- **Accurate calorie and macro totals** — Jarvis answers from the live diary block (with running totals) rather than from chat message history, eliminating double-counting
+- **Edge-function-only change** — no app update required; takes effect immediately on next Jarvis conversation
+
 ## [2026-06-01] — A21 fixes: edit drawer input and keyboard behaviour
 
 - **Numeric fields can be cleared** — calories, protein, carbs, fat, fiber, and servings no longer snap back to 0 when cleared; you can delete the value and type a fresh number cleanly
