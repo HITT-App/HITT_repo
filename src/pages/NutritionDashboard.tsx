@@ -133,6 +133,7 @@ export default function NutritionDashboard() {
       .from("meal_logs")
       .select("*, meals(name, image_url)")
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .gte("logged_at", startOfDay(selectedDate).toISOString())
       .lte("logged_at", endOfDay(selectedDate).toISOString())
       .order("logged_at", { ascending: false });

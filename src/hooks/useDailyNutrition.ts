@@ -48,6 +48,7 @@ export function useDailyNutrition(): DailyNutrition {
         .from("meal_logs")
         .select("calories, protein_grams, carbs_grams, fat_grams")
         .eq("user_id", user.id)
+        .is("deleted_at", null)
         .gte("logged_at", startISO),
       supabase
         .from("health_metrics")

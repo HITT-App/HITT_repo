@@ -563,7 +563,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         )}
 
         {/* Persisted conversation history */}
-        {ai.messages.map((msg, i) => (
+        {ai.messages.filter(msg => msg.content.trim() !== '').map((msg, i) => (
           msg.role === 'assistant' ? (
             <div key={msg.id ?? i} className="bg-secondary/40 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>

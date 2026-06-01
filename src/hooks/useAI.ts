@@ -69,6 +69,14 @@ function validateAction(action: unknown): action is Action {
 export type { AIMessage, Action, StreamStatus, UseAIReturn };
 export * from './useAI.types';
 
+// Returns a human-readable summary of log_food actions for storage as the
+// non-synthetic assistant message, giving the AI a fulfilled-state signal on reload.
+function logFoodSummary(actions: Action[]): string {
+  const logs = actions.filter((a): a is { type: 'log_food'; payload: LogFoodPayload } => a.type === 'log_food')
+  if (logs.length === 0) return ''
+  return logs.map(a => `Food logged: ${a.payload.name} (${a.payload.calories} kcal), ${a.payload.category}`).join('. ')
+}
+
 export function useAI(): UseAIReturn {
   const { user } = useAuth();
   const [messages, setMessages] = useState<AIMessage[]>([]);
@@ -336,21 +344,28 @@ export function useAI(): UseAIReturn {
           abortRef.current.signal,
         );
 
-        const { data: persistedAssistant } = await supabase
-          .from('messages')
-          .insert({ conversation_id: conversationId, role: 'assistant', content: assembledText })
-          .select('id, created_at')
-          .single();
+        const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions);
 
-        const assistantMsg: AIMessage = {
-          id: persistedAssistant?.id ?? crypto.randomUUID(),
-          role: 'assistant',
-          content: assembledText,
-          created_at: persistedAssistant?.created_at ?? new Date().toISOString(),
-          actions: emittedActions.length > 0 ? emittedActions : undefined,
-        };
+        let persistedAssistant: { id: string; created_at: string } | null = null;
+        if (effectiveContent) {
+          const { data } = await supabase
+            .from('messages')
+            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent })
+            .select('id, created_at')
+            .single();
+          persistedAssistant = data;
+        }
 
-        setMessages(prev => [...prev, assistantMsg]);
+        if (effectiveContent) {
+          const assistantMsg: AIMessage = {
+            id: persistedAssistant?.id ?? crypto.randomUUID(),
+            role: 'assistant',
+            content: effectiveContent,
+            created_at: persistedAssistant?.created_at ?? new Date().toISOString(),
+            actions: emittedActions.length > 0 ? emittedActions : undefined,
+          };
+          setMessages(prev => [...prev, assistantMsg]);
+        }
         setStreamingText('');
         setStatus('idle');
       } catch (err) {
@@ -403,11 +418,17 @@ export function useAI(): UseAIReturn {
           abortRef.current.signal,
         );
 
-        const { data: persistedAssistant } = await supabase
-          .from('messages')
-          .insert({ conversation_id: conversationId, role: 'assistant', content: assembledText })
-          .select('id, created_at')
-          .single();
+        const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions);
+
+        let persistedAssistant: { id: string; created_at: string } | null = null;
+        if (effectiveContent) {
+          const { data } = await supabase
+            .from('messages')
+            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent })
+            .select('id, created_at')
+            .single();
+          persistedAssistant = data;
+        }
 
         // Fire-and-forget cleanup
         supabase
@@ -419,15 +440,16 @@ export function useAI(): UseAIReturn {
             if (error) console.error('Chat history cleanup failed:', error);
           });
 
-        const assistantMsg: AIMessage = {
-          id: persistedAssistant?.id ?? crypto.randomUUID(),
-          role: 'assistant',
-          content: assembledText,
-          created_at: persistedAssistant?.created_at ?? new Date().toISOString(),
-          actions: emittedActions.length > 0 ? emittedActions : undefined,
-        };
-
-        setMessages(prev => [...prev, assistantMsg]);
+        if (effectiveContent) {
+          const assistantMsg: AIMessage = {
+            id: persistedAssistant?.id ?? crypto.randomUUID(),
+            role: 'assistant',
+            content: effectiveContent,
+            created_at: persistedAssistant?.created_at ?? new Date().toISOString(),
+            actions: emittedActions.length > 0 ? emittedActions : undefined,
+          };
+          setMessages(prev => [...prev, assistantMsg]);
+        }
         setStreamingText('');
         setStatus('idle');
       } catch (err) {
