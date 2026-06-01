@@ -12,6 +12,7 @@ type MealRow = {
   name: string
   description: string | null
   category: string
+  meal_type: string | null
   calories: number | null
   protein_grams: number | null
   fat_grams: number | null
@@ -47,7 +48,7 @@ export function MealsCarousel() {
         </Button>
       </div>
 
-      <div className="flex gap-3 px-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+      <div className="flex gap-3 pl-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1">
         {showOnboardingCard && (
           <NutritionOnboardingCard />
         )}
@@ -63,6 +64,8 @@ export function MealsCarousel() {
         {meals.length === 0 && !showOnboardingCard && (
           <p className="text-sm text-muted-foreground py-4 px-1">No recommendations yet.</p>
         )}
+
+        <div className="w-4 flex-shrink-0" />
       </div>
 
       {selectedMeal && (

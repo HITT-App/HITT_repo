@@ -7,6 +7,7 @@ type MealRow = {
   name: string
   description: string | null
   category: string
+  meal_type: string | null
   calories: number | null
   protein_grams: number | null
   fat_grams: number | null
@@ -28,7 +29,7 @@ export function useMealRecommendations() {
       const { data } = await supabase
         .from('meals')
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- new columns not yet in generated types
-        .select('id, name, description, category, calories, protein_grams, fat_grams, carbs_grams, image_url, tags, allergens, dietary_tags, ingredients' as any)
+        .select('id, name, description, category, meal_type, calories, protein_grams, fat_grams, carbs_grams, image_url, tags, allergens, dietary_tags, ingredients' as any)
         .eq('is_featured', false)
         .order('rating', { ascending: false })
         .limit(20)

@@ -48,7 +48,8 @@ export function MealDetailSheet({ meal, open, onClose }: MealDetailSheetProps) {
     })
   }
 
-  const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients as string[] : []
+  type Ingredient = { amount: string; unit: string; name: string }
+  const ingredients: Ingredient[] = Array.isArray(meal.ingredients) ? meal.ingredients as Ingredient[] : []
 
   return (
     <Drawer open={open} onOpenChange={open => { if (!open) onClose() }}>
@@ -129,7 +130,7 @@ export function MealDetailSheet({ meal, open, onClose }: MealDetailSheetProps) {
                   {ingredients.map((item, idx) => (
                     <li key={idx} className="text-sm text-foreground flex items-start gap-2">
                       <span className="text-primary mt-0.5">•</span>
-                      <span>{String(item)}</span>
+                      <span>{[item.amount, item.unit, item.name].filter(Boolean).join(' ')}</span>
                     </li>
                   ))}
                 </ul>

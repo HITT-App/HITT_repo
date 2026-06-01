@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ALLERGEN_OPTIONS, DIETARY_OPTIONS } from '@/lib/constants'
 import { useNutritionPreferences } from '@/hooks/useNutritionPreferences'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/integrations/supabase/client'
 import { cn } from '@/lib/utils'
 
 type ActivityLevel = 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active'
@@ -21,6 +23,7 @@ type Step =
   | 'dietary'
   | 'calorie_choice'
   | 'calorie_questions'
+  | 'calorie_result'
   | 'calorie_manual'
   | 'done'
 
@@ -112,6 +115,7 @@ function calculateCalorieTarget(
 
 export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPreferencesFlowProps) {
   const { save } = useNutritionPreferences()
+  const { user } = useAuth()
 
   const [step, setStep] = useState<Step>('allergens')
   const [allergies, setAllergies] = useState<string[]>([])
@@ -127,6 +131,9 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
 
   // Manual calorie state
   const [manualCalories, setManualCalories] = useState('')
+
+  // Calculated result (shown before confirming)
+  const [calculatedTarget, setCalculatedTarget] = useState<number | null>(null)
 
   const [saving, setSaving] = useState(false)
 
@@ -144,6 +151,7 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
       setWeightKg('')
       setHeightCm('')
       setManualCalories('')
+      setCalculatedTarget(null)
     }, 300)
   }
 
@@ -165,6 +173,19 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
       activity_level: activityLevel ?? undefined,
       onboarding_completed: true,
     })
+
+    // Sync weight to health_metrics so FitnessMetricsCard picks it up
+    const weightNum = parseFloat(weightKg)
+    if (user && !isNaN(weightNum) && weightNum > 0) {
+      await supabase.from('health_metrics').insert({
+        user_id: user.id,
+        metric_type: 'weight',
+        value: weightNum,
+        unit: 'kg',
+        recorded_at: new Date().toISOString(),
+      })
+    }
+
     setSaving(false)
     handleClose()
   }
@@ -177,20 +198,38 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
     weightKg.trim() !== '' &&
     heightCm.trim() !== ''
 
+  const STEPS: Step[] = ['allergens', 'dietary', 'calorie_choice', 'calorie_questions', 'calorie_result', 'calorie_manual']
+  const currentStepIndex = STEPS.indexOf(step)
+  const totalDots = 4 // allergens → dietary → calorie choice → calorie target
+  const dotIndex = step === 'allergens' ? 0 : step === 'dietary' ? 1 : step === 'calorie_choice' ? 2 : 3
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[90vh] overflow-y-auto">
-        <DrawerHeader className="pb-2">
-          <DrawerTitle>
+      <DrawerContent className="max-h-[90vh]">
+        <DrawerHeader className="pb-1 pt-5 px-5">
+          {/* Step dots */}
+          <div className="flex items-center gap-1.5 mb-3">
+            {Array.from({ length: totalDots }).map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'h-1 rounded-full transition-all',
+                  i <= dotIndex ? 'bg-primary flex-1' : 'bg-border flex-1',
+                )}
+              />
+            ))}
+          </div>
+          <DrawerTitle className="text-xl font-bold text-left">
             {step === 'allergens' && 'Any allergens?'}
             {step === 'dietary' && 'Dietary preferences'}
             {step === 'calorie_choice' && 'Calorie goal'}
             {step === 'calorie_questions' && 'A few quick stats'}
+            {step === 'calorie_result' && 'Your suggested target'}
             {step === 'calorie_manual' && 'Set your target'}
           </DrawerTitle>
         </DrawerHeader>
 
-        <div className="px-4 pb-4 flex flex-col gap-4">
+        <div className="px-5 pb-4 flex flex-col gap-5 overflow-y-auto">
           {/* Step: Allergens */}
           {step === 'allergens' && (
             <>
@@ -357,6 +396,25 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
             </>
           )}
 
+          {/* Step: Calculated result */}
+          {step === 'calorie_result' && calculatedTarget !== null && (
+            <>
+              <div className="flex flex-col items-center py-4 gap-2">
+                <p className="text-5xl font-bold text-foreground">
+                  {calculatedTarget.toLocaleString()}
+                </p>
+                <p className="text-base text-muted-foreground font-medium">kcal / day</p>
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Based on your goal to{' '}
+                <span className="text-foreground font-medium">
+                  {weightGoal === 'lose' ? 'lose weight' : weightGoal === 'gain' ? 'gain weight' : 'maintain weight'}
+                </span>{' '}
+                and your activity level, this will help you reach your goal.
+              </p>
+            </>
+          )}
+
           {/* Step: Manual calorie entry */}
           {step === 'calorie_manual' && (
             <>
@@ -375,7 +433,7 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
           )}
         </div>
 
-        <DrawerFooter className="pt-0">
+        <DrawerFooter className="pt-2 px-5 pb-6">
           {step === 'allergens' && (
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={handleSkip} disabled={saving}>
@@ -411,7 +469,7 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
               </Button>
               <Button
                 className="flex-1"
-                disabled={!questionsValid || saving}
+                disabled={!questionsValid}
                 onClick={() => {
                   const target = calculateCalorieTarget(
                     sex!,
@@ -421,10 +479,33 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
                     activityLevel!,
                     weightGoal!,
                   )
-                  handleComplete(target, 'calculated')
+                  setCalculatedTarget(target)
+                  setStep('calorie_result')
                 }}
               >
-                {saving ? 'Saving…' : 'Finish'}
+                Calculate
+              </Button>
+            </div>
+          )}
+
+          {step === 'calorie_result' && calculatedTarget !== null && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setManualCalories(String(calculatedTarget))
+                  setStep('calorie_manual')
+                }}
+              >
+                Adjust
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={saving}
+                onClick={() => handleComplete(calculatedTarget, 'calculated')}
+              >
+                {saving ? 'Saving…' : 'Use this target'}
               </Button>
             </div>
           )}

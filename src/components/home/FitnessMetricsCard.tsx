@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import hiitLogo from "@/assets/hiit-logo.jpg";
+import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 
 interface MetricItemProps {
   icon: React.ReactNode;
@@ -46,6 +47,11 @@ interface FitnessMetricsCardProps {
 
 export function FitnessMetricsCard({ hasData = false }: FitnessMetricsCardProps) {
   const navigate = useNavigate();
+  const { getLatestValue } = useHealthMetrics();
+
+  const weightVal = getLatestValue('weight') ?? '—';
+  const bpVal = getLatestValue('blood_pressure') ?? '—';
+  const hrVal = getLatestValue('heart_rate') ?? '—';
 
   if (!hasData) {
     return (
@@ -104,25 +110,25 @@ export function FitnessMetricsCard({ hasData = false }: FitnessMetricsCardProps)
         <MetricItem
           icon={<Scale className="w-5 h-5 text-green-500" />}
           label="Weight"
-          value="70.00"
-          unit="kg"
-          subtext="Stable weight"
+          value={weightVal}
+          unit={weightVal !== '—' ? 'kg' : undefined}
+          subtext="Latest reading"
           path="/weight"
         />
         <MetricItem
           icon={<Activity className="w-5 h-5 text-purple-500" />}
           label="Blood Pressure"
-          value="128/80"
-          unit="mmHg"
-          subtext="Stable Range"
+          value={bpVal}
+          unit={bpVal !== '—' ? 'mmHg' : undefined}
+          subtext="Latest reading"
           path="/blood-pressure"
         />
         <MetricItem
           icon={<Heart className="w-5 h-5 text-red-500" />}
           label="Heart Rate"
-          value="72"
-          unit="bpm"
-          subtext="Resting Rate"
+          value={hrVal}
+          unit={hrVal !== '—' ? 'bpm' : undefined}
+          subtext="Latest reading"
           path="/heart-rate"
         />
       </Card>

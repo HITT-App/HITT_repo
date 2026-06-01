@@ -1,6 +1,9 @@
+import hiitLogo from '@/assets/hiit-logo.jpg'
+
 type MealCardMeal = {
   id: string
   name: string
+  meal_type?: string | null
   calories: number | null
   image_url: string | null
   tags: string[] | null
@@ -29,7 +32,12 @@ export function MealCard({ meal, onClick }: MealCardProps) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/30 to-secondary" />
+          <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary flex flex-col items-center justify-center gap-1">
+            <img src={hiitLogo} alt="HIIT" className="w-8 h-8 rounded-lg object-cover opacity-70" />
+            {meal.meal_type && (
+              <p className="text-[10px] font-medium text-muted-foreground capitalize">{meal.meal_type}</p>
+            )}
+          </div>
         )}
       </div>
 
