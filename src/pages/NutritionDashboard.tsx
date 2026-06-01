@@ -107,13 +107,27 @@ export default function NutritionDashboard() {
   const fetchData = async () => {
     if (!user) return;
 
-    const { data: goalsData } = await supabase
-      .from("nutrition_goals")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
+    const [{ data: goalsData }, { data: prefsData }] = await Promise.all([
+      supabase.from("nutrition_goals").select("*").eq("user_id", user.id).single(),
+      supabase
+        .from("nutrition_profiles")
+        .select("daily_calorie_target")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+    ]);
 
-    if (goalsData) setGoals(goalsData);
+    if (goalsData) {
+      setGoals(prev => ({
+        ...prev,
+        ...goalsData,
+        // nutrition_profiles calorie target wins when present
+        ...(prefsData?.daily_calorie_target != null
+          ? { daily_calories: prefsData.daily_calorie_target }
+          : {}),
+      }));
+    } else if (prefsData?.daily_calorie_target != null) {
+      setGoals(prev => ({ ...prev, daily_calories: prefsData.daily_calorie_target! }));
+    }
 
     const { data: logsData } = await supabase
       .from("meal_logs")

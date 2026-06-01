@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight'
 import {
   Drawer,
   DrawerContent,
@@ -116,6 +117,7 @@ function calculateCalorieTarget(
 export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPreferencesFlowProps) {
   const { save } = useNutritionPreferences()
   const { user } = useAuth()
+  const keyboardHeight = useKeyboardHeight()
 
   const [step, setStep] = useState<Step>('allergens')
   const [allergies, setAllergies] = useState<string[]>([])
@@ -433,7 +435,10 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
           )}
         </div>
 
-        <DrawerFooter className="pt-2 px-5 pb-6">
+        <DrawerFooter
+          className="pt-2 px-5 pb-6"
+          style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : undefined }}
+        >
           {step === 'allergens' && (
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={handleSkip} disabled={saving}>
