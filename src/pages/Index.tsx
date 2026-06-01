@@ -31,6 +31,7 @@ import {
   SmartDailyBriefing,
   HealthSyncPrompt,
 } from "@/components/home";
+import { MealsCarousel } from "@/components/MealsCarousel";
 
 const Index = () => {
   const [showWelcome, setShowWelcome] = useState(false);
@@ -106,6 +107,7 @@ const Index = () => {
     header: null,
     daily_briefing: null,
     stats_grid: null,
+    meals: null,
     fitness_metrics: "health_metrics_enabled",
     activity: "activity_enabled",
     nutrition: "nutrition_enabled",
@@ -120,6 +122,7 @@ const Index = () => {
     header: <HomeHeader userName={displayName} score={hiitScore ?? undefined} scoreComponents={hiitComponents} avatarUrl={profile?.avatar_url} />,
     daily_briefing: <SmartDailyBriefing />,
     stats_grid: <StatsGrid />,
+    meals: <MealsCarousel />,
     fitness_metrics: <FitnessMetricsCard hasData={true} />,
     activity: <ActivitySection />,
     nutrition: <NutritionSection hasData={true} />,
@@ -140,6 +143,7 @@ const Index = () => {
           <StatsGrid />
           <BodyScanCard />
           <ScheduleCard />
+          <MealsCarousel />
           {flags.nutrition_enabled && <NutritionSection hasData={true} />}
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
           {flags.activity_enabled && <ActivitySection />}
@@ -160,7 +164,7 @@ const Index = () => {
       .flatMap((s) => {
         const el = <div key={s.section_key}>{sectionComponents[s.section_key]}</div>
         return s.section_key === 'stats_grid'
-          ? [el, <BodyScanCard key="body-scan-card" />, <ScheduleCard key="schedule-card" />]
+          ? [el, <BodyScanCard key="body-scan-card" />, <ScheduleCard key="schedule-card" />, <MealsCarousel key="meals-carousel" />]
           : [el]
       });
   };

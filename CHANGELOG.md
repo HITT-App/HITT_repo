@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-06-01] — A18: Nutrition preferences + Home meals carousel
+
+- **Recommended meals carousel on Home** — horizontal scroll of meals appears below the Schedule card; tapping any card opens a detail sheet with macros, ingredients, and a one-tap log button
+- **Nutrition preferences capture** — a 2–5 step flow collects allergens, dietary requirements, and a daily calorie target (either calculated via activity level and goals, or entered manually)
+- **Inline onboarding card** — first item in the carousel prompts preferences setup; disappears once completed or skipped
+- **Meal logging integration** — "Log this meal" pre-fills the existing log-meal screen with the meal's name and macros
+- **Allergen and dietary filtering** — meals matching the user's allergens are hidden; dietary preferences narrow the carousel further (filtering is client-side; tag backfill for existing meals is a follow-up task)
+- **DB extended** — `nutrition_profiles` gains calorie_method, weight_goal, activity_level, and onboarding_skipped columns; `meals` gains allergens and dietary_tags arrays
+
 ## [2026-05-31] — A5: 24-hour rolling chat history
 
 - **Chat history capped at 24 hours** — messages older than a day no longer appear in the chat view; Jarvis starts fresh each day

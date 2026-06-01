@@ -6,3 +6,12 @@
  * supabase/functions/_shared/constants.ts — keep them in sync.
  */
 export const CHAT_RETENTION_HOURS = 24;
+
+// Keep in sync with NutritionPreferencesFlow.tsx and A19 preferences editor
+export const ALLERGEN_OPTIONS = [
+  'Nuts', 'Peanuts', 'Dairy', 'Gluten', 'Eggs', 'Soy', 'Shellfish', 'Fish', 'Sesame',
+] as const;
+
+export const DIETARY_OPTIONS = [
+  'Vegetarian', 'Vegan', 'Pescatarian', 'Halal', 'Kosher', 'Low-carb',
+] as const;

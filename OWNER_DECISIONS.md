@@ -249,6 +249,121 @@ Info.plist contains all required Apple privacy usage strings: camera, photo libr
 
 ---
 
+## Coming Soon Website — Full Build List (added 2026-06-01)
+
+Everything needed to make the app match the promises on the coming soon website before public launch. Derived from a full audit of `HIIT Coming Soon.html` against the codebase and product spec.
+
+### Website copy — changes that must happen regardless of engineering
+
+These claims cannot be substantiated and must be updated on the website before it goes live:
+
+- **Remove "DEXA-grade" / "millimeter-accurate 3D model" / "±2% accuracy vs DEXA"** — would require a DXA validation study. Replace with: *"AI body composition analysis, accurate to ±3–5% — comparable to skinfold calipers. Designed for tracking trends, not clinical measurement."*
+- **Remove "Avatar morphs as your composition changes"** from the body scanner bullet list — months of 3D engineering, not a launch feature.
+- **Remove "bar speed"** from the AI coach description — requires hardware velocity sensors, not possible on phone alone.
+- **Remove "Trained on 500M+ real workouts"** stat — this is Gemini's training data, not a claim we can make.
+- **Change "25M+ food database"** — Open Food Facts has ~3M products. Change to *"millions of foods"* or remove the number.
+- **Remove Samsung Health from integrations** on the iOS version of the page — it's Android-only. Add it back with an "Android" label in the unified page.
+- **Update platform copy** throughout — *"iPhone & Apple Watch"* → *"iPhone, Android & Apple Watch"*. Apple Watch remains iOS-only; add a small "iOS" badge to that integration tile.
+
+---
+
+### Owner actions — required before engineering can complete these items
+
+| Action | Blocks |
+|---|---|
+| Create Google Play Console account (play.google.com/console, $25 one-time) | All Android publishing |
+| Generate Android signing keystore; upload to Codemagic → Code Signing → Android | Android builds signing |
+| Create Google Play service account in GCP; download JSON; add as `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS` in Codemagic | Codemagic → Play Store publishing |
+| Submit Health Connect privacy declaration in Play Console | Google Play distribution approval |
+| In Google Cloud Console project `hiit-fitness-oauth`, add Android OAuth 2.0 client (needs SHA-1 from keystore) | Google sign-in on Android |
+| Create Firebase project; register app with package name `com.hiitfitness.app`; download `google-services.json` | Push notifications on Android |
+| Enable Family Sharing on the Pro subscription product in App Store Connect (one checkbox) | Family sharing on iOS — zero engineering needed |
+| Apply to Garmin Connect Developer Program (developer.garmin.com/gc-developer-program) — approval ~2 days | Garmin integration |
+| Apply to Google Health API (Restricted scope review via Google Cloud Console) — approval weeks, not days | Fitbit/Google Health integration |
+| RevenueCat account + API key (already listed above — still open) | All subscription tiers |
+
+---
+
+### Engineering build list — pre-launch
+
+**Android platform (new)**
+
+| Feature | Effort | Notes |
+|---|---|---|
+| Google OAuth Android client ID | 1 day | Add `androidClientId` to `useAuth.tsx` once owner creates credential in GCP |
+| FCM push notifications | 1–2 days | Current VAPID implementation is web push. Android Capacitor needs FCM. Add `google-services.json` to build, update Supabase push edge functions to send FCM tokens on Android |
+| Samsung Health SDK | 1–3 weeks | Android-only. Register at developer.samsung.com/health. Exclusive data: Galaxy Watch BIA body composition (body fat %, skeletal muscle mass, body water). Some data types need additional Samsung approval |
+| Android QA on device | Ongoing | No local `android/` folder — Codemagic scaffolds it per build. QA must be done via the internal Play Store testing track |
+
+**Wearable integrations**
+
+| Feature | Effort | Notes |
+|---|---|---|
+| Whoop API | 1–2 weeks | Self-service dev access at developer.whoop.com — no pre-approval gatekeeping. Brings Strain score (0–21), Recovery % (HRV + RHR + sleep + respiratory rate), and RMSSD HRV — none of which come through HealthKit |
+| Garmin Connect API | 2–4 weeks | Push/webhook architecture — Garmin sends data to a Supabase Edge Function endpoint. Brings Body Battery (0–100), granular stress scores, and epoch-level summaries not available in HealthKit |
+| Google Health API / Fitbit | 3–6 weeks | Apply immediately — Google's privacy review is the uncontrollable delay. Intraday HR (1-second), Active Zone Minutes, breathing rate. Note: legacy Fitbit Web API deprecated Sept 2026; target Google Health API directly |
+
+**Nutrition**
+
+| Feature | Effort | Notes |
+|---|---|---|
+| Restaurant menu scanner | 1 day | Extend existing Gemini food analysis edge function with `mode: 'menu-scan'`. Returns `dishes[]` array. UI adds a picker step before logging. UK 2022 calorie labelling law means printed calorie counts on chain menus are readable by vision model — improves accuracy |
+| Micronutrient tracking | 2–3 days | Open Food Facts already returns vitamin/mineral data in `nutriments` — currently not captured. Add nullable JSONB `micros` column to `meal_logs`. Supplement with USDA FoodData Central API (free, no auth) for better coverage on staples. AI photo logs can estimate micros but accuracy is lower |
+| AI meal plan completion | 2–3 days | `generate-meal-plan` edge function is scaffolded but incomplete. Finish generation flow to produce a full weekly plan |
+| Weekly grocery list | 1–2 days | Extension of meal plan output — aggregate ingredients across the week's recipes, deduplicate quantities, return a structured list |
+| Macro auto-adjustment to training load | 3–5 days | Cross-pillar logic: if today's scheduled workout is high-intensity, nutrition dashboard and Jarvis adjust calorie/protein targets upward. New signal into nutrition goals calculation |
+
+**AI Fitness**
+
+| Feature | Effort | Notes |
+|---|---|---|
+| RPE input per set | 1–2 days | Add RPE slider (1–10) to workout player set completion flow. Store in workout logs table |
+| Progressive overload from previous session | 2–3 days | `generate-workout-plan` edge function currently ignores prior performance. Wire it to read the last session's actual weights/reps and suggest appropriate progression |
+| Auto-deload when recovery trends down | 2–3 days | Before generating a plan, query `health_metrics` for 5–7 day HRV/sleep trend. If trending down, inject a deload week into the plan output |
+
+**Health Monitor**
+
+| Feature | Effort | Notes |
+|---|---|---|
+| Daily recovery score | 2–3 days | Synthesise day's HRV + sleep data into a 0–100 recovery score. Surface on home dashboard. Jarvis references it when suggesting today's workout intensity |
+| Recovery score → informs tomorrow's plan | Included above | Same feature — recovery score feeds `generate-workout-plan` as an additional signal |
+| Sleep stages | 1 day | HealthKit exposes Core, Deep, REM, Awake sleep stages. Read these in `useHealthSync`; add a `stages` column (JSONB) to `sleep_logs` |
+| 90-day health export / clinician PDF | 3–4 days | Supabase edge function queries 90-day trend data, renders via pdfmake, streams PDF binary to Capacitor share sheet. Elite tier feature |
+
+**Subscriptions & Tiers**
+
+| Feature | Effort | Notes |
+|---|---|---|
+| RevenueCat wiring | 2 days | Owner must create RevenueCat account and supply API key. Already listed — still the blocker for everything below |
+| Free tier gating | 1–2 days | Limit to 3 manual-entry-only workouts per week; gate AI adaptive programming and body scanner behind Pro |
+| Elite tier definition and gating | 2–3 days | Define entitlement in RevenueCat. Gate: clinician PDFs, grocery lists, family sharing, AI meal planning behind Elite |
+| Annual billing option | ½ day | RevenueCat product config only — no code changes |
+| Family sharing (up to 5 accounts) | 15 min | Enable "Family Sharing" on the Pro subscription in App Store Connect. RevenueCat handles the rest automatically. Zero engineering |
+
+**Body Scanner**
+
+| Feature | Effort | Notes |
+|---|---|---|
+| Side-by-side progress comparison | ✅ Already built | `BodyScan.tsx` has `compareMode` and `previousScans` — done |
+
+---
+
+### Effort summary
+
+| Category | Estimated engineering time |
+|---|---|
+| Android platform | 3–5 weeks |
+| Wearable integrations (Whoop + Garmin + Google Health) | 6–12 weeks |
+| Nutrition features | 2–3 weeks |
+| AI fitness intelligence | 1–2 weeks |
+| Health monitor features | 1–2 weeks |
+| Subscriptions & tiers | 1–2 weeks |
+| **Total** | **~14–26 weeks** |
+
+The wide range is driven by the Google Health API review timeline (uncontrollable) and Samsung Health approval process. Whoop is the fastest wearable win — start there. Apply to Garmin and Google Health API this week; both have external review processes that run in parallel with other engineering.
+
+---
+
 ## Resolved
 
 ### ✅ Workout video links — owner-provided (2026-05-15)
