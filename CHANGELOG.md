@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-01] — A21 fixes: edit drawer input and keyboard behaviour
+
+- **Numeric fields can be cleared** — calories, protein, carbs, fat, fiber, and servings no longer snap back to 0 when cleared; you can delete the value and type a fresh number cleanly
+- **Keyboard no longer covers the edit fields** — the edit drawer now lifts above the on-screen keyboard when a field is focused, so you can always see what you're typing
+
 ## [2026-06-01] — A21: Edit and delete logged foods in diary
 
 - **Edit a logged entry** — tap the three-dot icon on any diary entry to open an action sheet, then choose Edit; a bottom drawer opens pre-filled with the entry's name, category, calories, servings, protein, carbs, fat, and fiber — save writes back to the database instantly

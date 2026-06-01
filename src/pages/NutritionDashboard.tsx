@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,15 +105,16 @@ export default function NutritionDashboard() {
   const [editForm, setEditForm] = useState({
     custom_name: '',
     category: 'breakfast',
-    calories: 0,
-    protein_grams: 0,
-    fat_grams: 0,
-    carbs_grams: 0,
-    fiber_grams: 0,
-    servings: 1,
+    calories: '',
+    protein_grams: '',
+    fat_grams: '',
+    carbs_grams: '',
+    fiber_grams: '',
+    servings: '',
   });
   const [editSaving, setEditSaving] = useState(false);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
 
   const currentDayIndex = getDay(selectedDate);
 
@@ -176,12 +178,12 @@ export default function NutritionDashboard() {
     setEditForm({
       custom_name: log.custom_name ?? log.meals?.name ?? '',
       category: log.category.toLowerCase(),
-      calories: log.calories,
-      protein_grams: log.protein_grams,
-      fat_grams: log.fat_grams,
-      carbs_grams: log.carbs_grams,
-      fiber_grams: log.fiber_grams ?? 0,
-      servings: log.servings ?? 1,
+      calories: String(log.calories),
+      protein_grams: String(log.protein_grams),
+      fat_grams: String(log.fat_grams),
+      carbs_grams: String(log.carbs_grams),
+      fiber_grams: String(log.fiber_grams ?? 0),
+      servings: String(log.servings ?? 1),
     });
     setEditLog(log);
     setActionLog(null);
@@ -193,12 +195,12 @@ export default function NutritionDashboard() {
     await supabase.from('meal_logs').update({
       custom_name: editForm.custom_name.trim() || null,
       category: editForm.category,
-      calories: editForm.calories,
-      protein_grams: editForm.protein_grams,
-      fat_grams: editForm.fat_grams,
-      carbs_grams: editForm.carbs_grams,
-      fiber_grams: editForm.fiber_grams,
-      servings: editForm.servings,
+      calories: Number(editForm.calories) || 0,
+      protein_grams: Number(editForm.protein_grams) || 0,
+      fat_grams: Number(editForm.fat_grams) || 0,
+      carbs_grams: Number(editForm.carbs_grams) || 0,
+      fiber_grams: Number(editForm.fiber_grams) || 0,
+      servings: Number(editForm.servings) || 1,
     }).eq('id', editLog.id);
     setEditSaving(false);
     setEditLog(null);
@@ -571,7 +573,7 @@ export default function NutritionDashboard() {
                   type="number"
                   inputMode="numeric"
                   value={editForm.calories}
-                  onChange={(e) => setEditForm(f => ({ ...f, calories: Number(e.target.value) }))}
+                  onChange={(e) => setEditForm(f => ({ ...f, calories: e.target.value }))}
                 />
               </div>
               <div className="space-y-1.5">
@@ -581,7 +583,7 @@ export default function NutritionDashboard() {
                   inputMode="decimal"
                   step="0.5"
                   value={editForm.servings}
-                  onChange={(e) => setEditForm(f => ({ ...f, servings: Number(e.target.value) }))}
+                  onChange={(e) => setEditForm(f => ({ ...f, servings: e.target.value }))}
                 />
               </div>
               <div className="space-y-1.5">
@@ -590,7 +592,7 @@ export default function NutritionDashboard() {
                   type="number"
                   inputMode="decimal"
                   value={editForm.protein_grams}
-                  onChange={(e) => setEditForm(f => ({ ...f, protein_grams: Number(e.target.value) }))}
+                  onChange={(e) => setEditForm(f => ({ ...f, protein_grams: e.target.value }))}
                 />
               </div>
               <div className="space-y-1.5">
@@ -599,7 +601,7 @@ export default function NutritionDashboard() {
                   type="number"
                   inputMode="decimal"
                   value={editForm.carbs_grams}
-                  onChange={(e) => setEditForm(f => ({ ...f, carbs_grams: Number(e.target.value) }))}
+                  onChange={(e) => setEditForm(f => ({ ...f, carbs_grams: e.target.value }))}
                 />
               </div>
               <div className="space-y-1.5">
@@ -608,7 +610,7 @@ export default function NutritionDashboard() {
                   type="number"
                   inputMode="decimal"
                   value={editForm.fat_grams}
-                  onChange={(e) => setEditForm(f => ({ ...f, fat_grams: Number(e.target.value) }))}
+                  onChange={(e) => setEditForm(f => ({ ...f, fat_grams: e.target.value }))}
                 />
               </div>
               <div className="space-y-1.5">
@@ -617,12 +619,15 @@ export default function NutritionDashboard() {
                   type="number"
                   inputMode="decimal"
                   value={editForm.fiber_grams}
-                  onChange={(e) => setEditForm(f => ({ ...f, fiber_grams: Number(e.target.value) }))}
+                  onChange={(e) => setEditForm(f => ({ ...f, fiber_grams: e.target.value }))}
                 />
               </div>
             </div>
           </div>
-          <DrawerFooter className="px-5 pb-8 pt-2 flex-row gap-3">
+          <DrawerFooter
+            className="px-5 pt-2 flex-row gap-3"
+            style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : 32 }}
+          >
             <Button variant="outline" className="flex-1" onClick={() => setEditLog(null)}>Cancel</Button>
             <Button className="flex-1" disabled={editSaving} onClick={handleSave}>
               {editSaving ? "Saving…" : "Save changes"}
