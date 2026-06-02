@@ -142,7 +142,8 @@ When the user asks you to log food or a meal (e.g. "log that I just ate an apple
 4. Confirm to the user what was logged and which meal slot it went into. Keep it brief: "Logged an apple as a snack (95 cal) 🍎"
 5. If you're unsure about a food item's nutrition, use reasonable averages — do not ask for confirmation, just log it.
 6. Food logging does NOT need user confirmation — log it immediately.
-7. When the user asks what they've eaten today or how many calories they've consumed, answer ONLY from TODAY'S FOOD DIARY in the context block. Chat messages that say "Logged X as Y (Z cal)" are confirmation receipts — the actual data is in the diary. Never sum the chat messages separately.
+7. Before emitting a [LOG_FOOD:...] marker, check TODAY'S FOOD DIARY in context. If the item is already present with a timestamp from the last few minutes, it has already been logged — do not emit the marker again.
+8. When the user asks what they've eaten today or how many calories they've consumed, answer ONLY from TODAY'S FOOD DIARY in the context block. The diary is the single source of truth. Do not infer food intake from earlier chat messages.
 
 ═══════════════════════════════════════════
 SCHEDULE CREATION — HOW IT WORKS (READ CAREFULLY)
@@ -260,10 +261,10 @@ THE REASON GOES BEFORE THE MARKER:
 "Your sleep was poor last night (under 6 hours) — let's go gentler. This 20-minute mobility flow will move you without taxing recovery.
 [RECOMMEND_WORKOUT:{"id":"abc-123-...","name":"Morning Mobility Flow"}]"
 
-Same rules apply to recipe recommendations. Reference whatever's relevant: what they've eaten today, their protein target progress, the time of day, their mood, what they said they wanted.
+Same rules apply to recipe recommendations. Reference whatever's relevant: today's food diary totals, their protein target progress, the time of day, their mood, what they said they wanted.
 
 ✅ "You're 40g short of your protein target with 6 hours left in the day — this dinner gets you there with room to spare."
-✅ "It's 11am, you only had coffee for breakfast, and your mood was 'flat' on check-in — this snack has the carbs and protein to lift your energy in 20 minutes."
+✅ "It's 11am, your diary shows 180 cal so far and your energy was 2/5 on check-in — this snack bridges the gap before lunch."
 
 ═══ WHEN TO RECOMMEND ═══
 
@@ -810,7 +811,6 @@ serve(async (req) => {
       { data: userWorkoutPrefs },
       { data: workoutsCatalogue },
       { data: recipesCatalogue },
-      { data: todayMealLogs },
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
@@ -827,8 +827,16 @@ serve(async (req) => {
       supabase.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
       supabase.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g').limit(50),
-      supabase.from('meal_logs').select('custom_name, category, calories, protein_grams, carbs_grams, fat_grams, logged_at').eq('user_id', userId).is('deleted_at', null).gte('logged_at', new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString()).order('logged_at', { ascending: true }),
     ]);
+
+    const todayBoundary = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString();
+    const { data: todayMealLogs } = await supabase
+      .from('meal_logs')
+      .select('custom_name, category, calories, protein_grams, carbs_grams, fat_grams, logged_at')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .gte('logged_at', todayBoundary)
+      .order('logged_at', { ascending: true });
 
     // Build user context string
     let userContext = "\n\n═══ USER PROFILE CONTEXT ═══\n";
@@ -1032,6 +1040,29 @@ serve(async (req) => {
       apiMessages.splice(apiMessages.length - 1, 0, {
         role: "system",
         content: `REMINDER: The user's name is "${nameForReminder}". ALWAYS address them as "${nameForReminder}". NEVER use their email address or username.`,
+      });
+    }
+
+    // Splice today's food diary as a standalone system message immediately before the final user turn.
+    // Position 0 diary block is authoritative data; this splice puts both data and instruction
+    // after all chat history, defeating positional bias toward "Food logged: X" receipts in the thread.
+    if (todayMealLogs && todayMealLogs.length > 0) {
+      const diaryTotals = todayMealLogs.reduce(
+        (acc: { calories: number; protein: number; carbs: number; fat: number }, m: any) => ({
+          calories: acc.calories + (m.calories || 0),
+          protein: acc.protein + (m.protein_grams || 0),
+          carbs: acc.carbs + (m.carbs_grams || 0),
+          fat: acc.fat + (m.fat_grams || 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+      const diaryLines = todayMealLogs.map((m: any) => {
+        const time = m.logged_at ? m.logged_at.substring(11, 16) : '??:??';
+        return `• ${time} UTC — ${m.custom_name} (${m.category}): ${m.calories || 0} cal, ${m.protein_grams || 0}g protein, ${m.carbs_grams || 0}g carbs, ${m.fat_grams || 0}g fat`;
+      }).join('\n');
+      apiMessages.splice(apiMessages.length - 1, 0, {
+        role: "system",
+        content: `TODAY'S FOOD DIARY (authoritative record of everything the user has eaten today):\n${diaryLines}\nDaily totals: ${Math.round(diaryTotals.calories)} cal | ${Math.round(diaryTotals.protein)}g protein | ${Math.round(diaryTotals.carbs)}g carbs | ${Math.round(diaryTotals.fat)}g fat\n\nWhen the user asks what they have eaten or how many calories they have consumed today, answer ONLY from this diary. Any "Food logged: X" or "Logged X" lines earlier in the conversation are confirmation receipts already represented above. Do not count them separately and do not infer food from earlier chat messages.`,
       });
     }
 

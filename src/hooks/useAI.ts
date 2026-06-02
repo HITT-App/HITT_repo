@@ -345,12 +345,15 @@ export function useAI(): UseAIReturn {
         );
 
         const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions);
+        // Log-summary messages (no AI text, only food logged silently) are stored as
+        // synthetic so they're excluded from AI context but remain visible in the chat UI.
+        const isLogSummary = !assembledText.trim() && emittedActions.some(a => a.type === 'log_food');
 
         let persistedAssistant: { id: string; created_at: string } | null = null;
         if (effectiveContent) {
           const { data } = await supabase
             .from('messages')
-            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent })
+            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent, synthetic: isLogSummary })
             .select('id, created_at')
             .single();
           persistedAssistant = data;
@@ -362,6 +365,7 @@ export function useAI(): UseAIReturn {
             role: 'assistant',
             content: effectiveContent,
             created_at: persistedAssistant?.created_at ?? new Date().toISOString(),
+            synthetic: isLogSummary,
             actions: emittedActions.length > 0 ? emittedActions : undefined,
           };
           setMessages(prev => [...prev, assistantMsg]);
@@ -419,12 +423,13 @@ export function useAI(): UseAIReturn {
         );
 
         const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions);
+        const isLogSummary = !assembledText.trim() && emittedActions.some(a => a.type === 'log_food');
 
         let persistedAssistant: { id: string; created_at: string } | null = null;
         if (effectiveContent) {
           const { data } = await supabase
             .from('messages')
-            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent })
+            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent, synthetic: isLogSummary })
             .select('id, created_at')
             .single();
           persistedAssistant = data;
@@ -446,6 +451,7 @@ export function useAI(): UseAIReturn {
             role: 'assistant',
             content: effectiveContent,
             created_at: persistedAssistant?.created_at ?? new Date().toISOString(),
+            synthetic: isLogSummary,
             actions: emittedActions.length > 0 ? emittedActions : undefined,
           };
           setMessages(prev => [...prev, assistantMsg]);

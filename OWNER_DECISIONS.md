@@ -6,11 +6,9 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
-### Calorie goal setting in Nutrition Dashboard
+### ✅ Calorie goal setting in Nutrition Dashboard (2026-06-01, Build 116)
 
-Users currently have no way to set their daily calorie target from within the app. The dashboard shows "X / 3320 kcal" but 3320 is a hardcoded default. A "Set goal" button or editable field on the Nutrition Dashboard (or in Profile/Settings) should let users enter their own daily calorie, protein, carbs, and fat targets, which would save to `nutrition_goals`.
-
-**Action needed:** confirm where this should live (inline on dashboard, or in a settings screen?) and whether the values should be manually entered or calculated from age/weight/activity level.
+A 2–5 step nutrition preferences flow now collects dietary requirements, allergens, and a daily calorie target — either calculated from weight/activity level/goal or entered manually. `nutrition_profiles` extended with `calorie_method`, `weight_goal`, `activity_level`, and `onboarding_skipped`. Dashboard reads from `nutrition_profiles` and the hardcoded 3320 default is gone.
 
 ### V2: Fitness Coach Sessions
 
@@ -45,16 +43,15 @@ Framework is built and registered in the Xcode project (`ios/App/HIITWatch/`). T
 
 **Action needed:** Follow `ios/App/WATCH_SETUP.md` to add the watchOS target in Xcode (File → New → Target → Watch App, ~5 minutes). After that, the Watch app will appear in the same TestFlight build automatically.
 
-### "OK HIIT" wake word feature
+### ⏸ "OK HIIT" wake word + voice — deferred to v1.0.1 (Build 102)
 
-The app has a "Say OK HIIT" toggle in Settings (backed by `WakeWordListener.tsx`). The intent is that saying "OK HIIT" activates the AI coach voice mode hands-free — similar to "Hey Siri". The scaffold is in place but the feature is not fully implemented.
+Voice responses and wake word detection have been switched off for v1.0 via a kill switch in `TTSContext` (`VOICE_FEATURE_ENABLED = false`). All TTS infrastructure stays deployed — one line restores it. The Settings toggle is hidden behind the flag. "OK HIIT" still opens Jarvis (it navigates to the AI surface) but does not speak.
 
-**Decision needed before enabling:**
-- Does the owner want continuous microphone listening as a feature? (Apple may scrutinise this during App Review — requires clear justification in the privacy usage string)
-- Should wake word detection run entirely on-device (requires a local ML model e.g. Picovoice Porcupine — ~1 week engineering) or trigger only when the app is in the foreground?
-- Alternatively: defer entirely and remove the toggle until post-launch when voice is a confirmed priority
+**Decision needed before v1.0.1:**
+- Wake word detection: on-device ML model (Picovoice Porcupine, ~1 week) vs foreground-only trigger only?
+- Apple may scrutinise continuous microphone use in App Review — justify in privacy strings before re-enabling
 
-Currently the toggle is visible in Settings but has no active effect. It is safe to leave as-is for TestFlight.
+Safe to ship v1.0 as-is.
 
 ### RevenueCat account — subscription wiring
 
@@ -238,6 +235,34 @@ App is on TestFlight. Current build: **24** (version 1.0). Add testers via App S
 | 69 | 2026-05-13 | Welcome message reliability + echo fix; nav restructure; social sticky headers; onboarding flow; mic chime fix |
 | 70 | 2026-05-13 | Hotfix: missing useEffect import in VoiceController caused startup crash on build 69 |
 | 71 | 2026-05-13 | Goals button added to Jarvis — reviews current goals or runs full onboarding if none set |
+| 72 | 2026-05-13 | Fix Jarvis onboarding edge cases; Watch workout persistence across restarts; activity pre-start screen |
+| 74 | 2026-05-14 | Force Jarvis to emit schedule marker on verbal approval; navigate to Schedule on add |
+| 75–79 | 2026-05-14 | Recommendation "why" reasons on every Jarvis suggestion; header padding polish; Jarvis voice echo fix |
+| 80–83 | 2026-05-14 | Phase 3–4: RECOMMEND_WORKOUT + RECOMMEND_RECIPE markers; Jarvis renders rich workout and recipe cards; Phase 5: proactive greeting recommendations + post-workout share nudge |
+| 84–87 | 2026-05-14 | Phase 6–7: Personal best detection (duration / calories / streak); PB share card gold treatment; 30-min push reminder; auto-cancel on share |
+| 88–90 | 2026-05-14 | T2.5: Schedule card on Home with three states; QuickAddSheet replaces mega-menu; nav restructure B |
+| 91–92 | 2026-05-14 | Visual polish: FAB size/position, avatar alignment, section spacing |
+| 93 | 2026-05-20 | T14: Workouts/Sports tab switcher; triathlon renamed to Long Course / Middle Distance for trademark compliance |
+| 94–95 | 2026-05-20 | SportsTab image-backed card redesign with sport illustrations; workout library import scripts |
+| 96 | 2026-05-21 | YouTube video playback in WorkoutPlayer — inline video alongside exercise steps |
+| 97 | 2026-05-21 | Workout filter normalisation — slugs, expanded categories and body areas now work |
+| 98 | 2026-05-21 | Navigation fixes: Triathlon and Routes use navigate(-1) instead of Home arrow |
+| 99 | 2026-05-26 | Fix Jarvis voice bugs — name injection, voice-off wiring, echo cancel, error toasts |
+| 100–101 | 2026-05-26 | Unify TTS into single service; fix voice name bug; fix iOS TTS gesture binding, name flicker, chat contamination |
+| 102 | 2026-05-26 | Voice deferred to v1.0.1 — VOICE_FEATURE_ENABLED kill switch; all TTS surfaces hidden |
+| 103–105 | 2026-05-27 | HIITMenu from Sheet to Drawer (swipe-dismiss); nav polish |
+| 106 | 2026-05-27 | 5A+5B: New `useAI` hook; structured response branch in ai-coach edge function (tool calling, typed Action SSE chunks) |
+| 107 | 2026-05-27 | 5C: JarvisMode refactored to pure UI over `useAI`; ~500 lines deleted; synthetic message architecture |
+| 108 | 2026-05-28 | 5E: AI-generated workout schema — inline exercises on `scheduled_workouts`, `workout_progress`, `user_workout_plan_items` |
+| 109 | 2026-05-29 | 5F: AI workout + plan generation via Jarvis (`generate-ai-workout`, `generate-ai-workout-plan` edge functions); A1: workout catalogue hidden from v1.0 surfaces |
+| 110 | 2026-05-29 | A2: Three-tab AI surface (/ai — Chat, Coach, Settings); bottom nav restructured to Home \| Quick Add \| HIIT \| Schedule \| Social |
+| 111 | 2026-05-31 | A5: 24-hour rolling chat history — messages older than 24 h purged; AI context window trimmed to same window |
+| 112–113 | 2026-06-01 | A18: Nutrition preferences flow (allergens, dietary requirements, calorie target); recommended meals carousel on Home |
+| 114–116 | 2026-06-01 | A18 patches: keyboard avoidance, ingredient fix, carousel polish; A18.4: Home nutrition card reads live data |
+| 117 | 2026-06-01 | BUG1: Fix nutrition double-logging on page reload — LOG_FOOD actions deduplicated by ID in useAI |
+| 118 | 2026-06-01 | A21: Edit and delete logged food diary entries — three-dot action sheet, pre-filled edit drawer, soft delete |
+| 119 | 2026-06-01 | A21 fixes: numeric field clear/retype; keyboard avoidance in edit drawer |
+| 120 | 2026-06-01 | A23: Jarvis food-diary reads live meal_logs; TODAY'S FOOD DIARY context block in ai-coach; double-counting guard |
 
 ### ✅ Google OAuth on iOS — rebuilt with native plugin (2026-05-01, build 24)
 
@@ -366,7 +391,29 @@ The wide range is driven by the Google Health API review timeline (uncontrollabl
 
 ## Resolved
 
-### ✅ Workout video links — owner-provided (2026-05-15)
+### ✅ TODAY'S FOOD DIARY in Jarvis context (2026-06-01, A23 / edge function)
+
+Jarvis now sees everything the user has eaten today — foods logged via the diary, barcode scanner, or meal scanner all appear as a structured context block in every ai-coach call. Jarvis answers "what have I eaten today?" from the live `meal_logs` query rather than reconstructing intake from chat history (which caused double-counting). Deleted entries are excluded. Running daily totals (cal / protein / carbs / fat) included. Edge-function-only change — no app rebuild needed.
+
+### ✅ AI-generated workouts via Jarvis — v1.0 feature (2026-05-29, Build 109, 5F)
+
+Jarvis can now generate a single custom workout or a multi-day plan on demand. Two new edge functions: `generate-ai-workout` (single session with full exercise detail) and `generate-ai-workout-plan` (multi-day, uses catalogue workouts as building blocks). AI workouts can be started immediately (GymTimer integration) or added to the schedule. Schema extended on `scheduled_workouts`, `workout_progress`, and `user_workout_plan_items` to hold inline exercise content alongside optional catalogue FK.
+
+**Decided:** ship for v1.0, but the workout catalogue is hidden from all user surfaces (A1) — users can only get workouts via Jarvis or the schedule. Catalogue routes preserved for v2.
+
+### ✅ Structured AI response architecture (2026-05-27, Builds 106–107, 5A–5C)
+
+`ai-coach` edge function now supports a structured response branch (`X-Response-Format: structured-v1`) using tool calling. Emits typed SSE chunks (`{type: text | action | done}`) rather than regex markers. New `useAI` hook is the single source of truth for conversation state, streaming, history, and action dispatch. JarvisMode refactored to a pure UI surface over the hook (~500 lines deleted). Marker path remains for backwards compatibility.
+
+### ✅ Jarvis workout and recipe recommendation cards (2026-05-14, Builds 80–83)
+
+Phase 3–5: Jarvis feeds the workouts and recipes catalogues into its context, emits `[RECOMMEND_WORKOUT]` and `[RECOMMEND_RECIPE]` markers, and renders rich cards in chat (thumbnail / name / macros / duration / difficulty). Three-button actions: Start now / Add to schedule / Skip (workouts); View recipe / Log it / Skip (recipes). Every recommendation includes a named reason. Proactive workout suggestions on days with nothing scheduled.
+
+### ✅ Personal best detection and share nudge (2026-05-14, Builds 84–87)
+
+Three PB types: longest duration, biggest calorie burn, longest streak. Gold share card treatment on PB. 30-minute push reminder if user backgrounds the app without sharing. Auto-cancel if they share inside Jarvis first.
+
+### ✅ Workout catalogue — owner-provided videos (2026-05-15)
 
 The YouTube API approach is no longer needed. The owner is providing video files directly for each workout. Videos should be uploaded and their URLs added to the `video_url` column on the `workouts` table directly. The `scripts/populate_videos.py` script (YouTube auto-search) can be ignored.
 
