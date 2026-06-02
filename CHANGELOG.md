@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-02] — MD Stage 1a: full body-scan analysis persisted (Build 122)
+
+- **Body scan results now saved in full** — the complete AI analysis (body type, muscle development, symmetry, posture, observations, recommendations) is stored in a new `body_scans` table, not just the body-fat percentage
+- **History chart unaffected** — the existing body-fat trend data in `health_metrics` is unchanged; `body_scans` is additive alongside it
+- **Foundation for user memory** — persisted scans will feed the future user-MD so Jarvis can reference your body composition history
+
 ## [2026-06-02] — A23: Jarvis reads food diary correctly (Build 121)
 
 - **Jarvis no longer reports yesterday's meals** — chat receipts ("Food logged: super noodles") are now excluded from the AI context window; Jarvis reads only the live diary, not stale chat history

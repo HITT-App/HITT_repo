@@ -284,6 +284,15 @@ const BodyScan = () => {
           notes: `AI estimate (${analysis.confidenceLevel} confidence)`,
         });
       }
+      if (analysis) {
+        const { error: scanError } = await (supabase as any).from("body_scans").insert({
+          user_id: user.id,
+          estimated_body_fat: analysis.estimatedBodyFat ?? null,
+          confidence_level: analysis.confidenceLevel,
+          analysis,
+        });
+        if (scanError) throw scanError;
+      }
       toast.success("Measurements saved!");
       setMeasurements({});
     } catch {
