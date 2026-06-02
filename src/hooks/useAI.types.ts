@@ -14,6 +14,7 @@ export type AIMessage = {
 export type Action =
   | { type: 'schedule_plan'; payload: SchedulePlanPayload }
   | { type: 'log_food'; payload: LogFoodPayload }
+  | { type: 'set_goals'; payload: SetGoalsPayload }
   | { type: 'recommend_workout'; payload: RecommendWorkoutPayload }
   | { type: 'recommend_workout_plan'; payload: RecommendWorkoutPlanPayload }
   | { type: 'recommend_recipe'; payload: RecommendRecipePayload }
@@ -74,6 +75,12 @@ export type RecommendWorkoutPlanPayload = {
   start_date: string
   workouts: WorkoutInPlan[]
 }
+
+export type SetGoalsPayload = {
+  goal_type: string;
+  target_text: string;
+  target_date?: string | null; // YYYY-MM-DD or null/omitted
+};
 
 export type RecommendRecipePayload = {
   id: string;

@@ -169,7 +169,7 @@ export const useActivity = () => {
         .upsert({
           user_id: user?.id,
           ...data,
-        });
+        }, { onConflict: 'user_id' });
 
       if (error) throw error;
     },

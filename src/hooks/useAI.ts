@@ -6,6 +6,7 @@ import type {
   AIMessage,
   Action,
   LogFoodPayload,
+  SetGoalsPayload,
   RecommendWorkoutPayload,
   RecommendWorkoutPlanPayload,
   StreamChunk,
@@ -54,6 +55,7 @@ function validateAction(action: unknown): action is Action {
   switch (a.type) {
     case 'schedule_plan':
     case 'log_food':
+    case 'set_goals':
     case 'recommend_recipe':
     case 'body_scan_prompt':
       return true // server-validated; trust
@@ -183,6 +185,32 @@ export function useAI(): UseAIReturn {
     }
   }, []);
 
+  // Silent write for set_goals actions — archives the prior active goal, then inserts the new one.
+  const setGoalsSilent = useCallback(async (payload: SetGoalsPayload) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData?.session?.user?.id;
+    if (!userId) return;
+
+    // Archive any currently active goals so history is preserved (not deleted/overwritten).
+    await (supabase as any)
+      .from('user_goals')
+      .update({ is_active: false })
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    const { error: insertError } = await (supabase as any).from('user_goals').insert({
+      user_id: userId,
+      goal_type: payload.goal_type,
+      target_text: payload.target_text,
+      target_date: payload.target_date ?? null,
+      is_active: true,
+    });
+
+    if (insertError) {
+      console.error('[useAI] setGoals insert failed:', insertError);
+    }
+  }, []);
+
   // Shared SSE stream executor. Reads chunks, updates streamingText + pendingActions.
   // Returns assembled text and collected actions when the stream ends.
   const runStream = useCallback(
@@ -251,6 +279,9 @@ export function useAI(): UseAIReturn {
               if (chunk.action.type === 'log_food') {
                 logFoodSilent(chunk.action.payload);
               }
+              if (chunk.action.type === 'set_goals') {
+                setGoalsSilent(chunk.action.payload);
+              }
             }
           } catch {
             // Malformed SSE chunk — skip
@@ -260,7 +291,7 @@ export function useAI(): UseAIReturn {
 
       return { text, actions };
     },
-    [logFoodSilent]
+    [logFoodSilent, setGoalsSilent]
   );
 
   const send = useCallback(

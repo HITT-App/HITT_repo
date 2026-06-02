@@ -37,6 +37,7 @@ const ActivityGoals = () => {
       toast.success("Goals updated successfully!");
       navigate(-1);
     } catch (error) {
+      console.error("[ActivityGoals] saveGoals failed:", error);
       toast.error("Failed to update goals");
     }
   };

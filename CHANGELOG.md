@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-02] — MD Stage 1b + activity goals fix (Build 123)
+
+- **Activity goals now save reliably** — fixed a bug where saving goals a second time failed silently; goals now update in place correctly
+- **Jarvis saves stated fitness goals** — when you clearly commit to a goal ("I want to lose 5kg by September"), Jarvis saves it durably; previous goal is archived not deleted
+- **Goal history preserved** — each new goal archives the old one so no goal is ever lost, only superseded
+
 ## [2026-06-02] — MD Stage 1a: full body-scan analysis persisted (Build 122)
 
 - **Body scan results now saved in full** — the complete AI analysis (body type, muscle development, symmetry, posture, observations, recommendations) is stored in a new `body_scans` table, not just the body-fat percentage
