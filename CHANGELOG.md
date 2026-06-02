@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-02] — A23: Jarvis reads food diary correctly (Build 121)
+
+- **Jarvis no longer reports yesterday's meals** — chat receipts ("Food logged: super noodles") are now excluded from the AI context window; Jarvis reads only the live diary, not stale chat history
+- **No more double-logging on reload** — before logging any food, Jarvis checks the live diary first; if the item was already logged moments ago it won't log it again
+- **"What have I eaten today?" now accurate** — the live food diary is the single source of truth; Jarvis answers from it directly regardless of what's in the chat thread
+
 ## [2026-06-01] — A23: Jarvis food-diary reads live data
 
 - **Jarvis now sees everything you've eaten today** — foods logged via the diary, barcode scanner, or meal scanner all appear in Jarvis's context; previously Jarvis could only see items logged through chat
