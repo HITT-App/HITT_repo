@@ -47,6 +47,7 @@ LAYER 1 — PERSONALITY COACH
 • You use emojis effectively (🔥 💪 ⚡ 🏆 😤 🎉)
 • You speak like an elite personal trainer who genuinely cares
 • You remember context and reference the user's progress
+• A USER PROFILE / MEMORY block is injected with each request — it describes who the user is and what they're working toward. Use it to personalise advice: reference their active goal ("since your goal is fat loss…"), their physique from the latest body scan ("your last scan showed…"), and any trend in their body composition. If the block is absent or data is missing, coach generically.
 • You check in on users gently: "Quick check in… how are you feeling?"
 • After workouts, encourage return: "Great session! Want to try another workout tomorrow?"
 
@@ -144,6 +145,30 @@ When the user asks you to log food or a meal (e.g. "log that I just ate an apple
 6. Food logging does NOT need user confirmation — log it immediately.
 7. Before emitting a [LOG_FOOD:...] marker, check TODAY'S FOOD DIARY in context. If the item is already present with a timestamp from the last few minutes, it has already been logged — do not emit the marker again.
 8. When the user asks what they've eaten today or how many calories they've consumed, answer ONLY from TODAY'S FOOD DIARY in the context block. The diary is the single source of truth. Do not infer food intake from earlier chat messages.
+
+═══════════════════════════════════════════
+GOAL SAVING
+═══════════════════════════════════════════
+When the user clearly states or commits to a fitness goal, save it silently using the marker below.
+The app archives their previous goal (keeping history) and saves the new one — do NOT mention this to the user.
+
+[SET_GOALS:{"goal_type":"fat loss","target_text":"lose 5kg before my holiday","target_date":"2026-09-01"}]
+
+- goal_type must be exactly one of: "fat loss" | "muscle gain" | "endurance" | "strength" | "event" | "general"
+- target_text: paraphrase of what the user said, in their words. Keep it concise (under 60 chars).
+- target_date: YYYY-MM-DD if the user mentions a date or deadline — otherwise omit or set null.
+- Emit the marker ONCE, silently, at the end of your response. Never mention it to the user.
+
+CONSERVATIVE RULE — only emit SET_GOALS when:
+✅ The user explicitly states a goal they want to work towards ("I want to lose 5kg", "my goal is to run a half marathon")
+✅ The user updates or changes a previously stated goal
+✅ The user confirms a goal during the goals setup flow
+
+Do NOT emit SET_GOALS for:
+❌ Hypothetical or passing mentions ("I'd love to run a marathon one day")
+❌ Questions about goals ("what goal should I pick?")
+❌ Goals discussed as examples or options, not commitments
+When in doubt, don't emit — wait for a clear statement of intent.
 
 ═══════════════════════════════════════════
 SCHEDULE CREATION — HOW IT WORKS (READ CAREFULLY)
@@ -351,6 +376,7 @@ You are in structured response mode. Do NOT include any [MARKER:{...}] text in y
 Instead, use the provided tools:
 • Use the schedule_plan tool instead of [SCHEDULE_PLAN:{...}]
 • Use the log_food tool instead of [LOG_FOOD:{...}]
+• Use the set_goals tool instead of [SET_GOALS:{...}]
 • Use the recommend_workout tool (source-aware — see below) instead of [RECOMMEND_WORKOUT:{...}]
 • Use the recommend_recipe tool instead of [RECOMMEND_RECIPE:{...}]
 • Use the body_scan_prompt tool instead of [BODY_SCAN_PROMPT]
@@ -419,6 +445,22 @@ const STRUCTURED_TOOLS = [
           fiber: { type: "number" },
         },
         required: ["name", "category", "calories", "protein", "carbs", "fat", "fiber"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_goals",
+      description: "Save a fitness goal the user has clearly committed to. Only call when the user explicitly states or updates a goal — not for hypothetical mentions or questions. The app archives the previous goal and saves the new one silently.",
+      parameters: {
+        type: "object",
+        properties: {
+          goal_type: { type: "string", description: "fat loss | muscle gain | endurance | strength | event | general" },
+          target_text: { type: "string", description: "Concise paraphrase of the user's stated goal, in their words. Max 60 chars." },
+          target_date: { type: "string", description: "YYYY-MM-DD deadline if the user mentioned one, otherwise omit." },
+        },
+        required: ["goal_type", "target_text"],
       },
     },
   },
@@ -520,6 +562,20 @@ async function mapToolCallToAction(
             carbs: args.carbs ?? 0,
             fat: args.fat ?? 0,
             fiber: args.fiber ?? 0,
+          },
+        };
+      }
+      case "set_goals": {
+        if (typeof args.goal_type !== "string" || typeof args.target_text !== "string" || !args.target_text.trim()) {
+          console.warn("[ai-coach] Invalid set_goals payload:", args);
+          return null;
+        }
+        return {
+          type: "set_goals",
+          payload: {
+            goal_type: args.goal_type,
+            target_text: args.target_text.trim(),
+            target_date: args.target_date ?? null,
           },
         };
       }
@@ -811,6 +867,8 @@ serve(async (req) => {
       { data: userWorkoutPrefs },
       { data: workoutsCatalogue },
       { data: recipesCatalogue },
+      { data: recentBodyScans },
+      { data: activeGoal },
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
@@ -827,6 +885,8 @@ serve(async (req) => {
       supabase.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
       supabase.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g').limit(50),
+      (supabase as any).from('body_scans').select('estimated_body_fat, confidence_level, scanned_at, analysis').eq('user_id', userId).order('scanned_at', { ascending: false }).limit(2),
+      (supabase as any).from('user_goals').select('goal_type, target_text, target_date, set_at').eq('user_id', userId).eq('is_active', true).order('set_at', { ascending: false }).limit(1).maybeSingle(),
     ]);
 
     const todayBoundary = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString();
@@ -994,6 +1054,52 @@ serve(async (req) => {
       userContext += `\n═══ TODAY'S FOOD DIARY ═══\nNo food logged today yet.\n`;
     }
 
+    // ─── Build user-MD block (goal + body scan) ───
+    // Assembled fresh each request from user_goals and body_scans queries above.
+    // Injected at position-0 (fallback) AND spliced near the final user turn (authoritative).
+    let userMD = '';
+    {
+      const latestScan = recentBodyScans?.[0] ?? null;
+      const prevScan = recentBodyScans?.[1] ?? null;
+
+      const goalLine = activeGoal
+        ? `• Active goal: ${activeGoal.goal_type} — "${activeGoal.target_text}"${activeGoal.target_date ? ` (target ${activeGoal.target_date})` : ''}`
+        : '• Active goal: not yet set';
+
+      let scanLines = '';
+      if (latestScan) {
+        const scanDate = latestScan.scanned_at ? latestScan.scanned_at.substring(0, 10) : 'unknown date';
+        const bf = latestScan.estimated_body_fat != null ? `${latestScan.estimated_body_fat}%` : 'unknown';
+        const a = latestScan.analysis as any;
+        const bodyType = a?.bodyType ?? null;
+        const md = a?.muscleDevelopment;
+        const mdSummary = md
+          ? `upper=${md.upper_body}, core=${md.core}, lower=${md.lower_body}`
+          : null;
+        const obs = Array.isArray(a?.keyObservations) ? a.keyObservations[0] : null;
+        const rec = Array.isArray(a?.recommendations) ? a.recommendations[0] : null;
+
+        scanLines += `• Latest body scan (${scanDate}): body fat ${bf}${latestScan.confidence_level ? ` (${latestScan.confidence_level} confidence)` : ''}`;
+        if (bodyType) scanLines += `, body type: ${bodyType}`;
+        if (mdSummary) scanLines += `\n• Muscle development: ${mdSummary}`;
+        if (obs) scanLines += `\n• Key observation: ${obs}`;
+        if (rec) scanLines += `\n• Top recommendation: ${rec}`;
+
+        if (prevScan && prevScan.estimated_body_fat != null && latestScan.estimated_body_fat != null) {
+          const prevDate = prevScan.scanned_at ? prevScan.scanned_at.substring(0, 10) : 'previous scan';
+          const direction = latestScan.estimated_body_fat < prevScan.estimated_body_fat ? 'down' : 'up';
+          scanLines += `\n• Body-fat trend: ${prevScan.estimated_body_fat}% → ${latestScan.estimated_body_fat}% (${direction} since ${prevDate})`;
+        }
+      } else {
+        scanLines = '• Body scan: no scan on record yet';
+      }
+
+      userMD = `\n═══ USER PROFILE / MEMORY ═══\n${goalLine}\n${scanLines}\n`;
+    }
+
+    // Position-0 fallback: append compact MD to the userContext string
+    userContext += userMD;
+
     // ─── Process request ───
     const reqBody = await req.json();
     const { messages, imageData, hasImage } = reqBody;
@@ -1040,6 +1146,15 @@ serve(async (req) => {
       apiMessages.splice(apiMessages.length - 1, 0, {
         role: "system",
         content: `REMINDER: The user's name is "${nameForReminder}". ALWAYS address them as "${nameForReminder}". NEVER use their email address or username.`,
+      });
+    }
+
+    // Splice the user-MD as a standalone system message immediately before the final user turn.
+    // This is the authoritative copy — position near end ensures it outweighs any stale context.
+    if (userMD.trim()) {
+      apiMessages.splice(apiMessages.length - 1, 0, {
+        role: "system",
+        content: userMD.trim(),
       });
     }
 
