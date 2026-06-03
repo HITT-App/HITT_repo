@@ -3,12 +3,13 @@ import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from 'react-router-dom';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, X, Loader2, StopCircle, Target } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, StopCircle, Target, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTTS } from '@/contexts/TTSContext';
 import { useAI } from '@/hooks/useAI';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { AIWorkoutCard } from './AIWorkoutCard';
 import { AIWorkoutPlanCard } from './AIWorkoutPlanCard';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload } from '@/hooks/useAI.types';
@@ -99,6 +100,8 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const navigate = useNavigate();
   const tts = useTTS();
   const ai = useAI();
+  const keyboardHeight = useKeyboardHeight();
+  const [typedText, setTypedText] = useState('');
 
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -866,11 +869,46 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
       {/* Bottom controls */}
       <div
-        className="shrink-0 flex flex-col items-center gap-3 pt-3 pb-4 border-t border-border/40"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 24px) + 1rem)" }}
+        className="shrink-0 flex flex-col items-center gap-3 pt-3 border-t border-border/40 px-4"
+        style={{
+          paddingBottom: keyboardHeight > 0
+            ? `${keyboardHeight + 8}px`
+            : "calc(env(safe-area-inset-bottom, 24px) + 1rem)",
+        }}
       >
+        {/* Text input row */}
+        <div className="flex items-center gap-2 w-full">
+          <input
+            type="text"
+            value={typedText}
+            onChange={e => setTypedText(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && typedText.trim() && ai.status !== 'streaming') {
+                e.preventDefault();
+                ai.send(typedText.trim());
+                setTypedText('');
+              }
+            }}
+            placeholder="Type a message…"
+            disabled={ai.status === 'streaming'}
+            className="flex-1 rounded-2xl border border-border/60 bg-background/40 backdrop-blur-sm px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+          />
+          <Button
+            size="icon"
+            className="w-10 h-10 rounded-full bg-primary hover:bg-primary/90 shrink-0"
+            onClick={() => {
+              if (!typedText.trim() || ai.status === 'streaming') return;
+              ai.send(typedText.trim());
+              setTypedText('');
+            }}
+            disabled={!typedText.trim() || ai.status === 'streaming'}
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+
         <p className="text-xs text-muted-foreground">
-          {ai.status === 'streaming' ? 'Thinking…' : isListening ? 'Listening…' : tts.isSpeaking ? 'Tap to interrupt' : 'Tap to speak'}
+          {ai.status === 'streaming' ? 'Thinking…' : isListening ? 'Listening…' : tts.isSpeaking ? 'Tap to interrupt' : 'Tap mic or type'}
         </p>
 
         <div className="flex items-center justify-center gap-6">
@@ -916,9 +954,6 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                 ? <StopCircle className="w-6 h-6 text-primary" />
                 : <Mic className="w-6 h-6" />}
           </Button>
-
-          {/* Spacer to keep mic centred */}
-          <div className="w-12 h-12" />
         </div>
       </div>
     </div>

@@ -380,6 +380,15 @@ export function useAI(): UseAIReturn {
         // synthetic so they're excluded from AI context but remain visible in the chat UI.
         const isLogSummary = !assembledText.trim() && emittedActions.some(a => a.type === 'log_food');
 
+        // Complete the synthetic pair: mark the user turn synthetic too so it doesn't
+        // appear as an unacknowledged food request to greet() on next open (BUG1 stopgap).
+        if (isLogSummary && persistedUser?.id) {
+          supabase.from('messages').update({ synthetic: true }).eq('id', persistedUser.id);
+          setMessages(prev => prev.map(m =>
+            m.id === persistedUser.id ? { ...m, synthetic: true } : m
+          ));
+        }
+
         let persistedAssistant: { id: string; created_at: string } | null = null;
         if (effectiveContent) {
           const { data } = await supabase
