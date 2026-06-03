@@ -115,4 +115,5 @@ export type UseAIReturn = {
   // Exposed for confirmation handlers — write only after user taps Confirm.
   logFoodSilent: (payload: LogFoodPayload) => Promise<void>;
   setGoalsSilent: (payload: SetGoalsPayload) => Promise<void>;
+  directAnswer: (userText: string, answerText: string) => Promise<void>;
 };

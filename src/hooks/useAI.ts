@@ -534,6 +534,35 @@ export function useAI(): UseAIReturn {
     setMessages(prev => [...prev, msg]);
   }, []);
 
+  const directAnswer = useCallback(async (userText: string, answerText: string) => {
+    const conversationId = conversationIdRef.current;
+    if (!conversationId) return;
+
+    const tempId = crypto.randomUUID();
+    setMessages(prev => [...prev, {
+      id: tempId,
+      role: 'user' as const,
+      content: userText,
+      created_at: new Date().toISOString(),
+    }]);
+
+    const { data: persistedUser } = await supabase
+      .from('messages')
+      .insert({ conversation_id: conversationId, role: 'user', content: userText })
+      .select('id, created_at')
+      .single();
+
+    if (persistedUser) {
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { id: persistedUser.id, role: 'user' as const, content: userText, created_at: persistedUser.created_at }
+          : m
+      ));
+    }
+
+    await appendAssistantMessage(answerText, true);
+  }, [appendAssistantMessage]);
+
   return {
     messages,
     status,
@@ -548,5 +577,6 @@ export function useAI(): UseAIReturn {
     appendAssistantMessage,
     logFoodSilent,
     setGoalsSilent,
+    directAnswer,
   };
 }

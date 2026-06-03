@@ -61,6 +61,43 @@ function bold(str: string): string {
   return str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
+function isFoodRecallQuestion(text: string): boolean {
+  const t = text.trim();
+  return (
+    /\b(what|show|list|tell me).{0,20}(have i|did i|i'?ve|i have)\s+eaten\b/i.test(t) ||
+    /\bhow (many|much)\s+(calories?|kcal|cal)\b.{0,30}(today|eaten|consumed|had|so far)/i.test(t) ||
+    /\bhow (many|much).{0,20}(calories?|kcal|cal).{0,20}today/i.test(t) ||
+    /\bwhat'?s? my (calorie|food|caloric|macro)\s+(intake|total|count|diary|log)\b/i.test(t) ||
+    /\bwhat foods? have i (eaten|had|logged)\b/i.test(t)
+  );
+}
+
+async function queryTodayDiary(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return "I couldn't retrieve your food diary right now.";
+
+  const todayBoundary = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString();
+  const { data: logs, error } = await supabase
+    .from('meal_logs')
+    .select('custom_name, calories, protein_grams, carbs_grams, fat_grams, fiber_grams')
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .gte('logged_at', todayBoundary)
+    .order('logged_at', { ascending: true });
+
+  if (error || !logs) return "I couldn't retrieve your food diary right now.";
+  if (logs.length === 0) return "You haven't logged any food today yet.";
+
+  const totalCals = logs.reduce((s, r) => s + (r.calories ?? 0), 0);
+  const totalProtein = logs.reduce((s, r) => s + (r.protein_grams ?? 0), 0);
+  const totalCarbs = logs.reduce((s, r) => s + (r.carbs_grams ?? 0), 0);
+  const totalFat = logs.reduce((s, r) => s + (r.fat_grams ?? 0), 0);
+  const totalFibre = logs.reduce((s, r) => s + (r.fiber_grams ?? 0), 0);
+
+  const foodList = logs.map(r => r.custom_name).join(', ');
+  return `Today you've logged: ${foodList}.\n\nTotal: ${Math.round(totalCals)} kcal · ${Math.round(totalProtein)}g protein · ${Math.round(totalCarbs)}g carbs · ${Math.round(totalFat)}g fat · ${Math.round(totalFibre)}g fibre`;
+}
+
 interface JarvisModeProps {
   onClose: () => void;
   healthProfile?: string;
@@ -134,6 +171,15 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const dispatchedCountRef = useRef(0);
   // Prevents the greeting from firing more than once per JarvisMode mount
   const greetingFiredRef = useRef(false);
+
+  const handleSend = useCallback(async (text: string) => {
+    if (isFoodRecallQuestion(text)) {
+      const answer = await queryTodayDiary();
+      await ai.directAnswer(text, answer);
+    } else {
+      ai.send(text);
+    }
+  }, [ai]);
 
   // ─── Voice (keep unchanged) ──────────────────────────────────────────────
 
@@ -210,7 +256,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       if (!finalTranscript || ai.status === 'streaming') return;
       setTranscript(finalTranscript);
       stopListening();
-      ai.send(finalTranscript);
+      await handleSend(finalTranscript);
     },
   });
 
@@ -963,7 +1009,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
             onKeyDown={e => {
               if (e.key === 'Enter' && typedText.trim() && ai.status !== 'streaming') {
                 e.preventDefault();
-                ai.send(typedText.trim());
+                handleSend(typedText.trim());
                 setTypedText('');
               }
             }}
@@ -976,7 +1022,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
             className="w-10 h-10 rounded-full bg-primary hover:bg-primary/90 shrink-0"
             onClick={() => {
               if (!typedText.trim() || ai.status === 'streaming') return;
-              ai.send(typedText.trim());
+              handleSend(typedText.trim());
               setTypedText('');
             }}
             disabled={!typedText.trim() || ai.status === 'streaming'}
