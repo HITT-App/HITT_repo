@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { CHAT_RETENTION_HOURS } from '@/lib/constants';
+import { toast } from 'sonner';
 import type {
   AIMessage,
   Action,
@@ -72,11 +73,19 @@ export type { AIMessage, Action, StreamStatus, UseAIReturn };
 export * from './useAI.types';
 
 // Returns a human-readable summary of log_food actions for storage as the
-// non-synthetic assistant message, giving the AI a fulfilled-state signal on reload.
+// synthetic assistant message, giving the AI a fulfilled-state signal on reload.
 function logFoodSummary(actions: Action[]): string {
   const logs = actions.filter((a): a is { type: 'log_food'; payload: LogFoodPayload } => a.type === 'log_food')
   if (logs.length === 0) return ''
   return logs.map(a => `Food logged: ${a.payload.name} (${a.payload.calories} kcal), ${a.payload.category}`).join('. ')
+}
+
+// Returns a confirmation for a set_goals action stored as a non-synthetic assistant
+// message so the AI sees the goal was acknowledged in context.
+function setGoalsSummary(actions: Action[]): string {
+  const goal = actions.find((a): a is { type: 'set_goals'; payload: SetGoalsPayload } => a.type === 'set_goals')
+  if (!goal) return ''
+  return `Goal set: ${goal.payload.target_text}`
 }
 
 export function useAI(): UseAIReturn {
@@ -208,6 +217,7 @@ export function useAI(): UseAIReturn {
 
     if (insertError) {
       console.error('[useAI] setGoals insert failed:', insertError);
+      toast.error(`Goal save failed: ${insertError.message}`);
     }
   }, []);
 
@@ -375,7 +385,7 @@ export function useAI(): UseAIReturn {
           abortRef.current.signal,
         );
 
-        const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions);
+        const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions) || setGoalsSummary(emittedActions);
         // Log-summary messages (no AI text, only food logged silently) are stored as
         // synthetic so they're excluded from AI context but remain visible in the chat UI.
         const isLogSummary = !assembledText.trim() && emittedActions.some(a => a.type === 'log_food');
@@ -462,7 +472,7 @@ export function useAI(): UseAIReturn {
           abortRef.current.signal,
         );
 
-        const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions);
+        const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions) || setGoalsSummary(emittedActions);
         const isLogSummary = !assembledText.trim() && emittedActions.some(a => a.type === 'log_food');
 
         let persistedAssistant: { id: string; created_at: string } | null = null;
