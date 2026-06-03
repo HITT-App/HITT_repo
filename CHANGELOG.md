@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-06-03] — A26: deterministic food-recall answers (Build 127)
+
+- **"What have I eaten today?" answered directly from your diary** — Jarvis no longer asks the AI for food-recall questions; it reads your meal_logs directly and answers instantly with the exact list and totals
+- **Calorie and macro totals are always accurate** — "How many calories today?" returns a live calculation from the database, not the AI's recollection of the conversation
+- **Works for voice and text** — both the mic and the text input route food-recall questions to the direct answer path
+- **Answer is synthetic** — the direct answer isn't fed back into the AI's context window, so it can't anchor to it for non-food questions
+
 ## [2026-06-02] — MD Stage 1b + activity goals fix (Build 123)
 
 - **Activity goals now save reliably** — fixed a bug where saving goals a second time failed silently; goals now update in place correctly
