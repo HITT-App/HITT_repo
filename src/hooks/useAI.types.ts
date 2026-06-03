@@ -109,7 +109,10 @@ export type UseAIReturn = {
   greet: (prompt: string) => Promise<void>;
   abort: () => void;
   dismissAction: (actionIndex: number) => void;
-  // Inserts a synthetic assistant message into the conversation (DB + state).
-  // Use for confirmation messages from action handlers (schedule created, recipe logged, etc.)
-  appendAssistantMessage: (text: string) => Promise<void>;
+  // Inserts an assistant message into the conversation (DB + state).
+  // synthetic defaults to true (schedule/recipe confirmations); pass false for food/goal confirmations.
+  appendAssistantMessage: (text: string, synthetic?: boolean) => Promise<void>;
+  // Exposed for confirmation handlers — write only after user taps Confirm.
+  logFoodSilent: (payload: LogFoodPayload) => Promise<void>;
+  setGoalsSilent: (payload: SetGoalsPayload) => Promise<void>;
 };

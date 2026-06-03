@@ -12,7 +12,7 @@ import { useAI } from '@/hooks/useAI';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { AIWorkoutCard } from './AIWorkoutCard';
 import { AIWorkoutPlanCard } from './AIWorkoutPlanCard';
-import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload } from '@/hooks/useAI.types';
+import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload } from '@/hooks/useAI.types';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
 // Strips excessive emoji usage (keeps max 1 per paragraph).
@@ -110,6 +110,12 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [pendingSchedule, setPendingSchedule] = useState<{
     goal: string; daysPerWeek: number; selectedDays: number[]; sessionMinutes: number;
   } | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<
+    | { type: 'food'; payload: LogFoodPayload }
+    | { type: 'goal'; payload: SetGoalsPayload }
+    | null
+  >(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [recommendedWorkout, setRecommendedWorkout] = useState<RecommendedWorkout | null>(null);
   const [recommendedRecipe, setRecommendedRecipe] = useState<RecommendedRecipe | null>(null);
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
@@ -268,6 +274,32 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   };
 
   // ─── Action handlers ──────────────────────────────────────────────────────
+
+  const confirmPendingAction = async () => {
+    if (!pendingConfirmation || isConfirming) return;
+    setIsConfirming(true);
+    try {
+      if (pendingConfirmation.type === 'food') {
+        await ai.logFoodSilent(pendingConfirmation.payload);
+        await ai.appendAssistantMessage(
+          `Logged: ${pendingConfirmation.payload.name} (${pendingConfirmation.payload.calories} kcal, ${pendingConfirmation.payload.category})`,
+          false,
+        );
+      } else if (pendingConfirmation.type === 'goal') {
+        await ai.setGoalsSilent(pendingConfirmation.payload);
+        await ai.appendAssistantMessage(`Goal set: ${pendingConfirmation.payload.target_text}`, false);
+      }
+      setPendingConfirmation(null);
+    } catch (err) {
+      console.error('[Jarvis] confirmPendingAction failed:', err);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const dismissPendingAction = () => {
+    setPendingConfirmation(null);
+  };
 
   const confirmSchedule = async () => {
     if (!pendingSchedule || isAddingSchedule) return;
@@ -500,7 +532,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           setPendingSchedule(action.payload);
           break;
         case 'log_food':
-          toast.success(`Logged: ${action.payload.name}`);
+          setPendingConfirmation({ type: 'food', payload: action.payload });
+          break;
+        case 'set_goals':
+          setPendingConfirmation({ type: 'goal', payload: action.payload });
           break;
         case 'recommend_workout':
           if (action.payload.source === 'catalogue') {
@@ -647,6 +682,49 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                 onClick={() => setPendingBodyScan(false)}
               >
                 Skip for now
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Unified food / goal confirmation card */}
+        {pendingConfirmation && (
+          <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
+            {pendingConfirmation.type === 'food' && (
+              <>
+                <p className="text-sm font-semibold text-foreground">Log this? 🍽️</p>
+                <p className="text-sm text-foreground font-medium">{pendingConfirmation.payload.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {pendingConfirmation.payload.calories} kcal · {pendingConfirmation.payload.protein}g protein · {pendingConfirmation.payload.carbs}g carbs · {pendingConfirmation.payload.fat}g fat · {pendingConfirmation.payload.fiber}g fibre · {pendingConfirmation.payload.category}
+                </p>
+              </>
+            )}
+            {pendingConfirmation.type === 'goal' && (
+              <>
+                <p className="text-sm font-semibold text-foreground">Save this goal? 🎯</p>
+                <p className="text-sm text-foreground">{pendingConfirmation.payload.target_text}</p>
+                {pendingConfirmation.payload.target_date && (
+                  <p className="text-xs text-muted-foreground">Target date: {pendingConfirmation.payload.target_date}</p>
+                )}
+              </>
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-primary text-primary-foreground text-xs h-9"
+                onClick={confirmPendingAction}
+                disabled={isConfirming}
+              >
+                {isConfirming ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirm'}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1 text-xs h-9 text-muted-foreground"
+                onClick={dismissPendingAction}
+                disabled={isConfirming}
+              >
+                Dismiss
               </Button>
             </div>
           </div>

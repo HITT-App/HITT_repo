@@ -72,21 +72,6 @@ function validateAction(action: unknown): action is Action {
 export type { AIMessage, Action, StreamStatus, UseAIReturn };
 export * from './useAI.types';
 
-// Returns a human-readable summary of log_food actions for storage as the
-// synthetic assistant message, giving the AI a fulfilled-state signal on reload.
-function logFoodSummary(actions: Action[]): string {
-  const logs = actions.filter((a): a is { type: 'log_food'; payload: LogFoodPayload } => a.type === 'log_food')
-  if (logs.length === 0) return ''
-  return logs.map(a => `Food logged: ${a.payload.name} (${a.payload.calories} kcal), ${a.payload.category}`).join('. ')
-}
-
-// Returns a confirmation for a set_goals action stored as a non-synthetic assistant
-// message so the AI sees the goal was acknowledged in context.
-function setGoalsSummary(actions: Action[]): string {
-  const goal = actions.find((a): a is { type: 'set_goals'; payload: SetGoalsPayload } => a.type === 'set_goals')
-  if (!goal) return ''
-  return `Goal set: ${goal.payload.target_text}`
-}
 
 export function useAI(): UseAIReturn {
   const { user } = useAuth();
@@ -286,12 +271,6 @@ export function useAI(): UseAIReturn {
               }
               actions.push(chunk.action);
               setPendingActions(prev => [...prev, chunk.action]);
-              if (chunk.action.type === 'log_food') {
-                logFoodSilent(chunk.action.payload);
-              }
-              if (chunk.action.type === 'set_goals') {
-                setGoalsSilent(chunk.action.payload);
-              }
             }
           } catch {
             // Malformed SSE chunk — skip
@@ -301,7 +280,7 @@ export function useAI(): UseAIReturn {
 
       return { text, actions };
     },
-    [logFoodSilent, setGoalsSilent]
+    []
   );
 
   const send = useCallback(
@@ -385,25 +364,13 @@ export function useAI(): UseAIReturn {
           abortRef.current.signal,
         );
 
-        const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions) || setGoalsSummary(emittedActions);
-        // Log-summary messages (no AI text, only food logged silently) are stored as
-        // synthetic so they're excluded from AI context but remain visible in the chat UI.
-        const isLogSummary = !assembledText.trim() && emittedActions.some(a => a.type === 'log_food');
-
-        // Complete the synthetic pair: mark the user turn synthetic too so it doesn't
-        // appear as an unacknowledged food request to greet() on next open (BUG1 stopgap).
-        if (isLogSummary && persistedUser?.id) {
-          supabase.from('messages').update({ synthetic: true }).eq('id', persistedUser.id);
-          setMessages(prev => prev.map(m =>
-            m.id === persistedUser.id ? { ...m, synthetic: true } : m
-          ));
-        }
+        const effectiveContent = assembledText.trim();
 
         let persistedAssistant: { id: string; created_at: string } | null = null;
         if (effectiveContent) {
           const { data } = await supabase
             .from('messages')
-            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent, synthetic: isLogSummary })
+            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent, synthetic: false })
             .select('id, created_at')
             .single();
           persistedAssistant = data;
@@ -415,7 +382,7 @@ export function useAI(): UseAIReturn {
             role: 'assistant',
             content: effectiveContent,
             created_at: persistedAssistant?.created_at ?? new Date().toISOString(),
-            synthetic: isLogSummary,
+            synthetic: false,
             actions: emittedActions.length > 0 ? emittedActions : undefined,
           };
           setMessages(prev => [...prev, assistantMsg]);
@@ -472,14 +439,13 @@ export function useAI(): UseAIReturn {
           abortRef.current.signal,
         );
 
-        const effectiveContent = assembledText.trim() || logFoodSummary(emittedActions) || setGoalsSummary(emittedActions);
-        const isLogSummary = !assembledText.trim() && emittedActions.some(a => a.type === 'log_food');
+        const effectiveContent = assembledText.trim();
 
         let persistedAssistant: { id: string; created_at: string } | null = null;
         if (effectiveContent) {
           const { data } = await supabase
             .from('messages')
-            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent, synthetic: isLogSummary })
+            .insert({ conversation_id: conversationId, role: 'assistant', content: effectiveContent, synthetic: false })
             .select('id, created_at')
             .single();
           persistedAssistant = data;
@@ -501,7 +467,7 @@ export function useAI(): UseAIReturn {
             role: 'assistant',
             content: effectiveContent,
             created_at: persistedAssistant?.created_at ?? new Date().toISOString(),
-            synthetic: isLogSummary,
+            synthetic: false,
             actions: emittedActions.length > 0 ? emittedActions : undefined,
           };
           setMessages(prev => [...prev, assistantMsg]);
@@ -537,13 +503,13 @@ export function useAI(): UseAIReturn {
 
   // Persists a synthetic assistant message to DB + state.
   // Visible in chat history across sessions, but excluded from AI context window.
-  const appendAssistantMessage = useCallback(async (text: string) => {
+  const appendAssistantMessage = useCallback(async (text: string, synthetic = true) => {
     const conversationId = conversationIdRef.current;
     if (!conversationId) return;
 
     const { data: persisted } = await supabase
       .from('messages')
-      .insert({ conversation_id: conversationId, role: 'assistant', content: text, synthetic: true })
+      .insert({ conversation_id: conversationId, role: 'assistant', content: text, synthetic })
       .select('id, created_at')
       .single();
 
@@ -563,7 +529,7 @@ export function useAI(): UseAIReturn {
       role: 'assistant',
       content: text,
       created_at: persisted?.created_at ?? new Date().toISOString(),
-      synthetic: true,
+      synthetic,
     };
     setMessages(prev => [...prev, msg]);
   }, []);
@@ -580,5 +546,7 @@ export function useAI(): UseAIReturn {
     abort,
     dismissAction,
     appendAssistantMessage,
+    logFoodSilent,
+    setGoalsSilent,
   };
 }
