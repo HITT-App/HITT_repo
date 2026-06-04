@@ -554,7 +554,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
             : hasHistory && hasSchedule && !hasWorkoutToday
               ? `[GREETING_NO_TODAY] The user has just re-opened our conversation. They have a schedule but no workout planned for today. In one warm sentence, welcome them back. Then suggest ONE specific workout from the WORKOUTS CATALOGUE that fits their goal and emit the recommend_workout tool at the end. Keep the whole response to 2 sentences max — let the card do the talking.`
               : hasHistory
-                ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back — reference something specific from our recent chat if helpful. Keep it brief, they can see the history.`
+                ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back. Then ask what they'd like to work on today. Do not address, reference, or continue any prior questions or topics from the chat history — just greet and invite.`
                 : healthProfile?.trim()
                   ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
                   : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;

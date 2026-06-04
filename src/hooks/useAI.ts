@@ -544,18 +544,19 @@ export function useAI(): UseAIReturn {
       role: 'user' as const,
       content: userText,
       created_at: new Date().toISOString(),
+      synthetic: true,
     }]);
 
     const { data: persistedUser } = await supabase
       .from('messages')
-      .insert({ conversation_id: conversationId, role: 'user', content: userText })
+      .insert({ conversation_id: conversationId, role: 'user', content: userText, synthetic: true })
       .select('id, created_at')
       .single();
 
     if (persistedUser) {
       setMessages(prev => prev.map(m =>
         m.id === tempId
-          ? { id: persistedUser.id, role: 'user' as const, content: userText, created_at: persistedUser.created_at }
+          ? { id: persistedUser.id, role: 'user' as const, content: userText, created_at: persistedUser.created_at, synthetic: true }
           : m
       ));
     }
