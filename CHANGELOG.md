@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-04] — A27: fix greet() volunteering stale food-recall answers (Build 128)
+
+- **Jarvis no longer answers old food questions on app open** — the greeting now just welcomes you and asks what you want to work on; it will never pick up or continue a prior conversation thread
+- **Food-recall questions are now fully hidden from AI context** — both the question and its deterministic answer are marked synthetic, so no LLM path (greeting or otherwise) can see an apparently-unanswered food question
+
 ## [2026-06-03] — A26: deterministic food-recall answers (Build 127)
 
 - **"What have I eaten today?" answered directly from your diary** — Jarvis no longer asks the AI for food-recall questions; it reads your meal_logs directly and answers instantly with the exact list and totals
