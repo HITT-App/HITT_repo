@@ -8,6 +8,12 @@
 - **Smart availability** — Full Stats requires GPS data, Personal Bests requires a new PR this session, New Route requires route positions, Triathlon is only shown for triathlon activities; unavailable templates are greyed out with a reason
 - **Integrated into existing share flow** — "Templates" appears as a new option in the share card grid alongside Map Card, Stats Card, Story Card, AI Cinematic, and Quick Photo
 
+## [2026-06-04] — Jarvis food/goal card redesign (Build 129)
+
+- **Food confirmation card redesigned** — replaced the plain emoji-titled block with a "Calorie Hero" card: an orange calorie ring (filled to show how much of your daily target this meal adds), food name, macro composition bars for Protein/Carbs/Fat with proportional fill, and an "Add to diary" button
+- **Goal confirmation card redesigned** — "Timeline" card: Target icon chip, goal text, and a runway bar showing today → target date with week count; degrades cleanly when no target date is set
+- **Both cards live daily context** — the calorie ring queries today's logged kcal at the moment the card appears and fills accordingly; the timeline runway computes the week count from the current date
+
 ## [2026-06-04] — A27: fix greet() volunteering stale food-recall answers (Build 128)
 
 - **Jarvis no longer answers old food questions on app open** — the greeting now just welcomes you and asks what you want to work on; it will never pick up or continue a prior conversation thread
