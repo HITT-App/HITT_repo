@@ -346,8 +346,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     }
   };
 
-  const dismissPendingAction = () => {
+  const dismissPendingAction = async () => {
+    if (!pendingConfirmation) return;
     setPendingConfirmation(null);
+    await ai.appendAssistantMessage('No problem, skipped that one.', false);
   };
 
   const confirmSchedule = async () => {

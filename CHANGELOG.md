@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-06-04] — Dismissed log fix + Jarvis prompt redesign
+
+- **Dismissed food/goal proposals no longer re-proposed** — tapping Dismiss on a log or goal confirmation card now leaves a resolution in the conversation, so Jarvis doesn't re-propose the same item on next open
+- **Jarvis identity redesigned** — results-driven professional replacing the praise-dispensing best friend; encouragement is earned and specific, not sprinkled
+- **Proactivity rule** — Jarvis now distinguishes purposeful proactivity (chasing goals, data, real progress) from decorative filler (chat summaries, motivational noise); filler is explicitly prohibited
+- **Goals section** — Jarvis gives caveated advice when no goal is set, and respects a stored preference (set/later/never) for whether to prompt
+- **Food diary instruction fixed** — removed the "answer intake questions from diary" instruction that was driving volunteering bugs; diary stays as background context for macro reasoning only
+- **Safety floor strengthened** — results-driven persona explicitly cannot override safety rules
+
 ## [2026-06-04] — Branded share templates (6 designs, post + story)
 
 - **6 branded share card templates** — Duration, Full Stats, Personal Bests, New Route, Triathlon, and Challenge; each available in post (1080×1080) and story (1080×1920) format
