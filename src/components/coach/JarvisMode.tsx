@@ -12,6 +12,8 @@ import { useAI } from '@/hooks/useAI';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { AIWorkoutCard } from './AIWorkoutCard';
 import { AIWorkoutPlanCard } from './AIWorkoutPlanCard';
+import { FoodConfirmCard } from './FoodConfirmCard';
+import { GoalConfirmCard } from './GoalConfirmCard';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload } from '@/hooks/useAI.types';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
@@ -153,6 +155,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     | null
   >(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [todayKcalTotal, setTodayKcalTotal] = useState<number | undefined>(undefined);
   const [recommendedWorkout, setRecommendedWorkout] = useState<RecommendedWorkout | null>(null);
   const [recommendedRecipe, setRecommendedRecipe] = useState<RecommendedRecipe | null>(null);
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
@@ -499,6 +502,24 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
   // ─── Effects ──────────────────────────────────────────────────────────────
 
+  // Query today's kcal total when a food confirmation card appears (feeds the calorie ring)
+  useEffect(() => {
+    if (pendingConfirmation?.type !== 'food') { setTodayKcalTotal(undefined); return; }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      const todayBoundary = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString();
+      supabase
+        .from('meal_logs')
+        .select('calories')
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .gte('logged_at', todayBoundary)
+        .then(({ data }) => {
+          if (data) setTodayKcalTotal(data.reduce((s, r) => s + (r.calories ?? 0), 0));
+        });
+    });
+  }, [pendingConfirmation?.type]);
+
   // Fire the greeting once, after the hook has finished loading history
   useEffect(() => {
     if (!ai.isInitialized || greetingFiredRef.current) return;
@@ -733,47 +754,23 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           </div>
         )}
 
-        {/* Unified food / goal confirmation card */}
-        {pendingConfirmation && (
-          <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
-            {pendingConfirmation.type === 'food' && (
-              <>
-                <p className="text-sm font-semibold text-foreground">Log this? 🍽️</p>
-                <p className="text-sm text-foreground font-medium">{pendingConfirmation.payload.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {pendingConfirmation.payload.calories} kcal · {pendingConfirmation.payload.protein}g protein · {pendingConfirmation.payload.carbs}g carbs · {pendingConfirmation.payload.fat}g fat · {pendingConfirmation.payload.fiber}g fibre · {pendingConfirmation.payload.category}
-                </p>
-              </>
-            )}
-            {pendingConfirmation.type === 'goal' && (
-              <>
-                <p className="text-sm font-semibold text-foreground">Save this goal? 🎯</p>
-                <p className="text-sm text-foreground">{pendingConfirmation.payload.target_text}</p>
-                {pendingConfirmation.payload.target_date && (
-                  <p className="text-xs text-muted-foreground">Target date: {pendingConfirmation.payload.target_date}</p>
-                )}
-              </>
-            )}
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="flex-1 bg-primary text-primary-foreground text-xs h-9"
-                onClick={confirmPendingAction}
-                disabled={isConfirming}
-              >
-                {isConfirming ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirm'}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="flex-1 text-xs h-9 text-muted-foreground"
-                onClick={dismissPendingAction}
-                disabled={isConfirming}
-              >
-                Dismiss
-              </Button>
-            </div>
-          </div>
+        {/* Food / goal confirmation cards */}
+        {pendingConfirmation?.type === 'food' && (
+          <FoodConfirmCard
+            payload={pendingConfirmation.payload}
+            consumedToday={todayKcalTotal}
+            onConfirm={confirmPendingAction}
+            onDismiss={dismissPendingAction}
+            isConfirming={isConfirming}
+          />
+        )}
+        {pendingConfirmation?.type === 'goal' && (
+          <GoalConfirmCard
+            payload={pendingConfirmation.payload}
+            onConfirm={confirmPendingAction}
+            onDismiss={dismissPendingAction}
+            isConfirming={isConfirming}
+          />
         )}
 
         {/* Schedule confirmation card */}
