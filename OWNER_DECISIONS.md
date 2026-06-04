@@ -263,6 +263,15 @@ App is on TestFlight. Current build: **24** (version 1.0). Add testers via App S
 | 118 | 2026-06-01 | A21: Edit and delete logged food diary entries — three-dot action sheet, pre-filled edit drawer, soft delete |
 | 119 | 2026-06-01 | A21 fixes: numeric field clear/retype; keyboard avoidance in edit drawer |
 | 120 | 2026-06-01 | A23: Jarvis food-diary reads live meal_logs; TODAY'S FOOD DIARY context block in ai-coach; double-counting guard |
+| 121 | 2026-06-02 | A23 fix: chat receipts excluded from AI context; no more yesterday's meals or double-logging on reload |
+| 122 | 2026-06-02 | MD Stage 1a: full body-scan analysis (body type, muscle, symmetry, posture, observations) persisted to new `body_scans` table |
+| 123 | 2026-06-02 | MD Stage 1b: `set_goals` tool in ai-coach — Jarvis saves stated fitness goals durably; activity goals upsert conflict fixed |
+| 124 | 2026-06-03 | A24: text input for Jarvis (keyboard path alongside mic); BUG1 synthetic stopgap — LOG_FOOD user-turn marked synthetic to prevent AI re-reading |
+| 125 | 2026-06-03 | Fix: set_goals blank response + surface write error handling |
+| 126 | 2026-06-03 | A25: unified logging confirmation pop-up — durable BUG1 fix; single confirmation regardless of logging path |
+| 127 | 2026-06-03 | A26: deterministic food-recall — "what have I eaten today?" answered directly from meal_logs, bypasses LLM entirely |
+| 128 | 2026-06-04 | A27: greet() no longer volunteers stale food-recall answers; food-recall Q&A marked synthetic on both sides |
+| 129 | 2026-06-04 | Branded share templates — 6 SVG designs (duration, full-stats, personal-bests, first-route, triathlon, challenge) × post + story formats; template picker with live SVG previews; auto-fill from session stats |
 
 ### ✅ Google OAuth on iOS — rebuilt with native plugin (2026-05-01, build 24)
 

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" fill="none">
+<defs>
+  <filter id="stkShadow" x="-30%" y="-30%" width="160%" height="180%">
+    <feDropShadow dx="0" dy="24" stdDeviation="33" flood-color="#000" flood-opacity="0.26"></feDropShadow>
+  </filter>
+  
+</defs>
+<rect x="48" y="48" width="114" height="114" rx="57" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<g transform="translate(72,72) scale(0.660)" fill="#FF8A26"><path d="M28,14 L40,0 L46,0 L46,42 L54,42 L54,0 L60,0 L72,14 L72,86 L60,100 L54,100 L54,58 L46,58 L46,100 L40,100 L28,86 Z"></path><path d="M4,36 L24,22 L24,78 L4,64 Z"></path><path d="M76,22 L96,36 L96,64 L76,78 Z"></path></g>
+<rect x="48" y="168" width="683" height="255" rx="54" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<text x="102" y="237" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_1">TRIATHLON · OLYMPIC</text>
+<text x="102" y="371" class="d" font-size="132" fill="#0E0E10" font-weight="900" letter-spacing="-3" id="stat_1">2:41:18</text>
+<text x="614" y="371" class="m" font-size="32" fill="#FF8A26" font-weight="700" letter-spacing="2" id="unit_1">MIN</text>
+<rect x="42" y="489" width="996" height="171" rx="42" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<rect x="84" y="530" width="90" height="90" rx="24" fill="#FF8A26"></rect>
+<text x="113" y="591" class="d" font-size="48" fill="#0E0E10" font-weight="900">≈</text>
+<text x="210" y="552" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_2">SWIM</text>
+<text x="210" y="614"><tspan class="d" font-size="60" fill="#0E0E10" font-weight="900" letter-spacing="-1" id="stat_2">1.5</tspan><tspan class="m" font-size="30" fill="#FF8A26" font-weight="900" letter-spacing="-1" id="unit_2"> KM</tspan><tspan class="d" font-size="60" fill="#0E0E10" font-weight="900" letter-spacing="-1"> · </tspan><tspan class="d" font-size="60" fill="#0E0E10" font-weight="900" letter-spacing="-1" id="stat_3">00:28</tspan></text>
+<rect x="42" y="678" width="996" height="171" rx="42" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<rect x="84" y="719" width="90" height="90" rx="24" fill="#FF8A26"></rect>
+<text x="115" y="779" class="d" font-size="48" fill="#0E0E10" font-weight="900">◴</text>
+<text x="210" y="741" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_3">BIKE</text>
+<text x="210" y="803"><tspan class="d" font-size="60" fill="#0E0E10" font-weight="900" letter-spacing="-1" id="stat_4">40.0</tspan><tspan class="m" font-size="30" fill="#FF8A26" font-weight="900" letter-spacing="-1" id="unit_3"> KM</tspan><tspan class="d" font-size="60" fill="#0E0E10" font-weight="900" letter-spacing="-1"> · </tspan><tspan class="d" font-size="60" fill="#0E0E10" font-weight="900" letter-spacing="-1" id="stat_5">01:14</tspan></text>
+<rect x="42" y="867" width="996" height="171" rx="42" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<rect x="84" y="908" width="90" height="90" rx="24" fill="#FF8A26"></rect>
+<text x="110" y="969" class="d" font-size="48" fill="#0E0E10" font-weight="900">▶</text>
+<text x="210" y="930" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_4">RUN</text>
+<text x="210" y="992"><tspan class="d" font-size="60" fill="#0E0E10" font-weight="900" letter-spacing="-1" id="stat_6">10.0</tspan><tspan class="m" font-size="30" fill="#FF8A26" font-weight="900" letter-spacing="-1" id="unit_4"> KM</tspan><tspan class="d" font-size="60" fill="#0E0E10" font-weight="900" letter-spacing="-1"> · </tspan><tspan class="d" font-size="60" fill="#0E0E10" font-weight="900" letter-spacing="-1" id="stat_7">00:58</tspan></text>
+</svg>

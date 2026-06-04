@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-06-04] — Branded share templates (6 designs, post + story)
+
+- **6 branded share card templates** — Duration, Full Stats, Personal Bests, New Route, Triathlon, and Challenge; each available in post (1080×1080) and story (1080×1920) format
+- **Live SVG previews** — the template picker shows each design as a live thumbnail so you can see exactly what it looks like before generating; thumbnail switches between post and story as you toggle
+- **Auto-filled from session** — stats (distance, time, pace, heart rate, calories, elevation) are read from the completed workout and injected into the right fields automatically
+- **Smart availability** — Full Stats requires GPS data, Personal Bests requires a new PR this session, New Route requires route positions, Triathlon is only shown for triathlon activities; unavailable templates are greyed out with a reason
+- **Integrated into existing share flow** — "Templates" appears as a new option in the share card grid alongside Map Card, Stats Card, Story Card, AI Cinematic, and Quick Photo
+
 ## [2026-06-04] — A27: fix greet() volunteering stale food-recall answers (Build 128)
 
 - **Jarvis no longer answers old food questions on app open** — the greeting now just welcomes you and asks what you want to work on; it will never pick up or continue a prior conversation thread

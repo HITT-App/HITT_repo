@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" fill="none">
+<defs>
+  <filter id="stkShadow" x="-30%" y="-30%" width="160%" height="180%">
+    <feDropShadow dx="0" dy="24" stdDeviation="33" flood-color="#000" flood-opacity="0.26"></feDropShadow>
+  </filter>
+  
+</defs>
+<rect x="48" y="48" width="114" height="114" rx="57" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<g transform="translate(72,72) scale(0.660)" fill="#FF8A26"><path d="M28,14 L40,0 L46,0 L46,42 L54,42 L54,0 L60,0 L72,14 L72,86 L60,100 L54,100 L54,58 L46,58 L46,100 L40,100 L28,86 Z"></path><path d="M4,36 L24,22 L24,78 L4,64 Z"></path><path d="M76,22 L96,36 L96,64 L76,78 Z"></path></g>
+<rect x="48" y="612" width="962" height="198" rx="48" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<text x="102" y="681" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_1">DISTANCE</text>
+<text x="102" y="761" class="d" font-size="78" fill="#0E0E10" font-weight="900" letter-spacing="-2" id="stat_1">10.0</text>
+<text x="284" y="761" class="m" font-size="19" fill="#FF8A26" font-weight="700" letter-spacing="1" id="unit_1">KM</text>
+<rect x="369" y="654" width="3" height="114" rx="0" fill="rgba(14, 14, 16, 0.55)" fill-opacity="0.35"></rect>
+<text x="432" y="681" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_2">TIME</text>
+<text x="432" y="761" class="d" font-size="78" fill="#0E0E10" font-weight="900" letter-spacing="-2" id="stat_2">46:59</text>
+<rect x="718" y="654" width="3" height="114" rx="0" fill="rgba(14, 14, 16, 0.55)" fill-opacity="0.35"></rect>
+<text x="781" y="681" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_3">ELEV</text>
+<text x="781" y="761" class="d" font-size="78" fill="#0E0E10" font-weight="900" letter-spacing="-2" id="stat_3">203</text>
+<text x="943" y="761" class="m" font-size="19" fill="#FF8A26" font-weight="700" letter-spacing="1" id="unit_2">M</text>
+<rect x="48" y="918" width="984" height="114" rx="36" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<text x="90" y="992" class="d" font-size="48" fill="#0E0E10" font-weight="900" id="stat_4">4:41</text>
+<text x="217" y="994" class="m" font-size="24" fill="#FF8A26" font-weight="700" letter-spacing="2" id="unit_3">/KM</text>
+<rect x="317" y="948" width="3" height="54" rx="0" fill="rgba(14, 14, 16, 0.55)" fill-opacity="0.35"></rect>
+<text x="368" y="992" class="d" font-size="48" fill="#0E0E10" font-weight="900" id="stat_5">162</text>
+<text x="478" y="994" class="m" font-size="24" fill="#FF8A26" font-weight="700" letter-spacing="2" id="unit_4">BPM</text>
+<rect x="578" y="948" width="3" height="54" rx="0" fill="rgba(14, 14, 16, 0.55)" fill-opacity="0.35"></rect>
+<text x="629" y="992" class="d" font-size="48" fill="#0E0E10" font-weight="900" id="stat_6">847</text>
+<text x="739" y="994" class="m" font-size="24" fill="#FF8A26" font-weight="700" letter-spacing="2" id="unit_5">KCAL</text>
+</svg>

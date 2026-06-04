@@ -1,7 +1,7 @@
-import { Map, BarChart3, Sparkles, Camera, Layers, Smartphone } from 'lucide-react';
+import { Map, BarChart3, Sparkles, Camera, Layers, Smartphone, LayoutTemplate } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type ShareStyle = 'none' | 'map' | 'stats' | 'ai' | 'photo' | 'transparent' | 'story';
+export type ShareStyle = 'none' | 'map' | 'stats' | 'ai' | 'photo' | 'transparent' | 'story' | 'template';
 
 interface ShareOptionsGridProps {
   hasMap: boolean;
@@ -56,6 +56,14 @@ const getOptions = (hasMap: boolean) => [
     label: 'Quick Photo',
     desc: 'Your photo + stats',
     badge: 'Instant',
+    needsMap: false,
+  },
+  {
+    key: 'template' as const,
+    icon: LayoutTemplate,
+    label: 'Templates',
+    desc: '6 branded designs',
+    badge: 'New',
     needsMap: false,
   },
 ];

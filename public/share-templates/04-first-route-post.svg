@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" fill="none">
+<defs>
+  <filter id="stkShadow" x="-30%" y="-30%" width="160%" height="180%">
+    <feDropShadow dx="0" dy="24" stdDeviation="33" flood-color="#000" flood-opacity="0.26"></feDropShadow>
+  </filter>
+  
+</defs>
+<rect x="48" y="48" width="114" height="114" rx="57" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<g transform="translate(72,72) scale(0.660)" fill="#FF8A26"><path d="M28,14 L40,0 L46,0 L46,42 L54,42 L54,0 L60,0 L72,14 L72,86 L60,100 L54,100 L54,58 L46,58 L46,100 L40,100 L28,86 Z"></path><path d="M4,36 L24,22 L24,78 L4,64 Z"></path><path d="M76,22 L96,36 L96,64 L76,78 Z"></path></g>
+<rect x="48" y="180" width="668" height="273" rx="42" fill="#0E0E10" filter="url(#stkShadow)"></rect>
+<rect x="96" y="222" width="155" height="51" rx="12" fill="#FF8A26"></rect>
+<text x="117" y="258" class="m" font-size="27" fill="#0E0E10" font-weight="800" letter-spacing="6">FIRST</text>
+<text x="275" y="258" class="m" font-size="27" fill="rgba(244, 241, 232, 0.62)" font-weight="700" letter-spacing="8">NEW ROUTE</text>
+<text x="96" y="355" class="d" font-size="66" fill="#F4F1E8" font-weight="900" letter-spacing="-1" id="stat_1">Mission Peak Loop</text>
+<text x="96" y="405" class="m" font-size="30" fill="rgba(244, 241, 232, 0.55)" font-weight="400" letter-spacing="3" id="label_1">Fremont · CA</text>
+<rect x="48" y="834" width="984" height="198" rx="48" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<text x="102" y="903" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_2">DISTANCE</text>
+<text x="102" y="983" class="d" font-size="78" fill="#0E0E10" font-weight="900" letter-spacing="-2" id="stat_2">8.4</text>
+<text x="233" y="983" class="m" font-size="19" fill="#FF8A26" font-weight="700" letter-spacing="1" id="unit_1">KM</text>
+<rect x="356" y="876" width="3" height="114" rx="0" fill="rgba(14, 14, 16, 0.55)" fill-opacity="0.35"></rect>
+<text x="419" y="903" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_3">ELEV</text>
+<text x="419" y="983" class="d" font-size="78" fill="#0E0E10" font-weight="900" letter-spacing="-2" id="stat_3">412</text>
+<text x="581" y="983" class="m" font-size="19" fill="#FF8A26" font-weight="700" letter-spacing="1" id="unit_2">M</text>
+<rect x="654" y="876" width="3" height="114" rx="0" fill="rgba(14, 14, 16, 0.55)" fill-opacity="0.35"></rect>
+<text x="717" y="903" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_4">TIME</text>
+<text x="717" y="983" class="d" font-size="78" fill="#0E0E10" font-weight="900" letter-spacing="-2" id="stat_4">58:22</text>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" fill="none">
+<defs>
+  <filter id="stkShadow" x="-30%" y="-30%" width="160%" height="180%">
+    <feDropShadow dx="0" dy="24" stdDeviation="33" flood-color="#000" flood-opacity="0.26"></feDropShadow>
+  </filter>
+  
+</defs>
+<rect x="48" y="48" width="114" height="114" rx="57" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<g transform="translate(72,72) scale(0.660)" fill="#FF8A26"><path d="M28,14 L40,0 L46,0 L46,42 L54,42 L54,0 L60,0 L72,14 L72,86 L60,100 L54,100 L54,58 L46,58 L46,100 L40,100 L28,86 Z"></path><path d="M4,36 L24,22 L24,78 L4,64 Z"></path><path d="M76,22 L96,36 L96,64 L76,78 Z"></path></g>
+<text x="54" y="254" class="d" font-size="90" fill="#F4F1E8" font-weight="900" letter-spacing="-3">May</text>
+<text x="54" y="335" class="d" font-size="90" fill="#FF8A26" font-weight="900" letter-spacing="-3">Burnout</text>
+<text x="54" y="416" class="d" font-size="90" fill="#F4F1E8" font-weight="900" letter-spacing="-3">Challenge</text>
+<rect x="48" y="600" width="515" height="180" rx="42" fill="#0E0E10" filter="url(#stkShadow)"></rect>
+<text x="90" y="734" class="d" font-size="120" fill="#FF8A26" font-weight="900" letter-spacing="-5" id="stat_1">12</text>
+<text x="255" y="678" class="m" font-size="27" fill="rgba(244, 241, 232, 0.62)" font-weight="700" letter-spacing="8" id="label_1">MAY BURNOUT</text>
+<text x="255" y="722"><tspan class="m" font-size="33" fill="#F4F1E8" font-weight="700">DAY </tspan><tspan class="m" font-size="33" fill="#F4F1E8" font-weight="700" id="stat_2">12</tspan><tspan class="m" font-size="33" fill="#F4F1E8" font-weight="700"> / </tspan><tspan class="m" font-size="33" fill="#F4F1E8" font-weight="700" id="stat_3">30</tspan></text>
+<rect x="334" y="570" width="698" height="300" rx="54" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<text x="394" y="645" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_2">TODAY</text>
+<text x="394" y="808" class="d" font-size="168" fill="#0E0E10" font-weight="900" letter-spacing="-4" id="stat_4">38:42</text>
+<text x="891" y="808" class="m" font-size="40" fill="#FF8A26" font-weight="700" letter-spacing="2" id="unit_1">MIN</text>
+<rect x="48" y="945" width="438" height="87" rx="44" fill="#FF8A26" filter="url(#stkShadow)"></rect>
+<text x="90" y="1001" class="m" font-size="33" fill="#0E0E10" font-weight="800" letter-spacing="6">#</text>
+<text x="128" y="1001" class="m" font-size="33" fill="#0E0E10" font-weight="800" letter-spacing="6" id="hashtag_1">MAYBURNOUT30</text>
+<rect x="504" y="945" width="359" height="87" rx="44" fill="#0E0E10" filter="url(#stkShadow)"></rect>
+<text x="546" y="1001" class="m" font-size="33" fill="#F4F1E8" font-weight="800" letter-spacing="6">#</text>
+<text x="585" y="1001" class="m" font-size="33" fill="#F4F1E8" font-weight="800" letter-spacing="6" id="hashtag_2">HIITWATCH</text>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" fill="none">
+<defs>
+  <filter id="stkShadow" x="-30%" y="-30%" width="160%" height="180%">
+    <feDropShadow dx="0" dy="24" stdDeviation="33" flood-color="#000" flood-opacity="0.26"></feDropShadow>
+  </filter>
+  
+</defs>
+<rect x="48" y="48" width="114" height="114" rx="57" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<g transform="translate(72,72) scale(0.660)" fill="#FF8A26"><path d="M28,14 L40,0 L46,0 L46,42 L54,42 L54,0 L60,0 L72,14 L72,86 L60,100 L54,100 L54,58 L46,58 L46,100 L40,100 L28,86 Z"></path><path d="M4,36 L24,22 L24,78 L4,64 Z"></path><path d="M76,22 L96,36 L96,64 L76,78 Z"></path></g>
+<rect x="191" y="390" width="698" height="300" rx="54" fill="#F4F1E8" filter="url(#stkShadow)"></rect>
+<text x="251" y="465" class="m" font-size="27" fill="rgba(14, 14, 16, 0.55)" font-weight="700" letter-spacing="8" id="label_1">TODAY&#39;S SESSION</text>
+<text x="251" y="628" class="d" font-size="168" fill="#0E0E10" font-weight="900" letter-spacing="-4" id="stat_1">32:14</text>
+<text x="748" y="628" class="m" font-size="40" fill="#FF8A26" font-weight="700" letter-spacing="2" id="unit_1">MIN</text>
+</svg>
