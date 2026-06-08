@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-08] — Fix goal card always hidden on iOS
+
+- **Goal card now appears correctly on iOS** — Supabase timestamp format was causing the weekly cadence check to silently fail on device, suppressing the card on every open
+
 ## [2026-06-08] — Goal card reliability fixes
 
 - **Onboarding and goal card are now mutually exclusive** — brand-new users get the conversational onboarding greeting; the goal card only shows to returning users with no active goal and cadence due

@@ -587,12 +587,17 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           if (!isNewUser) {
             const hasActiveGoal = (activeGoalCount ?? 0) > 0;
             const pref = profilePrefs?.goal_prompt_preference ?? null;
-            const lastAt = profilePrefs?.goal_prompt_last_at ? new Date(profilePrefs.goal_prompt_last_at) : null;
+            // Supabase returns TIMESTAMPTZ as "2026-05-31 14:51:25+00" (space, no colon in offset).
+            // iOS Safari rejects that format — normalise to ISO 8601 before parsing.
+            const rawLastAt = profilePrefs?.goal_prompt_last_at;
+            const lastAt = rawLastAt
+              ? new Date(rawLastAt.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00'))
+              : null;
             const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
             shouldPromptGoal =
               !hasActiveGoal &&
               pref !== 'never' &&
-              (lastAt === null || lastAt < sevenDaysAgo);
+              (lastAt === null || isNaN(lastAt.getTime()) || lastAt < sevenDaysAgo);
 
             if (shouldPromptGoal) {
               setPendingGoalPrompt(true);
