@@ -139,14 +139,14 @@ export default function GoalSetup() {
         .eq('user_id', userId);
 
       if (returnTo === '/ai') {
+        const fitnessLabel = FITNESS_LEVELS.find(f => f.id === fitnessLevel)?.label ?? fitnessLevel;
+        const greetPrompt = `[POST_GOAL_WIZARD] The user just finished the goal setup wizard. Their goal: ${buildTargetText()}. Fitness level: ${fitnessLabel}. Equipment: ${equipment.join(', ')}. In one warm sentence, acknowledge their specific goal by name. Then ask what they want to work on first. Be encouraging and personal — no lists, no options.`;
         navigate('/ai', {
-          state: {
-            tab: 'chat',
-            prefillMessage: "I just set my fitness goal through the wizard. Acknowledge what I've chosen in one warm sentence and ask what I want to work on first.",
-          },
+          replace: true,
+          state: { tab: 'chat', prefillMessage: greetPrompt },
         });
       } else {
-        navigate(returnTo);
+        navigate(returnTo, { replace: true });
       }
     } finally {
       setSaving(false);

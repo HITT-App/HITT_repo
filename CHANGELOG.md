@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-08] — Jarvis post-goal acknowledgement fixes
+
+- **AI now names the actual goal** — prefill prompt includes goal name, timeline, fitness level, and equipment so Jarvis acknowledges what the user chose specifically rather than responding generically
+- **Prefill no longer shows as a user message** — switched from ai.send() to ai.greet() so the programmatic prompt is invisible; only Jarvis's response appears
+- **X button goes home, not back to the wizard** — navigate('/') when closing a prefill-triggered session prevents the wizard re-mounting; used replace:true on the wizard's navigate so it's removed from history too
+
 ## [2026-06-08] — Hide Jarvis FAB during goal wizard
 
 - **Jarvis FAB hidden on /goal-setup** — the floating orange + button (z-40) was rendering above the wizard and blocking the "Set my goal" button on the final step; added /goal-setup to the hidden-nav and hidden-FAB route lists

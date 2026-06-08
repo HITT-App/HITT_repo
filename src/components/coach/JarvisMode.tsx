@@ -617,7 +617,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       await new Promise(r => setTimeout(r, 400));
 
       if (prefillMessage) {
-        ai.send(prefillMessage);
+        ai.greet(prefillMessage);
         return;
       }
 

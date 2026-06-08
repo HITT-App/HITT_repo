@@ -46,7 +46,7 @@ export function AISurface() {
         <TabsContent value="chat" className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden">
           {activeTab === 'chat' && (
             <JarvisMode
-              onClose={() => navigate(-1)}
+              onClose={() => prefillMessage ? navigate('/') : navigate(-1)}
               healthProfile={healthProfile ?? undefined}
               prefillMessage={prefillMessage}
             />
