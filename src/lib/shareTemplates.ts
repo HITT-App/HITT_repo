@@ -161,23 +161,19 @@ export interface WeeklyStatsData {
   minutes: string
   streak: string
   calories: string
+  title?: string
 }
 export function renderWeeklyStats(format: TemplateFormat, data: WeeklyStatsData) {
   return render('02-full-stats', format, {
+    title_1: data.title ?? 'MY STATS THIS WEEK',
     label_1: 'WORKOUTS',
     stat_1:  data.workouts,
-    unit_1:  'THIS WK',
     label_2: 'MINUTES',
     stat_2:  data.minutes,
-    label_3: 'STREAK',
-    stat_3:  data.streak,
-    unit_2:  'DAYS',
-    stat_4:  '',
-    unit_3:  '',
-    stat_5:  '',
-    unit_4:  '',
-    stat_6:  data.calories,
-    unit_5:  'KCAL',
+    label_3: 'KCAL',
+    stat_3:  data.calories,
+    label_4: 'STREAK',
+    stat_4:  data.streak,
   })
 }
 
