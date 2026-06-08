@@ -3,7 +3,7 @@ import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from 'react-router-dom';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, X, Loader2, StopCircle, Target, Send } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, StopCircle, Target, Send, Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import { AIWorkoutCard } from './AIWorkoutCard';
 import { AIWorkoutPlanCard } from './AIWorkoutPlanCard';
 import { FoodConfirmCard } from './FoodConfirmCard';
 import { GoalConfirmCard } from './GoalConfirmCard';
+import { MultiChoiceCard } from './MultiChoiceCard';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload } from '@/hooks/useAI.types';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
@@ -155,6 +156,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     | null
   >(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [pendingGoalPrompt, setPendingGoalPrompt] = useState(false);
   const [todayKcalTotal, setTodayKcalTotal] = useState<number | undefined>(undefined);
   const [recommendedWorkout, setRecommendedWorkout] = useState<RecommendedWorkout | null>(null);
   const [recommendedRecipe, setRecommendedRecipe] = useState<RecommendedRecipe | null>(null);
@@ -352,6 +354,30 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     await ai.appendAssistantMessage('No problem, skipped that one.', false);
   };
 
+  const handleGoalPromptSetNow = useCallback(() => {
+    setPendingGoalPrompt(false);
+    ai.greet(`[ONBOARDING] The user wants to set up their fitness goals. They have no goals set yet. Introduce yourself as Coach HIIT in one warm sentence, then ask: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`);
+  }, [ai]);
+
+  const handleGoalPromptLater = useCallback(async () => {
+    setPendingGoalPrompt(false);
+    const { data: session } = await supabase.auth.getSession();
+    const userId = session?.session?.user?.id;
+    if (!userId) return;
+    await supabase.from('profiles').update({
+      goal_prompt_preference: 'later',
+      goal_prompt_last_at: new Date().toISOString(),
+    }).eq('user_id', userId);
+  }, []);
+
+  const handleGoalPromptNever = useCallback(async () => {
+    setPendingGoalPrompt(false);
+    const { data: session } = await supabase.auth.getSession();
+    const userId = session?.session?.user?.id;
+    if (!userId) return;
+    await supabase.from('profiles').update({ goal_prompt_preference: 'never' }).eq('user_id', userId);
+  }, []);
+
   const confirmSchedule = async () => {
     if (!pendingSchedule || isAddingSchedule) return;
     setIsAddingSchedule(true);
@@ -537,19 +563,34 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         if (userId) {
           const today = new Date().toISOString().split('T')[0];
 
-          const { count: futureCount } = await supabase
-            .from('scheduled_workouts')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .gte('scheduled_date', today);
-          hasSchedule = (futureCount ?? 0) > 0;
+          const [
+            { count: futureCount },
+            { count: todayCount },
+            { count: activeGoalCount },
+            { data: profilePrefs },
+          ] = await Promise.all([
+            supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('scheduled_date', today),
+            supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('scheduled_date', today),
+            (supabase as any).from('user_goals').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_active', true),
+            supabase.from('profiles').select('goal_prompt_preference, goal_prompt_last_at').eq('user_id', userId).maybeSingle(),
+          ]);
 
-          const { count: todayCount } = await supabase
-            .from('scheduled_workouts')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .eq('scheduled_date', today);
+          hasSchedule = (futureCount ?? 0) > 0;
           hasWorkoutToday = (todayCount ?? 0) > 0;
+
+          const hasActiveGoal = (activeGoalCount ?? 0) > 0;
+          const pref = profilePrefs?.goal_prompt_preference ?? null;
+          const lastAt = profilePrefs?.goal_prompt_last_at ? new Date(profilePrefs.goal_prompt_last_at) : null;
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          const shouldPrompt =
+            !hasActiveGoal &&
+            pref !== 'never' &&
+            (lastAt === null || lastAt < sevenDaysAgo);
+
+          if (shouldPrompt) {
+            setPendingGoalPrompt(true);
+            await supabase.from('profiles').update({ goal_prompt_last_at: new Date().toISOString() }).eq('user_id', userId);
+          }
         }
       } catch {
         hasSchedule = true;
@@ -754,6 +795,21 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Goal-prompt multi-choice card */}
+        {pendingGoalPrompt && (
+          <MultiChoiceCard
+            icon={<Flag className="w-6 h-6 text-primary" strokeWidth={2.1} />}
+            eyebrow="Set a goal"
+            heading="What are you training toward?"
+            subtext="I coach better with a target. Takes 30 seconds to set."
+            choices={[
+              { label: 'Set my goal', variant: 'primary', onSelect: handleGoalPromptSetNow },
+              { label: 'Remind me later', variant: 'outline', onSelect: handleGoalPromptLater },
+              { label: "Don't ask again", variant: 'ghost', onSelect: handleGoalPromptNever },
+            ]}
+          />
         )}
 
         {/* Food / goal confirmation cards */}

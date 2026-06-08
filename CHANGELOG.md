@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-06-08] — Goal-prompt pop-up (reusable multi-choice primitive)
+
+- **Goal-prompt card** — Jarvis now asks "What are you training toward?" on open when no goal is set; appears once then re-surfaces weekly on "Remind me later", never again on "Don't ask again"
+- **Set my goal** routes into the existing goal-setting conversation; confirmed goals stop the prompt naturally
+- **Reusable MultiChoiceCard component** — generic N-choice card (icon, heading, choices array) for goal prompt and future prompts (HealthKit connect, onboarding steps, etc.)
+- **Profile schema** — two new nullable columns (`goal_prompt_preference`, `goal_prompt_last_at`) track the user's choice and cadence
+- **Jarvis prompt fix** — "not set" goal now correctly described as unset rather than inaccessible
+
 ## [2026-06-04] — Dismissed log fix + Jarvis prompt redesign
 
 - **Dismissed food/goal proposals no longer re-proposed** — tapping Dismiss on a log or goal confirmation card now leaves a resolution in the conversation, so Jarvis doesn't re-propose the same item on next open
