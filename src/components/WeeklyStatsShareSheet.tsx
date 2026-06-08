@@ -53,10 +53,13 @@ export function WeeklyStatsShareSheet({ workouts, minutes, streak, calories, onC
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-[60] flex flex-col justify-end">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative bg-background rounded-t-3xl px-6 pt-4 pb-8 space-y-4">
+      <div
+        className="relative bg-background rounded-t-3xl px-6 pt-4 space-y-4"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}
+      >
         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-border" />
 
         <div className="flex items-center justify-between pt-2">
