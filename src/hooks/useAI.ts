@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { recordActiveDay } from '@/lib/activeDay';
 import { CHAT_RETENTION_HOURS } from '@/lib/constants';
 import { toast } from 'sonner';
 import type {
@@ -176,6 +177,8 @@ export function useAI(): UseAIReturn {
 
     if (insertError) {
       console.error('[useAI] logFood insert failed:', insertError);
+    } else {
+      recordActiveDay(supabase, userId).catch(() => {})
     }
   }, []);
 

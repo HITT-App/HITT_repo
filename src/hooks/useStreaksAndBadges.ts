@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { notifyUser } from '@/lib/notify';
+import { recordActiveDay } from '@/lib/activeDay';
 
 // Leaderboard point values for actions
 const POINTS = {
@@ -96,77 +97,29 @@ export function useStreaksAndBadges() {
   const recordWorkout = useCallback(async (): Promise<number> => {
     if (!user) return 0;
 
-    const today = new Date().toISOString().split('T')[0];
-    
     try {
-      // Get or create streak record
-      let currentStreak = streak;
-      
-      if (!currentStreak) {
-        // Create new streak record
-        const { data: newStreak, error: createError } = await supabase
-          .from('user_streaks')
-          .insert({ 
-            user_id: user.id,
-            current_streak: 1,
-            longest_streak: 1,
-            last_workout_date: today,
-            total_workouts: 1
-          })
-          .select()
-          .single();
+      await recordActiveDay(supabase, user.id);
 
-        if (createError) throw createError;
-        currentStreak = newStreak;
-      } else {
-        // Calculate new streak
-        const lastDate = currentStreak.last_workout_date;
-        let newCurrentStreak = currentStreak.current_streak;
-        
-        if (lastDate) {
-          const lastWorkout = new Date(lastDate);
-          const todayDate = new Date(today);
-          const diffDays = Math.floor((todayDate.getTime() - lastWorkout.getTime()) / (1000 * 60 * 60 * 24));
-          
-          if (diffDays === 0) {
-            // Same day, don't update streak
-          } else if (diffDays === 1) {
-            // Consecutive day, increment streak
-            newCurrentStreak += 1;
-          } else {
-            // Streak broken, reset to 1
-            newCurrentStreak = 1;
-          }
-        } else {
-          newCurrentStreak = 1;
-        }
+      const { data: current } = await supabase
+        .from('user_streaks')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-        const newLongestStreak = Math.max(currentStreak.longest_streak, newCurrentStreak);
-        const newTotalWorkouts = currentStreak.total_workouts + 1;
+      if (!current) return 0;
 
-        const { data: updatedStreak, error: updateError } = await supabase
-          .from('user_streaks')
-          .update({
-            current_streak: newCurrentStreak,
-            longest_streak: newLongestStreak,
-            last_workout_date: today,
-            total_workouts: newTotalWorkouts
-          })
-          .eq('user_id', user.id)
-          .select()
-          .single();
+      const updatedStreak: UserStreak = { ...current, total_workouts: current.total_workouts + 1 };
 
-        if (updateError) throw updateError;
-        currentStreak = updatedStreak;
-      }
+      await supabase
+        .from('user_streaks')
+        .update({ total_workouts: updatedStreak.total_workouts })
+        .eq('user_id', user.id);
 
-      setStreak(currentStreak);
+      setStreak(updatedStreak);
 
-      // Award leaderboard points for workout completion
       let pointsToAward = POINTS.WORKOUT_COMPLETE;
-      // Bonus for streak continuation
-      if (currentStreak && currentStreak.current_streak > 1) {
-        pointsToAward += POINTS.STREAK_DAY_BONUS * Math.min(currentStreak.current_streak, 10);
+      if (updatedStreak.current_streak > 1) {
+        pointsToAward += POINTS.STREAK_DAY_BONUS * Math.min(updatedStreak.current_streak, 10);
       }
       await supabase.rpc("award_points", {
         p_user_id: user.id,
@@ -174,15 +127,14 @@ export function useStreaksAndBadges() {
         p_category: "worldwide",
       });
 
-      // Check for new badges
-      await checkAndAwardBadges(currentStreak);
+      await checkAndAwardBadges(updatedStreak);
 
       return pointsToAward;
     } catch (error) {
       console.error('Error recording workout:', error);
       return 0;
     }
-  }, [user, streak, allBadges, earnedBadges]);
+  }, [user, allBadges, earnedBadges]);
 
   const checkAndAwardBadges = async (currentStreak: UserStreak) => {
     if (!user || !allBadges.length) return;

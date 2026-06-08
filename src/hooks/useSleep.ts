@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { recordActiveDay } from "@/lib/activeDay";
 import { startOfWeek, endOfWeek, subDays, differenceInMinutes, parseISO } from "date-fns";
 
 export const useSleep = () => {
@@ -249,6 +250,7 @@ export const useSleep = () => {
       });
 
       if (error) throw error;
+      recordActiveDay(supabase, user!.id).catch(() => {})
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sleep-logs"] });

@@ -87,7 +87,7 @@ export const StatsGrid = () => {
       icon: Clock,
       hEmoji: 'streak',
       value: streak?.current_streak?.toString() || "0",
-      label: "Day Streak",
+      label: "Active Days",
       glassBg: "rgba(16,185,129,0.55), rgba(13,148,136,0.4)",
       glowColor: "#10b981",
       glow: "shadow-emerald-500/30",

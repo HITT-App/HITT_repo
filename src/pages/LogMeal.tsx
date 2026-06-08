@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Analytics } from '@/lib/analytics';
 import { useAuth } from '@/hooks/useAuth';
+import { recordActiveDay } from '@/lib/activeDay';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,6 +96,7 @@ export default function LogMeal() {
 
       if (error) throw error;
 
+      recordActiveDay(supabase, user.id).catch(() => {})
       Analytics.mealLogged('manual');
       setShowSuccess(true);
       setTimeout(() => {

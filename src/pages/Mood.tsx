@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { recordActiveDay } from "@/lib/activeDay";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
@@ -81,6 +82,7 @@ const Mood = () => {
         { onConflict: "user_id,date" }
       );
       if (error) throw error;
+      recordActiveDay(supabase, user!.id).catch(() => {})
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mood-today"] });

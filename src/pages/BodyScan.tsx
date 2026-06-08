@@ -10,6 +10,7 @@ import { type MetricType } from "@/hooks/useHealthMetrics";
 import { useAuth } from "@/hooks/useAuth";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 import { supabase } from "@/integrations/supabase/client";
+import { recordActiveDay } from "@/lib/activeDay";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, subDays } from "date-fns";
@@ -292,6 +293,7 @@ const BodyScan = () => {
           analysis,
         });
         if (scanError) throw scanError;
+        recordActiveDay(supabase, user.id).catch(() => {})
       }
       toast.success("Measurements saved!");
       setMeasurements({});

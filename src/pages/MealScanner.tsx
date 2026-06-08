@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { recordActiveDay } from '@/lib/activeDay';
 import { ArrowLeft, Camera, Scan, Flame, Droplets, Wheat, Check, X, RefreshCw, Image, Plus, Minus, ChevronDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -228,6 +229,7 @@ export default function MealScanner() {
         });
         if (error) throw error;
       }
+      recordActiveDay(supabase, user.id).catch(() => {})
       Analytics.mealLogged('scanner');
       toast({ title: 'Food logged!', description: `${selected.length} item(s) added to ${mealCategory}.` });
       navigate('/nutrition');

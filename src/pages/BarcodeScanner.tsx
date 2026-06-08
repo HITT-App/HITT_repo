@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { recordActiveDay } from "@/lib/activeDay";
 
 interface ProductInfo {
   name: string;
@@ -155,6 +156,7 @@ export default function BarcodeScanner() {
         image_url: product.image_url,
         servings,
       });
+      recordActiveDay(supabase, user.id).catch(() => {})
       Analytics.mealLogged('barcode');
       toast.success("Meal logged successfully!");
       navigate("/nutrition-dashboard");
