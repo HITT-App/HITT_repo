@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-08] — Suppress repeated Jarvis greeting within a session
+
+- **No more "welcome back" every open** — Jarvis now skips the greeting if the user was last in the chat within 10 minutes; conversation history shows immediately without an additional message
+
 ## [2026-06-08] — Jarvis post-goal acknowledgement fixes
 
 - **AI now names the actual goal** — prefill prompt includes goal name, timeline, fitness level, and equipment so Jarvis acknowledges what the user chose specifically rather than responding generically

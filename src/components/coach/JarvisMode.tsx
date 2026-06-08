@@ -624,6 +624,12 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       // Goal card owns the screen — no greeting when it's showing.
       if (shouldPromptGoal) return;
 
+      // Skip greeting if the user was here recently — prevents repeated "welcome back" within a session.
+      const GREET_COOLDOWN_MS = 10 * 60 * 1000;
+      const lastGreetTs = Number(sessionStorage.getItem('jarvis_last_greeted') ?? 0);
+      if (hasHistory && Date.now() - lastGreetTs < GREET_COOLDOWN_MS) return;
+      sessionStorage.setItem('jarvis_last_greeted', String(Date.now()));
+
       const isOnboarding = !hasHistory && !hasSchedule;
 
       const greetingPrompt = sharePromptDetail
