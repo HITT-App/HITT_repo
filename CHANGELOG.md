@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-08] — Fix goal card suppressed by catch-block contamination
+
+- **Goal card now reliably appears** — schedule and goal-prompt queries are now in separate try/catch blocks; previously a failure in either would silently reset hasSchedule and prevent the card from ever showing
+- **No more "returns a thought" greeting when card should appear** — the goal-prompt check can now fail gracefully without affecting which greeting branch runs
+
 ## [2026-06-08] — Fix goal card always hidden on iOS
 
 - **Goal card now appears correctly on iOS** — Supabase timestamp format was causing the weekly cadence check to silently fail on device, suppressing the card on every open

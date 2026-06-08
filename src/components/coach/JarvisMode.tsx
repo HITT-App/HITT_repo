@@ -560,35 +560,38 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
       const hasHistory = ai.messages.length > 0;
 
+      // Step 1 — schedule queries (affects greeting branch selection; defensive default = true).
       try {
         const { data: session } = await supabase.auth.getSession();
         const userId = session?.session?.user?.id;
         if (userId) {
           const today = new Date().toISOString().split('T')[0];
-
-          const [
-            { count: futureCount },
-            { count: todayCount },
-            { count: activeGoalCount },
-            { data: profilePrefs },
-          ] = await Promise.all([
+          const [{ count: futureCount }, { count: todayCount }] = await Promise.all([
             supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('scheduled_date', today),
             supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('scheduled_date', today),
-            (supabase as any).from('user_goals').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_active', true),
-            supabase.from('profiles').select('goal_prompt_preference, goal_prompt_last_at').eq('user_id', userId).maybeSingle(),
           ]);
-
           hasSchedule = (futureCount ?? 0) > 0;
           hasWorkoutToday = (todayCount ?? 0) > 0;
+        }
+      } catch {
+        hasSchedule = true;
+        hasWorkoutToday = true;
+      }
 
-          // Only offer the goal card to returning users — onboarding handles goal-collection
-          // conversationally for brand-new users (no history AND no schedule).
-          const isNewUser = !hasHistory && !hasSchedule;
-          if (!isNewUser) {
+      // Step 2 — goal-prompt check (isolated: a failure here never affects schedule state).
+      // Only runs for returning users; new users get the onboarding conversational flow instead.
+      try {
+        const isNewUser = !hasHistory && !hasSchedule;
+        if (!isNewUser) {
+          const { data: session } = await supabase.auth.getSession();
+          const userId = session?.session?.user?.id;
+          if (userId) {
+            const [{ count: activeGoalCount }, { data: profilePrefs }] = await Promise.all([
+              (supabase as any).from('user_goals').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_active', true),
+              supabase.from('profiles').select('goal_prompt_preference, goal_prompt_last_at').eq('user_id', userId).maybeSingle(),
+            ]);
             const hasActiveGoal = (activeGoalCount ?? 0) > 0;
             const pref = profilePrefs?.goal_prompt_preference ?? null;
-            // Supabase returns TIMESTAMPTZ as "2026-05-31 14:51:25+00" (space, no colon in offset).
-            // iOS Safari rejects that format — normalise to ISO 8601 before parsing.
             const rawLastAt = profilePrefs?.goal_prompt_last_at;
             const lastAt = rawLastAt
               ? new Date(rawLastAt.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00'))
@@ -606,8 +609,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           }
         }
       } catch {
-        hasSchedule = true;
-        hasWorkoutToday = true;
+        // Goal-prompt check failed — suppress the card rather than show it in an unknown state.
       }
 
       await new Promise(r => setTimeout(r, 400));
