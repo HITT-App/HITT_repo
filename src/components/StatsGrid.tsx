@@ -23,17 +23,31 @@ export const StatsGrid = () => {
   const fetchStats = async () => {
     if (!user) return;
 
+    // Monday 00:00:00 local time → ISO string for Supabase filter
+    const now = new Date();
+    const daysFromMonday = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - daysFromMonday);
+    monday.setHours(0, 0, 0, 0);
+    const weekStart = monday.toISOString();
+
     try {
       const { data: progressData } = await supabase
         .from('workout_progress')
-        .select('duration_seconds, workout_id')
-        .eq('user_id', user.id);
+        .select('duration_seconds, calories_burned')
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+        .gte('completed_at', weekStart);
 
       if (progressData) {
         const totalSecs = progressData.reduce((acc, p) => acc + (p.duration_seconds || 0), 0);
+        const totalCals = progressData.reduce((acc, p) => {
+          // Use real calories_burned if available, otherwise estimate from duration
+          return acc + (p.calories_burned ?? Math.floor((p.duration_seconds || 0) / 60 * 7));
+        }, 0);
         setTotalMinutes(Math.floor(totalSecs / 60));
         setWorkoutCount(progressData.length);
-        setTotalCalories(Math.floor(totalSecs / 60 * 7));
+        setTotalCalories(Math.floor(totalCals));
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -41,29 +55,29 @@ export const StatsGrid = () => {
   };
 
   const stats = [
-    { 
-      id: "calories", 
-      icon: Flame, 
-      value: totalCalories > 0 ? totalCalories.toLocaleString() : "0", 
-      label: "Calories",
+    {
+      id: "calories",
+      icon: Flame,
+      value: totalCalories > 0 ? totalCalories.toLocaleString() : "0",
+      label: "Kcal This Week",
       glassBg: "rgba(249,115,22,0.55), rgba(245,158,11,0.4)",
       glowColor: "#f97316",
       glow: "shadow-orange-500/30",
     },
-    { 
-      id: "workouts", 
-      icon: Target, 
-      value: workoutCount.toString(), 
-      label: "Workouts",
+    {
+      id: "workouts",
+      icon: Target,
+      value: workoutCount.toString(),
+      label: "Workouts This Week",
       glassBg: "rgba(139,92,246,0.55), rgba(147,51,234,0.4)",
       glowColor: "#8b5cf6",
       glow: "shadow-violet-500/30",
     },
-    { 
-      id: "minutes", 
-      icon: Clock, 
-      value: totalMinutes.toString(), 
-      label: "Minutes",
+    {
+      id: "minutes",
+      icon: Clock,
+      value: totalMinutes.toString(),
+      label: "Mins This Week",
       glassBg: "rgba(14,165,233,0.55), rgba(37,99,235,0.4)",
       glowColor: "#0ea5e9",
       glow: "shadow-sky-500/30",
