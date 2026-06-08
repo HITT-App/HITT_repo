@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-08] — Jarvis scroll fix + wizard UX polish
+
+- **Jarvis auto-scroll fixed** — new messages and the thinking indicator now scroll into view reliably on iOS using direct container scrollTop instead of scrollIntoView
+- **Goal wizard auto-advances** — selecting a goal type, timeline, or fitness level immediately moves to the next step without needing to tap a button
+- **Wizard FAB removed** — replaced the full-width Continue button with a small circular ">" arrow for steps that require manual advance (event details, exercise types); only the final "Set my goal" submit retains the full button
+
 ## [2026-06-08] — Goal setup wizard
 
 - **5-screen goal wizard at /goal-setup** — captures goal type (fat loss / muscle gain / endurance / strength / event prep), timeline or event date, fitness level, exercise types, and equipment

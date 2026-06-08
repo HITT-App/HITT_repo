@@ -169,6 +169,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const animationFrameRef = useRef<number>();
   const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const responseEndRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const isListeningRef = useRef(false);
   const isConnectingRef = useRef(false);
   // Tracks how many pendingActions have been dispatched to prevent re-dispatch on re-render.
@@ -686,10 +687,11 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     dispatchedCountRef.current = ai.pendingActions.length;
   }, [ai.pendingActions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Scroll to latest content
+  // Scroll to latest content — use container scrollTop for reliable iOS WKWebView behaviour
   useEffect(() => {
-    responseEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [ai.streamingText, transcript, ai.messages]);
+    const el = scrollContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [ai.streamingText, transcript, ai.messages, ai.status, pendingGoalPrompt]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -719,7 +721,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       </div>
 
       {/* Scrollable conversation */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
 
         {/* Loading history indicator */}
         {!ai.isInitialized && (

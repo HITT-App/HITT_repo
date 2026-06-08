@@ -77,6 +77,23 @@ export default function GoalSetup() {
     setList(list.includes(value) ? list.filter(v => v !== value) : [...list, value]);
   };
 
+  const advance = () => setStep(s => s + 1);
+
+  const selectGoalType = (id: string) => {
+    setGoalType(id);
+    setTimeout(advance, 150);
+  };
+
+  const selectTimeline = (id: string) => {
+    setTimeline(id);
+    setTimeout(advance, 150);
+  };
+
+  const selectFitnessLevel = (id: string) => {
+    setFitnessLevel(id);
+    setTimeout(advance, 150);
+  };
+
   const buildTargetText = (): string => {
     if (isEventPrep) {
       const name = eventName.trim() || 'my event';
@@ -178,7 +195,7 @@ export default function GoalSetup() {
               {GOAL_OPTIONS.map(({ id, label, desc, icon: Icon }) => (
                 <button
                   key={id}
-                  onClick={() => setGoalType(id)}
+                  onClick={() => selectGoalType(id)}
                   className={cn(
                     'w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left touch-manipulation',
                     goalType === id ? 'border-primary bg-primary/[0.08]' : 'border-border bg-card active:bg-secondary/60'
@@ -212,7 +229,7 @@ export default function GoalSetup() {
               {TIMELINE_OPTIONS.map(({ id, label }) => (
                 <button
                   key={id}
-                  onClick={() => setTimeline(id)}
+                  onClick={() => selectTimeline(id)}
                   className={cn(
                     'w-full flex items-center justify-between p-4 rounded-2xl border text-left font-medium text-sm transition-all touch-manipulation',
                     timeline === id ? 'border-primary bg-primary/[0.08] text-primary' : 'border-border bg-card text-foreground active:bg-secondary/60'
@@ -270,7 +287,7 @@ export default function GoalSetup() {
               {FITNESS_LEVELS.map(({ id, label, desc }) => (
                 <button
                   key={id}
-                  onClick={() => setFitnessLevel(id)}
+                  onClick={() => selectFitnessLevel(id)}
                   className={cn(
                     'w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left touch-manipulation',
                     fitnessLevel === id ? 'border-primary bg-primary/[0.08]' : 'border-border bg-card active:bg-secondary/60'
@@ -340,29 +357,34 @@ export default function GoalSetup() {
         )}
       </div>
 
-      {/* Footer CTA */}
-      <div
-        className="px-5 py-4 border-t border-border/40 bg-background/90 backdrop-blur-sm"
-        style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 16px)' }}
-      >
-        {step < TOTAL_STEPS - 1 ? (
-          <Button
-            className="w-full h-12 rounded-xl font-semibold"
-            disabled={!canProceed()}
-            onClick={() => setStep(s => s + 1)}
-          >
-            Continue <ArrowRight className="w-4 h-4 ml-1.5" />
-          </Button>
-        ) : (
-          <Button
-            className="w-full h-12 rounded-xl font-semibold"
-            disabled={!canProceed() || saving}
-            onClick={handleSave}
-          >
-            {saving ? 'Saving…' : 'Set my goal'}
-          </Button>
-        )}
-      </div>
+      {/* Footer — only shown when manual advance is needed */}
+      {(step === 4 || (step === 1 && isEventPrep) || step === 3) && (
+        <div
+          className="px-5 py-4 border-t border-border/40 bg-background/90 backdrop-blur-sm"
+          style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 16px)' }}
+        >
+          {step === 4 ? (
+            <Button
+              className="w-full h-12 rounded-xl font-semibold"
+              disabled={!canProceed() || saving}
+              onClick={handleSave}
+            >
+              {saving ? 'Saving…' : 'Set my goal'}
+            </Button>
+          ) : (
+            <div className="flex justify-end">
+              <Button
+                size="icon"
+                className="w-12 h-12 rounded-full"
+                disabled={!canProceed()}
+                onClick={advance}
+              >
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
