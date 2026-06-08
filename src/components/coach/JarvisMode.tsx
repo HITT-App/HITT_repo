@@ -556,6 +556,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     const doGreeting = async () => {
       let hasSchedule = true;
       let hasWorkoutToday = true;
+      let shouldPromptGoal = false;
+
+      const hasHistory = ai.messages.length > 0;
 
       try {
         const { data: session } = await supabase.auth.getSession();
@@ -578,18 +581,23 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           hasSchedule = (futureCount ?? 0) > 0;
           hasWorkoutToday = (todayCount ?? 0) > 0;
 
-          const hasActiveGoal = (activeGoalCount ?? 0) > 0;
-          const pref = profilePrefs?.goal_prompt_preference ?? null;
-          const lastAt = profilePrefs?.goal_prompt_last_at ? new Date(profilePrefs.goal_prompt_last_at) : null;
-          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-          const shouldPrompt =
-            !hasActiveGoal &&
-            pref !== 'never' &&
-            (lastAt === null || lastAt < sevenDaysAgo);
+          // Only offer the goal card to returning users — onboarding handles goal-collection
+          // conversationally for brand-new users (no history AND no schedule).
+          const isNewUser = !hasHistory && !hasSchedule;
+          if (!isNewUser) {
+            const hasActiveGoal = (activeGoalCount ?? 0) > 0;
+            const pref = profilePrefs?.goal_prompt_preference ?? null;
+            const lastAt = profilePrefs?.goal_prompt_last_at ? new Date(profilePrefs.goal_prompt_last_at) : null;
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            shouldPromptGoal =
+              !hasActiveGoal &&
+              pref !== 'never' &&
+              (lastAt === null || lastAt < sevenDaysAgo);
 
-          if (shouldPrompt) {
-            setPendingGoalPrompt(true);
-            await supabase.from('profiles').update({ goal_prompt_last_at: new Date().toISOString() }).eq('user_id', userId);
+            if (shouldPromptGoal) {
+              setPendingGoalPrompt(true);
+              await supabase.from('profiles').update({ goal_prompt_last_at: new Date().toISOString() }).eq('user_id', userId);
+            }
           }
         }
       } catch {
@@ -604,7 +612,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         return;
       }
 
-      const hasHistory = ai.messages.length > 0;
+      // Goal card owns the screen — no greeting when it's showing.
+      if (shouldPromptGoal) return;
+
       const isOnboarding = !hasHistory && !hasSchedule;
 
       const greetingPrompt = sharePromptDetail
@@ -727,6 +737,21 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           )
         ))}
 
+        {/* Goal-prompt multi-choice card — rendered before streaming so it's the first visible thing */}
+        {pendingGoalPrompt && (
+          <MultiChoiceCard
+            icon={<Flag className="w-6 h-6 text-primary" strokeWidth={2.1} />}
+            eyebrow="Set a goal"
+            heading="What are you training toward?"
+            subtext="I coach better with a target. Takes 30 seconds to set."
+            choices={[
+              { label: 'Set my goal', variant: 'primary', onSelect: handleGoalPromptSetNow },
+              { label: 'Remind me later', variant: 'outline', onSelect: handleGoalPromptLater },
+              { label: "Don't ask again", variant: 'ghost', onSelect: handleGoalPromptNever },
+            ]}
+          />
+        )}
+
         {/* Streaming response (in progress) */}
         {ai.status === 'streaming' && ai.streamingText && (
           <div className="bg-secondary/40 rounded-2xl px-4 py-3">
@@ -795,21 +820,6 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
               </Button>
             </div>
           </div>
-        )}
-
-        {/* Goal-prompt multi-choice card */}
-        {pendingGoalPrompt && (
-          <MultiChoiceCard
-            icon={<Flag className="w-6 h-6 text-primary" strokeWidth={2.1} />}
-            eyebrow="Set a goal"
-            heading="What are you training toward?"
-            subtext="I coach better with a target. Takes 30 seconds to set."
-            choices={[
-              { label: 'Set my goal', variant: 'primary', onSelect: handleGoalPromptSetNow },
-              { label: 'Remind me later', variant: 'outline', onSelect: handleGoalPromptLater },
-              { label: "Don't ask again", variant: 'ghost', onSelect: handleGoalPromptNever },
-            ]}
-          />
         )}
 
         {/* Food / goal confirmation cards */}

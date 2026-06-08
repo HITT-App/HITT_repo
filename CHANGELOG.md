@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-08] — Goal card reliability fixes
+
+- **Onboarding and goal card are now mutually exclusive** — brand-new users get the conversational onboarding greeting; the goal card only shows to returning users with no active goal and cadence due
+- **Goal card is now the first visible thing on open** — moved above the streaming response so it's never hidden below the fold
+- **Jarvis "I can't check" fix** — prompt now targets the behaviour (claiming inaccessibility) rather than a specific phrase, so synonyms can't slip through
+
 ## [2026-06-08] — Goal-prompt pop-up (reusable multi-choice primitive)
 
 - **Goal-prompt card** — Jarvis now asks "What are you training toward?" on open when no goal is set; appears once then re-surfaces weekly on "Remind me later", never again on "Don't ask again"
