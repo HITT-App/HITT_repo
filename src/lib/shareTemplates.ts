@@ -156,6 +156,31 @@ export function renderTriathlon(format: TemplateFormat, data: TriathlonData) {
   })
 }
 
+export interface WeeklyStatsData {
+  workouts: string
+  minutes: string
+  streak: string
+  calories: string
+}
+export function renderWeeklyStats(format: TemplateFormat, data: WeeklyStatsData) {
+  return render('02-full-stats', format, {
+    label_1: 'WORKOUTS',
+    stat_1:  data.workouts,
+    unit_1:  'THIS WK',
+    label_2: 'MINUTES',
+    stat_2:  data.minutes,
+    label_3: 'STREAK',
+    stat_3:  data.streak,
+    unit_2:  'DAYS',
+    stat_4:  '',
+    unit_3:  '',
+    stat_5:  '',
+    unit_4:  '',
+    stat_6:  data.calories,
+    unit_5:  'KCAL',
+  })
+}
+
 export interface ChallengeData {
   challengeName: string // "MAY BURNOUT"
   currentDay: string    // "12"
