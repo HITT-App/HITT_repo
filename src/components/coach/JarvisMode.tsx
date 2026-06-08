@@ -578,38 +578,39 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         hasWorkoutToday = true;
       }
 
-      // Step 2 — goal-prompt check (isolated: a failure here never affects schedule state).
-      // Only runs for returning users; new users get the onboarding conversational flow instead.
-      try {
-        const isNewUser = !hasHistory && !hasSchedule;
-        if (!isNewUser) {
-          const { data: session } = await supabase.auth.getSession();
-          const userId = session?.session?.user?.id;
-          if (userId) {
-            const [{ count: activeGoalCount }, { data: profilePrefs }] = await Promise.all([
-              (supabase as any).from('user_goals').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_active', true),
-              supabase.from('profiles').select('goal_prompt_preference, goal_prompt_last_at').eq('user_id', userId).maybeSingle(),
-            ]);
-            const hasActiveGoal = (activeGoalCount ?? 0) > 0;
-            const pref = profilePrefs?.goal_prompt_preference ?? null;
-            const rawLastAt = profilePrefs?.goal_prompt_last_at;
-            const lastAt = rawLastAt
-              ? new Date(rawLastAt.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00'))
-              : null;
+      // Step 2 — goal-prompt check. Only for returning users; new users get conversational onboarding.
+      // Default is to show the card. The try block only SUPPRESSES it if we can positively
+      // confirm the user opted out or the cadence hasn't elapsed. A catch keeps shouldPromptGoal=true.
+      const isReturningUser = hasHistory || hasSchedule;
+      if (isReturningUser) {
+        shouldPromptGoal = true;
+        try {
+          const { data: session2 } = await supabase.auth.getSession();
+          const userId2 = session2?.session?.user?.id;
+          if (userId2) {
+            const { data: row } = await supabase
+              .from('profiles')
+              .select('goal_prompt_preference, goal_prompt_last_at')
+              .eq('user_id', userId2)
+              .maybeSingle();
+            const pref = (row as any)?.goal_prompt_preference ?? null;
+            const rawLastAt = (row as any)?.goal_prompt_last_at;
+            const lastAt = rawLastAt ? new Date(rawLastAt) : null;
             const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            shouldPromptGoal =
-              !hasActiveGoal &&
-              pref !== 'never' &&
-              (lastAt === null || isNaN(lastAt.getTime()) || lastAt < sevenDaysAgo);
-
-            if (shouldPromptGoal) {
-              setPendingGoalPrompt(true);
-              await supabase.from('profiles').update({ goal_prompt_last_at: new Date().toISOString() }).eq('user_id', userId);
+            if (pref === 'never' || (lastAt !== null && !isNaN(lastAt.getTime()) && lastAt >= sevenDaysAgo)) {
+              shouldPromptGoal = false;
             }
           }
+        } catch {
+          // Check failed — keep shouldPromptGoal=true so the card shows rather than silently vanishes.
         }
-      } catch {
-        // Goal-prompt check failed — suppress the card rather than show it in an unknown state.
+        if (shouldPromptGoal) {
+          setPendingGoalPrompt(true);
+          supabase.auth.getSession().then(({ data: s }) => {
+            const uid = s?.session?.user?.id;
+            if (uid) supabase.from('profiles').update({ goal_prompt_last_at: new Date().toISOString() }).eq('user_id', uid);
+          });
+        }
       }
 
       await new Promise(r => setTimeout(r, 400));

@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-08] — Fix goal card: invert suppression logic to show-by-default
+
+- **Goal card now shows unless we can positively confirm it should be hidden** — previously the card defaulted to hidden and only showed if all DB checks succeeded; now it defaults to visible and is only suppressed if the user has opted out or the 7-day cadence hasn't elapsed
+- **A failing DB check no longer silently hides the card** — if the profiles query throws or returns nothing, the card shows rather than disappearing
+
 ## [2026-06-08] — Fix goal card suppressed by catch-block contamination
 
 - **Goal card now reliably appears** — schedule and goal-prompt queries are now in separate try/catch blocks; previously a failure in either would silently reset hasSchedule and prevent the card from ever showing
