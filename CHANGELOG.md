@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-06-08] — Goal setup wizard
+
+- **5-screen goal wizard at /goal-setup** — captures goal type (fat loss / muscle gain / endurance / strength / event prep), timeline or event date, fitness level, exercise types, and equipment
+- **Wizard writes to user_goals + workout_preferences** — feeds directly into the AI coach's user context on every subsequent Jarvis session
+- **Returns to Jarvis with acknowledgement** — when reached from the Jarvis goal card, completes and re-opens the chat with the new goal pre-loaded in context
+- **Static link in Profile** — "Set up with wizard" button in the Fitness Goal section; returns to profile on completion
+- **Goal card now navigates to wizard** — "Set my goal" on the Jarvis popup opens the wizard instead of a broken AI chat flow
+
 ## [2026-06-08] — Fix goal card: invert suppression logic to show-by-default
 
 - **Goal card now shows unless we can positively confirm it should be hidden** — previously the card defaulted to hidden and only showed if all DB checks succeeded; now it defaults to visible and is only suppressed if the user has opted out or the 7-day cadence hasn't elapsed

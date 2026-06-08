@@ -356,8 +356,8 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
   const handleGoalPromptSetNow = useCallback(() => {
     setPendingGoalPrompt(false);
-    ai.greet(`[ONBOARDING] The user wants to set up their fitness goals. They have no goals set yet. Introduce yourself as Coach HIIT in one warm sentence, then ask: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`);
-  }, [ai]);
+    navigate('/goal-setup', { state: { returnTo: '/ai' } });
+  }, [navigate]);
 
   const handleGoalPromptLater = useCallback(async () => {
     setPendingGoalPrompt(false);

@@ -437,10 +437,18 @@ export default function Profile() {
 
           {/* Fitness Goal */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-foreground flex items-center gap-2">
-              <Target className="w-4 h-4 text-muted-foreground" />
-              Fitness Goal
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <Target className="w-4 h-4 text-muted-foreground" />
+                Fitness Goal
+              </h3>
+              <button
+                onClick={() => navigate('/goal-setup', { state: { returnTo: '/profile' } })}
+                className="text-xs font-semibold text-primary active:opacity-70 transition-opacity"
+              >
+                Set up with wizard →
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {FITNESS_GOALS.map((goal) => (
                 <button
