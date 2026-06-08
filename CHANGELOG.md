@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-08] — Fix Jarvis goal access
+
+- **Edge function now reads user_goals with admin client** — switched from user-JWT client to supabaseAdmin for the user_goals query; eliminates any RLS edge case that could return null even when a goal is set
+- **GoalSetup throws on insert failure** — goal insert errors are no longer swallowed silently; the save button will surface the failure instead of navigating to Jarvis with no goal stored
+
 ## [2026-06-08] — Suppress repeated Jarvis greeting within a session
 
 - **No more "welcome back" every open** — Jarvis now skips the greeting if the user was last in the chat within 10 minutes; conversation history shows immediately without an additional message

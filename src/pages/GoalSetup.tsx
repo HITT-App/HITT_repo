@@ -117,13 +117,14 @@ export default function GoalSetup() {
         .eq('is_active', true);
 
       // Insert the new goal
-      await (supabase as any).from('user_goals').insert({
+      const { error: goalInsertError } = await (supabase as any).from('user_goals').insert({
         user_id:     userId,
         goal_type:   goalType,
         target_text: buildTargetText(),
         target_date: isEventPrep && eventDate ? eventDate : null,
         is_active:   true,
       });
+      if (goalInsertError) throw goalInsertError;
 
       // Upsert workout preferences
       await supabase.from('workout_preferences').upsert({

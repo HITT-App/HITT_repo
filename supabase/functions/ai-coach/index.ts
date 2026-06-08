@@ -873,7 +873,7 @@ serve(async (req) => {
       supabase.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
       supabase.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g').limit(50),
       (supabase as any).from('body_scans').select('estimated_body_fat, confidence_level, scanned_at, analysis').eq('user_id', userId).order('scanned_at', { ascending: false }).limit(2),
-      (supabase as any).from('user_goals').select('goal_type, target_text, target_date, set_at').eq('user_id', userId).eq('is_active', true).order('set_at', { ascending: false }).limit(1).maybeSingle(),
+      (supabaseAdmin as any).from('user_goals').select('goal_type, target_text, target_date, set_at').eq('user_id', userId).eq('is_active', true).order('set_at', { ascending: false }).limit(1).maybeSingle(),
     ]);
 
     const todayBoundary = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString();
