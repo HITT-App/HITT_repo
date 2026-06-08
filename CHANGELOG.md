@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-08] — Hide Jarvis FAB during goal wizard
+
+- **Jarvis FAB hidden on /goal-setup** — the floating orange + button (z-40) was rendering above the wizard and blocking the "Set my goal" button on the final step; added /goal-setup to the hidden-nav and hidden-FAB route lists
+
 ## [2026-06-08] — Jarvis scroll fix + wizard UX polish
 
 - **Jarvis auto-scroll fixed** — new messages and the thinking indicator now scroll into view reliably on iOS using direct container scrollTop instead of scrollIntoView

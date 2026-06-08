@@ -22,6 +22,7 @@ const HIDDEN_ROUTES = [
   '/community/create-story',
   '/routes',
   '/route/',
+  '/goal-setup',
 ]
 
 export function FloatingActionButton({ onClick }: FloatingActionButtonProps) {

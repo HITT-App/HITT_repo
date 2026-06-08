@@ -25,6 +25,7 @@ const HIDDEN_NAV_ROUTES = [
   "/route/",
   "/ai-coach",
   "/ai",
+  "/goal-setup",
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
