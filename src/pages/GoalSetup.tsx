@@ -148,11 +148,8 @@ export default function GoalSetup() {
         p_value: goalMemoryValue,
       });
 
-      // After goal setup always go to schedule setup, passing goal text for the final welcome message
-      navigate('/schedule-setup', {
-        replace: true,
-        state: { returnTo: '/ai', goalText: buildTargetText() },
-      });
+      // After goal setup go back to Jarvis — it will show the plan card automatically
+      navigate('/ai', { replace: true });
     } finally {
       setSaving(false);
     }

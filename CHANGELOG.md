@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-09] — Fix onboarding flow: goal wizard returns to Jarvis plan card
+
+- **Goal wizard now returns to Jarvis**, which automatically shows the "You don't have a workout plan yet" card — no more skipping straight into the schedule wizard
+- **Cleaner two-step onboarding**: set goal → Jarvis shows plan card → set schedule → Jarvis welcome message; each step clearly prompted
+
 ## [2026-06-09] — Persistent user memory + state-driven Jarvis greeting
 
 - **Jarvis now remembers you across sessions** — goal, physique, injuries, preferences, and lifestyle are stored in a persistent `user_memory` field and injected as Jarvis's own recall on every request; no more "I can't access your goals"

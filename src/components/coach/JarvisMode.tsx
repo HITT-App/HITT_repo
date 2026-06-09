@@ -395,7 +395,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
   const handleGoalPromptSetNow = useCallback(() => {
     setPendingGoalPrompt(false);
-    navigate('/goal-setup', { state: { returnTo: '/schedule-setup' } });
+    navigate('/goal-setup', { state: { returnTo: '/ai' } });
   }, [navigate]);
 
   const handleGoalPromptLater = useCallback(async () => {
