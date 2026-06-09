@@ -1205,7 +1205,13 @@ serve(async (req) => {
     // treats it as its own prior recall rather than injected database content.
     const rawMemory = (profile as any)?.user_memory ?? {};
     const memoryParts: string[] = [];
-    if (rawMemory.goal)     memoryParts.push(`Current goal: ${rawMemory.goal}`);
+    // Prefer user_memory.goal; fall back to workoutPrefs so the synthetic turn always
+    // includes the goal even before the user re-runs the wizard with the new code.
+    const goalForMemory = rawMemory.goal
+      || (activeGoal ? `${activeGoal.goal_type} — "${activeGoal.target_text}"` : null)
+      || workoutPrefs?.workout_goal
+      || null;
+    if (goalForMemory) memoryParts.push(`Current goal: ${goalForMemory}`);
     if (rawMemory.physique) memoryParts.push(`Body scan — ${rawMemory.physique}`);
     if (rawMemory.injuries) memoryParts.push(`Physical notes: ${rawMemory.injuries}`);
     if (rawMemory.preferences) memoryParts.push(`Preferences: ${rawMemory.preferences}`);

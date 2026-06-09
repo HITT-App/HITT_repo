@@ -789,9 +789,19 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
               {
                 label: "Let's add it",
                 variant: 'primary',
-                onSelect: () => {
+                onSelect: async () => {
                   setPendingNoPlanPrompt(false);
-                  ai.send("I'd like to set up a workout schedule");
+                  const { data: { user } } = await supabase.auth.getUser();
+                  let goalCtx = '';
+                  if (user) {
+                    const { data: prefs } = await supabase
+                      .from('workout_preferences')
+                      .select('workout_goal')
+                      .eq('user_id', user.id)
+                      .maybeSingle();
+                    if (prefs?.workout_goal) goalCtx = ` My goal is ${prefs.workout_goal}.`;
+                  }
+                  ai.send(`I'd like to set up a workout schedule.${goalCtx}`);
                 },
               },
               {
