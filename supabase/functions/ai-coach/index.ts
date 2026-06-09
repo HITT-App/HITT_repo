@@ -855,7 +855,6 @@ serve(async (req) => {
       { data: workoutsCatalogue },
       { data: recipesCatalogue },
       { data: recentBodyScans },
-      { data: activeGoal },
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
@@ -873,8 +872,37 @@ serve(async (req) => {
       supabase.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
       supabase.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g').limit(50),
       (supabase as any).from('body_scans').select('estimated_body_fat, confidence_level, scanned_at, analysis').eq('user_id', userId).order('scanned_at', { ascending: false }).limit(2),
-      (supabaseAdmin as any).from('user_goals').select('goal_type, target_text, target_date, set_at').eq('user_id', userId).eq('is_active', true).order('set_at', { ascending: false }).limit(1).maybeSingle(),
     ]);
+
+    // Fetch active goal separately so errors are visible and we can fall back gracefully.
+    // First try: is_active=true (current goal). Fallback: most recent goal regardless of flag.
+    let activeGoal: { goal_type: string; target_text: string; target_date: string | null; set_at: string } | null = null;
+    {
+      const { data, error } = await (supabaseAdmin as any)
+        .from('user_goals')
+        .select('goal_type, target_text, target_date, set_at')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('set_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.error('[ai-coach] user_goals query error:', error.message ?? error);
+      }
+      if (data) {
+        activeGoal = data;
+      } else {
+        // Fallback: is_active flag may be wrong — get most recent goal by date
+        const { data: fallback } = await (supabaseAdmin as any)
+          .from('user_goals')
+          .select('goal_type, target_text, target_date, set_at')
+          .eq('user_id', userId)
+          .order('set_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (fallback) activeGoal = fallback;
+      }
+    }
 
     const todayBoundary = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString();
     const { data: todayMealLogs } = await supabase
