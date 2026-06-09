@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const DAYS_PER_WEEK = [
   { id: 2, label: '2 days', desc: 'Light — good for beginners' },
@@ -146,6 +147,7 @@ export default function ScheduleSetup() {
       });
     } catch (err) {
       console.error('[ScheduleSetup] Build failed:', err);
+      toast.error('Could not build your plan. Please try again.');
       setSaving(false);
     }
   };

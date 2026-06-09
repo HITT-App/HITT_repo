@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-06-09] — Goal wizard UX polish + fix plan generation crash
+
+- **Goal wizard**: Next arrow now shows on every step — tap a choice to select it, then tap the arrow to move forward
+- **Goal wizard step 2**: Optional specific target date field added alongside the timeline picker
+- **Goal wizard step 4**: Heading updated to "What's your go to?"
+- **Fix "Build my plan" doing nothing**: Removed invalid API parameter that was causing every workout plan generation to silently fail with a 400 error
+- **Schedule setup**: Now shows an error message if plan generation fails instead of silently resetting
+
 ## [2026-06-09] — Fix onboarding flow: goal wizard returns to Jarvis plan card
 
 - **Goal wizard now returns to Jarvis**, which automatically shows the "You don't have a workout plan yet" card — no more skipping straight into the schedule wizard

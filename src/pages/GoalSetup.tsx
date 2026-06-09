@@ -52,13 +52,14 @@ export default function GoalSetup() {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  const [goalType, setGoalType]       = useState('');
-  const [eventName, setEventName]     = useState('');
-  const [eventDate, setEventDate]     = useState('');
-  const [timeline, setTimeline]       = useState('');
+  const [goalType, setGoalType]         = useState('');
+  const [eventName, setEventName]       = useState('');
+  const [eventDate, setEventDate]       = useState('');
+  const [timeline, setTimeline]         = useState('');
+  const [targetDate, setTargetDate]     = useState('');
   const [fitnessLevel, setFitnessLevel] = useState('');
   const [exerciseTypes, setExerciseTypes] = useState<string[]>([]);
-  const [equipment, setEquipment]     = useState<string[]>([]);
+  const [equipment, setEquipment]       = useState<string[]>([]);
 
   const isEventPrep = goalType === 'event prep';
 
@@ -79,27 +80,13 @@ export default function GoalSetup() {
 
   const advance = () => setStep(s => s + 1);
 
-  const selectGoalType = (id: string) => {
-    setGoalType(id);
-    setTimeout(advance, 150);
-  };
-
-  const selectTimeline = (id: string) => {
-    setTimeline(id);
-    setTimeout(advance, 150);
-  };
-
-  const selectFitnessLevel = (id: string) => {
-    setFitnessLevel(id);
-    setTimeout(advance, 150);
-  };
-
   const buildTargetText = (): string => {
     if (isEventPrep) {
       const name = eventName.trim() || 'my event';
       return eventDate ? `${name} on ${eventDate}` : name;
     }
     const label = GOAL_OPTIONS.find(g => g.id === goalType)?.label ?? goalType;
+    if (targetDate) return `${label} by ${targetDate}`;
     return timeline === 'ongoing' ? `${label} (ongoing)` : `${label} over ${timeline}`;
   };
 
@@ -110,23 +97,20 @@ export default function GoalSetup() {
       const userId = session?.user?.id;
       if (!userId) return;
 
-      // Deactivate any existing active goals
       await (supabase as any).from('user_goals')
         .update({ is_active: false })
         .eq('user_id', userId)
         .eq('is_active', true);
 
-      // Insert the new goal
       const { error: goalInsertError } = await (supabase as any).from('user_goals').insert({
         user_id:     userId,
         goal_type:   goalType,
         target_text: buildTargetText(),
-        target_date: isEventPrep && eventDate ? eventDate : null,
+        target_date: isEventPrep ? (eventDate || null) : (targetDate || null),
         is_active:   true,
       });
       if (goalInsertError) throw goalInsertError;
 
-      // Upsert workout preferences
       await supabase.from('workout_preferences').upsert({
         user_id:             userId,
         workout_goal:        goalType,
@@ -134,12 +118,10 @@ export default function GoalSetup() {
         available_equipment: equipment,
       }, { onConflict: 'user_id' });
 
-      // goal_prompt_preference is not in generated types — cast as any
       await (supabase as any).from('profiles')
         .update({ goal_prompt_preference: 'never' })
         .eq('user_id', userId);
 
-      // Write goal into user_memory — jsonb_set merges only the 'goal' key, leaves other keys intact
       const fitnessLabelForMemory = FITNESS_LEVELS.find(f => f.id === fitnessLevel)?.label ?? fitnessLevel;
       const goalMemoryValue = `${buildTargetText()}. Fitness level: ${fitnessLabelForMemory}. Equipment: ${equipment.join(', ') || 'not specified'}.`;
       await (supabase as any).rpc('upsert_user_memory_key', {
@@ -148,7 +130,6 @@ export default function GoalSetup() {
         p_value: goalMemoryValue,
       });
 
-      // After goal setup go back to Jarvis — it will show the plan card automatically
       navigate('/ai', { replace: true });
     } finally {
       setSaving(false);
@@ -197,7 +178,7 @@ export default function GoalSetup() {
               {GOAL_OPTIONS.map(({ id, label, desc, icon: Icon }) => (
                 <button
                   key={id}
-                  onClick={() => selectGoalType(id)}
+                  onClick={() => setGoalType(id)}
                   className={cn(
                     'w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left touch-manipulation',
                     goalType === id ? 'border-primary bg-primary/[0.08]' : 'border-border bg-card active:bg-secondary/60'
@@ -231,7 +212,7 @@ export default function GoalSetup() {
               {TIMELINE_OPTIONS.map(({ id, label }) => (
                 <button
                   key={id}
-                  onClick={() => selectTimeline(id)}
+                  onClick={() => setTimeline(id)}
                   className={cn(
                     'w-full flex items-center justify-between p-4 rounded-2xl border text-left font-medium text-sm transition-all touch-manipulation',
                     timeline === id ? 'border-primary bg-primary/[0.08] text-primary' : 'border-border bg-card text-foreground active:bg-secondary/60'
@@ -241,6 +222,18 @@ export default function GoalSetup() {
                   {timeline === id && <Check className="w-4 h-4 text-primary shrink-0" />}
                 </button>
               ))}
+            </div>
+            <div className="space-y-2 pt-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" /> Specific target date <span className="font-normal normal-case tracking-normal">(optional)</span>
+              </label>
+              <input
+                type="date"
+                value={targetDate}
+                onChange={e => setTargetDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full h-12 px-3 rounded-xl border border-border bg-card text-foreground text-sm"
+              />
             </div>
           </>
         )}
@@ -289,7 +282,7 @@ export default function GoalSetup() {
               {FITNESS_LEVELS.map(({ id, label, desc }) => (
                 <button
                   key={id}
-                  onClick={() => selectFitnessLevel(id)}
+                  onClick={() => setFitnessLevel(id)}
                   className={cn(
                     'w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left touch-manipulation',
                     fitnessLevel === id ? 'border-primary bg-primary/[0.08]' : 'border-border bg-card active:bg-secondary/60'
@@ -310,7 +303,7 @@ export default function GoalSetup() {
         {step === 3 && (
           <>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">What do you currently do?</h1>
+              <h1 className="text-2xl font-bold tracking-tight">What's your go to?</h1>
               <p className="text-sm text-muted-foreground mt-1">Select everything that applies.</p>
             </div>
             <div className="flex flex-wrap gap-2.5">
@@ -359,34 +352,32 @@ export default function GoalSetup() {
         )}
       </div>
 
-      {/* Footer — only shown when manual advance is needed */}
-      {(step === 4 || (step === 1 && isEventPrep) || step === 3) && (
-        <div
-          className="px-5 py-4 border-t border-border/40 bg-background/90 backdrop-blur-sm"
-          style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 16px)' }}
-        >
-          {step === 4 ? (
+      {/* Footer — always visible */}
+      <div
+        className="px-5 py-4 border-t border-border/40 bg-background/90 backdrop-blur-sm"
+        style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 16px)' }}
+      >
+        {step === 4 ? (
+          <Button
+            className="w-full h-12 rounded-xl font-semibold"
+            disabled={!canProceed() || saving}
+            onClick={handleSave}
+          >
+            {saving ? 'Saving…' : 'Set my goal'}
+          </Button>
+        ) : (
+          <div className="flex justify-end">
             <Button
-              className="w-full h-12 rounded-xl font-semibold"
-              disabled={!canProceed() || saving}
-              onClick={handleSave}
+              size="icon"
+              className="w-12 h-12 rounded-full"
+              disabled={!canProceed()}
+              onClick={advance}
             >
-              {saving ? 'Saving…' : 'Set my goal'}
+              <ArrowRight className="w-5 h-5" />
             </Button>
-          ) : (
-            <div className="flex justify-end">
-              <Button
-                size="icon"
-                className="w-12 h-12 rounded-full"
-                disabled={!canProceed()}
-                onClick={advance}
-              >
-                <ArrowRight className="w-5 h-5" />
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -37,12 +37,12 @@ export function NutritionSection({
   return (
     <div className="px-5 py-2">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-foreground">Nutrition</h2>
-        <Button 
-          variant="link" 
-          size="sm" 
+        <h2 className="text-base font-bold text-foreground">Nutrition</h2>
+        <Button
+          variant="link"
+          size="sm"
           className="text-primary p-0 h-auto text-sm"
-          onClick={() => navigate("/nutrition")}
+          onClick={() => navigate("/nutrition-dashboard")}
         >
           See All
         </Button>
@@ -140,14 +140,6 @@ export function NutritionSection({
               Keep it up, champ!
             </p>
 
-            <Button
-              variant="link"
-              className="w-full text-primary text-sm"
-              onClick={() => navigate("/nutrition-dashboard")}
-            >
-              See Nutrition Dashboard
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
           </>
         )}
       </Card>
