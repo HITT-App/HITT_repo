@@ -134,8 +134,8 @@ export default function GoalSetup() {
         available_equipment: equipment,
       }, { onConflict: 'user_id' });
 
-      // Suppress the goal-prompt card permanently (wizard is the full flow)
-      await supabase.from('profiles')
+      // goal_prompt_preference is not in generated types — cast as any to guarantee the column is sent
+      await (supabase as any).from('profiles')
         .update({ goal_prompt_preference: 'never' })
         .eq('user_id', userId);
 

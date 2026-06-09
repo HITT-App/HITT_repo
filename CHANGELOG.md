@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-09] — Fix Jarvis goal context + suppress goal card reliably
+
+- **AI now sees goal even when user_goals query returns null** — userMD falls back to workout_preferences.workout_goal so "Active goal: not yet set" never appears when a goal has been saved
+- **Goal card no longer re-appears after wizard** — profiles update now uses (supabase as any) so goal_prompt_preference column (missing from generated types) is always written; card also checks workout_preferences.workout_goal as a second suppression gate
+- **All profiles goal-column updates cast as any** — covers GoalSetup, handleGoalPromptLater, handleGoalPromptNever, and the last_at stamp
+
 ## [2026-06-08] — Fix Jarvis goal access
 
 - **Edge function now reads user_goals with admin client** — switched from user-JWT client to supabaseAdmin for the user_goals query; eliminates any RLS edge case that could return null even when a goal is set

@@ -365,7 +365,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     const { data: session } = await supabase.auth.getSession();
     const userId = session?.session?.user?.id;
     if (!userId) return;
-    await supabase.from('profiles').update({
+    await (supabase as any).from('profiles').update({
       goal_prompt_preference: 'later',
       goal_prompt_last_at: new Date().toISOString(),
     }).eq('user_id', userId);
@@ -376,7 +376,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     const { data: session } = await supabase.auth.getSession();
     const userId = session?.session?.user?.id;
     if (!userId) return;
-    await supabase.from('profiles').update({ goal_prompt_preference: 'never' }).eq('user_id', userId);
+    await (supabase as any).from('profiles').update({ goal_prompt_preference: 'never' }).eq('user_id', userId);
   }, []);
 
   const confirmSchedule = async () => {
@@ -601,6 +601,16 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
             if (pref === 'never' || (lastAt !== null && !isNaN(lastAt.getTime()) && lastAt >= sevenDaysAgo)) {
               shouldPromptGoal = false;
             }
+            // Also suppress if the user already has a goal set in workout_preferences —
+            // catches the case where goal_prompt_preference column update failed silently
+            if (shouldPromptGoal) {
+              const { data: prefs } = await supabase
+                .from('workout_preferences')
+                .select('workout_goal')
+                .eq('user_id', userId2)
+                .maybeSingle();
+              if (prefs?.workout_goal) shouldPromptGoal = false;
+            }
           }
         } catch {
           // Check failed — keep shouldPromptGoal=true so the card shows rather than silently vanishes.
@@ -609,7 +619,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           setPendingGoalPrompt(true);
           supabase.auth.getSession().then(({ data: s }) => {
             const uid = s?.session?.user?.id;
-            if (uid) supabase.from('profiles').update({ goal_prompt_last_at: new Date().toISOString() }).eq('user_id', uid);
+            if (uid) (supabase as any).from('profiles').update({ goal_prompt_last_at: new Date().toISOString() }).eq('user_id', uid);
           });
         }
       }

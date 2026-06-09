@@ -1077,9 +1077,13 @@ serve(async (req) => {
       const latestScan = recentBodyScans?.[0] ?? null;
       const prevScan = recentBodyScans?.[1] ?? null;
 
+      // Prefer user_goals (has full target text); fall back to workout_preferences.workout_goal
+      // so the AI always sees the goal even if the user_goals query returned null.
       const goalLine = activeGoal
         ? `• Active goal: ${activeGoal.goal_type} — "${activeGoal.target_text}"${activeGoal.target_date ? ` (target ${activeGoal.target_date})` : ''}`
-        : '• Active goal: not yet set';
+        : workoutPrefs?.workout_goal
+          ? `• Active goal: ${workoutPrefs.workout_goal}`
+          : '• Active goal: not yet set';
 
       let scanLines = '';
       if (latestScan) {
