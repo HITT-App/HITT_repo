@@ -33,7 +33,6 @@ const AISurface = lazy(() => import("./components/AISurface").then(m => ({ defau
 const Profile = lazy(() => import("./pages/Profile"));
 const ProfileSetup = lazy(() => import("./pages/ProfileSetup"));
 const AssessmentResults = lazy(() => import("./pages/AssessmentResults"));
-const Subscription = lazy(() => import("./pages/Subscription"));
 const HealthMetrics = lazy(() => import("./pages/HealthMetrics"));
 const ActivityTracker = lazy(() => import("./pages/ActivityTracker"));
 const ActivityOnboarding = lazy(() => import("./pages/ActivityOnboarding"));
@@ -220,7 +219,6 @@ const App = () => (
             <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
             <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
             <Route path="/assessment-results" element={<ProtectedRoute><AssessmentResults /></ProtectedRoute>} />
-            <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
             <Route path="/heart-rate" element={<ProtectedRoute><HeartRate /></ProtectedRoute>} />
             <Route path="/steps" element={<ProtectedRoute><Steps /></ProtectedRoute>} />
             <Route path="/weight" element={<ProtectedRoute><Weight /></ProtectedRoute>} />

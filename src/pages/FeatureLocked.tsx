@@ -58,13 +58,6 @@ const FeatureLocked = () => {
         {/* Actions */}
         <div className="flex flex-col gap-3">
           <Button
-            className="w-full rounded-xl py-6 gap-2"
-            onClick={() => { Analytics.subscriptionCheckoutStarted(); navigate("/subscription"); }}
-          >
-            <Sparkles className="w-5 h-5" />
-            Upgrade to HIIT Plus
-          </Button>
-          <Button
             variant="ghost"
             className="w-full rounded-xl py-6 gap-2"
             onClick={() => navigate(-1)}

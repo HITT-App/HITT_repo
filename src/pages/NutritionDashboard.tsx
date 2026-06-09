@@ -275,18 +275,9 @@ export default function NutritionDashboard() {
               />
             </PopoverContent>
           </Popover>
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              className="rounded-full bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 border-0 font-semibold text-xs px-4 h-8"
-              onClick={() => navigate("/subscription")}
-            >
-              Go Premium
-            </Button>
-            <div className="flex items-center gap-1 text-foreground">
-              <span className="font-semibold text-sm">0</span>
-              <Zap className="w-4 h-4 text-primary" />
-            </div>
+          <div className="flex items-center gap-1 text-foreground">
+            <span className="font-semibold text-sm">0</span>
+            <Zap className="w-4 h-4 text-primary" />
           </div>
         </div>
       </header>

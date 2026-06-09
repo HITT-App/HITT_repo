@@ -5,7 +5,7 @@ import {
   LogOut, User, Trophy, Target, MessageCircle,
   Bell, Search, Settings, Footprints, Droplets,
   Scale, Gauge, Smile, Camera, UtensilsCrossed,
-  Clock, X, Crown, Shield, Sun, ScanLine, Crosshair,
+  Clock, X, Shield, Sun, ScanLine, Crosshair,
   Barcode,
 } from "lucide-react";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
@@ -109,8 +109,6 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
       title: "Account",
       items: [
         { icon: User, label: "Profile", path: "/profile" },
-        { icon: Crown, label: "Subscription", path: "/subscription" },
-        // TODO: no dedicated /settings route — /profile is used as fallback (matches original)
         { icon: Settings, label: "Settings", path: "/chat-settings" },
       ],
     },

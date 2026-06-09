@@ -106,13 +106,6 @@ export default function ProfileSetup() {
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </button>
 
-          <button
-            onClick={() => navigate('/subscription')}
-            className="w-full flex items-center justify-between p-4 rounded-2xl bg-card border border-border hover:bg-secondary/50 transition-colors"
-          >
-            <span className="font-medium">Subscription</span>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          </button>
         </div>
       </div>
     </div>
