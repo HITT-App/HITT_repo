@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-06-09] — Plan preview step + fix plan generation token crash
+
+- **"Build my plan" now works**: Fixed a crash where Gemini's thinking tokens were eating the entire token budget, truncating the plan JSON
+- **Plan preview before confirming**: After generating, you see all your scheduled workouts — date, category, duration, and equipment — before committing
+- **"Start training" confirms the plan** and drops you into a Jarvis welcome message
+- Log meal and nutrition dashboard minor updates
+
 ## [2026-06-09] — Goal wizard UX polish + fix plan generation crash
 
 - **Goal wizard**: Next arrow now shows on every step — tap a choice to select it, then tap the arrow to move forward

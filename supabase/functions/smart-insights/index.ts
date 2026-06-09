@@ -44,7 +44,7 @@ serve(async (req) => {
       prompt: { redacted: true },
     });
 
-    const { type, activityData } = await req.json();
+    const { type, activityData, mealName, mealDescription } = await req.json();
 
     // Gather user context
     const userId = user.id;
@@ -144,6 +144,13 @@ RULES:
 - If limited data, adjust gracefully but still provide value.`;
       userPrompt = `Generate this week's training report.\n\n${contextBlock}`;
 
+    } else if (type === "nutrition-estimate") {
+      systemPrompt = `You are a nutrition expert. Estimate the nutritional content of a meal from its name and description.
+Return ONLY a valid JSON object with exactly these four fields (integers):
+{"calories":number,"protein_g":number,"carbs_g":number,"fat_g":number}
+No markdown, no explanation, no extra fields. One standard serving.`;
+      userPrompt = `Meal: ${mealName || "Unknown meal"}\nDescription: ${mealDescription || "No description provided"}`;
+
     } else {
       return new Response(JSON.stringify({ error: "Invalid type" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -175,9 +182,22 @@ RULES:
     }
 
     const data = await aiResponse.json();
-    const content = data.choices?.[0]?.message?.content || "No insight available right now.";
+    const content = data.choices?.[0]?.message?.content || "";
 
-    return new Response(JSON.stringify({ insight: content }), {
+    if (type === "nutrition-estimate") {
+      try {
+        const json = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
+        return new Response(JSON.stringify({ nutrition: json }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch {
+        return new Response(JSON.stringify({ error: "Could not parse nutrition estimate" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    return new Response(JSON.stringify({ insight: content || "No insight available right now." }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 

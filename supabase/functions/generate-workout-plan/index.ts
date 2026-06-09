@@ -118,7 +118,7 @@ serve(async (req) => {
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 6000,
+      max_tokens: 16000,
     });
 
     const aiResponseText = await aiResponse.text();

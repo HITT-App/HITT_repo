@@ -11,10 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { ArrowLeft, Plus, Camera, Scan, Upload, Apple, Coffee, Sandwich, UtensilsCrossed, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Camera, Scan, Apple, Coffee, Sandwich, UtensilsCrossed, Check, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MEAL_CATEGORIES = [
@@ -22,11 +20,6 @@ const MEAL_CATEGORIES = [
   { id: 'lunch', label: 'Lunch', icon: Sandwich },
   { id: 'dinner', label: 'Dinner', icon: UtensilsCrossed },
   { id: 'snack', label: 'Snack', icon: Apple },
-];
-
-const FOOD_ICONS = [
-  '🍕', '🍔', '🥗', '🍳', '🥐', '🍜', '🍱', '🥘',
-  '🥑', '🍝', '🌮', '🥙', '🍲', '🥩', '🍚', '🥯',
 ];
 
 export default function LogMeal() {
@@ -50,27 +43,10 @@ export default function LogMeal() {
   const [protein, setProtein] = useState(prefill?.protein_g ?? 25);
   const [carbs, setCarbs] = useState(prefill?.carbs_g ?? 50);
   const [fat, setFat] = useState(prefill?.fat_g ?? 20);
-  const [selectedIcon, setSelectedIcon] = useState('🍳');
-  const [showIconPicker, setShowIconPicker] = useState(false);
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [submitToDatabase, setSubmitToDatabase] = useState(true);
+  const [aiEstimating, setAiEstimating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setUploadedImages(prev => [...prev, e.target!.result as string]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
 
   const handleSubmit = async () => {
     if (!user || !mealName.trim()) {
@@ -83,7 +59,7 @@ export default function LogMeal() {
     try {
       const { error } = await supabase.from('meal_logs').insert({
         user_id: user.id,
-        custom_name: `${selectedIcon} ${mealName}`,
+        custom_name: mealName,
         category,
         calories,
         protein_grams: protein,
@@ -91,7 +67,7 @@ export default function LogMeal() {
         carbs_grams: carbs,
         servings: servingAmount,
         notes: description,
-        image_url: uploadedImages[0] || null,
+        image_url: null,
       });
 
       if (error) throw error;
@@ -100,7 +76,7 @@ export default function LogMeal() {
       Analytics.mealLogged('manual');
       setShowSuccess(true);
       setTimeout(() => {
-        navigate('/nutrition');
+        navigate('/nutrition-dashboard');
       }, 2000);
     } catch (error) {
       console.error('Error logging meal:', error);
@@ -110,10 +86,37 @@ export default function LogMeal() {
     }
   };
 
+  const handleAiEstimate = async () => {
+    if (!mealName.trim()) {
+      toast({ variant: 'destructive', title: 'Enter a meal name first', description: 'AI needs a name to estimate nutrition.' });
+      return;
+    }
+    setAiEstimating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('smart-insights', {
+        body: { type: 'nutrition-estimate', mealName, mealDescription: description },
+      });
+      if (error || !data?.nutrition) throw new Error('No estimate returned');
+      const n = data.nutrition;
+      setCalories(Math.round(n.calories) || 0);
+      setProtein(Math.round(n.protein_g) || 0);
+      setCarbs(Math.round(n.carbs_g) || 0);
+      setFat(Math.round(n.fat_g) || 0);
+      toast({ title: 'AI estimate applied', description: 'Adjust any values as needed.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Estimate failed', description: 'Try adding more detail to the description.' });
+    } finally {
+      setAiEstimating(false);
+    }
+  };
+
   if (showMethodSelect) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <header className="flex items-center gap-3 px-4 py-4 border-b border-border">
+        <header
+          className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-3"
+          style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}
+        >
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -156,7 +159,10 @@ export default function LogMeal() {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="flex items-center gap-3 px-4 py-4 border-b border-border">
+      <header
+        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-3"
+        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}
+      >
         <Button variant="ghost" size="icon" onClick={() => setShowMethodSelect(true)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -172,16 +178,6 @@ export default function LogMeal() {
       )}
 
       <div className="p-4 space-y-6">
-        {/* Icon Selector */}
-        <div className="flex justify-center">
-          <button
-            onClick={() => setShowIconPicker(true)}
-            className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center text-4xl hover:bg-primary/20 transition-colors"
-          >
-            {selectedIcon}
-          </button>
-        </div>
-
         {/* General Section */}
         <Card className="border-border/50">
           <CardContent className="p-4 space-y-4">
@@ -229,6 +225,7 @@ export default function LogMeal() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="grams">Grams</SelectItem>
                     <SelectItem value="plate">Plate</SelectItem>
                     <SelectItem value="bowl">Bowl</SelectItem>
                     <SelectItem value="cup">Cup</SelectItem>
@@ -272,114 +269,73 @@ export default function LogMeal() {
         {/* Nutritional Value Section */}
         <Card className="border-border/50">
           <CardContent className="p-4 space-y-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="w-2 h-2 rounded-full bg-primary" />
-              Nutritional Value
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="w-2 h-2 rounded-full bg-primary" />
+                Nutritional Value
+              </div>
+              <button
+                onClick={handleAiEstimate}
+                disabled={aiEstimating}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold active:bg-primary/20 transition-colors disabled:opacity-50 touch-manipulation"
+              >
+                {aiEstimating
+                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Estimating…</>
+                  : <><Sparkles className="w-3.5 h-3.5" /> Let AI estimate</>}
+              </button>
             </div>
 
             {/* Calories */}
-            <div className="space-y-2">
-              <Label>Calories</Label>
-              <div className="space-y-2">
-                <Slider
-                  value={[calories]}
-                  onValueChange={([v]) => setCalories(v)}
-                  max={2000}
-                  step={10}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Moderate</span>
-                  <span>{calories}kcal</span>
-                </div>
-              </div>
+            <div className="space-y-1.5">
+              <Label>Calories (kcal)</Label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                placeholder="e.g. 450"
+                value={calories || ''}
+                onChange={(e) => setCalories(parseInt(e.target.value) || 0)}
+              />
             </div>
 
             {/* Protein */}
-            <div className="space-y-2">
-              <Label>Protein</Label>
-              <Select value={protein.toString()} onValueChange={(v) => setProtein(parseInt(v))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[10, 15, 20, 25, 30, 40, 50].map((g) => (
-                    <SelectItem key={g} value={g.toString()}>{g}g</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-1.5">
+              <Label>Protein (g)</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                placeholder="e.g. 30"
+                value={protein || ''}
+                onChange={(e) => setProtein(parseFloat(e.target.value) || 0)}
+              />
             </div>
 
-            {/* Carb & Fat */}
+            {/* Carbs & Fat */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Carb</Label>
-                <Select value={carbs.toString()} onValueChange={(v) => setCarbs(parseInt(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[20, 30, 50, 75, 100, 150, 200].map((g) => (
-                      <SelectItem key={g} value={g.toString()}>{g}mg</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Fat</Label>
-                <Select value={fat.toString()} onValueChange={(v) => setFat(parseInt(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[10, 15, 20, 30, 50, 75, 100].map((g) => (
-                      <SelectItem key={g} value={g.toString()}>{g}mg</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Image Upload Section */}
-        <Card className="border-border/50">
-          <CardContent className="p-4 space-y-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="w-2 h-2 rounded-full bg-primary" />
-              Image Screenshot
-            </div>
-
-            <div className="flex gap-2">
-              <label className="w-16 h-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                <Upload className="w-5 h-5 text-muted-foreground" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleImageUpload}
+              <div className="space-y-1.5">
+                <Label>Carbs (g)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="e.g. 50"
+                  value={carbs || ''}
+                  onChange={(e) => setCarbs(parseFloat(e.target.value) || 0)}
                 />
-              </label>
-              {uploadedImages.map((img, idx) => (
-                <div key={idx} className="w-16 h-16 rounded-xl overflow-hidden">
-                  <img src={img} alt={`Upload ${idx}`} className="w-full h-full object-cover" />
-                </div>
-              ))}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Fat (g)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="e.g. 15"
+                  value={fat || ''}
+                  onChange={(e) => setFat(parseFloat(e.target.value) || 0)}
+                />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Browse your file to upload! Supported Formats: SVG, JPG, PNG (10mb each)
-            </p>
           </CardContent>
         </Card>
 
-        {/* Submit Toggle */}
-        <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl">
-          <div>
-            <p className="font-medium text-sm">Submit meal to database?</p>
-            <p className="text-xs text-muted-foreground">Toggle this option to contribute the data to us. 👍</p>
-          </div>
-          <Switch checked={submitToDatabase} onCheckedChange={setSubmitToDatabase} />
-        </div>
+
 
         {/* Submit Button */}
         <Button
@@ -391,30 +347,6 @@ export default function LogMeal() {
         </Button>
       </div>
 
-      {/* Icon Picker Dialog */}
-      <Dialog open={showIconPicker} onOpenChange={setShowIconPicker}>
-        <DialogContent className="max-w-sm">
-          <h3 className="font-semibold mb-4">Select Icon or Image</h3>
-          <Input placeholder="Search for an icon..." className="mb-4" />
-          <div className="grid grid-cols-6 gap-2">
-            {FOOD_ICONS.map((icon) => (
-              <button
-                key={icon}
-                onClick={() => {
-                  setSelectedIcon(icon);
-                  setShowIconPicker(false);
-                }}
-                className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center text-xl hover:bg-secondary transition-colors",
-                  selectedIcon === icon && "bg-primary/20"
-                )}
-              >
-                {icon}
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
@@ -426,7 +358,7 @@ export default function LogMeal() {
           <p className="text-muted-foreground">You have successfully logged your food!</p>
           <Button 
             className="w-full h-12 rounded-2xl mt-4"
-            onClick={() => navigate('/nutrition')}
+            onClick={() => navigate('/nutrition-dashboard')}
           >
             Great, thanks!
           </Button>

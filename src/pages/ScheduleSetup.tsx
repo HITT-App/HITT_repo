@@ -39,7 +39,22 @@ const DEFAULT_DAYS: Record<number, number[]> = {
   6: [1, 2, 3, 4, 5, 6],
 };
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
+
+type WorkoutDetails = {
+  id: string;
+  title: string;
+  duration_minutes: number | null;
+  category: string | null;
+  difficulty: string | null;
+  equipment: string[] | null;
+};
+
+type PlanPreviewItem = {
+  workout_id: string;
+  scheduled_date: string;
+  workout: WorkoutDetails;
+};
 
 export default function ScheduleSetup() {
   const navigate = useNavigate();
@@ -53,6 +68,8 @@ export default function ScheduleSetup() {
   const [daysPerWeek, setDaysPerWeek] = useState(0);
   const [sessionMinutes, setSessionMinutes] = useState(0);
   const [preferredDays, setPreferredDays] = useState<number[]>([]);
+  const [planPreview, setPlanPreview] = useState<PlanPreviewItem[] | null>(null);
+  const [planGoal, setPlanGoal] = useState('');
 
   const advance = () => setStep(s => s + 1);
 
@@ -98,7 +115,7 @@ export default function ScheduleSetup() {
     }));
   };
 
-  const handleBuild = async () => {
+  const handleGenerate = async () => {
     setSaving(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -112,6 +129,7 @@ export default function ScheduleSetup() {
         .eq('user_id', userId)
         .maybeSingle();
       const goal = prefs?.workout_goal ?? 'general fitness';
+      setPlanGoal(goal);
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-workout-plan`,
@@ -134,20 +152,59 @@ export default function ScheduleSetup() {
       const rows = mapToScheduleDates(planItems);
       if (!rows.length) throw new Error('No workouts returned');
 
+      const workoutIds = [...new Set(rows.map(r => r.workout_id))];
+      const { data: workouts } = await supabase
+        .from('workouts')
+        .select('id, title, duration_minutes, category, difficulty, equipment')
+        .in('id', workoutIds);
+
+      const workoutMap = new Map((workouts ?? []).map(w => [w.id, w as WorkoutDetails]));
+
+      const preview: PlanPreviewItem[] = rows.map(r => ({
+        workout_id: r.workout_id,
+        scheduled_date: r.scheduled_date,
+        workout: workoutMap.get(r.workout_id) ?? {
+          id: r.workout_id,
+          title: 'Workout',
+          duration_minutes: sessionMinutes,
+          category: null,
+          difficulty: null,
+          equipment: null,
+        },
+      }));
+
+      setPlanPreview(preview);
+      advance();
+    } catch (err) {
+      console.error('[ScheduleSetup] Generate failed:', err);
+      toast.error('Could not build your plan. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!planPreview) return;
+    setSaving(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) return;
+
       await supabase.from('scheduled_workouts').insert(
-        rows.map(r => ({ user_id: userId, workout_id: r.workout_id, scheduled_date: r.scheduled_date }))
+        planPreview.map(r => ({ user_id: userId, workout_id: r.workout_id, scheduled_date: r.scheduled_date }))
       );
 
       const daysLabel = `${daysPerWeek} day${daysPerWeek > 1 ? 's' : ''} a week`;
-      const greetPrompt = `[POST_SCHEDULE_WIZARD] The user just finished setting up their workout schedule. Their goal: ${goalText || goal}. Schedule: ${daysLabel}, ${sessionMinutes} minutes per session. In one warm sentence, acknowledge their new plan by name — mention both their goal and their schedule. Then ask what they want to work on first. No lists, no options, be encouraging and personal.`;
+      const greetPrompt = `[POST_SCHEDULE_WIZARD] The user just finished setting up their workout schedule. Their goal: ${goalText || planGoal}. Schedule: ${daysLabel}, ${sessionMinutes} minutes per session. In one warm sentence, acknowledge their new plan by name — mention both their goal and their schedule. Then ask what they want to work on first. No lists, no options, be encouraging and personal.`;
 
       navigate(returnTo, {
         replace: true,
         state: { tab: 'chat', prefillMessage: greetPrompt },
       });
     } catch (err) {
-      console.error('[ScheduleSetup] Build failed:', err);
-      toast.error('Could not build your plan. Please try again.');
+      console.error('[ScheduleSetup] Confirm failed:', err);
+      toast.error('Could not save your plan. Please try again.');
       setSaving(false);
     }
   };
@@ -265,21 +322,75 @@ export default function ScheduleSetup() {
             </div>
           </>
         )}
+
+        {/* Step 3 — plan preview */}
+        {step === 3 && planPreview && (
+          <>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Your plan</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {daysPerWeek} session{daysPerWeek > 1 ? 's' : ''} a week · {sessionMinutes} min each
+              </p>
+            </div>
+            <div className="space-y-2.5">
+              {planPreview.map((item, i) => {
+                const date = new Date(item.scheduled_date + 'T00:00:00');
+                const dayName = date.toLocaleDateString('en-GB', { weekday: 'short' });
+                const dayNum = date.getDate();
+                const monthName = date.toLocaleDateString('en-GB', { month: 'short' });
+                const equipment = (item.workout.equipment ?? []).filter(Boolean);
+                return (
+                  <div key={i} className="flex gap-3 items-start p-4 rounded-2xl border border-border bg-card">
+                    <div className="text-center shrink-0 w-10">
+                      <p className="text-[10px] text-muted-foreground uppercase font-semibold">{dayName}</p>
+                      <p className="text-xl font-bold leading-tight text-foreground">{dayNum}</p>
+                      <p className="text-[10px] text-muted-foreground">{monthName}</p>
+                    </div>
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <p className="font-semibold text-sm text-foreground">{item.workout.title}</p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {item.workout.category && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{item.workout.category}</span>
+                        )}
+                        {item.workout.duration_minutes && (
+                          <span className="text-[11px] text-muted-foreground">{item.workout.duration_minutes} min</span>
+                        )}
+                        <span className="text-[11px] text-muted-foreground">
+                          {equipment.length > 0 ? equipment.join(', ') : 'Bodyweight'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Footer — only step 2 needs manual advance */}
-      {step === 2 && (
+      {/* Footer */}
+      {(step === 2 || step === 3) && (
         <div
           className="px-5 py-4 border-t border-border/40 bg-background/90 backdrop-blur-sm"
           style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 16px)' }}
         >
-          <Button
-            className="w-full h-12 rounded-xl font-semibold"
-            disabled={!canBuild || saving}
-            onClick={handleBuild}
-          >
-            {saving ? 'Building your plan…' : 'Build my plan'}
-          </Button>
+          {step === 3 ? (
+            <Button
+              className="w-full h-12 rounded-xl font-semibold"
+              disabled={saving}
+              onClick={handleConfirm}
+            >
+              {saving ? 'Starting…' : 'Start training'}
+            </Button>
+          ) : (
+            <Button
+              className="w-full h-12 rounded-xl font-semibold"
+              disabled={!canBuild || saving}
+              onClick={handleGenerate}
+            >
+              {saving ? 'Building your plan…' : 'Preview my plan'}
+            </Button>
+          )}
         </div>
       )}
     </div>

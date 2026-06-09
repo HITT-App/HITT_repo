@@ -17,13 +17,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Search,
   ScanBarcode,
-  Mic,
   Camera,
   Droplets,
-  Scale,
-  Flame,
   MoreHorizontal,
   Zap,
   ArrowLeftRight,
@@ -66,18 +65,14 @@ type NutritionGoals = {
 };
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
+const today = new Date();
+today.setHours(23, 59, 59, 999);
 
 const quickActions = [
-  { label: "Log Food", icon: Search, color: "text-blue-400" },
-  { label: "Barcode Scan", icon: ScanBarcode, color: "text-pink-400" },
-  { label: "Voice Log", icon: Mic, color: "text-purple-400" },
-  { label: "Meal Scan", icon: Camera, color: "text-teal-400" },
-];
-
-const quickLinks = [
-  { label: "Water", icon: Droplets, color: "text-blue-400", route: "/hydration" },
-  { label: "Weight", icon: Scale, color: "text-green-400", route: "/weight" },
-  { label: "Exercise", icon: Flame, color: "text-orange-400", route: "/activity" },
+  { label: "Log Food", icon: Search, color: "text-blue-400", route: "/log-meal" },
+  { label: "Barcode Scan", icon: ScanBarcode, color: "text-pink-400", route: "/barcode-scanner" },
+  { label: "Log Water", icon: Droplets, color: "text-cyan-400", route: "/hydration" },
+  { label: "Meal Scan", icon: Camera, color: "text-teal-400", route: "/meal-scanner" },
 ];
 
 const diaryMeals = [
@@ -99,6 +94,7 @@ export default function NutritionDashboard() {
     daily_fat_grams: 111,
     daily_carbs_grams: 415,
   });
+  const [macroView, setMacroView] = useState<'grams' | 'percent'>('grams');
   const [actionLog, setActionLog] = useState<MealLog | null>(null);
   const [editLog, setEditLog] = useState<MealLog | null>(null);
   const [deleteLog, setDeleteLog] = useState<MealLog | null>(null);
@@ -117,6 +113,32 @@ export default function NutritionDashboard() {
   const keyboardHeight = useKeyboardHeight();
 
   const currentDayIndex = getDay(selectedDate);
+
+  // Sunday of the week containing selectedDate
+  const weekSunday = new Date(selectedDate);
+  weekSunday.setDate(selectedDate.getDate() - currentDayIndex);
+  weekSunday.setHours(0, 0, 0, 0);
+
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekSunday);
+    d.setDate(weekSunday.getDate() + i);
+    return d;
+  });
+
+  const canGoNextWeek = new Date(weekSunday.getTime() + 7 * 24 * 60 * 60 * 1000) <= today;
+
+  const goToPrevWeek = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 7);
+    setSelectedDate(d);
+  };
+
+  const goToNextWeek = () => {
+    if (!canGoNextWeek) return;
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 7);
+    setSelectedDate(d > today ? today : d);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -284,31 +306,55 @@ export default function NutritionDashboard() {
       <div className="px-5 pt-4 pb-8 space-y-6">
 
           {/* Week Day Selector */}
-          <div className="flex justify-between px-1">
-            {DAYS.map((day, i) => (
-              <div key={i} className="flex flex-col items-center gap-1.5">
-                <span
-                  className={cn(
-                    "text-xs font-medium",
-                    i === currentDayIndex ? "text-foreground" : "text-muted-foreground"
-                  )}
-                >
-                  {day}
-                </span>
-                <div
-                  className={cn(
-                    "w-8 h-8 rounded-full border-2 flex items-center justify-center",
-                    i === currentDayIndex
-                      ? "border-primary border-dashed"
-                      : "border-muted-foreground/30"
-                  )}
-                >
-                  {i === currentDayIndex && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={goToPrevWeek}
+              className="p-1 rounded-lg text-muted-foreground active:bg-secondary transition-colors touch-manipulation"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="flex flex-1 justify-between">
+              {weekDays.map((day, i) => {
+                const isSelected = format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
+                const isFuture = day > today;
+                const isCurrentDay = isToday(day);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => !isFuture && setSelectedDate(day)}
+                    disabled={isFuture}
+                    className={cn(
+                      "flex flex-col items-center gap-1 touch-manipulation",
+                      isFuture && "opacity-30"
+                    )}
+                  >
+                    <span className={cn(
+                      "text-[11px] font-medium",
+                      isSelected ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      {DAYS[i]}
+                    </span>
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
+                      isSelected
+                        ? "bg-primary text-primary-foreground"
+                        : isCurrentDay
+                          ? "border-2 border-primary/50 text-foreground"
+                          : "text-foreground"
+                    )}>
+                      {day.getDate()}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={goToNextWeek}
+              disabled={!canGoNextWeek}
+              className="p-1 rounded-lg text-muted-foreground active:bg-secondary transition-colors touch-manipulation disabled:opacity-30"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Calories Card */}
@@ -344,56 +390,36 @@ export default function NutritionDashboard() {
               <div className="bg-muted/50 rounded-xl p-4">
                 <div className="flex items-start justify-between">
                   <div className="grid grid-cols-3 gap-6 flex-1">
-                    {/* Carbs */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Carbs</p>
-                      <p className="text-foreground font-bold text-base">
-                        {todayTotals.carbs} g{" "}
-                        <span className="font-normal text-xs text-muted-foreground">
-                          / {goals.daily_carbs_grams}
-                        </span>
-                      </p>
-                      <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full transition-all"
-                          style={{ width: `${carbsPct}%` }}
-                        />
+                    {[
+                      { label: 'Carbs', value: todayTotals.carbs, goal: goals.daily_carbs_grams, pct: carbsPct, color: 'bg-yellow-500' },
+                      { label: 'Fat',   value: todayTotals.fat,   goal: goals.daily_fat_grams,   pct: fatPct,   color: 'bg-blue-500'   },
+                      { label: 'Protein', value: todayTotals.protein, goal: goals.daily_protein_grams, pct: proteinPct, color: 'bg-red-500' },
+                    ].map(({ label, value, goal, pct, color }) => (
+                      <div key={label}>
+                        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+                        {macroView === 'grams' ? (
+                          <p className="text-foreground font-bold text-base">
+                            {value} g{" "}
+                            <span className="font-normal text-xs text-muted-foreground">/ {goal}</span>
+                          </p>
+                        ) : (
+                          <p className="text-foreground font-bold text-base">
+                            {Math.round(pct)}<span className="text-sm font-normal">%</span>
+                          </p>
+                        )}
+                        <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className={cn("h-full rounded-full transition-all duration-500", color)} style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                    </div>
-                    {/* Fat */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Fat</p>
-                      <p className="text-foreground font-bold text-base">
-                        {todayTotals.fat} g{" "}
-                        <span className="font-normal text-xs text-muted-foreground">
-                          / {goals.daily_fat_grams}
-                        </span>
-                      </p>
-                      <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full transition-all"
-                          style={{ width: `${fatPct}%` }}
-                        />
-                      </div>
-                    </div>
-                    {/* Protein */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Protein</p>
-                      <p className="text-foreground font-bold text-base">
-                        {todayTotals.protein} g{" "}
-                        <span className="font-normal text-xs text-muted-foreground">
-                          / {goals.daily_protein_grams}
-                        </span>
-                      </p>
-                      <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full transition-all"
-                          style={{ width: `${proteinPct}%` }}
-                        />
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                  <button className="ml-3 mt-1 text-muted-foreground">
+                  <button
+                    onClick={() => setMacroView(v => v === 'grams' ? 'percent' : 'grams')}
+                    className={cn(
+                      "ml-3 mt-1 p-1.5 rounded-lg transition-colors touch-manipulation",
+                      macroView === 'percent' ? "bg-primary/15 text-primary" : "text-muted-foreground active:bg-muted"
+                    )}
+                  >
                     <ArrowLeftRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -406,11 +432,7 @@ export default function NutritionDashboard() {
             {quickActions.map((action) => (
               <button
                 key={action.label}
-                onClick={() => {
-                  if (action.label === "Log Food") navigate("/log-meal");
-                  else if (action.label === "Meal Scan") navigate("/meal-scanner");
-                  else if (action.label === "Barcode Scan") navigate("/barcode-scanner");
-                }}
+                onClick={() => navigate(action.route)}
                 className="flex flex-col items-center justify-center gap-2.5 bg-card rounded-2xl p-6 active:scale-[0.97] transition-transform touch-manipulation"
               >
                 <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center">
@@ -420,22 +442,6 @@ export default function NutritionDashboard() {
               </button>
             ))}
           </div>
-
-          {/* Quick Links */}
-          <Card className="border-0 bg-card">
-            <CardContent className="p-0 divide-y divide-border">
-              {quickLinks.map((link) => (
-                <button
-                  key={link.label}
-                  onClick={() => navigate(link.route)}
-                  className="w-full flex items-center gap-3 px-5 py-4 active:bg-muted/50 transition-colors touch-manipulation"
-                >
-                  <link.icon className={cn("w-5 h-5", link.color)} />
-                  <span className="text-sm font-medium text-foreground">{link.label}</span>
-                </button>
-              ))}
-            </CardContent>
-          </Card>
 
           {/* Diary Section */}
           <div>
