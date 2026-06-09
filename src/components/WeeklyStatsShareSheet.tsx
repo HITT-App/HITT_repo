@@ -163,7 +163,7 @@ export function WeeklyStatsShareSheet({ workouts, minutes, streak, calories, onC
 
           {/* Add-photo hint when no background set */}
           {isReady && !bgPhotoUrl && (
-            <div className="absolute inset-0 flex items-end justify-center pb-3 pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1.5">
                 <ImagePlus size={13} className="text-white" />
                 <span className="text-white text-[11px] font-semibold">Add background photo</span>
