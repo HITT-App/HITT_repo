@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-09] — Fix: plan confirmation no longer shows a duplicate "Add to schedule" card
+
+- **Plan is saved when you tap "Start training"** — confirmed and working; no extra step needed
+- **Fixed Jarvis showing a confusing "3 x 45 mins / Add to my schedule" card** after the plan wizard — that was the AI re-proposing a schedule it didn't need to; AI now just gives a warm welcome when the plan is already saved
+
 ## [2026-06-09] — Editable plan preview + reassuring loading messages
 
 - **Plan preview is now editable**: tap the swap icon on any session to choose a different workout from the full catalogue, or tap X to remove a session entirely

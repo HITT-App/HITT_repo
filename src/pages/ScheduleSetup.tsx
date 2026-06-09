@@ -229,7 +229,7 @@ export default function ScheduleSetup() {
       );
 
       const daysLabel = `${daysPerWeek} day${daysPerWeek > 1 ? 's' : ''} a week`;
-      const greetPrompt = `[POST_SCHEDULE_WIZARD] The user just finished setting up their workout schedule. Their goal: ${goalText || planGoal}. Schedule: ${daysLabel}, ${sessionMinutes} minutes per session. In one warm sentence, acknowledge their new plan by name — mention both their goal and their schedule. Then ask what they want to work on first. No lists, no options, be encouraging and personal.`;
+      const greetPrompt = `[POST_PLAN_SAVED] The user's workout plan is confirmed and already saved to their schedule — no scheduling action needed. Goal: ${goalText || planGoal}. Schedule: ${daysLabel}, ${sessionMinutes} min/session. Give one warm celebratory sentence acknowledging their plan is live. Then ask what they want to focus on first. No action markers, no lists.`;
 
       navigate(returnTo, {
         replace: true,
