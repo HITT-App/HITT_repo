@@ -16,7 +16,7 @@ export function HealthSyncPrompt() {
   const platformName = Capacitor.getPlatform() === "ios" ? "Apple Health" : "Health Connect";
 
   return (
-    <div className="mx-6 bg-card border border-border/60 rounded-2xl p-4 flex items-start gap-3">
+    <div className="mx-5 bg-card border border-border/60 rounded-[18px] p-4 flex items-start gap-3">
       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
         <Heart className="w-5 h-5 text-primary" />
       </div>

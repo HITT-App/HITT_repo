@@ -16,13 +16,13 @@ export function AICoachSection({
   const navigate = useNavigate();
 
   return (
-    <div className="px-6 py-2">
-      <Card className="p-4 bg-card border border-border/60">
+    <div className="px-5 py-2">
+      <Card className="p-4 bg-card border border-border/60 rounded-[18px] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.4)]">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
-            <img 
-              src={hiitLogo} 
-              alt="HIIT AI Coach" 
+          <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+            <img
+              src={hiitLogo}
+              alt="HIIT AI Coach"
               className="w-full h-full object-cover"
             />
           </div>
@@ -40,10 +40,9 @@ export function AICoachSection({
             </div>
           </div>
         </div>
-        
+
         <Button
-          variant="link"
-          className="w-full text-primary text-sm mt-2"
+          className="w-full mt-3 bg-primary text-primary-foreground hover:bg-primary/90"
           onClick={() => navigate("/ai-coach")}
         >
           See in Detail

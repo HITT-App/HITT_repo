@@ -64,6 +64,40 @@ function bold(str: string): string {
   return str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
+function isGoalQuestion(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return (
+    /\bwhat('?s| is) my (fitness |workout |current |main )?goal\b/.test(t) ||
+    /\bwhat am i (training|working) (for|toward|towards)\b/.test(t) ||
+    /\b(what|remind me of|tell me) my (previously |current |fitness |workout )?goal\b/.test(t) ||
+    /\bdo you know my goal\b/.test(t) ||
+    /\bpreviously set goals?\b/.test(t) ||
+    /\bwhat goal did i set\b/.test(t) ||
+    /\bcan you (see|access|check) my goal\b/.test(t)
+  );
+}
+
+async function queryUserGoal(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return "I couldn't retrieve your goal right now.";
+
+  const [{ data: prefs }, { data: goals }] = await Promise.all([
+    supabase.from('workout_preferences').select('workout_goal, fitness_level').eq('user_id', user.id).maybeSingle(),
+    (supabase as any).from('user_goals').select('goal_type, target_text, target_date').eq('user_id', user.id).eq('is_active', true).order('set_at', { ascending: false }).limit(1).maybeSingle(),
+  ]);
+
+  if (goals?.target_text) {
+    const deadline = goals.target_date ? ` (target date: ${goals.target_date})` : '';
+    const level = prefs?.fitness_level ? ` Your fitness level is ${prefs.fitness_level}.` : '';
+    return `Your goal is ${goals.target_text}${deadline}.${level}`;
+  }
+  if (prefs?.workout_goal) {
+    const level = prefs?.fitness_level ? ` Your fitness level is ${prefs.fitness_level}.` : '';
+    return `Your goal is ${prefs.workout_goal}.${level}`;
+  }
+  return "You haven't set a goal yet. Want me to help you set one?";
+}
+
 function isFoodRecallQuestion(text: string): boolean {
   const t = text.trim();
   return (
@@ -163,6 +197,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   const [aiWorkout, setAIWorkout] = useState<(RecommendWorkoutPayload & { source: 'ai_generated' }) | null>(null);
   const [aiWorkoutPlan, setAIWorkoutPlan] = useState<RecommendWorkoutPlanPayload | null>(null);
+  const [pendingNoPlanPrompt, setPendingNoPlanPrompt] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -179,7 +214,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const greetingFiredRef = useRef(false);
 
   const handleSend = useCallback(async (text: string) => {
-    if (isFoodRecallQuestion(text)) {
+    if (isGoalQuestion(text)) {
+      const answer = await queryUserGoal();
+      await ai.directAnswer(text, answer);
+    } else if (isFoodRecallQuestion(text)) {
       const answer = await queryTodayDiary();
       await ai.directAnswer(text, answer);
     } else {
@@ -555,108 +593,71 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     greetingFiredRef.current = true;
 
     const doGreeting = async () => {
-      let hasSchedule = true;
-      let hasWorkoutToday = true;
-      let shouldPromptGoal = false;
+      // prefillMessage (post-wizard) takes priority over everything
+      if (prefillMessage) {
+        await new Promise(r => setTimeout(r, 400));
+        ai.greet(prefillMessage);
+        return;
+      }
 
-      const hasHistory = ai.messages.length > 0;
+      let hasGoal = false;
+      let hasSchedule = false;
+      let hasWorkoutToday = false;
 
-      // Step 1 — schedule queries (affects greeting branch selection; defensive default = true).
       try {
         const { data: session } = await supabase.auth.getSession();
         const userId = session?.session?.user?.id;
         if (userId) {
           const today = new Date().toISOString().split('T')[0];
-          const [{ count: futureCount }, { count: todayCount }] = await Promise.all([
+          const [
+            { data: prefs },
+            { count: futureCount },
+            { count: todayCount },
+          ] = await Promise.all([
+            supabase.from('workout_preferences').select('workout_goal').eq('user_id', userId).maybeSingle(),
             supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('scheduled_date', today),
             supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('scheduled_date', today),
           ]);
+          hasGoal = !!prefs?.workout_goal;
           hasSchedule = (futureCount ?? 0) > 0;
           hasWorkoutToday = (todayCount ?? 0) > 0;
         }
       } catch {
-        hasSchedule = true;
-        hasWorkoutToday = true;
-      }
-
-      // Step 2 — goal-prompt check. Only for returning users; new users get conversational onboarding.
-      // Default is to show the card. The try block only SUPPRESSES it if we can positively
-      // confirm the user opted out or the cadence hasn't elapsed. A catch keeps shouldPromptGoal=true.
-      const isReturningUser = hasHistory || hasSchedule;
-      if (isReturningUser) {
-        shouldPromptGoal = true;
-        try {
-          const { data: session2 } = await supabase.auth.getSession();
-          const userId2 = session2?.session?.user?.id;
-          if (userId2) {
-            const { data: row } = await supabase
-              .from('profiles')
-              .select('goal_prompt_preference, goal_prompt_last_at')
-              .eq('user_id', userId2)
-              .maybeSingle();
-            const pref = (row as any)?.goal_prompt_preference ?? null;
-            const rawLastAt = (row as any)?.goal_prompt_last_at;
-            const lastAt = rawLastAt ? new Date(rawLastAt) : null;
-            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            if (pref === 'never' || (lastAt !== null && !isNaN(lastAt.getTime()) && lastAt >= sevenDaysAgo)) {
-              shouldPromptGoal = false;
-            }
-            // Also suppress if the user already has a goal set in workout_preferences —
-            // catches the case where goal_prompt_preference column update failed silently
-            if (shouldPromptGoal) {
-              const { data: prefs } = await supabase
-                .from('workout_preferences')
-                .select('workout_goal')
-                .eq('user_id', userId2)
-                .maybeSingle();
-              if (prefs?.workout_goal) shouldPromptGoal = false;
-            }
-          }
-        } catch {
-          // Check failed — keep shouldPromptGoal=true so the card shows rather than silently vanishes.
-        }
-        if (shouldPromptGoal) {
-          setPendingGoalPrompt(true);
-          supabase.auth.getSession().then(({ data: s }) => {
-            const uid = s?.session?.user?.id;
-            if (uid) (supabase as any).from('profiles').update({ goal_prompt_last_at: new Date().toISOString() }).eq('user_id', uid);
-          });
-        }
+        // Default: no goal, no schedule — show goal card
       }
 
       await new Promise(r => setTimeout(r, 400));
 
-      if (prefillMessage) {
-        ai.greet(prefillMessage);
+      // No goal → show goal setup card (no AI call)
+      if (!hasGoal) {
+        setPendingGoalPrompt(true);
         return;
       }
 
-      // Goal card owns the screen — no greeting when it's showing.
-      if (shouldPromptGoal) return;
+      // Goal set but no plan → show plan setup card (no AI call)
+      if (!hasSchedule) {
+        setPendingNoPlanPrompt(true);
+        return;
+      }
 
-      // Skip greeting if the user was here recently — prevents repeated "welcome back" within a session.
+      // Has goal + schedule → check cooldown, then greet
+      const hasHistory = ai.messages.length > 0;
       const GREET_COOLDOWN_MS = 10 * 60 * 1000;
       const lastGreetTs = Number(sessionStorage.getItem('jarvis_last_greeted') ?? 0);
       if (hasHistory && Date.now() - lastGreetTs < GREET_COOLDOWN_MS) return;
       sessionStorage.setItem('jarvis_last_greeted', String(Date.now()));
 
-      const isOnboarding = !hasHistory && !hasSchedule;
-
       const greetingPrompt = sharePromptDetail
         ? (sharePromptDetail.pbs && sharePromptDetail.pbs.length > 0
             ? `[POST_WORKOUT_PB] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} and hit a new personal best: ${sharePromptDetail.pbs.map(pb => `${pb.label} (${pb.value}, previous best ${pb.previousBest})`).join('; ')}. Celebrate this specifically and enthusiastically — name the PB. Then say they should share it because this one matters. Keep it to 2-3 sentences, genuinely excited tone, use one 🏆 emoji.`
             : `[POST_WORKOUT_SHARE] The user just finished a ${sharePromptDetail.durationMin}-minute ${sharePromptDetail.workoutTitle} workout, burning around ${sharePromptDetail.calories} calories. Congratulate them warmly in one sentence — be specific about what they just did, not generic. Then ask if they want to share it on the community feed. Keep it to 2 sentences total, encouraging tone, no follow-up questions beyond the share question.`)
-        : isOnboarding
-          ? `[ONBOARDING] This user has no schedule yet. Introduce yourself as Coach HIIT in one warm sentence, then say you want to ask a couple of quick questions to build their perfect plan, then ask just this: "What's your main fitness goal right now?" — no lists, no options, keep it conversational.`
-          : hasHistory && !hasSchedule
-            ? `[GREETING] Welcome this user back in one warm sentence. Then immediately say you notice they haven't set up a workout schedule yet and ask if they want to do that now. Keep it brief and positive — do not repeat questions already in the chat history above.`
-            : hasHistory && hasSchedule && !hasWorkoutToday
-              ? `[GREETING_NO_TODAY] The user has just re-opened our conversation. They have a schedule but no workout planned for today. In one warm sentence, welcome them back. Then suggest ONE specific workout from the WORKOUTS CATALOGUE that fits their goal and emit the recommend_workout tool at the end. Keep the whole response to 2 sentences max — let the card do the talking.`
-              : hasHistory
-                ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back. Then ask what they'd like to work on today. Do not address, reference, or continue any prior questions or topics from the chat history — just greet and invite.`
-                : healthProfile?.trim()
-                  ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
-                  : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
+        : hasHistory && hasSchedule && !hasWorkoutToday
+          ? `[GREETING_NO_TODAY] The user has just re-opened our conversation. They have a schedule but no workout planned for today. In one warm sentence, welcome them back. Then suggest ONE specific workout from the WORKOUTS CATALOGUE that fits their goal and emit the recommend_workout tool at the end. Keep the whole response to 2 sentences max — let the card do the talking.`
+          : hasHistory
+            ? `[GREETING] The user has just re-opened our conversation. Give a warm 1-sentence welcome back. Then ask what they'd like to work on today. Do not address, reference, or continue any prior questions or topics from the chat history — just greet and invite.`
+            : healthProfile?.trim()
+              ? `[GREETING] Give me a warm 2-sentence spoken greeting. First sentence: reference something specific from my biometric data (workout frequency, sleep, steps, or activity level) — be personal, not generic. Second sentence: ask what I want to work on today. Sound like a coach who knows me.\n\nMy data:\n${healthProfile}`
+              : `[GREETING] Welcome me warmly in 2 short sentences. First: introduce yourself as my AI coach. Second: ask what I want to work on today.`;
 
       ai.greet(greetingPrompt);
     };
@@ -763,17 +764,41 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           )
         ))}
 
-        {/* Goal-prompt multi-choice card — rendered before streaming so it's the first visible thing */}
+        {/* Goal-prompt card — shown when no goal is set */}
         {pendingGoalPrompt && (
           <MultiChoiceCard
             icon={<Flag className="w-6 h-6 text-primary" strokeWidth={2.1} />}
-            eyebrow="Set a goal"
-            heading="What are you training toward?"
-            subtext="I coach better with a target. Takes 30 seconds to set."
+            eyebrow="No goal set"
+            heading="Let's set your goals"
+            subtext="I coach better with a target. Takes 30 seconds."
             choices={[
               { label: 'Set my goal', variant: 'primary', onSelect: handleGoalPromptSetNow },
-              { label: 'Remind me later', variant: 'outline', onSelect: handleGoalPromptLater },
-              { label: "Don't ask again", variant: 'ghost', onSelect: handleGoalPromptNever },
+              { label: 'Maybe later', variant: 'ghost', onSelect: handleGoalPromptLater },
+            ]}
+          />
+        )}
+
+        {/* No-plan card — shown when goal is set but no workout schedule exists */}
+        {pendingNoPlanPrompt && (
+          <MultiChoiceCard
+            icon={<Target className="w-6 h-6 text-primary" strokeWidth={2.1} />}
+            eyebrow="No workout plan"
+            heading="You don't have a workout plan yet"
+            subtext="Let's build one around your goal — takes about a minute."
+            choices={[
+              {
+                label: "Let's add it",
+                variant: 'primary',
+                onSelect: () => {
+                  setPendingNoPlanPrompt(false);
+                  ai.send("I'd like to set up a workout schedule");
+                },
+              },
+              {
+                label: 'Maybe later',
+                variant: 'ghost',
+                onSelect: () => setPendingNoPlanPrompt(false),
+              },
             ]}
           />
         )}

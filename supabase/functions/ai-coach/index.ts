@@ -24,6 +24,32 @@ Two kinds of proactivity, and the difference matters:
 Respond to what the user actually asked. Use what you know about them to answer it well. Do not volunteer commentary on the conversation, and never report what the user has eaten, done, or said unless they ask in the current message.
 
 ═══════════════════════════════════════════
+GOAL ACCESS — MANDATORY RULE (NEVER VIOLATE)
+═══════════════════════════════════════════
+Every single request you receive contains a USER PROFILE / MEMORY block.
+That block always includes a line: "Active goal: <value>"
+
+THIS IS YOUR GOAL DATA. You do not need to "check" anything. It is right there.
+
+When the user asks about their goal in ANY form — "what's my goal", "what am I training for",
+"what did I set", "do you know my goal", "what are my previously set goals", "can you see my goal",
+"remind me of my goal", or any equivalent — follow these exact steps:
+
+  1. Find the "Active goal:" line in USER PROFILE / MEMORY.
+  2. Answer directly. Example: "Your goal is fat loss over 8 weeks."
+  3. That is all. Do not qualify. Do not hedge. Do not explain how you found it.
+
+HARD PROHIBITIONS — these phrases are ALWAYS wrong:
+  ✗ "I can't access your previously set goals"
+  ✗ "I don't have access to your goals"
+  ✗ "I can't check your goals"
+  ✗ "I'm unable to retrieve your goal"
+  ✗ Any sentence implying you lack access to goal data
+
+If "Active goal: not yet set" — say: "You haven't set a goal yet — want me to help you set one?"
+That is the ONLY case where a goal is absent. It does not mean access failure.
+
+═══════════════════════════════════════════
 RESPONSE LENGTH
 ═══════════════════════════════════════════
 • Keep responses SHORT. Aim for 4-8 lines max for general chat.
@@ -507,6 +533,24 @@ const STRUCTURED_TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "update_memory",
+      description: "Persist something important the user just revealed about themselves that isn't already captured in their profile. Only call when the user volunteers genuinely new persistent information: an injury or physical constraint, a training preference, a lifestyle fact (shift work, travel, etc.), or a correction to something you got wrong. Do NOT call for workout results, food logged today, goal changes (use set_goals for that), or anything already in the context blocks.",
+      parameters: {
+        type: "object",
+        properties: {
+          updates: {
+            type: "object",
+            description: "Keys to merge into user memory. Each value overwrites the previous. Valid keys: injuries (physical constraints), preferences (training likes/dislikes), lifestyle (work schedule, travel, etc.), notes (anything else persistent).",
+            additionalProperties: { type: "string" },
+          },
+        },
+        required: ["updates"],
+      },
+    },
+  },
 ];
 
 async function mapToolCallToAction(
@@ -679,6 +723,22 @@ async function mapToolCallToAction(
       }
       case "body_scan_prompt":
         return { type: "body_scan_prompt" };
+      case "update_memory": {
+        if (!args.updates || typeof args.updates !== "object") {
+          console.warn("[ai-coach] update_memory missing updates");
+          return null;
+        }
+        const allowedKeys = new Set(["injuries", "preferences", "lifestyle", "notes"]);
+        for (const [key, value] of Object.entries(args.updates)) {
+          if (!allowedKeys.has(key) || typeof value !== "string") continue;
+          await supabaseAdmin.rpc("upsert_user_memory_key", {
+            p_user_id: userId,
+            p_key: key,
+            p_value: value,
+          });
+        }
+        return null; // silent — no card shown to user
+      }
       default:
         console.warn("[ai-coach] Unknown tool call:", tc.name);
         return null;
@@ -856,7 +916,7 @@ serve(async (req) => {
       { data: recipesCatalogue },
       { data: recentBodyScans },
     ] = await Promise.all([
-      supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('profiles').select('*, user_memory').eq('user_id', userId).maybeSingle(),
       supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('nutrition_profiles').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('user_streaks').select('*').eq('user_id', userId).maybeSingle(),
@@ -1140,6 +1200,21 @@ serve(async (req) => {
 
     const personalizedPrompt = SYSTEM_PROMPT + userContext + extraContext;
 
+    // ─── Render user_memory as a synthetic assistant turn ───
+    // Injected at position 1 (after system prompt, before any history) so Gemini
+    // treats it as its own prior recall rather than injected database content.
+    const rawMemory = (profile as any)?.user_memory ?? {};
+    const memoryParts: string[] = [];
+    if (rawMemory.goal)     memoryParts.push(`Current goal: ${rawMemory.goal}`);
+    if (rawMemory.physique) memoryParts.push(`Body scan — ${rawMemory.physique}`);
+    if (rawMemory.injuries) memoryParts.push(`Physical notes: ${rawMemory.injuries}`);
+    if (rawMemory.preferences) memoryParts.push(`Preferences: ${rawMemory.preferences}`);
+    if (rawMemory.lifestyle)   memoryParts.push(`Lifestyle: ${rawMemory.lifestyle}`);
+    if (rawMemory.notes)       memoryParts.push(rawMemory.notes);
+    const userMemoryTurn: string | null = memoryParts.length > 0
+      ? `Here's what I know about ${nameForReminder !== 'there' ? nameForReminder : 'you'}: ${memoryParts.join('. ')}.`
+      : null;
+
     // Build the messages array for the API
     let apiMessages: any[] = [{ role: "system", content: personalizedPrompt }];
 
@@ -1156,6 +1231,14 @@ serve(async (req) => {
       } else {
         apiMessages.push({ role: msg.role, content: msg.content });
       }
+    }
+
+    // Inject user_memory as a synthetic assistant turn at position 1.
+    // Position 1 (immediately after the system prompt, before any real history) makes it
+    // look like the oldest thing Jarvis said. The model treats its own prior turns as recall,
+    // not as injected data — so it answers goal/physique questions correctly without denial.
+    if (userMemoryTurn) {
+      apiMessages.splice(1, 0, { role: "assistant", content: userMemoryTurn });
     }
 
     // Insert a name reminder as a system message immediately before the final user turn.

@@ -293,7 +293,26 @@ const BodyScan = () => {
           analysis,
         });
         if (scanError) throw scanError;
-        recordActiveDay(supabase, user.id).catch(() => {})
+        recordActiveDay(supabase, user.id).catch(() => {});
+
+        // Write physique summary into user_memory for Jarvis recall
+        const scanDate = new Date().toISOString().split('T')[0];
+        const bf = analysis.estimatedBodyFat != null ? `${analysis.estimatedBodyFat}% body fat` : null;
+        const md = analysis.muscleDevelopment;
+        const mdSummary = md ? `upper=${md.upper_body}, core=${md.core}, lower=${md.lower_body}` : null;
+        const obs = Array.isArray(analysis.keyObservations) ? analysis.keyObservations[0] : null;
+        const physiqueParts = [
+          `Scan ${scanDate}`,
+          analysis.bodyType ? `body type: ${analysis.bodyType}` : null,
+          bf ? `${bf} (${analysis.confidenceLevel} confidence)` : null,
+          mdSummary ? `muscle development: ${mdSummary}` : null,
+          obs ? `key observation: ${obs}` : null,
+        ].filter(Boolean);
+        await (supabase as any).rpc('upsert_user_memory_key', {
+          p_user_id: user.id,
+          p_key: 'physique',
+          p_value: physiqueParts.join('. '),
+        });
       }
       toast.success("Measurements saved!");
       setMeasurements({});

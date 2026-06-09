@@ -40,7 +40,7 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
   };
 
   return (
-    <div className="bg-background px-6 pt-2 pb-3 space-y-4">
+    <div className="bg-background px-5 pt-2 pb-3 space-y-4">
       {/* Top Row: Logo + Greeting + Notifications */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

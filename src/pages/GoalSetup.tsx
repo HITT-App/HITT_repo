@@ -134,10 +134,19 @@ export default function GoalSetup() {
         available_equipment: equipment,
       }, { onConflict: 'user_id' });
 
-      // goal_prompt_preference is not in generated types — cast as any to guarantee the column is sent
+      // goal_prompt_preference is not in generated types — cast as any
       await (supabase as any).from('profiles')
         .update({ goal_prompt_preference: 'never' })
         .eq('user_id', userId);
+
+      // Write goal into user_memory — jsonb_set merges only the 'goal' key, leaves other keys intact
+      const fitnessLabelForMemory = FITNESS_LEVELS.find(f => f.id === fitnessLevel)?.label ?? fitnessLevel;
+      const goalMemoryValue = `${buildTargetText()}. Fitness level: ${fitnessLabelForMemory}. Equipment: ${equipment.join(', ') || 'not specified'}.`;
+      await (supabase as any).rpc('upsert_user_memory_key', {
+        p_user_id: userId,
+        p_key: 'goal',
+        p_value: goalMemoryValue,
+      });
 
       if (returnTo === '/ai') {
         const fitnessLabel = FITNESS_LEVELS.find(f => f.id === fitnessLevel)?.label ?? fitnessLevel;

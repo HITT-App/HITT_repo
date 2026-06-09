@@ -64,7 +64,7 @@ export function ActivitySection({
   };
 
   return (
-    <div className="px-6 py-2">
+    <div className="px-5 py-2">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-foreground">Activity</h2>
         <Button 

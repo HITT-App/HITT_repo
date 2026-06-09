@@ -37,8 +37,8 @@ export function MealsCarousel() {
 
   return (
     <div className="pt-6 pb-2">
-      <div className="flex items-center justify-between px-4 mb-3">
-        <h2 className="text-sm font-semibold text-foreground">Recommended meals</h2>
+      <div className="flex items-center justify-between px-5 mb-3">
+        <h2 className="text-base font-bold text-foreground">Recommended meals</h2>
         <Button
           variant="link"
           size="sm"
@@ -49,7 +49,7 @@ export function MealsCarousel() {
         </Button>
       </div>
 
-      <div className="flex gap-3 pl-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1">
+      <div className="flex gap-3 pl-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1">
         {showOnboardingCard && (
           <NutritionOnboardingCard />
         )}

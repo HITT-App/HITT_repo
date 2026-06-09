@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-06-09] — Persistent user memory + state-driven Jarvis greeting
+
+- **Jarvis now remembers you across sessions** — goal, physique, injuries, preferences, and lifestyle are stored in a persistent `user_memory` field and injected as Jarvis's own recall on every request; no more "I can't access your goals"
+- **Goal and body scan write to memory on save** — goal wizard writes goal + fitness level + equipment; body scan writes physique summary; both survive chat history wipes
+- **Jarvis can learn and remember soft facts** — via a new `update_memory` tool, Jarvis persists injuries, training preferences, and lifestyle context (shift work, travel, etc.) across sessions
+- **Greeting is now state-driven** — Jarvis checks whether a goal and workout plan are set before opening; shows the right card (set goal / build plan) without triggering the AI unnecessarily
+- **Goal questions answered directly** — "what's my goal" type questions are intercepted client-side and answered from the database instantly, bypassing the AI entirely
+
 ## [2026-06-09] — Fix Jarvis goal context + suppress goal card reliably
 
 - **AI now sees goal even when user_goals query returns null** — userMD falls back to workout_preferences.workout_goal so "Active goal: not yet set" never appears when a goal has been saved
