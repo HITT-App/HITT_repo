@@ -1,5 +1,18 @@
 # HITT App Changelog
 
+## [2026-06-09] — LogMeal redesign: food picker with budget strip and AI describe
+
+- **LogMeal is now a food picker** — replaces the manual form with a search-and-select flow matching the design spec
+- **Calorie budget strip** — live bar showing today's consumed vs daily target, with an orange projected overlay as items are queued
+- **Quick add chips** — Describe (AI), Snap (→ meal scanner), Barcode (→ barcode scanner), Voice (placeholder)
+- **Describe chip** — bottom sheet where you type a meal description; AI estimates calories/protein/carbs/fat via `smart-insights`; confirm to add to the selection tray
+- **Food history** — pulls last 100 meal_logs and shows Recent (last 4 distinct meals) and Frequent (top 6 by count) sections with macro pips
+- **+/− stepper** on each food row; multiple items can be queued before logging
+- **Selection tray** — slides up from the bottom when items are selected; "Add to diary" inserts all queued rows to `meal_logs` in one go
+- **Success overlay** — orange circle check with blur, then auto-navigates to the nutrition dashboard
+- **Nav bar hidden on `/log-meal`** — added to `HIDDEN_NAV_ROUTES` so the selection tray isn't obscured
+- Recipe prefill still works — navigating from a recipe pre-loads it into the selection tray
+
 ## [2026-06-09] — Fix: plan confirmation no longer shows a duplicate "Add to schedule" card
 
 - **Plan is saved when you tap "Start training"** — confirmed and working; no extra step needed
