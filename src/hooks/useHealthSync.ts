@@ -5,6 +5,7 @@ import type { HealthDataType, HealthSample } from "@capgo/capacitor-health";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+
 const SYNC_WINDOW_HOURS = 48;
 
 const READ_TYPES: HealthDataType[] = [
@@ -195,6 +196,38 @@ export function useHealthSync() {
           onConflict: "user_id,source_platform,source_platform_id",
           ignoreDuplicates: false,
         });
+      }
+
+      // Workouts
+      const workoutResult = await Health.queryWorkouts({
+        startDate: startISO,
+        endDate: endISO,
+        limit: 100,
+        ascending: false,
+      }).catch(() => ({ workouts: [] as NonNullable<Awaited<ReturnType<typeof Health.queryWorkouts>>["workouts"]> }));
+
+      const workoutRows = (workoutResult.workouts ?? [])
+        .filter((w) => w.platformId)
+        .map((w) => ({
+          user_id: user.id,
+          activity_type: w.workoutType,
+          started_at: w.startDate,
+          ended_at: w.endDate,
+          duration_seconds: Math.round(w.duration),
+          distance_km: w.totalDistance != null ? w.totalDistance / 1000 : null,
+          calories_burned: w.totalEnergyBurned != null ? Math.round(w.totalEnergyBurned) : null,
+          status: "completed",
+          source_platform: platform,
+          source_platform_id: w.platformId!,
+        }));
+
+      if (workoutRows.length) {
+        await supabase
+          .from("activity_logs")
+          .upsert(workoutRows, {
+            onConflict: "user_id,source_platform,source_platform_id",
+            ignoreDuplicates: false,
+          });
       }
 
       setLastSyncAt(new Date());
