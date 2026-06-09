@@ -148,16 +148,11 @@ export default function GoalSetup() {
         p_value: goalMemoryValue,
       });
 
-      if (returnTo === '/ai') {
-        const fitnessLabel = FITNESS_LEVELS.find(f => f.id === fitnessLevel)?.label ?? fitnessLevel;
-        const greetPrompt = `[POST_GOAL_WIZARD] The user just finished the goal setup wizard. Their goal: ${buildTargetText()}. Fitness level: ${fitnessLabel}. Equipment: ${equipment.join(', ')}. In one warm sentence, acknowledge their specific goal by name. Then ask what they want to work on first. Be encouraging and personal — no lists, no options.`;
-        navigate('/ai', {
-          replace: true,
-          state: { tab: 'chat', prefillMessage: greetPrompt },
-        });
-      } else {
-        navigate(returnTo, { replace: true });
-      }
+      // After goal setup always go to schedule setup, passing goal text for the final welcome message
+      navigate('/schedule-setup', {
+        replace: true,
+        state: { returnTo: '/ai', goalText: buildTargetText() },
+      });
     } finally {
       setSaving(false);
     }

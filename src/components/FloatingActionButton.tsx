@@ -23,6 +23,7 @@ const HIDDEN_ROUTES = [
   '/routes',
   '/route/',
   '/goal-setup',
+  '/schedule-setup',
 ]
 
 export function FloatingActionButton({ onClick }: FloatingActionButtonProps) {

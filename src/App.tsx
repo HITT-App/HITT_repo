@@ -121,6 +121,7 @@ const WeeklyReport = lazy(() => import("./pages/WeeklyReport"));
 const BodyScan = lazy(() => import("./pages/BodyScan"));
 const Triathlon = lazy(() => import("./pages/Triathlon"));
 const GoalSetup = lazy(() => import("./pages/GoalSetup"));
+const ScheduleSetup = lazy(() => import("./pages/ScheduleSetup"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -236,6 +237,7 @@ const App = () => (
             <Route path="/log-meal" element={<ProtectedRoute><LogMeal /></ProtectedRoute>} />
             <Route path="/workout-onboarding" element={<ProtectedRoute><WorkoutOnboarding /></ProtectedRoute>} />
             <Route path="/goal-setup" element={<ProtectedRoute><GoalSetup /></ProtectedRoute>} />
+            <Route path="/schedule-setup" element={<ProtectedRoute><ScheduleSetup /></ProtectedRoute>} />
             <Route path="/workout-library" element={<ProtectedRoute><WorkoutLibrary /></ProtectedRoute>} />
             <Route path="/workout/:id" element={<ProtectedRoute><WorkoutDetail /></ProtectedRoute>} />
             <Route path="/workout-player/:id" element={<ProtectedRoute><WorkoutPlayer /></ProtectedRoute>} />
