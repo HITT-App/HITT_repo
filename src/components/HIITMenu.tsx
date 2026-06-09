@@ -74,7 +74,7 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
     ...(flags.nutrition_enabled ? [{
       title: "Nutrition",
       items: [
-        { icon: Apple, label: "Nutrition", path: "/nutrition" },
+        { icon: Apple, label: "Nutrition", path: "/nutrition-dashboard" },
         { icon: UtensilsCrossed, label: "Meals", path: "/browse-meals" },
       ],
     }] : []),
