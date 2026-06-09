@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-06-09] — Editable plan preview + reassuring loading messages
+
+- **Plan preview is now editable**: tap the swap icon on any session to choose a different workout from the full catalogue, or tap X to remove a session entirely
+- **Cycling loading messages** while your plan generates — "Coach is reviewing your goals…", "Balancing your training load…" etc. — with a note that it takes 15–20 seconds
+- **"Start training" disabled** if you remove all sessions from the plan
+- Log meal: category pre-filled from URL query param
+
 ## [2026-06-09] — Plan preview step + fix plan generation token crash
 
 - **"Build my plan" now works**: Fixed a crash where Gemini's thinking tokens were eating the entire token budget, truncating the plan JSON

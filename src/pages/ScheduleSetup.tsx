@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -39,6 +39,15 @@ const DEFAULT_DAYS: Record<number, number[]> = {
   6: [1, 2, 3, 4, 5, 6],
 };
 
+const LOADING_MESSAGES = [
+  'Coach is reviewing your goals…',
+  'Browsing the workout catalogue…',
+  'Balancing your training load…',
+  'Scheduling rest and recovery days…',
+  'Ordering sessions for best results…',
+  'Almost ready — putting finishing touches on…',
+];
+
 const TOTAL_STEPS = 4;
 
 type WorkoutDetails = {
@@ -69,7 +78,17 @@ export default function ScheduleSetup() {
   const [sessionMinutes, setSessionMinutes] = useState(0);
   const [preferredDays, setPreferredDays] = useState<number[]>([]);
   const [planPreview, setPlanPreview] = useState<PlanPreviewItem[] | null>(null);
+  const [availableWorkouts, setAvailableWorkouts] = useState<WorkoutDetails[]>([]);
   const [planGoal, setPlanGoal] = useState('');
+  const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
+
+  // Cycle loading messages while generating
+  useEffect(() => {
+    if (!saving) { setLoadingMsgIndex(0); return; }
+    const id = setInterval(() => setLoadingMsgIndex(i => (i + 1) % LOADING_MESSAGES.length), 2800);
+    return () => clearInterval(id);
+  }, [saving]);
 
   const advance = () => setStep(s => s + 1);
 
@@ -152,13 +171,15 @@ export default function ScheduleSetup() {
       const rows = mapToScheduleDates(planItems);
       if (!rows.length) throw new Error('No workouts returned');
 
-      const workoutIds = [...new Set(rows.map(r => r.workout_id))];
+      // Fetch ALL workouts (for the swap picker too)
       const { data: workouts } = await supabase
         .from('workouts')
         .select('id, title, duration_minutes, category, difficulty, equipment')
-        .in('id', workoutIds);
+        .order('category');
 
-      const workoutMap = new Map((workouts ?? []).map(w => [w.id, w as WorkoutDetails]));
+      const allWorkouts = (workouts ?? []) as WorkoutDetails[];
+      setAvailableWorkouts(allWorkouts);
+      const workoutMap = new Map(allWorkouts.map(w => [w.id, w]));
 
       const preview: PlanPreviewItem[] = rows.map(r => ({
         workout_id: r.workout_id,
@@ -181,6 +202,18 @@ export default function ScheduleSetup() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSwap = (index: number, workout: WorkoutDetails) => {
+    setPlanPreview(prev => prev
+      ? prev.map((item, i) => i === index ? { ...item, workout_id: workout.id, workout } : item)
+      : prev
+    );
+    setSwappingIndex(null);
+  };
+
+  const handleRemove = (index: number) => {
+    setPlanPreview(prev => prev ? prev.filter((_, i) => i !== index) : prev);
   };
 
   const handleConfirm = async () => {
@@ -299,37 +332,55 @@ export default function ScheduleSetup() {
         {/* Step 2 — preferred days */}
         {step === 2 && (
           <>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Which days work best?</h1>
-              <p className="text-sm text-muted-foreground mt-1">Pick exactly {daysPerWeek} day{daysPerWeek > 1 ? 's' : ''}.</p>
-            </div>
-            <div className="grid grid-cols-4 gap-2.5">
-              {WEEK_DAYS.map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => toggleDay(id)}
-                  disabled={!preferredDays.includes(id) && preferredDays.length >= daysPerWeek}
-                  className={cn(
-                    'py-3 rounded-2xl border text-sm font-semibold transition-all touch-manipulation',
-                    preferredDays.includes(id)
-                      ? 'border-primary bg-primary/[0.08] text-primary'
-                      : 'border-border bg-card text-foreground active:bg-secondary/60 disabled:opacity-40'
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            {saving ? (
+              /* Loading state with cycling messages */
+              <div className="flex flex-col items-center justify-center py-16 space-y-5">
+                <div className="relative w-16 h-16">
+                  <div className="absolute inset-0 rounded-full border-4 border-border" />
+                  <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                </div>
+                <div className="text-center space-y-1.5 px-4">
+                  <p className="font-semibold text-sm text-foreground transition-all duration-500">
+                    {LOADING_MESSAGES[loadingMsgIndex]}
+                  </p>
+                  <p className="text-xs text-muted-foreground">This takes about 15–20 seconds</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight">Which days work best?</h1>
+                  <p className="text-sm text-muted-foreground mt-1">Pick exactly {daysPerWeek} day{daysPerWeek > 1 ? 's' : ''}.</p>
+                </div>
+                <div className="grid grid-cols-4 gap-2.5">
+                  {WEEK_DAYS.map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => toggleDay(id)}
+                      disabled={!preferredDays.includes(id) && preferredDays.length >= daysPerWeek}
+                      className={cn(
+                        'py-3 rounded-2xl border text-sm font-semibold transition-all touch-manipulation',
+                        preferredDays.includes(id)
+                          ? 'border-primary bg-primary/[0.08] text-primary'
+                          : 'border-border bg-card text-foreground active:bg-secondary/60 disabled:opacity-40'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
 
-        {/* Step 3 — plan preview */}
+        {/* Step 3 — plan preview + editing */}
         {step === 3 && planPreview && (
           <>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Your plan</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {daysPerWeek} session{daysPerWeek > 1 ? 's' : ''} a week · {sessionMinutes} min each
+                {daysPerWeek} session{daysPerWeek > 1 ? 's' : ''} a week · {sessionMinutes} min each · tap <RefreshCw className="inline w-3 h-3" /> to swap
               </p>
             </div>
             <div className="space-y-2.5">
@@ -360,6 +411,20 @@ export default function ScheduleSetup() {
                         </span>
                       </div>
                     </div>
+                    <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                      <button
+                        onClick={() => setSwappingIndex(i)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors touch-manipulation"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleRemove(i)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors touch-manipulation"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -377,7 +442,7 @@ export default function ScheduleSetup() {
           {step === 3 ? (
             <Button
               className="w-full h-12 rounded-xl font-semibold"
-              disabled={saving}
+              disabled={saving || !planPreview?.length}
               onClick={handleConfirm}
             >
               {saving ? 'Starting…' : 'Start training'}
@@ -388,9 +453,59 @@ export default function ScheduleSetup() {
               disabled={!canBuild || saving}
               onClick={handleGenerate}
             >
-              {saving ? 'Building your plan…' : 'Preview my plan'}
+              {saving ? 'Working on it…' : 'Preview my plan'}
             </Button>
           )}
+        </div>
+      )}
+
+      {/* Swap sheet */}
+      {swappingIndex !== null && (
+        <div className="fixed inset-0 z-50 flex flex-col">
+          <div
+            className="flex-1 bg-black/40"
+            onClick={() => setSwappingIndex(null)}
+          />
+          <div className="bg-background rounded-t-3xl flex flex-col max-h-[70vh]" style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 8px)' }}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
+              <p className="font-semibold text-sm">Swap workout</p>
+              <button onClick={() => setSwappingIndex(null)} className="p-1 text-muted-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-5 py-3 space-y-2">
+              {availableWorkouts.map(w => {
+                const isCurrent = w.id === planPreview?.[swappingIndex]?.workout_id;
+                const equip = (w.equipment ?? []).filter(Boolean);
+                return (
+                  <button
+                    key={w.id}
+                    onClick={() => handleSwap(swappingIndex, w)}
+                    className={cn(
+                      'w-full flex items-start gap-3 p-3.5 rounded-2xl border text-left transition-all touch-manipulation',
+                      isCurrent ? 'border-primary bg-primary/[0.08]' : 'border-border bg-card active:bg-secondary/60'
+                    )}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className={cn('font-semibold text-sm', isCurrent ? 'text-primary' : 'text-foreground')}>{w.title}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {w.category && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">{w.category}</span>
+                        )}
+                        {w.duration_minutes && (
+                          <span className="text-[11px] text-muted-foreground">{w.duration_minutes} min</span>
+                        )}
+                        <span className="text-[11px] text-muted-foreground">
+                          {equip.length > 0 ? equip.join(', ') : 'Bodyweight'}
+                        </span>
+                      </div>
+                    </div>
+                    {isCurrent && <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>

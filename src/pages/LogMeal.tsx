@@ -35,7 +35,7 @@ export default function LogMeal() {
   const [mealName, setMealName] = useState(prefill?.name ?? '');
   const [servingAmount, setServingAmount] = useState(1);
   const [servingUnit, setServingUnit] = useState('plate');
-  const [category, setCategory] = useState('breakfast');
+  const [category, setCategory] = useState(() => new URLSearchParams(location.search).get('category') || 'breakfast');
   const [description, setDescription] = useState(
     useSwap && prefill ? `${prefill.veg_swap || prefill.vegan_swap || ''}` : ''
   );
@@ -114,8 +114,7 @@ export default function LogMeal() {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header
-          className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-3"
-          style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}
+          className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-4"
         >
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
@@ -160,8 +159,7 @@ export default function LogMeal() {
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <header
-        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-3"
-        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}
+        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-4"
       >
         <Button variant="ghost" size="icon" onClick={() => setShowMethodSelect(true)}>
           <ArrowLeft className="w-5 h-5" />
