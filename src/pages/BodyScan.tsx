@@ -63,7 +63,7 @@ const BodyScan = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
-  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [measurements, setMeasurements] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -138,34 +138,40 @@ const BodyScan = () => {
     setCountdown(timerSeconds);
   }, [timerSeconds, cameraReady, capturePhoto]);
 
+  const startStream = useCallback(async (mode: "user" | "environment") => {
+    const mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 1920 } }
+    });
+    setCameraReady(false);
+    setStream(mediaStream);
+    // Wire directly — don't wait for the useEffect, which can race on iOS WKWebView
+    if (videoRef.current) {
+      videoRef.current.srcObject = mediaStream;
+      videoRef.current.play().catch(() => {});
+    }
+    return mediaStream;
+  }, []);
+
   const openCamera = useCallback(async (mode?: "user" | "environment") => {
     const selectedMode = mode ?? facingMode;
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: selectedMode, width: { ideal: 1280 }, height: { ideal: 1920 } }
-      });
-      setCameraReady(false);
       setIsCameraOpen(true);
-      setStream(mediaStream);
+      await startStream(selectedMode);
     } catch {
       toast.error("Could not access camera. Please check permissions.");
     }
-  }, [facingMode]);
+  }, [facingMode, startStream]);
 
   const flipCamera = useCallback(async () => {
     if (stream) stream.getTracks().forEach(t => t.stop());
     const newMode = facingMode === "user" ? "environment" : "user";
     setFacingMode(newMode);
-    setCameraReady(false);
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: newMode, width: { ideal: 1280 }, height: { ideal: 1920 } }
-      });
-      setStream(mediaStream);
+      await startStream(newMode);
     } catch {
       toast.error("Could not switch camera.");
     }
-  }, [facingMode, stream]);
+  }, [facingMode, stream, startStream]);
 
   const resizeToDataUrl = (srcCanvas: HTMLCanvasElement, maxPx = 900): string => {
     const { width, height } = srcCanvas;
