@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-10] — Fix: "View my schedule" 404 and plan insert RLS
+
+- **"View my schedule" now navigates correctly** — was routing to `/schedule` (404); fixed to `/workout-schedule`
+- **RLS INSERT policies added** for `user_workout_plans` and `user_workout_plan_items` — original migration only had SELECT/UPDATE/DELETE, blocking plan saves entirely
+
 ## [2026-06-10] — Fix: plan save failure, button rename, wizard exit
 
 - **"Could not save your plan" fixed** — `user_workout_plans` insert was including a `workout_source` column that doesn't exist on that table; removed

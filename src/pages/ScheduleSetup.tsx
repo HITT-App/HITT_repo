@@ -325,7 +325,7 @@ export default function ScheduleSetup() {
     }
   };
 
-  const handleGoToSchedule = () => navigate('/schedule', { replace: true });
+  const handleGoToSchedule = () => navigate('/workout-schedule', { replace: true });
 
   const handleGoToCoach = () => {
     const daysLabel = `${daysPerWeek} day${daysPerWeek > 1 ? 's' : ''} a week`;
