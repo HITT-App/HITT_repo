@@ -17,6 +17,7 @@ export interface AIChatCompletionOptions {
   modalities?: string[];
   temperature?: number;
   max_tokens?: number;
+  timeout_ms?: number;
   [key: string]: unknown;
 }
 
@@ -38,8 +39,9 @@ export async function aiChatCompletion(
   options: AIChatCompletionOptions
 ): Promise<Response> {
   const { url, apiKey } = getConfig();
+  const { timeout_ms: timeoutMs, ...fetchOptions } = options;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 55000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs ?? 55000);
   try {
     return await fetch(`${url}/chat/completions`, {
       method: "POST",
@@ -48,7 +50,7 @@ export async function aiChatCompletion(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(options),
+      body: JSON.stringify(fetchOptions),
     });
   } finally {
     clearTimeout(timeoutId);
