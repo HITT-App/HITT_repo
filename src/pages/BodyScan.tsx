@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User, SwitchCamera, ArrowRight, Timer } from "lucide-react";
+import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User, SwitchCamera, ArrowRight, Timer, Trash2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -78,6 +78,7 @@ const BodyScan = () => {
   const [previousScans, setPreviousScans] = useState<any[]>([]);
   const [compareMode, setCompareMode] = useState(false);
   const [selectedCompare, setSelectedCompare] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Load historical body fat data for trends
   useEffect(() => {
@@ -85,7 +86,7 @@ const BodyScan = () => {
     const loadProgress = async () => {
       const { data } = await supabase
         .from("health_metrics")
-        .select("value, recorded_at, notes")
+        .select("id, value, recorded_at, notes")
         .eq("user_id", user.id)
         .eq("metric_type", "body_fat")
         .order("recorded_at", { ascending: true })
@@ -368,6 +369,14 @@ const BodyScan = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const deleteScan = async (id: string) => {
+    await supabase.from("health_metrics").delete().eq("id", id);
+    setPreviousScans(prev => prev.filter(s => s.id !== id));
+    setProgressData(prev => prev.filter((_, i) => previousScans[i]?.id !== id));
+    setConfirmDeleteId(null);
+    toast.success("Scan deleted");
   };
 
   const clearImage = () => {
@@ -706,14 +715,43 @@ const BodyScan = () => {
               <Card className="p-5 rounded-2xl">
                 <h3 className="font-semibold text-foreground mb-3">Scan History</h3>
                 <div className="space-y-2">
-                  {[...previousScans].reverse().slice(0, 10).map((scan, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-secondary/50">
-                      <div>
-                        <p className="text-sm font-medium">{scan.value}% body fat</p>
-                        <p className="text-[10px] text-muted-foreground">{format(new Date(scan.recorded_at), "MMM d, yyyy 'at' h:mm a")}</p>
+                  {[...previousScans].reverse().slice(0, 10).map((scan) => (
+                    <div key={scan.id} className="rounded-xl bg-secondary/50 overflow-hidden">
+                      <div className="flex items-center justify-between p-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{scan.value}% body fat</p>
+                          <p className="text-[10px] text-muted-foreground">{format(new Date(scan.recorded_at), "MMM d, yyyy 'at' h:mm a")}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {scan.notes && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{scan.notes.includes('AI') ? 'AI' : 'Manual'}</span>
+                          )}
+                          <button
+                            onClick={() => setConfirmDeleteId(confirmDeleteId === scan.id ? null : scan.id)}
+                            className="p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive active:scale-90 transition-all touch-manipulation"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      {scan.notes && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{scan.notes.includes('AI') ? 'AI' : 'Manual'}</span>
+                      {confirmDeleteId === scan.id && (
+                        <div className="flex items-center justify-between px-3 py-2 bg-destructive/10 border-t border-destructive/20">
+                          <p className="text-xs text-destructive font-medium">Delete this scan?</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-xs px-2.5 py-1 rounded-lg bg-muted text-muted-foreground font-medium touch-manipulation"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => deleteScan(scan.id)}
+                              className="text-xs px-2.5 py-1 rounded-lg bg-destructive text-destructive-foreground font-medium touch-manipulation"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </div>
                   ))}
