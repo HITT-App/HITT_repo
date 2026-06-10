@@ -66,7 +66,7 @@ export default function GoalSetup() {
   const canProceed = (): boolean => {
     switch (step) {
       case 0: return !!goalType;
-      case 1: return isEventPrep ? (!!eventName.trim() && !!eventDate) : !!timeline;
+      case 1: return isEventPrep ? (!!eventName.trim() && !!eventDate) : (!!timeline || !!targetDate);
       case 2: return !!fitnessLevel;
       case 3: return exerciseTypes.length > 0;
       case 4: return equipment.length > 0;
@@ -235,7 +235,7 @@ export default function GoalSetup() {
                 value={targetDate}
                 onChange={e => setTargetDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full h-12 px-3 rounded-xl border border-border bg-card text-foreground text-sm"
+                className="w-full h-12 px-4 rounded-2xl border border-border bg-card text-foreground text-sm"
               />
             </div>
           </>
@@ -267,7 +267,7 @@ export default function GoalSetup() {
                   value={eventDate}
                   onChange={e => setEventDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full h-12 px-3 rounded-xl border border-border bg-card text-foreground text-sm"
+                  className="w-full h-12 px-4 rounded-2xl border border-border bg-card text-foreground text-sm"
                 />
               </div>
             </div>

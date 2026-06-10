@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-10] — Fix: GoalSetup step 2 next button and date input styling
+
+- **Next arrow now enables when a specific target date is set** — previously required a timeline option to also be selected; now either is sufficient
+- **Date input width and corner radius match the timeline cards** — consistent `rounded-2xl` and padding across the whole step
+
 ## [2026-06-10] — Plan confirmation screen
 
 - **"Your plan is in your schedule" confirmation** — after tapping "Start training", a clear success screen shows how many sessions were added, with buttons to view the schedule or chat with the coach; no more silently landing on Jarvis
