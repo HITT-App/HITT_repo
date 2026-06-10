@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User, SwitchCamera, ArrowRight, Timer, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User, SwitchCamera, ArrowRight, Timer, Trash2, Share2, CheckCircle2, History } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -67,6 +67,7 @@ const BodyScan = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [measurements, setMeasurements] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [activeTab, setActiveTab] = useState("scan");
   const [poseIndex, setPoseIndex] = useState(0);
   const [timerSeconds, setTimerSeconds] = useState<0 | 3 | 5 | 10>(0);
@@ -361,6 +362,7 @@ const BodyScan = () => {
       }
       toast.success("Measurements saved!");
       setMeasurements({});
+      setIsSaved(true);
       if (returnTo) {
         setTimeout(() => navigate(returnTo), 800);
       }
@@ -382,6 +384,34 @@ const BodyScan = () => {
   const clearImage = () => {
     setImagePreview(null);
     setAnalysis(null);
+    setIsSaved(false);
+  };
+
+  const shareResults = async () => {
+    if (!analysis) return;
+    const md = analysis.muscleDevelopment;
+    const devLabel = (v: string) => v.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const text = [
+      `My HITT Body Scan 💪`,
+      ``,
+      `Body Fat: ${analysis.estimatedBodyFat}%  (${analysis.confidenceLevel} confidence)`,
+      `Body Type: ${devLabel(analysis.bodyType)}`,
+      `Posture: ${devLabel(analysis.posture)}`,
+      ``,
+      `Muscle Development:`,
+      `• Upper body: ${devLabel(md.upper_body)}`,
+      `• Core: ${devLabel(md.core)}`,
+      `• Lower body: ${devLabel(md.lower_body)}`,
+      ``,
+      ...(analysis.keyObservations.slice(0, 2).map(o => `• ${o}`)),
+      ``,
+      `Tracked with HITT App`,
+    ].join('\n');
+    try {
+      await navigator.share({ title: 'My Body Scan Results', text });
+    } catch {
+      // user cancelled or share not supported — silently ignore
+    }
   };
 
   const devLabel = (val: string) =>
@@ -599,9 +629,25 @@ const BodyScan = () => {
                   </ul>
                 </Card>
 
-                <Button onClick={saveMeasurements} disabled={isSaving} className="w-full gap-2 h-12">
-                  {isSaving ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</> : "Save Scan Results"}
-                </Button>
+                {isSaved ? (
+                  <div className="space-y-3">
+                    <Button disabled className="w-full gap-2 h-12 opacity-50 cursor-default">
+                      <CheckCircle2 className="w-5 h-5" /> Saved
+                    </Button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button variant="outline" className="gap-2 h-11" onClick={shareResults}>
+                        <Share2 className="w-4 h-4" /> Share results
+                      </Button>
+                      <Button variant="outline" className="gap-2 h-11" onClick={() => setActiveTab("progress")}>
+                        <History className="w-4 h-4" /> View history
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button onClick={saveMeasurements} disabled={isSaving} className="w-full gap-2 h-12">
+                    {isSaving ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</> : "Save Scan Results"}
+                  </Button>
+                )}
 
                 <div className="pb-24 pt-1">
                   <p className="text-xs text-center text-muted-foreground bg-secondary/60 rounded-xl px-3 py-2">
