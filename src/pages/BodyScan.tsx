@@ -111,7 +111,45 @@ const BodyScan = () => {
     }
   }, [stream]);
 
-  // Countdown tick — fires capturePhoto when it reaches 0
+  const resizeToDataUrl = (srcCanvas: HTMLCanvasElement, maxPx = 900): string => {
+    const { width, height } = srcCanvas;
+    const scale = Math.min(1, maxPx / Math.max(width, height));
+    const out = document.createElement("canvas");
+    out.width = Math.round(width * scale);
+    out.height = Math.round(height * scale);
+    out.getContext("2d")?.drawImage(srcCanvas, 0, 0, out.width, out.height);
+    return out.toDataURL("image/jpeg", 0.8);
+  };
+
+  // closeCamera must be defined before capturePhoto (which calls it)
+  const closeCamera = useCallback(() => {
+    setCountdown(null);
+    shouldCaptureRef.current = false;
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      setStream(null);
+    }
+    setIsCameraOpen(false);
+  }, [stream]);
+
+  const capturePhoto = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    if (!video.videoWidth || !video.videoHeight) {
+      toast.error("Camera not ready yet — wait a moment and try again.");
+      return;
+    }
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    setImagePreview(resizeToDataUrl(canvas));
+    closeCamera();
+  }, [closeCamera]);
+
+  // Countdown tick — capturePhoto defined above, no temporal dead zone
   useEffect(() => {
     if (countdown === null) {
       if (shouldCaptureRef.current) {
@@ -172,43 +210,6 @@ const BodyScan = () => {
       toast.error("Could not switch camera.");
     }
   }, [facingMode, stream, startStream]);
-
-  const resizeToDataUrl = (srcCanvas: HTMLCanvasElement, maxPx = 900): string => {
-    const { width, height } = srcCanvas;
-    const scale = Math.min(1, maxPx / Math.max(width, height));
-    const out = document.createElement("canvas");
-    out.width = Math.round(width * scale);
-    out.height = Math.round(height * scale);
-    out.getContext("2d")?.drawImage(srcCanvas, 0, 0, out.width, out.height);
-    return out.toDataURL("image/jpeg", 0.8);
-  };
-
-  const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
-    const video = videoRef.current;
-    if (!video.videoWidth || !video.videoHeight) {
-      toast.error("Camera not ready yet — wait a moment and try again.");
-      return;
-    }
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0);
-    setImagePreview(resizeToDataUrl(canvas));
-    closeCamera();
-  }, []);
-
-  const closeCamera = useCallback(() => {
-    setCountdown(null);
-    shouldCaptureRef.current = false;
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      setStream(null);
-    }
-    setIsCameraOpen(false);
-  }, [stream]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
