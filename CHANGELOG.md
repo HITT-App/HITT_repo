@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-10] — Fix: home screen crash on AI-generated workouts
+
+- **ScheduleCard and WorkoutPlanCard no longer crash** when AI-generated scheduled workouts are present — both were accessing `workout.id/title` without null-checking; AI workouts have `workout_id: null` so the join returns null
+- Both cards now use `workout_title` and `estimated_duration_minutes` as fallbacks
+- Tapping an AI workout on the home screen now routes to GymTimer correctly
+
 ## [2026-06-10] — Fix: "View my schedule" 404 and plan insert RLS
 
 - **"View my schedule" now navigates correctly** — was routing to `/schedule` (404); fixed to `/workout-schedule`

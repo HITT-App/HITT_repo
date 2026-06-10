@@ -7,7 +7,10 @@ import { useAuth } from "@/hooks/useAuth"
 type ScheduledWorkout = {
   id: string
   scheduled_date: string
-  workout: { id: string; title: string; duration_minutes: number }
+  workout_source: string
+  workout_title: string | null
+  estimated_duration_minutes: number | null
+  workout: { id: string; title: string; duration_minutes: number } | null
 }
 
 function todayStr() {
@@ -50,7 +53,7 @@ export function ScheduleCard() {
     const load = async () => {
       const { data } = await supabase
         .from('scheduled_workouts')
-        .select('id, scheduled_date, workout:workouts(id, title, duration_minutes)')
+        .select('id, scheduled_date, workout_source, workout_title, estimated_duration_minutes, workout:workouts(id, title, duration_minutes)')
         .eq('user_id', user.id)
         .gte('scheduled_date', todayStr())
         .order('scheduled_date', { ascending: true })
@@ -98,22 +101,29 @@ export function ScheduleCard() {
       </div>
       <div className="bg-card border border-border/60 rounded-[18px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.4)]">
         <div className="space-y-2">
-          {items.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => navigate(`/workout/${item.workout.id}`)}
-              className="w-full flex items-center gap-3 py-2 active:opacity-70 transition-opacity text-left"
-            >
-              <DayBadge dateStr={item.scheduled_date} />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground text-sm truncate">{item.workout.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {getDayLabel(item.scheduled_date)} · {item.workout.duration_minutes}min
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-            </button>
-          ))}
+          {items.map((item) => {
+            const title = item.workout?.title ?? item.workout_title ?? 'Workout'
+            const duration = item.workout?.duration_minutes ?? item.estimated_duration_minutes
+            const handleTap = () => item.workout_source === 'ai_generated'
+              ? navigate(`/gym-timer?scheduled_id=${item.id}`)
+              : navigate(`/workout/${item.workout?.id}`)
+            return (
+              <button
+                key={item.id}
+                onClick={handleTap}
+                className="w-full flex items-center gap-3 py-2 active:opacity-70 transition-opacity text-left"
+              >
+                <DayBadge dateStr={item.scheduled_date} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground text-sm truncate">{title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getDayLabel(item.scheduled_date)}{duration ? ` · ${duration}min` : ''}
+                  </p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+            )
+          })}
         </div>
         {items.length === 1 && (
           <button

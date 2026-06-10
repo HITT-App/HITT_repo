@@ -10,12 +10,15 @@ interface ScheduledWorkout {
   id: string;
   scheduled_date: string;
   status: string;
+  workout_source: string;
+  workout_title: string | null;
+  estimated_duration_minutes: number | null;
   workout: {
     id: string;
     title: string;
     duration_minutes: number;
     calories_burned: number;
-  };
+  } | null;
 }
 
 export function WorkoutPlanCard() {
@@ -37,7 +40,7 @@ export function WorkoutPlanCard() {
     const { data } = await supabase
       .from('scheduled_workouts')
       .select(`
-        id, scheduled_date, status,
+        id, scheduled_date, status, workout_source, workout_title, estimated_duration_minutes,
         workout:workouts (id, title, duration_minutes, calories_burned)
       `)
       .eq('user_id', user?.id)
@@ -83,7 +86,9 @@ export function WorkoutPlanCard() {
             variant="secondary"
             className="bg-white/20 hover:bg-white/30 active:bg-white/40 text-white border-0 touch-manipulation flex-shrink-0 ml-2"
             onClick={() => todaysWorkout 
-              ? navigate(`/workout-player/${todaysWorkout.workout.id}`)
+              ? (todaysWorkout.workout_source === 'ai_generated'
+                  ? navigate(`/gym-timer?scheduled_id=${todaysWorkout.id}`)
+                  : navigate(`/workout-player/${todaysWorkout.workout?.id}`))
               : navigate('/workout-library')
             }
           >
