@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User, SwitchCamera, ArrowRight } from "lucide-react";
+import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User, SwitchCamera, ArrowRight, Timer } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -69,6 +69,9 @@ const BodyScan = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("scan");
   const [poseIndex, setPoseIndex] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState<0 | 3 | 5 | 10>(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const shouldCaptureRef = useRef(false);
 
   // Progress data
   const [progressData, setProgressData] = useState<any[]>([]);
@@ -107,6 +110,33 @@ const BodyScan = () => {
       videoRef.current.play().catch(() => {});
     }
   }, [stream]);
+
+  // Countdown tick — fires capturePhoto when it reaches 0
+  useEffect(() => {
+    if (countdown === null) {
+      if (shouldCaptureRef.current) {
+        shouldCaptureRef.current = false;
+        capturePhoto();
+      }
+      return;
+    }
+    if (countdown === 0) {
+      shouldCaptureRef.current = true;
+      setCountdown(null);
+      return;
+    }
+    const t = setTimeout(() => setCountdown(c => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(t);
+  }, [countdown, capturePhoto]);
+
+  const cycleTimer = () =>
+    setTimerSeconds(t => (t === 0 ? 3 : t === 3 ? 5 : t === 5 ? 10 : 0));
+
+  const handleShutter = useCallback(() => {
+    if (!cameraReady) return;
+    if (timerSeconds === 0) { capturePhoto(); return; }
+    setCountdown(timerSeconds);
+  }, [timerSeconds, cameraReady, capturePhoto]);
 
   const openCamera = useCallback(async (mode?: "user" | "environment") => {
     const selectedMode = mode ?? facingMode;
@@ -165,6 +195,8 @@ const BodyScan = () => {
   }, []);
 
   const closeCamera = useCallback(() => {
+    setCountdown(null);
+    shouldCaptureRef.current = false;
     if (stream) {
       stream.getTracks().forEach(t => t.stop());
       setStream(null);
@@ -400,6 +432,18 @@ const BodyScan = () => {
                       />
                     ))}
                   </div>
+                  {/* Countdown overlay */}
+                  {countdown !== null && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <span
+                        key={countdown}
+                        className="text-white font-black animate-in zoom-in-50 duration-200"
+                        style={{ fontSize: 128, lineHeight: 1, textShadow: '0 0 48px rgba(0,0,0,0.9)' }}
+                      >
+                        {countdown}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-4">
@@ -409,11 +453,20 @@ const BodyScan = () => {
                   <Button variant="outline" size="icon" onClick={flipCamera} className="rounded-full bg-white/20 border-white/30 text-white hover:bg-white/30">
                     <SwitchCamera className="w-5 h-5" />
                   </Button>
-                  <button onClick={capturePhoto} disabled={!cameraReady} className="w-16 h-16 rounded-full border-4 border-white bg-white/20 hover:bg-white/40 transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
+                  <button onClick={handleShutter} disabled={!cameraReady || countdown !== null} className="w-16 h-16 rounded-full border-4 border-white bg-white/20 hover:bg-white/40 transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
                     <div className="w-12 h-12 rounded-full bg-white" />
                   </button>
-                  <Button variant="outline" size="icon" onClick={() => setPoseIndex((poseIndex + 1) % POSE_GUIDES.length)} className="rounded-full bg-white/20 border-white/30 text-white hover:bg-white/30">
-                    <RotateCcw className="w-5 h-5" />
+                  {/* Timer button — cycles Off → 3s → 5s → 10s */}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={cycleTimer}
+                    disabled={countdown !== null}
+                    className={`rounded-full border-white/30 text-white hover:bg-white/30 ${timerSeconds > 0 ? 'bg-primary/70 border-primary/60' : 'bg-white/20'}`}
+                  >
+                    {timerSeconds === 0
+                      ? <Timer className="w-5 h-5" />
+                      : <span className="text-xs font-bold">{timerSeconds}s</span>}
                   </Button>
                 </div>
               </Card>
