@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, RefreshCw, X, Zap, Flame, Feather } from 'lucide-react';
+import { ArrowLeft, Check, RefreshCw, X, Zap, Flame, Feather, CalendarCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -87,6 +87,7 @@ export default function ScheduleSetup() {
 
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
 
   const [daysPerWeek, setDaysPerWeek] = useState(0);
@@ -317,13 +318,7 @@ export default function ScheduleSetup() {
         .insert(scheduleInserts as any);
       if (schedErr) throw schedErr;
 
-      const daysLabel = `${daysPerWeek} day${daysPerWeek > 1 ? 's' : ''} a week`;
-      const greetPrompt = `[POST_PLAN_SAVED] The user's workout plan is confirmed and already saved to their schedule — no scheduling action needed. Goal: ${goalText || planGoal}. Schedule: ${daysLabel}, ${sessionMinutes} min/session. Give one warm celebratory sentence acknowledging their plan is live. Then ask what they want to focus on first. No action markers, no lists.`;
-
-      navigate(returnTo, {
-        replace: true,
-        state: { tab: 'chat', prefillMessage: greetPrompt },
-      });
+      setConfirmed(true);
     } catch (err) {
       console.error('[ScheduleSetup] Confirm failed:', err);
       toast.error('Could not save your plan. Please try again.');
@@ -331,10 +326,47 @@ export default function ScheduleSetup() {
     }
   };
 
+  const handleGoToSchedule = () => navigate('/schedule', { replace: true });
+
+  const handleGoToCoach = () => {
+    const daysLabel = `${daysPerWeek} day${daysPerWeek > 1 ? 's' : ''} a week`;
+    const greetPrompt = `[POST_PLAN_SAVED] The user's workout plan is confirmed and saved to their schedule. Goal: ${goalText || planGoal}. Schedule: ${daysLabel}, ${sessionMinutes} min/session. Give one warm celebratory sentence acknowledging their plan is live. Then ask what they want to focus on first. No action markers, no lists.`;
+    navigate(returnTo, { replace: true, state: { tab: 'chat', prefillMessage: greetPrompt } });
+  };
+
   const handleBack = () => {
     if (step > 0) setStep(s => s - 1);
     else navigate(-1);
   };
+
+  if (confirmed) {
+    return (
+      <div className="fixed inset-0 bg-background flex flex-col items-center justify-center px-6 text-center space-y-8"
+        style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 24px)', paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 24px)' }}
+      >
+        <div className="w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center">
+          <CalendarCheck className="w-12 h-12 text-primary" />
+        </div>
+        <div className="space-y-3">
+          <h1 className="text-2xl font-bold tracking-tight">Your plan is in your schedule</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {planPreview?.length} sessions added to your calendar. Open the Schedule tab to see them, or chat with your coach to get started.
+          </p>
+        </div>
+        <div className="w-full space-y-3">
+          <Button className="w-full h-12 rounded-xl font-semibold" onClick={handleGoToSchedule}>
+            View my schedule
+          </Button>
+          <button
+            className="w-full h-11 text-sm text-muted-foreground font-medium active:opacity-70 transition-opacity touch-manipulation"
+            onClick={handleGoToCoach}
+          >
+            Chat with my coach
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-background flex flex-col">

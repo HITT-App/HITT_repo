@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-10] — Plan confirmation screen
+
+- **"Your plan is in your schedule" confirmation** — after tapping "Start training", a clear success screen shows how many sessions were added, with buttons to view the schedule or chat with the coach; no more silently landing on Jarvis
+
 ## [2026-06-10] — AI-generated workout plans with full exercise breakdowns
 
 - **Plans are now fully AI-generated** — no more picking from a static catalogue; the AI builds bespoke sessions based on your goal, fitness level, equipment, preferred days, and session length
