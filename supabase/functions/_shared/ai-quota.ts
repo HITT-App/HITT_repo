@@ -32,7 +32,7 @@ export const DEFAULT_QUOTAS: Record<string, number> = {
   activity_image: 30,
   // 5F — review these limits before production; 10 plans/day is generous at scale
   generate_ai_workout: 20,
-  generate_ai_workout_plan: 10,
+  generate_ai_workout_plan: 50,
 };
 
 export interface QuotaResult {

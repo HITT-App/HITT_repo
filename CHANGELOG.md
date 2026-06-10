@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-10] — Fix: plan generation used wrong timeline and ignored body scan
+
+- **Timeline now read correctly from the user's saved goal** — was always defaulting to 4 weeks due to a data extraction bug; now reflects 8 weeks / 3 months / 6 months / event date as set in the goal wizard
+- **Body scan summary now passed to plan generator** — physique data from the body scan will feed into the AI prompt as intended
+- **Daily plan generation quota raised** — internal limit increased from 10 to 50 per day to accommodate testing
+
 ## [2026-06-10] — Fix: GoalSetup step 2 next button and date input styling
 
 - **Next arrow now enables when a specific target date is set** — previously required a timeline option to also be selected; now either is sufficient

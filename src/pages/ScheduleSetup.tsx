@@ -148,11 +148,11 @@ export default function ScheduleSetup() {
     const fitnessLevel = prefs?.fitness_level ?? '';
     const equipment: string[] = prefs?.available_equipment ?? [];
     const bodyAreas: string[] = prefs?.target_body_areas ?? [];
-    const timeline: string = activeGoal?.data?.target_text?.includes('ongoing')
+    const timeline: string = activeGoal?.target_text?.includes('ongoing')
       ? 'ongoing'
-      : activeGoal?.data?.target_text?.match(/(\d+ (?:weeks?|months?))/i)?.[1] ?? '4 weeks';
-    const eventDate: string | null = activeGoal?.data?.target_date ?? null;
-    const userMemory = profile?.data?.user_memory ?? {};
+      : activeGoal?.target_text?.match(/(\d+ (?:weeks?|months?))/i)?.[1] ?? '4 weeks';
+    const eventDate: string | null = activeGoal?.target_date ?? null;
+    const userMemory = profile?.user_memory ?? {};
     const bodyScanSummary: string = userMemory?.physique ?? '';
 
     return {
