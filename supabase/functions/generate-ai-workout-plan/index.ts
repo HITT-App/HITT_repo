@@ -61,6 +61,15 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
 
+  try {
+    return await handleRequest(req);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return json({ error: `Unhandled error: ${msg}` }, 500);
+  }
+});
+
+async function handleRequest(req: Request): Promise<Response> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -221,7 +230,7 @@ serve(async (req) => {
   });
 
   return json({ plan });
-});
+}
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -286,17 +295,37 @@ function buildUserPrompt(p: {
 }
 
 function parsePlanJSON(text: string): PlanShape | null {
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  try {
-    const outer = JSON.parse(cleaned);
-    const content = outer?.choices?.[0]?.message?.content;
-    const inner = typeof content === "string"
-      ? JSON.parse(content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""))
-      : outer;
-    return inner?.plan ?? null;
-  } catch {
+  function tryJ(s: string): any {
+    const c = s.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/m, "").trim();
+    try { return JSON.parse(c); } catch { return null; }
+  }
+
+  function extractPlan(obj: any): PlanShape | null {
+    if (!obj) return null;
+    if (obj?.plan?.workouts) return obj.plan as PlanShape;
+    if (Array.isArray(obj?.workouts)) return obj as PlanShape;
     return null;
   }
+
+  // 1. Parse raw text directly
+  const outer = tryJ(text);
+  if (outer) {
+    // OpenAI wrapper: choices[0].message.content
+    const content = outer?.choices?.[0]?.message?.content;
+    const inner = typeof content === "string" ? (tryJ(content) ?? outer) : outer;
+    const plan = extractPlan(inner);
+    if (plan) return plan;
+  }
+
+  // 2. Regex fallback: pull the outermost JSON object from the text
+  const match = text.match(/\{[\s\S]*\}/);
+  if (match) {
+    const extracted = tryJ(match[0]);
+    const plan = extractPlan(extracted);
+    if (plan) return plan;
+  }
+
+  return null;
 }
 
 type ExerciseShape = {
