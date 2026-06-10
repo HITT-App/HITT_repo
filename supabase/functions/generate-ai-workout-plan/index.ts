@@ -52,7 +52,7 @@ Rules:
 - Respect available equipment — bodyweight only if no equipment listed
 - Use intensity='low' for recovery/mobility, 'moderate' for standard sessions, 'high' for HIIT/heavy lifting
 - Each exercise must have EITHER sets+reps OR duration_seconds — not both, not neither
-- 4–8 exercises per workout
+- Exactly 4 exercises per workout — no more, no less
 - order_index starts at 1 per workout
 - Always set thumbnail_url and video_url to null
 - 'why' must be one sentence, max 12 words, specific to position in the plan (not generic)`;
@@ -165,7 +165,7 @@ async function handleRequest(req: Request): Promise<Response> {
       { role: "user", content: userPrompt },
     ],
     response_format: { type: "json_object" },
-    max_tokens: 16000,
+    max_tokens: 32000,
     timeout_ms: 110000,
   });
 
@@ -303,7 +303,7 @@ function parsePlanJSON(text: string): PlanShape | null {
   function extractPlan(obj: any): PlanShape | null {
     if (!obj) return null;
     if (obj?.plan?.workouts) return obj.plan as PlanShape;
-    if (Array.isArray(obj?.workouts)) return obj as PlanShape;
+    if (Array.isArray(obj?.workouts) && obj?.workouts.length > 0) return obj as PlanShape;
     return null;
   }
 
@@ -311,9 +311,10 @@ function parsePlanJSON(text: string): PlanShape | null {
   const outer = tryJ(text);
   if (outer) {
     // OpenAI wrapper: choices[0].message.content
-    const content = outer?.choices?.[0]?.message?.content;
-    const inner = typeof content === "string" ? (tryJ(content) ?? outer) : outer;
-    const plan = extractPlan(inner);
+    // content may be a string (needs parsing) OR already a parsed object (json_object mode)
+    const rawContent = outer?.choices?.[0]?.message?.content;
+    const inner = typeof rawContent === "string" ? (tryJ(rawContent) ?? null) : rawContent;
+    const plan = extractPlan(inner) ?? extractPlan(outer);
     if (plan) return plan;
   }
 
