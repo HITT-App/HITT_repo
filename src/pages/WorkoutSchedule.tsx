@@ -6,7 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 import {
@@ -39,7 +38,6 @@ export default function WorkoutSchedule() {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const [view, setView] = useState<'daily' | 'weekly'>('daily');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -174,8 +172,6 @@ export default function WorkoutSchedule() {
     );
   };
 
-  const timeSlots = Array.from({ length: 12 }, (_, i) => i + 7); // 7am to 6pm
-
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -183,9 +179,7 @@ export default function WorkoutSchedule() {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold">
-          Workout Schedule ({view === 'daily' ? 'Daily' : 'Weekly'})
-        </h1>
+        <h1 className="text-lg font-semibold">Workout Schedule</h1>
         <Button size="sm" onClick={() => window.dispatchEvent(new CustomEvent('hitt:open-jarvis', { detail: { prefillMessage: "I'd like to add a workout to my schedule" } }))} className="gap-1 h-8 px-3 text-xs">
           <Plus className="w-3.5 h-3.5" /> Add
         </Button>
@@ -235,134 +229,74 @@ export default function WorkoutSchedule() {
         })}
       </div>
 
-      <Tabs value={view} onValueChange={(v) => setView(v as 'daily' | 'weekly')} className="p-4">
-        <TabsList className="grid grid-cols-2 mb-4">
-          <TabsTrigger value="daily">Daily</TabsTrigger>
-          <TabsTrigger value="weekly">Weekly</TabsTrigger>
-        </TabsList>
+      <div className="p-4">
+        <ScrollArea className="h-[calc(100vh-280px)]">
+          <div className="space-y-4">
+            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => {
+              const date = weekDays[(index + 1) % 7];
+              const dayWorkouts = getWorkoutsForDate(date);
 
-        <TabsContent value="daily" className="mt-0">
-          <ScrollArea className="h-[calc(100vh-350px)]">
-            <div className="relative">
-              {timeSlots.map(hour => {
-                const workoutsAtHour = scheduledWorkouts.filter(w => {
-                  if (!isSameDay(parseISO(w.scheduled_date), currentDate)) return false;
-                  if (!w.scheduled_time) return false;
-                  const workoutHour = parseInt(w.scheduled_time.split(':')[0]);
-                  return workoutHour === hour;
-                });
-
-                return (
-                  <div key={hour} className="flex min-h-[80px] border-b border-border/50">
-                    <div className="w-16 py-2 text-xs text-muted-foreground text-right pr-3 flex-shrink-0">
-                      {hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`}
-                    </div>
-                    <div className="flex-1 py-2 px-2 relative">
-                      {workoutsAtHour.map(workout => (
+              return (
+                <div key={day}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium">{day}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-primary"
+                      onClick={() => window.dispatchEvent(new CustomEvent('hitt:open-jarvis', { detail: { prefillMessage: `I'd like to add a workout for ${day}` } }))}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  {dayWorkouts.length > 0 ? (
+                    <div className="space-y-2">
+                      {dayWorkouts.map(workout => (
                         <Card
                           key={workout.id}
-                          className="mb-2 bg-primary/10 border-primary/20 cursor-pointer"
-                          onClick={() => workout.workout_id && navigate(`/workout/${workout.workout_id}`)}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            if (workout.workout_source === 'ai_generated') {
+                              navigate(`/gym-timer?scheduled_id=${workout.id}`)
+                            } else if (workout.workout_id) {
+                              navigate(`/workout-player/${workout.workout_id}`)
+                            }
+                          }}
                         >
                           <CardContent className="p-3 flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
+                            <div className="w-14 h-14 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
                               {workout.workout?.thumbnail_url ? (
                                 <img src={workout.workout.thumbnail_url} alt="" className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                  <Dumbbell className="w-5 h-5 text-muted-foreground" />
+                                  <Dumbbell className="w-6 h-6 text-muted-foreground" />
                                 </div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate">{workout.workout_title ?? workout.workout?.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {(workout.estimated_duration_minutes ?? workout.workout?.duration_minutes) ?? '—'}min
-                                {workout.workout?.category ? ` · ${workout.workout.category}` : ''}
-                              </p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Clock className="w-3 h-3" />
+                                <span>{(workout.estimated_duration_minutes ?? workout.workout?.duration_minutes) ?? '—'}min</span>
+                                {workout.workout?.category && <><span>·</span><span className="capitalize">{workout.workout.category}</span></>}
+                              </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="flex-shrink-0"
-                              onClick={(e) => openActions(workout, e)}
-                            >
+                            <Button variant="ghost" size="icon" onClick={(e) => openActions(workout, e)}>
                               <MoreHorizontal className="w-4 h-4" />
                             </Button>
                           </CardContent>
                         </Card>
                       ))}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="weekly" className="mt-0">
-          <ScrollArea className="h-[calc(100vh-350px)]">
-            <div className="space-y-4">
-              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => {
-                const date = weekDays[(index + 1) % 7];
-                const dayWorkouts = getWorkoutsForDate(date);
-
-                return (
-                  <div key={day}>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-medium">{day}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-primary"
-                        onClick={() => window.dispatchEvent(new CustomEvent('hitt:open-jarvis', { detail: { prefillMessage: `I'd like to add a workout for ${day}` } }))}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                    {dayWorkouts.length > 0 ? (
-                      <div className="space-y-2">
-                        {dayWorkouts.map(workout => (
-                          <Card
-                            key={workout.id}
-                            className="cursor-pointer"
-                            onClick={() => workout.workout_id && navigate(`/workout/${workout.workout_id}`)}
-                          >
-                            <CardContent className="p-3 flex items-center gap-3">
-                              <div className="w-14 h-14 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
-                                {workout.workout?.thumbnail_url ? (
-                                  <img src={workout.workout.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Dumbbell className="w-6 h-6 text-muted-foreground" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{workout.workout_title ?? workout.workout?.title}</p>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <Clock className="w-3 h-3" />
-                                  <span>{(workout.estimated_duration_minutes ?? workout.workout?.duration_minutes) ?? '—'}min</span>
-                                  {workout.workout?.category && <><span>·</span><span className="capitalize">{workout.workout.category}</span></>}
-                                </div>
-                              </div>
-                              <Button variant="ghost" size="icon" onClick={(e) => openActions(workout, e)}>
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground py-3">No workouts scheduled</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-3">No workouts scheduled</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </div>
 
       {/* Action sheet — Move or Delete */}
       <Sheet open={showActionSheet} onOpenChange={setShowActionSheet}>

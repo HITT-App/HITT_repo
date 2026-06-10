@@ -137,27 +137,6 @@ const GymTimer = () => {
     if (settings.autoVibrate) navigator.vibrate?.(50);
   }, [isPaused, elapsed, settings.autoVibrate]);
 
-  // Hold to finish
-  const handleHoldStart = useCallback(() => {
-    setIsHolding(true);
-    setHoldProgress(0);
-    let progress = 0;
-    holdTimerRef.current = setInterval(() => {
-      progress += 2;
-      setHoldProgress(progress);
-      if (progress >= 100) {
-        clearInterval(holdTimerRef.current!);
-        finishActivity();
-      }
-    }, 30);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleHoldEnd = useCallback(() => {
-    setIsHolding(false);
-    setHoldProgress(0);
-    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
-  }, []);
-
   const finishActivity = useCallback(async () => {
     setShowCompleted(true);
     if (settings.autoVibrate) navigator.vibrate?.([100, 50, 100, 50, 200]);
@@ -207,6 +186,27 @@ const GymTimer = () => {
       toast.error("Failed to save activity");
     }
   }, [isAIMode, aiContent, user, elapsed, calories, scheduledId, activityType, counter, counterLabel, logActivity, settings.autoVibrate, recordWorkout]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Hold to finish
+  const handleHoldStart = useCallback(() => {
+    setIsHolding(true);
+    setHoldProgress(0);
+    let progress = 0;
+    holdTimerRef.current = setInterval(() => {
+      progress += 2;
+      setHoldProgress(progress);
+      if (progress >= 100) {
+        clearInterval(holdTimerRef.current!);
+        finishActivity();
+      }
+    }, 30);
+  }, [finishActivity]);
+
+  const handleHoldEnd = useCallback(() => {
+    setIsHolding(false);
+    setHoldProgress(0);
+    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+  }, []);
 
   // Heart rate zone visual (decorative)
   const hrZone = elapsed < 300 ? "Warm Up" : elapsed < 1200 ? "Fat Burn" : elapsed < 2400 ? "Cardio" : "Peak";
