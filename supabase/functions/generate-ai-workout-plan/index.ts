@@ -9,25 +9,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are an expert fitness coach. Generate a multi-day workout plan tailored to the user's context.
+const SYSTEM_PROMPT = `You are an expert fitness coach. Generate a personalised multi-session workout plan.
 
-Output must be valid JSON matching EXACTLY this shape:
+Output ONLY valid JSON matching EXACTLY this shape — no commentary, no markdown fences:
 {
   "plan": {
-    "title": "<plan name — 3-6 words>",
-    "goal": "<1 sentence describing what this plan achieves>",
-    "start_date": "<YYYY-MM-DD — use the startDate from the request>",
+    "title": "<plan name, 3–6 words>",
+    "goal": "<one sentence: what this plan achieves>",
+    "start_date": "<YYYY-MM-DD from the request>",
     "workouts": [
       {
         "scheduled_date": "<YYYY-MM-DD>",
-        "title": "<workout title — 2-5 words>",
-        "description": "<1-2 sentences>",
+        "title": "<workout title, 2–5 words>",
+        "description": "<1–2 sentences>",
+        "why": "<one sentence, max 12 words, explaining why this session fits here — e.g. 'Kick off the week with a full-body metabolic burst.' or 'Easy session after yesterday's hard leg day.'>",
+        "intensity": "<low | moderate | high>",
         "estimated_duration_minutes": <integer>,
         "estimated_calories": <integer>,
         "exercises": [
           {
             "title": "<exercise name>",
-            "description": "<form cue, max 1 sentence, or null>",
+            "description": "<form cue, 1 sentence max, or null>",
             "duration_seconds": <integer or null>,
             "sets": <integer or null>,
             "reps": <integer or null>,
@@ -43,15 +45,17 @@ Output must be valid JSON matching EXACTLY this shape:
 }
 
 Rules:
-- Generate EXACTLY the requested number of workouts (daysPerWeek count)
-- Distribute focus across days (e.g. for 4 days: legs, push, pull, full body — adapt to goal)
-- Avoid training the same muscle group on consecutive days
-- Schedule workouts across the week starting from startDate, skipping rest days sensibly
+- Schedule workouts ONLY on the user's preferred days of the week (supplied in the request)
+- Spread sessions across the full plan period — not all in week 1
+- Avoid training the same muscle group on back-to-back days
+- Match difficulty to the user's fitness level — beginners get simpler progressions, athletes get higher volume
+- Respect available equipment — bodyweight only if no equipment listed
+- Use intensity='low' for recovery/mobility, 'moderate' for standard sessions, 'high' for HIIT/heavy lifting
 - Each exercise must have EITHER sets+reps OR duration_seconds — not both, not neither
+- 4–8 exercises per workout
 - order_index starts at 1 per workout
-- Aim for 4–8 exercises per workout
 - Always set thumbnail_url and video_url to null
-- Output ONLY the JSON — no commentary, no markdown fences`;
+- 'why' must be one sentence, max 12 words, specific to position in the plan (not generic)`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -63,16 +67,14 @@ serve(async (req) => {
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return json({ error: "Unauthorized" }, 401);
   }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
   const admin = createClient(supabaseUrl, supabaseServiceKey);
 
   const { data: userData, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-  if (authError || !userData?.user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
+  if (authError || !userData?.user) return json({ error: "Unauthorized" }, 401);
   const userId = userData.user.id;
 
   const quota = await checkAIQuota(admin, userId, {
@@ -81,54 +83,71 @@ serve(async (req) => {
   });
   if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
 
-  let intent = "";
-  let daysPerWeek = 3;
-  let startDate = "";
-  let customMemory = "";
-  let customResponseStyle = "";
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    intent = body.intent ?? "";
-    daysPerWeek = body.daysPerWeek ?? 3;
-    startDate = body.startDate ?? "";
-    customMemory = body.customMemory ?? "";
-    customResponseStyle = body.customResponseStyle ?? "";
+    body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return json({ error: "Invalid JSON body" }, 400);
   }
 
-  if (!intent) {
-    return new Response(JSON.stringify({ error: "intent is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  // Wizard-supplied inputs (take precedence over DB prefs)
+  const goal = (body.goal as string) ?? "";
+  const fitnessLevel = (body.fitnessLevel as string) ?? "";
+  const daysPerWeek = typeof body.daysPerWeek === "number" ? body.daysPerWeek : 3;
+  const sessionMinutes = typeof body.sessionMinutes === "number" ? body.sessionMinutes : 30;
+  const preferredDays = Array.isArray(body.preferredDays) ? (body.preferredDays as number[]) : [];
+  const equipment = Array.isArray(body.equipment) ? (body.equipment as string[]) : [];
+  const bodyAreas = Array.isArray(body.bodyAreas) ? (body.bodyAreas as string[]) : [];
+  const timeline = (body.timeline as string) ?? "4 weeks";
+  const eventDate = (body.eventDate as string) ?? null;
+  const bodyScanSummary = (body.bodyScanSummary as string) ?? "";
+  const startDate = (body.startDate as string) ?? new Date().toISOString().split("T")[0];
+  // Legacy Jarvis flow
+  const intent = (body.intent as string) ?? "";
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    return json({ error: "startDate must be YYYY-MM-DD" }, 400);
   }
-  if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-    return new Response(JSON.stringify({ error: "startDate is required (YYYY-MM-DD)" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
-  if (typeof daysPerWeek !== "number" || daysPerWeek < 1 || daysPerWeek > 7) {
-    return new Response(JSON.stringify({ error: "daysPerWeek must be 1–7" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
+
+  // Determine total plan days from timeline
+  const totalDays = calcTotalDays(timeline, eventDate, startDate);
+  const totalWorkouts = daysPerWeek * Math.ceil(totalDays / 7);
+
+  // Day-of-week labels (0=Sun … 6=Sat)
+  const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const preferredDayNames = preferredDays.length
+    ? preferredDays.map((d) => DAY_NAMES[d] ?? d).join(", ")
+    : "any days";
+
+  const started = Date.now();
+
+  // Gather DB context (health metrics, recent activity, saved preferences)
+  const context = await gatherWorkoutContext(supabase, userId, {});
+
+  const userPrompt = buildUserPrompt({
+    intent,
+    goal: goal || context.goalsSummary,
+    fitnessLevel,
+    daysPerWeek,
+    sessionMinutes,
+    preferredDayNames,
+    equipment,
+    bodyAreas,
+    totalDays,
+    totalWorkouts,
+    startDate,
+    bodyScanSummary,
+    healthMetricsSummary: context.healthMetricsSummary,
+    recentActivitySummary: context.recentActivitySummary,
+    customMemory: context.customMemory,
+  });
 
   await admin.from("ai_generation_log").insert({
     user_id: userId,
     generation_type: "generate_ai_workout_plan",
     model: "gemini-2.5-flash",
-    prompt: { intent, daysPerWeek, startDate },
+    prompt: { goal, daysPerWeek, sessionMinutes, timeline, totalWorkouts, startDate },
   });
-
-  const started = Date.now();
-
-  const context = await gatherWorkoutContext(supabase, userId, { customMemory, customResponseStyle });
-
-  const userPrompt = [
-    context.healthMetricsSummary,
-    context.goalsSummary,
-    context.recentActivitySummary,
-    context.customMemory ? `Personal context: ${context.customMemory}` : "",
-    context.customResponseStyle ? `Response style: ${context.customResponseStyle}` : "",
-    `\nUser request: ${intent}`,
-    `Training days per week: ${daysPerWeek}`,
-    `Start date: ${startDate}`,
-    "\nGenerate the plan. Output ONLY the JSON.",
-  ].filter(Boolean).join("\n");
 
   const aiResponse = await aiChatCompletion({
     model: "gemini-2.5-flash",
@@ -137,7 +156,7 @@ serve(async (req) => {
       { role: "user", content: userPrompt },
     ],
     response_format: { type: "json_object" },
-    max_tokens: 6000,
+    max_tokens: 16000,
   });
 
   const latencyMs = Date.now() - started;
@@ -148,11 +167,10 @@ serve(async (req) => {
       user_id: userId,
       generation_type: "generate_ai_workout_plan",
       model: "gemini-2.5-flash",
-      prompt: { intent, daysPerWeek, startDate },
       error: `Gateway ${aiResponse.status}: ${rawText.slice(0, 400)}`,
       latency_ms: latencyMs,
     });
-    return new Response(JSON.stringify({ error: "AI service error — try again" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return json({ error: "AI service error — try again" }, 502);
   }
 
   const plan = parsePlanJSON(rawText);
@@ -162,27 +180,26 @@ serve(async (req) => {
       user_id: userId,
       generation_type: "generate_ai_workout_plan",
       model: "gemini-2.5-flash",
-      prompt: { intent, daysPerWeek, startDate },
       error: "Could not parse JSON from AI response",
       latency_ms: latencyMs,
+      response: { raw: rawText.slice(0, 500) },
     });
-    return new Response(JSON.stringify({ error: "AI returned malformed response — try again" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return json({ error: "AI returned malformed response — try again" }, 502);
   }
 
-  const validationError = validatePlan(plan, daysPerWeek);
+  const validationError = validatePlan(plan, totalWorkouts);
   if (validationError) {
     await admin.from("ai_generation_log").insert({
       user_id: userId,
       generation_type: "generate_ai_workout_plan",
       model: "gemini-2.5-flash",
-      prompt: { intent, daysPerWeek, startDate },
-      error: `Validation failed: ${validationError}`,
+      error: `Validation: ${validationError}`,
       latency_ms: latencyMs,
     });
-    return new Response(JSON.stringify({ error: "AI produced invalid plan — try again" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return json({ error: "AI produced invalid plan — try again" }, 502);
   }
 
-  // Force media fields to null on all exercises
+  // Sanitise media fields
   for (const w of plan.workouts) {
     for (const ex of w.exercises) {
       ex.thumbnail_url = null;
@@ -194,16 +211,74 @@ serve(async (req) => {
     user_id: userId,
     generation_type: "generate_ai_workout_plan",
     model: "gemini-2.5-flash",
-    prompt: { intent, daysPerWeek, startDate },
     response: { plan_title: plan.title, workout_count: plan.workouts.length },
     latency_ms: latencyMs,
   });
 
-  return new Response(JSON.stringify({ plan }), {
-    status: 200,
+  return json({ plan });
+});
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-});
+}
+
+function calcTotalDays(timeline: string, eventDate: string | null, startDate: string): number {
+  if (eventDate) {
+    const days = Math.ceil(
+      (new Date(eventDate).getTime() - new Date(startDate).getTime()) / 86400000
+    );
+    return Math.max(7, Math.min(days, 168));
+  }
+  if (timeline.includes("8 weeks")) return 56;
+  if (timeline.includes("3 months")) return 84;
+  if (timeline.includes("6 months")) return 168;
+  return 28; // '4 weeks' or 'ongoing'
+}
+
+function buildUserPrompt(p: {
+  intent: string;
+  goal: string;
+  fitnessLevel: string;
+  daysPerWeek: number;
+  sessionMinutes: number;
+  preferredDayNames: string;
+  equipment: string[];
+  bodyAreas: string[];
+  totalDays: number;
+  totalWorkouts: number;
+  startDate: string;
+  bodyScanSummary: string;
+  healthMetricsSummary: string;
+  recentActivitySummary: string;
+  customMemory: string;
+}): string {
+  const lines: string[] = [];
+  if (p.intent) lines.push(`User request: ${p.intent}`);
+  lines.push(`Goal: ${p.goal || "general fitness"}`);
+  if (p.fitnessLevel) lines.push(`Fitness level: ${p.fitnessLevel}`);
+  lines.push(`Training days per week: ${p.daysPerWeek} (preferred days: ${p.preferredDayNames})`);
+  lines.push(`Session length: ~${p.sessionMinutes} minutes`);
+  if (p.equipment.length) lines.push(`Available equipment: ${p.equipment.join(", ")}`);
+  else lines.push("Equipment: bodyweight only");
+  if (p.bodyAreas.length) lines.push(`Priority body areas: ${p.bodyAreas.join(", ")}`);
+  if (p.bodyScanSummary) lines.push(`Body scan / physique: ${p.bodyScanSummary}`);
+  lines.push(`Plan start: ${p.startDate}`);
+  lines.push(`Plan length: ${p.totalDays} days (${p.totalWorkouts} total sessions)`);
+  if (p.healthMetricsSummary && p.healthMetricsSummary !== "No health metrics on record.") {
+    lines.push(p.healthMetricsSummary);
+  }
+  if (p.recentActivitySummary && p.recentActivitySummary !== "No recent activity logged.") {
+    lines.push(p.recentActivitySummary);
+  }
+  if (p.customMemory) lines.push(`Personal context: ${p.customMemory}`);
+  lines.push("\nGenerate the plan. Output ONLY the JSON.");
+  return lines.join("\n");
+}
 
 function parsePlanJSON(text: string): PlanShape | null {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
@@ -235,6 +310,8 @@ type WorkoutInPlan = {
   scheduled_date: string;
   title: string;
   description: string;
+  why: string;
+  intensity: "low" | "moderate" | "high";
   estimated_duration_minutes: number;
   estimated_calories: number;
   exercises: ExerciseShape[];
@@ -247,28 +324,28 @@ type PlanShape = {
   workouts: WorkoutInPlan[];
 };
 
-function validatePlan(p: PlanShape, expectedDays: number): string | null {
+function validatePlan(p: PlanShape, expectedWorkouts: number): string | null {
   if (!p.title || typeof p.title !== "string") return "missing plan title";
   if (!Array.isArray(p.workouts) || p.workouts.length === 0) return "no workouts";
-  // Allow ±1 from expected — AI might round sensibly
-  if (Math.abs(p.workouts.length - expectedDays) > 1) {
-    return `expected ~${expectedDays} workouts, got ${p.workouts.length}`;
+  if (p.workouts.length < Math.max(1, expectedWorkouts - 2)) {
+    return `too few workouts: got ${p.workouts.length}, expected ~${expectedWorkouts}`;
   }
 
   for (let i = 0; i < p.workouts.length; i++) {
     const w = p.workouts[i];
     if (!w.title) return `workout ${i}: missing title`;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(w.scheduled_date ?? "")) return `workout ${i}: invalid scheduled_date`;
+    if (!w.why || typeof w.why !== "string") return `workout ${i}: missing why`;
+    if (!["low", "moderate", "high"].includes(w.intensity)) return `workout ${i}: invalid intensity '${w.intensity}'`;
     if (!Array.isArray(w.exercises) || w.exercises.length === 0) return `workout ${i}: no exercises`;
     for (let j = 0; j < w.exercises.length; j++) {
       const ex = w.exercises[j];
-      if (!ex.title) return `workout ${i} exercise ${j}: missing title`;
-      if (typeof ex.order_index !== "number") return `workout ${i} exercise ${j}: missing order_index`;
+      if (!ex.title) return `workout ${i} ex ${j}: missing title`;
+      if (typeof ex.order_index !== "number") return `workout ${i} ex ${j}: missing order_index`;
       const hasSetsReps = typeof ex.sets === "number" && typeof ex.reps === "number";
       const hasDuration = typeof ex.duration_seconds === "number";
-      if (!hasSetsReps && !hasDuration) return `workout ${i} exercise ${j} (${ex.title}): needs sets+reps or duration_seconds`;
+      if (!hasSetsReps && !hasDuration) return `workout ${i} ex ${j} (${ex.title}): needs sets+reps or duration_seconds`;
     }
   }
-
   return null;
 }

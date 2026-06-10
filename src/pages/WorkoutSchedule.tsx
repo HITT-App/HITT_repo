@@ -378,7 +378,13 @@ export default function WorkoutSchedule() {
                 <div className="space-y-2">
                   <button
                     className="w-full flex items-center gap-4 p-4 rounded-2xl bg-secondary/50 active:bg-secondary transition-colors text-left"
-                    onClick={() => activeWorkout.workout_id && navigate(`/workout-player/${activeWorkout.workout_id}`)}
+                    onClick={() => {
+                      if (activeWorkout.workout_source === 'ai_generated') {
+                        navigate(`/gym-timer?scheduled_id=${activeWorkout.id}`);
+                      } else if (activeWorkout.workout_id) {
+                        navigate(`/workout-player/${activeWorkout.workout_id}`);
+                      }
+                    }}
                   >
                     <Play className="w-5 h-5 text-primary" />
                     <span className="font-medium">Start now</span>

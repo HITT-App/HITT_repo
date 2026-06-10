@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-06-10] — AI-generated workout plans with full exercise breakdowns
+
+- **Plans are now fully AI-generated** — no more picking from a static catalogue; the AI builds bespoke sessions based on your goal, fitness level, equipment, preferred days, and session length
+- **Body scan prompt after goal setup** — after completing the goal wizard, you're asked to do a quick body scan before building your plan; skip button available; scan result feeds directly into the AI plan generation
+- **Each session shows intensity (Low/Moderate/High), duration, calories, and a "why" explanation** on the preview card
+- **Regenerate individual days** — tap the refresh icon on any preview card to ask the AI for a different session for that day; rest of the plan untouched
+- **Plan is saved to DB on confirm** — written to user_workout_plans + user_workout_plan_items (with full exercise snapshot) + scheduled_workouts (with plan_item back-link for future editing)
+- **Playing a scheduled AI workout now works** — fixed the "Start now" button on the Schedule page routing to the GymTimer with the session data
+
 ## [2026-06-09] — LogMeal redesign: food picker with budget strip and AI describe
 
 - **LogMeal is now a food picker** — replaces the manual form with a search-and-select flow matching the design spec

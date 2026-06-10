@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, Loader2, RefreshCw, X } from 'lucide-react';
+import { ArrowLeft, Check, RefreshCw, X, Zap, Flame, Feather } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -50,19 +50,33 @@ const LOADING_MESSAGES = [
 
 const TOTAL_STEPS = 4;
 
-type WorkoutDetails = {
-  id: string;
+type ExerciseSnapshot = {
   title: string;
-  duration_minutes: number | null;
-  category: string | null;
-  difficulty: string | null;
-  equipment: string[] | null;
+  description: string | null;
+  duration_seconds: number | null;
+  sets: number | null;
+  reps: number | null;
+  order_index: number;
+  body_area: string | null;
+  thumbnail_url: null;
+  video_url: null;
 };
 
 type PlanPreviewItem = {
-  workout_id: string;
   scheduled_date: string;
-  workout: WorkoutDetails;
+  title: string;
+  description: string;
+  why: string;
+  intensity: 'low' | 'moderate' | 'high';
+  estimated_duration_minutes: number;
+  estimated_calories: number;
+  exercises: ExerciseSnapshot[];
+};
+
+const INTENSITY_CONFIG = {
+  low:      { label: 'Low',      icon: Feather, colour: 'text-sky-400    bg-sky-400/10'    },
+  moderate: { label: 'Moderate', icon: Flame,   colour: 'text-orange-400 bg-orange-400/10' },
+  high:     { label: 'High',     icon: Zap,     colour: 'text-red-400    bg-red-400/10'    },
 };
 
 export default function ScheduleSetup() {
@@ -73,14 +87,14 @@ export default function ScheduleSetup() {
 
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
 
   const [daysPerWeek, setDaysPerWeek] = useState(0);
   const [sessionMinutes, setSessionMinutes] = useState(0);
   const [preferredDays, setPreferredDays] = useState<number[]>([]);
   const [planPreview, setPlanPreview] = useState<PlanPreviewItem[] | null>(null);
-  const [availableWorkouts, setAvailableWorkouts] = useState<WorkoutDetails[]>([]);
   const [planGoal, setPlanGoal] = useState('');
-  const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
+  const [planTitle, setPlanTitle] = useState('');
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
 
   // Cycle loading messages while generating
@@ -111,27 +125,67 @@ export default function ScheduleSetup() {
 
   const canBuild = preferredDays.length === daysPerWeek;
 
-  const mapToScheduleDates = (
-    planItems: { workout_id: string }[],
-  ): { workout_id: string; scheduled_date: string }[] => {
-    const sorted = [...preferredDays].sort((a, b) => a - b);
-    const today = new Date();
-    const todayDow = today.getDay();
-    const upcomingDates: Date[] = [];
-    for (let week = 0; week < 4; week++) {
-      for (const dow of sorted) {
-        const diff = ((dow - todayDow + 7) % 7) + week * 7;
-        if (diff === 0 && week === 0) continue;
-        const d = new Date(today);
-        d.setDate(today.getDate() + (diff || 7));
-        upcomingDates.push(d);
+  const buildPlanRequest = async (accessToken: string, userId: string, overrides?: Partial<{
+    daysPerWeek: number; sessionMinutes: number; preferredDays: number[];
+  }>) => {
+    const days = overrides?.daysPerWeek ?? daysPerWeek;
+    const mins = overrides?.sessionMinutes ?? sessionMinutes;
+    const prefDays = overrides?.preferredDays ?? preferredDays;
+
+    const [{ data: prefs }, { data: activeGoal }, { data: profile }] = await Promise.all([
+      supabase.from('workout_preferences')
+        .select('workout_goal, fitness_level, available_equipment, target_body_areas')
+        .eq('user_id', userId).maybeSingle(),
+      (supabase as any).from('user_goals')
+        .select('goal_type, target_text, target_date')
+        .eq('user_id', userId).eq('is_active', true).maybeSingle(),
+      (supabase as any).from('profiles')
+        .select('user_memory').eq('user_id', userId).maybeSingle(),
+    ]);
+
+    const goal = prefs?.workout_goal ?? 'general fitness';
+    const fitnessLevel = prefs?.fitness_level ?? '';
+    const equipment: string[] = prefs?.available_equipment ?? [];
+    const bodyAreas: string[] = prefs?.target_body_areas ?? [];
+    const timeline: string = activeGoal?.data?.target_text?.includes('ongoing')
+      ? 'ongoing'
+      : activeGoal?.data?.target_text?.match(/(\d+ (?:weeks?|months?))/i)?.[1] ?? '4 weeks';
+    const eventDate: string | null = activeGoal?.data?.target_date ?? null;
+    const userMemory = profile?.data?.user_memory ?? {};
+    const bodyScanSummary: string = userMemory?.physique ?? '';
+
+    return {
+      accessToken, goal, fitnessLevel, days, mins, prefDays,
+      equipment, bodyAreas, timeline, eventDate, bodyScanSummary,
+    };
+  };
+
+  const callGeneratePlan = async (params: Awaited<ReturnType<typeof buildPlanRequest>>) => {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ai-workout-plan`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${params.accessToken}` },
+        body: JSON.stringify({
+          goal: params.goal,
+          fitnessLevel: params.fitnessLevel,
+          daysPerWeek: params.days,
+          sessionMinutes: params.mins,
+          preferredDays: params.prefDays,
+          equipment: params.equipment,
+          bodyAreas: params.bodyAreas,
+          timeline: params.timeline,
+          eventDate: params.eventDate,
+          bodyScanSummary: params.bodyScanSummary,
+          startDate: new Date().toISOString().split('T')[0],
+        }),
       }
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error ?? `Plan generator returned ${res.status}`);
     }
-    upcomingDates.sort((a, b) => a.getTime() - b.getTime());
-    return planItems.slice(0, upcomingDates.length).map((item, i) => ({
-      workout_id: item.workout_id,
-      scheduled_date: upcomingDates[i].toISOString().split('T')[0],
-    }));
+    return res.json();
   };
 
   const handleGenerate = async () => {
@@ -142,59 +196,15 @@ export default function ScheduleSetup() {
       const userId = sessionData?.session?.user?.id;
       if (!accessToken || !userId) return;
 
-      const { data: prefs } = await supabase
-        .from('workout_preferences')
-        .select('workout_goal')
-        .eq('user_id', userId)
-        .maybeSingle();
-      const goal = prefs?.workout_goal ?? 'general fitness';
-      setPlanGoal(goal);
+      const params = await buildPlanRequest(accessToken, userId);
+      setPlanGoal(params.goal);
 
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-workout-plan`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({
-            goal,
-            days: daysPerWeek * 4,
-            sessions_per_week: daysPerWeek,
-            duration_minutes: sessionMinutes,
-            title: `${goal} Plan`,
-          }),
-        }
-      );
-      if (!res.ok) throw new Error(`Plan generator returned ${res.status}`);
+      const data = await callGeneratePlan(params);
+      const workouts: PlanPreviewItem[] = data.plan?.workouts ?? [];
+      if (!workouts.length) throw new Error('No workouts returned');
 
-      const data = await res.json();
-      const planItems: { day_index: number; workout_id: string }[] = data.items ?? [];
-      const rows = mapToScheduleDates(planItems);
-      if (!rows.length) throw new Error('No workouts returned');
-
-      // Fetch ALL workouts (for the swap picker too)
-      const { data: workouts } = await supabase
-        .from('workouts')
-        .select('id, title, duration_minutes, category, difficulty, equipment')
-        .order('category');
-
-      const allWorkouts = (workouts ?? []) as WorkoutDetails[];
-      setAvailableWorkouts(allWorkouts);
-      const workoutMap = new Map(allWorkouts.map(w => [w.id, w]));
-
-      const preview: PlanPreviewItem[] = rows.map(r => ({
-        workout_id: r.workout_id,
-        scheduled_date: r.scheduled_date,
-        workout: workoutMap.get(r.workout_id) ?? {
-          id: r.workout_id,
-          title: 'Workout',
-          duration_minutes: sessionMinutes,
-          category: null,
-          difficulty: null,
-          equipment: null,
-        },
-      }));
-
-      setPlanPreview(preview);
+      setPlanTitle(data.plan?.title ?? '');
+      setPlanPreview(workouts);
       advance();
     } catch (err) {
       console.error('[ScheduleSetup] Generate failed:', err);
@@ -204,12 +214,32 @@ export default function ScheduleSetup() {
     }
   };
 
-  const handleSwap = (index: number, workout: WorkoutDetails) => {
-    setPlanPreview(prev => prev
-      ? prev.map((item, i) => i === index ? { ...item, workout_id: workout.id, workout } : item)
-      : prev
-    );
-    setSwappingIndex(null);
+  const handleRegenerateDay = async (index: number) => {
+    setRegeneratingIndex(index);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      const userId = sessionData?.session?.user?.id;
+      if (!accessToken || !userId) return;
+
+      const params = await buildPlanRequest(accessToken, userId, { daysPerWeek: 1 });
+      const data = await callGeneratePlan(params);
+      const newWorkout: PlanPreviewItem | undefined = data.plan?.workouts?.[0];
+      if (!newWorkout) throw new Error('No workout returned');
+
+      // Keep the original scheduled_date, just replace content
+      setPlanPreview(prev => prev
+        ? prev.map((item, i) => i === index
+            ? { ...newWorkout, scheduled_date: item.scheduled_date }
+            : item)
+        : prev
+      );
+    } catch (err) {
+      console.error('[ScheduleSetup] Regenerate day failed:', err);
+      toast.error('Could not regenerate this session. Try again.');
+    } finally {
+      setRegeneratingIndex(null);
+    }
   };
 
   const handleRemove = (index: number) => {
@@ -224,9 +254,68 @@ export default function ScheduleSetup() {
       const userId = sessionData?.session?.user?.id;
       if (!userId) return;
 
-      await supabase.from('scheduled_workouts').insert(
-        planPreview.map(r => ({ user_id: userId, workout_id: r.workout_id, scheduled_date: r.scheduled_date }))
-      );
+      const today = new Date().toISOString().split('T')[0];
+      const lastDate = planPreview[planPreview.length - 1]?.scheduled_date ?? today;
+
+      // 1. Insert plan header
+      const { data: planRow, error: planErr } = await supabase
+        .from('user_workout_plans')
+        .insert({
+          user_id: userId,
+          title: planTitle || `${planGoal} Plan`,
+          goal: planGoal,
+          start_date: today,
+          end_date: lastDate,
+          sessions_per_week: daysPerWeek,
+          target_duration_minutes: sessionMinutes,
+          workout_source: 'ai_generated',
+        } as any)
+        .select('id')
+        .maybeSingle();
+      if (planErr || !planRow) throw planErr ?? new Error('Could not create plan');
+
+      // 2. Insert plan items (with exercise snapshots)
+      const itemInserts = planPreview.map((item, idx) => ({
+        plan_id: planRow.id,
+        user_id: userId,
+        workout_id: null,
+        workout_source: 'ai_generated',
+        workout_title: item.title,
+        workout_description: item.description,
+        exercises_snapshot: item.exercises,
+        why_text: item.why,
+        intensity: item.intensity,
+        estimated_duration_minutes: item.estimated_duration_minutes,
+        estimated_calories: item.estimated_calories,
+        scheduled_date: item.scheduled_date,
+        day_index: idx,
+        sequence_in_day: 0,
+      }));
+      const { data: itemRows, error: itemsErr } = await supabase
+        .from('user_workout_plan_items')
+        .insert(itemInserts as any)
+        .select('id, scheduled_date');
+      if (itemsErr) throw itemsErr;
+
+      // 3. Insert into scheduled_workouts with plan_item_id back-link
+      const scheduleInserts = (itemRows ?? []).map((row: any, idx: number) => ({
+        user_id: userId,
+        workout_id: null,
+        workout_source: 'ai_generated',
+        workout_title: planPreview[idx].title,
+        workout_description: planPreview[idx].description,
+        exercises_snapshot: planPreview[idx].exercises,
+        why_text: planPreview[idx].why,
+        intensity: planPreview[idx].intensity,
+        estimated_duration_minutes: planPreview[idx].estimated_duration_minutes,
+        estimated_calories: planPreview[idx].estimated_calories,
+        scheduled_date: row.scheduled_date,
+        plan_item_id: row.id,
+      }));
+      const { error: schedErr } = await supabase
+        .from('scheduled_workouts')
+        .insert(scheduleInserts as any);
+      if (schedErr) throw schedErr;
 
       const daysLabel = `${daysPerWeek} day${daysPerWeek > 1 ? 's' : ''} a week`;
       const greetPrompt = `[POST_PLAN_SAVED] The user's workout plan is confirmed and already saved to their schedule — no scheduling action needed. Goal: ${goalText || planGoal}. Schedule: ${daysLabel}, ${sessionMinutes} min/session. Give one warm celebratory sentence acknowledging their plan is live. Then ask what they want to focus on first. No action markers, no lists.`;
@@ -378,9 +467,9 @@ export default function ScheduleSetup() {
         {step === 3 && planPreview && (
           <>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Your plan</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{planTitle || 'Your plan'}</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {daysPerWeek} session{daysPerWeek > 1 ? 's' : ''} a week · {sessionMinutes} min each · tap <RefreshCw className="inline w-3 h-3" /> to swap
+                {planPreview.length} session{planPreview.length !== 1 ? 's' : ''} · tap <RefreshCw className="inline w-3 h-3" /> to regenerate a day
               </p>
             </div>
             <div className="space-y-2.5">
@@ -389,34 +478,40 @@ export default function ScheduleSetup() {
                 const dayName = date.toLocaleDateString('en-GB', { weekday: 'short' });
                 const dayNum = date.getDate();
                 const monthName = date.toLocaleDateString('en-GB', { month: 'short' });
-                const equipment = (item.workout.equipment ?? []).filter(Boolean);
+                const ic = INTENSITY_CONFIG[item.intensity] ?? INTENSITY_CONFIG.moderate;
+                const IntIcon = ic.icon;
+                const isRegenerating = regeneratingIndex === i;
                 return (
                   <div key={i} className="flex gap-3 items-start p-4 rounded-2xl border border-border bg-card">
+                    {/* Date column */}
                     <div className="text-center shrink-0 w-10">
                       <p className="text-[10px] text-muted-foreground uppercase font-semibold">{dayName}</p>
                       <p className="text-xl font-bold leading-tight text-foreground">{dayNum}</p>
                       <p className="text-[10px] text-muted-foreground">{monthName}</p>
                     </div>
+                    {/* Content */}
                     <div className="flex-1 min-w-0 pt-0.5">
-                      <p className="font-semibold text-sm text-foreground">{item.workout.title}</p>
+                      <p className="font-semibold text-sm text-foreground">{item.title}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{item.why}</p>
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        {item.workout.category && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{item.workout.category}</span>
-                        )}
-                        {item.workout.duration_minutes && (
-                          <span className="text-[11px] text-muted-foreground">{item.workout.duration_minutes} min</span>
-                        )}
-                        <span className="text-[11px] text-muted-foreground">
-                          {equipment.length > 0 ? equipment.join(', ') : 'Bodyweight'}
+                        <span className={cn('inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium', ic.colour)}>
+                          <IntIcon className="w-3 h-3" />
+                          {ic.label}
                         </span>
+                        <span className="text-[11px] text-muted-foreground">{item.estimated_duration_minutes} min</span>
+                        {item.estimated_calories > 0 && (
+                          <span className="text-[11px] text-muted-foreground">~{item.estimated_calories} kcal</span>
+                        )}
                       </div>
                     </div>
+                    {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0 pt-0.5">
                       <button
-                        onClick={() => setSwappingIndex(i)}
+                        onClick={() => !isRegenerating && handleRegenerateDay(i)}
                         className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors touch-manipulation"
+                        disabled={isRegenerating}
                       >
-                        <RefreshCw className="w-3.5 h-3.5" />
+                        <RefreshCw className={cn('w-3.5 h-3.5', isRegenerating && 'animate-spin text-primary')} />
                       </button>
                       <button
                         onClick={() => handleRemove(i)}
@@ -456,56 +551,6 @@ export default function ScheduleSetup() {
               {saving ? 'Working on it…' : 'Preview my plan'}
             </Button>
           )}
-        </div>
-      )}
-
-      {/* Swap sheet */}
-      {swappingIndex !== null && (
-        <div className="fixed inset-0 z-50 flex flex-col">
-          <div
-            className="flex-1 bg-black/40"
-            onClick={() => setSwappingIndex(null)}
-          />
-          <div className="bg-background rounded-t-3xl flex flex-col max-h-[70vh]" style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 8px)' }}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
-              <p className="font-semibold text-sm">Swap workout</p>
-              <button onClick={() => setSwappingIndex(null)} className="p-1 text-muted-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="overflow-y-auto px-5 py-3 space-y-2">
-              {availableWorkouts.map(w => {
-                const isCurrent = w.id === planPreview?.[swappingIndex]?.workout_id;
-                const equip = (w.equipment ?? []).filter(Boolean);
-                return (
-                  <button
-                    key={w.id}
-                    onClick={() => handleSwap(swappingIndex, w)}
-                    className={cn(
-                      'w-full flex items-start gap-3 p-3.5 rounded-2xl border text-left transition-all touch-manipulation',
-                      isCurrent ? 'border-primary bg-primary/[0.08]' : 'border-border bg-card active:bg-secondary/60'
-                    )}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className={cn('font-semibold text-sm', isCurrent ? 'text-primary' : 'text-foreground')}>{w.title}</p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        {w.category && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">{w.category}</span>
-                        )}
-                        {w.duration_minutes && (
-                          <span className="text-[11px] text-muted-foreground">{w.duration_minutes} min</span>
-                        )}
-                        <span className="text-[11px] text-muted-foreground">
-                          {equip.length > 0 ? equip.join(', ') : 'Bodyweight'}
-                        </span>
-                      </div>
-                    </div>
-                    {isCurrent && <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
       )}
     </div>

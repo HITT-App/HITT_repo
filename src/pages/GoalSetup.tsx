@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Check, Flame, Dumbbell, Wind, Zap, Trophy, Calendar } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Flame, Dumbbell, Wind, Zap, Trophy, Calendar, ScanFace } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const GOAL_OPTIONS = [
@@ -42,7 +42,7 @@ const EQUIPMENT_OPTIONS = [
   { id: 'gym',        label: 'Full gym access'       },
 ];
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 5; // step 5 is the body scan prompt (not shown in progress bar)
 
 export default function GoalSetup() {
   const navigate = useNavigate();
@@ -130,7 +130,8 @@ export default function GoalSetup() {
         p_value: goalMemoryValue,
       });
 
-      navigate('/ai', { replace: true });
+      // Show body scan prompt instead of navigating away
+      setStep(5);
     } finally {
       setSaving(false);
     }
@@ -143,26 +144,28 @@ export default function GoalSetup() {
 
   return (
     <div className="fixed inset-0 bg-background flex flex-col">
-      {/* Header + progress */}
-      <header
-        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-3"
-        style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 12px)' }}
-      >
-        <button onClick={handleBack} className="text-muted-foreground p-1 -ml-1">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <p className="text-[11px] text-muted-foreground font-medium">Step {step + 1} of {TOTAL_STEPS}</p>
-          <div className="flex gap-1 mt-1.5">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <div
-                key={i}
-                className={cn('h-1 flex-1 rounded-full transition-colors duration-300', i <= step ? 'bg-primary' : 'bg-border')}
-              />
-            ))}
+      {/* Header + progress — hidden on body scan prompt step */}
+      {step < 5 && (
+        <header
+          className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-3"
+          style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 12px)' }}
+        >
+          <button onClick={handleBack} className="text-muted-foreground p-1 -ml-1">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1">
+            <p className="text-[11px] text-muted-foreground font-medium">Step {step + 1} of {TOTAL_STEPS}</p>
+            <div className="flex gap-1 mt-1.5">
+              {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                <div
+                  key={i}
+                  className={cn('h-1 flex-1 rounded-full transition-colors duration-300', i <= step ? 'bg-primary' : 'bg-border')}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-5 py-6 space-y-5">
@@ -350,34 +353,67 @@ export default function GoalSetup() {
             </div>
           </>
         )}
-      </div>
 
-      {/* Footer — always visible */}
-      <div
-        className="px-5 py-4 border-t border-border/40 bg-background/90 backdrop-blur-sm"
-        style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 16px)' }}
-      >
-        {step === 4 ? (
-          <Button
-            className="w-full h-12 rounded-xl font-semibold"
-            disabled={!canProceed() || saving}
-            onClick={handleSave}
-          >
-            {saving ? 'Saving…' : 'Set my goal'}
-          </Button>
-        ) : (
-          <div className="flex justify-end">
-            <Button
-              size="icon"
-              className="w-12 h-12 rounded-full"
-              disabled={!canProceed()}
-              onClick={advance}
-            >
-              <ArrowRight className="w-5 h-5" />
-            </Button>
+        {/* Step 5 — body scan prompt */}
+        {step === 5 && (
+          <div className="flex flex-col items-center justify-center min-h-full py-12 space-y-8 text-center">
+            <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center">
+              <ScanFace className="w-10 h-10 text-primary" />
+            </div>
+            <div className="space-y-3 px-2">
+              <h1 className="text-2xl font-bold tracking-tight">One more thing</h1>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                A quick body scan lets the AI see your muscle development and body composition — so your workouts are calibrated to <em>your</em> physique, not a generic template.
+              </p>
+              <p className="text-xs text-muted-foreground/70">Takes about 60 seconds. You can always do it later from your profile.</p>
+            </div>
+            <div className="w-full space-y-3 px-2">
+              <Button
+                className="w-full h-12 rounded-xl font-semibold"
+                onClick={() => navigate('/body-scan', { state: { returnTo: '/schedule-setup' } })}
+              >
+                <ScanFace className="w-4 h-4 mr-2" />
+                Scan my body
+              </Button>
+              <button
+                className="w-full h-11 text-sm text-muted-foreground font-medium active:opacity-70 transition-opacity touch-manipulation"
+                onClick={() => navigate('/schedule-setup')}
+              >
+                Skip for now, build my plan
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Footer — hidden on body scan prompt step */}
+      {step < 5 && (
+        <div
+          className="px-5 py-4 border-t border-border/40 bg-background/90 backdrop-blur-sm"
+          style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 16px)' }}
+        >
+          {step === 4 ? (
+            <Button
+              className="w-full h-12 rounded-xl font-semibold"
+              disabled={!canProceed() || saving}
+              onClick={handleSave}
+            >
+              {saving ? 'Saving…' : 'Set my goal'}
+            </Button>
+          ) : (
+            <div className="flex justify-end">
+              <Button
+                size="icon"
+                className="w-12 h-12 rounded-full"
+                disabled={!canProceed()}
+                onClick={advance}
+              >
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

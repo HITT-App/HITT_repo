@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User, SwitchCamera } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Camera, Upload, Ruler, TrendingUp, Loader2, X, RotateCcw, Sparkles, ChevronRight, User, SwitchCamera, ArrowRight } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,8 @@ const POSE_GUIDES = [
 
 const BodyScan = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as any)?.returnTo as string | undefined;
   const { user } = useAuth();
   const { logMetric } = useHealthMetrics();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -253,6 +255,9 @@ const BodyScan = () => {
       // Invalidate health profile cache so next AI message picks up the scan
       localStorage.removeItem('hiit-health-profile-at');
       toast.success("Body analysis complete!");
+      if (returnTo) {
+        setTimeout(() => navigate(returnTo), 1200);
+      }
     } catch (err: any) {
       toast.error(err.message || "Analysis failed. Try a clearer photo.");
     } finally {
@@ -316,6 +321,9 @@ const BodyScan = () => {
       }
       toast.success("Measurements saved!");
       setMeasurements({});
+      if (returnTo) {
+        setTimeout(() => navigate(returnTo), 800);
+      }
     } catch {
       toast.error("Failed to save measurements.");
     } finally {
@@ -335,8 +343,12 @@ const BodyScan = () => {
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between p-4">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-secondary">
-            <ArrowLeft className="w-5 h-5 text-foreground" />
+          <button onClick={() => returnTo ? navigate(returnTo) : navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-secondary">
+            {returnTo ? (
+              <span className="text-sm text-muted-foreground font-medium">Skip</span>
+            ) : (
+              <ArrowLeft className="w-5 h-5 text-foreground" />
+            )}
           </button>
           <h1 className="text-lg font-semibold text-foreground">Body Scan</h1>
           <div className="w-9" />
