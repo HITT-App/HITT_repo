@@ -157,35 +157,40 @@ serve(async (req) => {
     ],
     response_format: { type: "json_object" },
     max_tokens: 16000,
+    timeout_ms: 110000,
   });
 
   const latencyMs = Date.now() - started;
   const rawText = await aiResponse.text();
 
   if (!aiResponse.ok) {
+    const detail = `Gateway ${aiResponse.status}: ${rawText.slice(0, 400)}`;
     await admin.from("ai_generation_log").insert({
       user_id: userId,
       generation_type: "generate_ai_workout_plan",
       model: "gemini-2.5-flash",
-      error: `Gateway ${aiResponse.status}: ${rawText.slice(0, 400)}`,
+      error: detail,
       latency_ms: latencyMs,
     });
-    return json({ error: "AI service error — try again" }, 502);
+    return json({ error: `AI service error (${aiResponse.status}) — try again`, detail }, 502);
   }
 
   const plan = parsePlanJSON(rawText);
 
   if (!plan) {
+    const detail = rawText.slice(0, 300);
     await admin.from("ai_generation_log").insert({
       user_id: userId,
       generation_type: "generate_ai_workout_plan",
       model: "gemini-2.5-flash",
       error: "Could not parse JSON from AI response",
       latency_ms: latencyMs,
-      response: { raw: rawText.slice(0, 500) },
+      response: { raw: detail },
     });
-    return json({ error: "AI returned malformed response — try again" }, 502);
+    return json({ error: "AI returned malformed JSON — try again", detail }, 502);
   }
+
+  coercePlanTypes(plan);
 
   const validationError = validatePlan(plan, totalWorkouts);
   if (validationError) {
@@ -196,7 +201,7 @@ serve(async (req) => {
       error: `Validation: ${validationError}`,
       latency_ms: latencyMs,
     });
-    return json({ error: "AI produced invalid plan — try again" }, 502);
+    return json({ error: `Plan validation failed: ${validationError}`, detail: validationError }, 502);
   }
 
   // Sanitise media fields
@@ -323,6 +328,25 @@ type PlanShape = {
   start_date: string;
   workouts: WorkoutInPlan[];
 };
+
+function toIntOrNull(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const n = typeof v === "number" ? v : parseInt(String(v), 10);
+  return isNaN(n) ? null : n;
+}
+
+function coercePlanTypes(p: PlanShape): void {
+  for (const w of p.workouts) {
+    w.estimated_duration_minutes = Number(w.estimated_duration_minutes) || 30;
+    w.estimated_calories = Number(w.estimated_calories) || 0;
+    for (const ex of w.exercises ?? []) {
+      ex.sets = toIntOrNull(ex.sets);
+      ex.reps = toIntOrNull(ex.reps);
+      ex.duration_seconds = toIntOrNull(ex.duration_seconds);
+      if (typeof ex.order_index !== "number") ex.order_index = Number(ex.order_index) || 0;
+    }
+  }
+}
 
 function validatePlan(p: PlanShape, expectedWorkouts: number): string | null {
   if (!p.title || typeof p.title !== "string") return "missing plan title";

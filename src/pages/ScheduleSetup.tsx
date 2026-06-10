@@ -207,9 +207,9 @@ export default function ScheduleSetup() {
       setPlanTitle(data.plan?.title ?? '');
       setPlanPreview(workouts);
       advance();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[ScheduleSetup] Generate failed:', err);
-      toast.error('Could not build your plan. Please try again.');
+      toast.error(err?.message ?? 'Could not build your plan. Please try again.');
     } finally {
       setSaving(false);
     }

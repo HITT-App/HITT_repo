@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-10] — Fix: plan generation timeout and type coercion
+
+- **AI timeout raised to 110 seconds** — 55s was sometimes not enough for large multi-week plans; increased to prevent silent failures
+- **Numeric fields coerced before validation** — Gemini occasionally returns sets/reps/duration as strings; these are now normalised before validation runs
+- **Real error message shown in toast** — instead of always "Could not build your plan", the toast now shows what actually went wrong to aid debugging
+
 ## [2026-06-10] — Fix: plan generation used wrong timeline and ignored body scan
 
 - **Timeline now read correctly from the user's saved goal** — was always defaulting to 4 weeks due to a data extraction bug; now reflects 8 weeks / 3 months / 6 months / event date as set in the goal wizard
