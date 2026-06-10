@@ -225,7 +225,7 @@ async function handleRequest(req: Request): Promise<Response> {
     user_id: userId,
     generation_type: "generate_ai_workout_plan",
     model: "gemini-2.5-flash",
-    response: { plan_title: plan.title, workout_count: plan.workouts.length },
+    response: { plan_title: plan.title, workout_count: plan.workouts.length, raw_prefix: rawText.slice(0, 200) },
     latency_ms: latencyMs,
   });
 
