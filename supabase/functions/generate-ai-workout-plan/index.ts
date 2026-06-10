@@ -187,16 +187,16 @@ async function handleRequest(req: Request): Promise<Response> {
   const plan = parsePlanJSON(rawText);
 
   if (!plan) {
-    const detail = rawText.slice(0, 300);
+    const raw100 = rawText.slice(0, 100);
     await admin.from("ai_generation_log").insert({
       user_id: userId,
       generation_type: "generate_ai_workout_plan",
       model: "gemini-2.5-flash",
       error: "Could not parse JSON from AI response",
       latency_ms: latencyMs,
-      response: { raw: detail },
+      response: { raw: rawText.slice(0, 800) },
     });
-    return json({ error: "AI returned malformed JSON — try again", detail }, 502);
+    return json({ error: `Parse failed. Raw[0:100]: ${raw100}` }, 502);
   }
 
   coercePlanTypes(plan);
