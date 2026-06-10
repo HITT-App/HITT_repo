@@ -183,15 +183,37 @@ serve(async (req) => {
 });
 
 function parseWorkoutJSON(text: string): WorkoutShape | null {
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  let raw = text.trim();
+
+  // Unwrap OpenAI-compatible envelope: choices[0].message.content
   try {
-    const outer = JSON.parse(cleaned);
-    // OpenAI-compatible envelope: choices[0].message.content
+    const outer = JSON.parse(raw);
     const content = outer?.choices?.[0]?.message?.content;
-    const inner = typeof content === "string"
-      ? JSON.parse(content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""))
-      : outer;
-    return inner?.workout ?? null;
+    if (typeof content === "string") {
+      raw = content.trim();
+    } else if (outer?.workout) {
+      return outer.workout as WorkoutShape;
+    } else {
+      return (outer?.workout ?? null) as WorkoutShape | null;
+    }
+  } catch {
+    // Not a valid JSON envelope — treat as raw text
+  }
+
+  // Strip Gemini extended-thinking tags (<thinking>...</thinking>)
+  raw = raw.replace(/<thinking>[\s\S]*?<\/thinking>/gi, "").trim();
+
+  // Strip markdown fences
+  raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+
+  // Fallback: extract outermost {...} block in case of leading/trailing prose
+  const first = raw.indexOf("{");
+  const last = raw.lastIndexOf("}");
+  if (first !== -1 && last > first) raw = raw.slice(first, last + 1);
+
+  try {
+    const parsed = JSON.parse(raw);
+    return (parsed?.workout ?? null) as WorkoutShape | null;
   } catch {
     return null;
   }
