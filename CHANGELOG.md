@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-10] — Fix: schedule daily view removed; hold-to-finish now saves AI workouts
+
+- **Daily view removed from Workout Schedule** — weekly view is the only view now; simpler and always shows AI-generated workouts
+- **Tapping a workout card now navigates correctly** — AI workouts route to GymTimer, catalogue workouts to the workout player
+- **Hold to finish now works for AI workouts** — was a stale closure bug: the save function was frozen at mount before the workout data had loaded, so the AI save path was never reached; fixed
+
 ## [2026-06-10] — Fix: home screen crash on AI-generated workouts
 
 - **ScheduleCard and WorkoutPlanCard no longer crash** when AI-generated scheduled workouts are present — both were accessing `workout.id/title` without null-checking; AI workouts have `workout_id: null` so the join returns null
