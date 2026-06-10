@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-06-10] — Fix: plan save failure, button rename, wizard exit
+
+- **"Could not save your plan" fixed** — `user_workout_plans` insert was including a `workout_source` column that doesn't exist on that table; removed
+- **"Start training" renamed to "Add to schedule"** — more accurate label for what the button does
+- **X button added to GoalSetup and ScheduleSetup headers** — exits the wizard and returns to the previous screen at any step
+- **Confirm error now shows the actual message** — instead of always "Could not save your plan", the real DB error is shown
+
 ## [2026-06-10] — Fix: plan generation timeout and type coercion
 
 - **AI timeout raised to 110 seconds** — 55s was sometimes not enough for large multi-week plans; increased to prevent silent failures

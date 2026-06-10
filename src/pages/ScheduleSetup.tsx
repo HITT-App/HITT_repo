@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, RefreshCw, X, Zap, Flame, Feather, CalendarCheck } from 'lucide-react';
+import { ArrowLeft, Check, RefreshCw, X, Zap, Flame, Feather, CalendarCheck, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -269,7 +269,6 @@ export default function ScheduleSetup() {
           end_date: lastDate,
           sessions_per_week: daysPerWeek,
           target_duration_minutes: sessionMinutes,
-          workout_source: 'ai_generated',
         } as any)
         .select('id')
         .maybeSingle();
@@ -319,9 +318,9 @@ export default function ScheduleSetup() {
       if (schedErr) throw schedErr;
 
       setConfirmed(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[ScheduleSetup] Confirm failed:', err);
-      toast.error('Could not save your plan. Please try again.');
+      toast.error(err?.message ?? 'Could not save your plan. Please try again.');
       setSaving(false);
     }
   };
@@ -389,6 +388,9 @@ export default function ScheduleSetup() {
             ))}
           </div>
         </div>
+        <button onClick={() => navigate(returnTo)} className="text-muted-foreground p-1 -mr-1">
+          <X className="w-5 h-5" />
+        </button>
       </header>
 
       {/* Content */}
@@ -572,7 +574,7 @@ export default function ScheduleSetup() {
               disabled={saving || !planPreview?.length}
               onClick={handleConfirm}
             >
-              {saving ? 'Starting…' : 'Start training'}
+              {saving ? 'Saving…' : 'Add to schedule'}
             </Button>
           ) : (
             <Button

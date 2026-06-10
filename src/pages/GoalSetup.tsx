@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Check, Flame, Dumbbell, Wind, Zap, Trophy, Calendar, ScanFace } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Flame, Dumbbell, Wind, Zap, Trophy, Calendar, ScanFace, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const GOAL_OPTIONS = [
@@ -164,6 +164,9 @@ export default function GoalSetup() {
               ))}
             </div>
           </div>
+          <button onClick={() => navigate(returnTo)} className="text-muted-foreground p-1 -mr-1">
+            <X className="w-5 h-5" />
+          </button>
         </header>
       )}
 
