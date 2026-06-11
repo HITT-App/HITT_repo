@@ -117,6 +117,7 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
   ];
 
   return (
+    <>
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         className="h-[90vh] p-0 flex flex-col"
@@ -254,5 +255,6 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
     </Drawer>
 
     <ChooseSportSheet open={showSportPicker} onOpenChange={setShowSportPicker} />
+    </>
   );
 }
