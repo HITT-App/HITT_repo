@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { X, Square, Smartphone, Share2 } from 'lucide-react';
+import { X, Square, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
@@ -348,7 +348,6 @@ export function CompletionSummary({
             WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <Share2 size={19} color="#1a0d04" strokeWidth={2.2} />
           {isSharing ? 'Preparing…' : 'Share'}
         </button>
       </div>
