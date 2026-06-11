@@ -579,7 +579,7 @@ const BodyScan = () => {
           <>
             {/* Camera view */}
             {isCameraOpen ? (
-              <>
+              <div className="flex flex-col gap-2">
                 {/* Pose strip */}
                 <div className="flex gap-2">
                   {POSE_GUIDES.map((pose, i) => {
@@ -690,7 +690,7 @@ const BodyScan = () => {
                   <Sparkles className="w-4 h-4" /> Analyse 3 photos
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-              </>
+              </div>
             ) : imagePreview && !analysis ? (
               /* Image preview — no analysis yet */
               <>
