@@ -1,8 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Medal, Route, ChevronRight, ArrowRight, Waves, Bike, Footprints } from "lucide-react";
 import { Drawer, DrawerContent, DrawerClose } from "@/components/ui/drawer";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { SPORT_CONFIG, SPORT_CATEGORIES, getTrackerRoute } from "@/lib/sports";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -257,14 +256,14 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
         </div>
 
         {/* Scrollable body: Quick Start + Filter pills + 2-up grid */}
-        <ScrollArea className="flex-1 min-h-0">
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           <div className="px-5 pb-8">
-            {/* Quick Start rail */}
+            {/* Quick Start rail — 6 equal columns, all visible */}
             <div className="mb-5">
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 13 }}>
                 Quick Start
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
                 {QUICK_START.map((name) => {
                   const hex = SPORT_HEX[name] || '#f97316';
                   return (
@@ -274,10 +273,10 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
                       className="touch-manipulation"
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', WebkitTapHighlightColor: 'transparent', padding: 0 }}
                     >
-                      <div style={{ width: 50, height: 50, borderRadius: 999, background: `${hex}1c`, border: `1px solid ${hex}2e`, display: 'grid', placeItems: 'center' }}>
-                        <SportIcon name={name} size={21} color={hex} />
+                      <div style={{ width: 46, height: 46, borderRadius: 999, background: `${hex}1c`, border: `1px solid ${hex}2e`, display: 'grid', placeItems: 'center' }}>
+                        <SportIcon name={name} size={20} color={hex} />
                       </div>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: C.dim, textAlign: 'center' }}>
+                      <span style={{ fontSize: 9.5, fontWeight: 600, color: C.dim, textAlign: 'center', lineHeight: 1.2 }}>
                         {QUICK_LABELS[name] || name}
                       </span>
                     </button>
@@ -346,7 +345,7 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
               })}
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </DrawerContent>
     </Drawer>
   );
