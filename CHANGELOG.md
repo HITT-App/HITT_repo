@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-11] — Schedule card selection; hold-to-finish text fix; completion screen exit
+
+- **Tapping a workout in the schedule now selects it** (orange highlight) and reveals a play button — tapping play starts the workout; tapping again deselects
+- **Hold-to-finish text no longer gets selected** when pressing and holding the button
+- **Completion screen now has a sticky header** with an X button to close, plus a swipe-down gesture to dismiss
+
 ## [2026-06-10] — Fix: schedule daily view removed; hold-to-finish now saves AI workouts
 
 - **Daily view removed from Workout Schedule** — weekly view is the only view now; simpler and always shows AI-generated workouts
