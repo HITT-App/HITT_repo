@@ -374,7 +374,7 @@ const GymTimer = () => {
           <div className="relative">
             <button
               className={cn(
-                "w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all touch-manipulation",
+                "w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all touch-manipulation select-none",
                 isHolding ? "bg-destructive scale-110" : "bg-destructive/80"
               )}
               onMouseDown={handleHoldStart}
