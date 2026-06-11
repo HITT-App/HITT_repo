@@ -42,6 +42,8 @@ export default function WorkoutSchedule() {
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
+
   // Edit state
   const [activeWorkout, setActiveWorkout] = useState<ScheduledWorkout | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
@@ -133,6 +135,7 @@ export default function WorkoutSchedule() {
 
   const openActions = (workout: ScheduledWorkout, e: React.MouseEvent) => {
     e.stopPropagation();
+    setSelectedWorkoutId(null);
     setActiveWorkout(workout);
     setShowDayPicker(false);
     setShowActionSheet(true);
@@ -251,42 +254,59 @@ export default function WorkoutSchedule() {
                   </div>
                   {dayWorkouts.length > 0 ? (
                     <div className="space-y-2">
-                      {dayWorkouts.map(workout => (
-                        <Card
-                          key={workout.id}
-                          className="cursor-pointer"
-                          onClick={() => {
-                            if (workout.workout_source === 'ai_generated') {
-                              navigate(`/gym-timer?scheduled_id=${workout.id}`)
-                            } else if (workout.workout_id) {
-                              navigate(`/workout-player/${workout.workout_id}`)
-                            }
-                          }}
-                        >
-                          <CardContent className="p-3 flex items-center gap-3">
-                            <div className="w-14 h-14 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
-                              {workout.workout?.thumbnail_url ? (
-                                <img src={workout.workout.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Dumbbell className="w-6 h-6 text-muted-foreground" />
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{workout.workout_title ?? workout.workout?.title}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Clock className="w-3 h-3" />
-                                <span>{(workout.estimated_duration_minutes ?? workout.workout?.duration_minutes) ?? '—'}min</span>
-                                {workout.workout?.category && <><span>·</span><span className="capitalize">{workout.workout.category}</span></>}
+                      {dayWorkouts.map(workout => {
+                        const isSelected = selectedWorkoutId === workout.id
+                        const startWorkout = () => {
+                          if (workout.workout_source === 'ai_generated') {
+                            navigate(`/gym-timer?scheduled_id=${workout.id}`)
+                          } else if (workout.workout_id) {
+                            navigate(`/workout-player/${workout.workout_id}`)
+                          }
+                        }
+                        return (
+                          <Card
+                            key={workout.id}
+                            className={cn(
+                              "cursor-pointer transition-colors",
+                              isSelected && "border-primary/50 bg-primary/8"
+                            )}
+                            onClick={() => setSelectedWorkoutId(prev => prev === workout.id ? null : workout.id)}
+                          >
+                            <CardContent className="p-3 flex items-center gap-3">
+                              <div className="w-14 h-14 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
+                                {workout.workout?.thumbnail_url ? (
+                                  <img src={workout.workout.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className={cn("w-full h-full flex items-center justify-center", isSelected && "bg-primary/10")}>
+                                    <Dumbbell className={cn("w-6 h-6", isSelected ? "text-primary" : "text-muted-foreground")} />
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={(e) => openActions(workout, e)}>
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
+                              <div className="flex-1 min-w-0">
+                                <p className={cn("font-medium truncate", isSelected && "text-primary")}>{workout.workout_title ?? workout.workout?.title}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{(workout.estimated_duration_minutes ?? workout.workout?.duration_minutes) ?? '—'}min</span>
+                                  {workout.workout?.category && <><span>·</span><span className="capitalize">{workout.workout.category}</span></>}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-primary hover:bg-primary/10"
+                                  onClick={(e) => { e.stopPropagation(); startWorkout() }}
+                                >
+                                  <Play className="w-4 h-4 fill-primary" />
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="icon" onClick={(e) => openActions(workout, e)}>
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground py-3">No workouts scheduled</p>
