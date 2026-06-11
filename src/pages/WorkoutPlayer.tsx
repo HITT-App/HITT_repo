@@ -39,7 +39,7 @@ type Exercise = {
   video_url: string | null;
 };
 
-type PlayerState = 'countdown' | 'playing' | 'paused' | 'completed';
+type PlayerState = 'ready' | 'countdown' | 'playing' | 'paused' | 'completed';
 
 type PBKind = 'duration' | 'calories' | 'streak';
 
@@ -148,7 +148,7 @@ export default function WorkoutPlayer() {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [playerState, setPlayerState] = useState<PlayerState>('countdown');
+  const [playerState, setPlayerState] = useState<PlayerState>('ready');
   const [countdown, setCountdown] = useState(3);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [totalElapsed, setTotalElapsed] = useState(0);
@@ -398,6 +398,42 @@ export default function WorkoutPlayer() {
   const currentExercise = exercises[currentExerciseIndex];
   const progress = exercises.length > 0 ? ((currentExerciseIndex + 1) / exercises.length) * 100 : 0;
   const totalDuration = exercises.reduce((acc, ex) => acc + (ex.duration_seconds || 45), 0);
+
+  // Ready Screen
+  if (playerState === 'ready') {
+    const totalDurationMin = Math.round(totalDuration / 60) || workout?.duration_minutes || 0;
+    return (
+      <div className="h-dvh bg-background flex flex-col items-center justify-center p-6 gap-8">
+        <div className="text-center space-y-2">
+          <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">Ready to start?</p>
+          <h1 className="text-3xl font-black text-foreground leading-tight">{workout?.title ?? 'Workout'}</h1>
+          {exercises.length > 0 && (
+            <p className="text-muted-foreground text-sm">
+              {exercises.length} exercises · {totalDurationMin} min
+            </p>
+          )}
+        </div>
+
+        <HIITLogo size="lg" />
+
+        <div className="w-full space-y-3">
+          <Button
+            className="w-full h-16 text-xl font-black rounded-2xl"
+            onClick={() => setPlayerState('countdown')}
+          >
+            <Play className="w-6 h-6 mr-2" /> Let's go
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full text-muted-foreground"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Countdown Screen
   if (playerState === 'countdown') {
