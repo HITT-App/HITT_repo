@@ -1,20 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Share2, TrendingUp, Sparkles, Download, X, RefreshCw, Camera, User, Zap, Star } from 'lucide-react';
-import { PostActivityInsight } from './PostActivityInsight';
-import { HIITLogo } from '@/components/HIITLogo';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
+import { useState, useRef, useCallback } from 'react';
+import { X, Square, Smartphone, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ShareOptionsGrid, type ShareStyle } from './ShareOptionsGrid';
-import { SocialShareButtons } from './SocialShareButtons';
-import { TemplateSharePicker } from './TemplateSharePicker';
-import { generateStatsCard, generatePhotoCard, generateMapCard, generateRouteCard, generateTransparentCard, generateStoryCard, type RoutePoint } from './ShareCardCanvas';
+import { toast } from 'sonner';
+import html2canvas from 'html2canvas';
 
 import type { Json } from '@/integrations/supabase/types';
+import type { RoutePoint } from './ShareCardCanvas';
 
 export interface CompletionStat {
   label: string;
@@ -38,567 +29,332 @@ interface CompletionSummaryProps {
   pointsEarned?: number;
 }
 
+const C = {
+  bg:          '#0a0a0a',
+  panel:       '#141414',
+  line:        '#262626',
+  dim:         '#8c8c8c',
+  cream:       '#f1ebdf',
+  primary:     '#f97316',
+  primaryDeep: '#ea580c',
+};
+
+const FONT_COND = "'Saira Condensed', 'Inter', sans-serif";
+const FONT_UI   = "'Inter', -apple-system, sans-serif";
+
+function getHeroMetrics(activityType: string | undefined, stats: CompletionStat[]): CompletionStat[] {
+  const type = (activityType || '').toLowerCase();
+  const find = (...kw: string[]) => stats.find(s => kw.some(k => s.label.toLowerCase().includes(k)));
+
+  const duration  = find('duration', 'time');
+  const calories  = find('calorie', 'kcal', 'cal');
+  const distance  = find('distance', 'km', 'mile');
+  const elevation = find('elevation', 'climb', 'ascent', 'gain');
+  const exercises = find('exercise', 'set', 'rep', 'round', 'count');
+  const laps      = find('lap', 'length');
+
+  if (/run|cycl|walk|bike|hike|triath|route/.test(type)) {
+    return [duration, distance, elevation].filter(Boolean) as CompletionStat[];
+  }
+  if (/swim|pool|aqua/.test(type)) {
+    return [duration, laps || distance, calories].filter(Boolean) as CompletionStat[];
+  }
+  if (/strength|weight|hiit|aerob|box|martial|gym|circuit|crossfit/.test(type)) {
+    return [duration, calories, exercises].filter(Boolean) as CompletionStat[];
+  }
+  const used = new Set([duration, calories]);
+  const extra = stats.find(s => !used.has(s));
+  return [duration, calories, extra].filter(Boolean) as CompletionStat[];
+}
+
+function GlowDivider({ width }: { width: number }) {
+  return (
+    <div style={{
+      width, height: 3, borderRadius: 2, flexShrink: 0,
+      background: 'linear-gradient(90deg, transparent, #f97316 22%, #fb923c 50%, #f97316 78%, transparent)',
+      boxShadow: '0 0 14px rgba(249,115,22,0.55)',
+    }} />
+  );
+}
+
+function PulseLine({ width, height }: { width: number; height: number }) {
+  const ys = [60,58,61,57,60,56,59,55,58,57,60,58,62,59,63,74,52,38,49,46,54,51,56,55,58,57,59];
+  const W = 1000, H = 200, n = ys.length;
+  const px = (i: number) => 30 + (i / (n - 1)) * (W - 60);
+  const py = (v: number) => (v / 100) * H;
+  let d = `M ${px(0).toFixed(1)} ${py(ys[0]).toFixed(1)}`;
+  for (let i = 1; i < n; i++) d += ` L ${px(i).toFixed(1)} ${py(ys[i]).toFixed(1)}`;
+  const ex = px(n - 1), ey = py(ys[n - 1]);
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
+      <defs>
+        <filter id="sc-glow" x="-20%" y="-60%" width="140%" height="220%">
+          <feGaussianBlur stdDeviation="7" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <linearGradient id="sc-stroke" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#f97316" stopOpacity="0.55" />
+          <stop offset="0.5" stopColor="#fb923c" />
+          <stop offset="1" stopColor="#fdba74" />
+        </linearGradient>
+      </defs>
+      <path d={d} fill="none" stroke="#ea580c" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" filter="url(#sc-glow)" />
+      <path d={d} fill="none" stroke="url(#sc-stroke)" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={ex} cy={ey} r="16" fill="#fb923c" opacity="0.35" filter="url(#sc-glow)" />
+      <circle cx={ex} cy={ey} r="8" fill="#fff" />
+    </svg>
+  );
+}
+
+function Metric({ stat, numSize, labelSize, align }: {
+  stat: CompletionStat;
+  numSize: number;
+  labelSize: number;
+  align: 'center' | 'left';
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'left' ? 'flex-start' : 'center' }}>
+      <span style={{ fontFamily: FONT_COND, fontWeight: 600, fontSize: labelSize, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.dim, lineHeight: 1 }}>
+        {stat.label}
+      </span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: numSize * 0.04, marginTop: labelSize * 0.35 }}>
+        <span style={{ fontFamily: FONT_COND, fontWeight: 700, fontSize: numSize, letterSpacing: '-0.01em', color: C.cream, lineHeight: 0.86 }}>
+          {stat.value}
+        </span>
+        {stat.unit && (
+          <span style={{ fontFamily: FONT_COND, fontWeight: 600, fontSize: numSize * 0.32, letterSpacing: '0.02em', textTransform: 'uppercase', color: C.primary, lineHeight: 1 }}>
+            {stat.unit}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Creative({ format, activityTitle, heroMetrics, pbLabel, pointsEarned }: {
+  format: 'square' | 'story';
+  activityTitle: string;
+  heroMetrics: CompletionStat[];
+  pbLabel?: string;
+  pointsEarned?: number;
+}) {
+  const square = format === 'square';
+  const W = 1080, H = square ? 1080 : 1920;
+  const align = square ? 'center' as const : 'left' as const;
+  const items = square ? 'center' : 'flex-start';
+  const contentW = square ? 560 : 820;
+  const numSize = square ? 108 : 168;
+  const labelSize = square ? 27 : 40;
+  const padX = square ? 0 : 96;
+  const hasPB = !!(pbLabel || (pointsEarned && pointsEarned > 0));
+
+  return (
+    <div style={{
+      width: W, height: H, position: 'relative', overflow: 'hidden', boxSizing: 'border-box',
+      background: 'radial-gradient(120% 70% at 50% 0%, #171310 0%, #0a0807 42%, #050505 100%)',
+      display: 'flex', flexDirection: 'column', alignItems: items, justifyContent: 'center',
+      padding: square ? '60px 0' : `0 ${padX}px`, fontFamily: FONT_COND,
+    }}>
+      {/* Brand frame */}
+      <div style={{ position: 'absolute', top: 56, left: 56, right: 56, bottom: 56, border: '1px solid rgba(249,115,22,0.10)', borderRadius: 18, pointerEvents: 'none' }} />
+
+      <div style={{ width: contentW, display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 46 : 60 }}>
+        {/* Logo + title */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 22 : 28 }}>
+          <div style={{
+            width: square ? 132 : 168, height: square ? 132 : 168, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 60px rgba(249,115,22,0.35)',
+            flexShrink: 0,
+          }}>
+            <span style={{ fontFamily: FONT_COND, fontWeight: 700, fontSize: square ? 52 : 66, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>H</span>
+          </div>
+          {!square && (
+            <span style={{ fontFamily: FONT_COND, fontWeight: 600, fontSize: 32, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.primary, whiteSpace: 'nowrap' }}>
+              WORKOUT COMPLETE
+            </span>
+          )}
+          <span style={{ fontFamily: FONT_COND, fontWeight: 700, fontSize: square ? 32 : 62, letterSpacing: square ? '0.16em' : '0.02em', textTransform: 'uppercase', color: C.cream, lineHeight: 1, whiteSpace: 'nowrap' }}>
+            {activityTitle}
+          </span>
+        </div>
+
+        {/* Metrics */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 30 : 36, width: contentW }}>
+          {heroMetrics.map((m, i) => (
+            <div key={m.label} style={{ display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 30 : 36, width: contentW }}>
+              <Metric stat={m} align={align} numSize={numSize} labelSize={labelSize} />
+              {i < heroMetrics.length - 1 && <GlowDivider width={contentW} />}
+            </div>
+          ))}
+        </div>
+
+        {/* Pulse line + story footer */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 0 : 42, width: contentW }}>
+          <PulseLine width={contentW} height={square ? 104 : 150} />
+          {!square && hasPB && (
+            <span style={{ fontFamily: FONT_COND, fontWeight: 600, fontSize: 34, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.primary, whiteSpace: 'nowrap' }}>
+              {pbLabel || 'Great Work'}{pointsEarned ? <> <span style={{ color: C.dim }}>·</span> +{pointsEarned} PTS</> : null}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FormatSeg({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: 7, height: 38, padding: '0 18px', borderRadius: 999,
+      border: 'none', cursor: 'pointer', fontFamily: FONT_UI, fontSize: 13.5, fontWeight: 600,
+      background: active ? '#2a2a2a' : 'transparent',
+      color: active ? C.cream : C.dim,
+      boxShadow: active ? '0 1px 3px rgba(0,0,0,0.4)' : 'none',
+      WebkitTapHighlightColor: 'transparent',
+      transition: 'background 0.18s, color 0.18s',
+    }}>
+      {icon} {label}
+    </button>
+  );
+}
+
 export function CompletionSummary({
   activityTitle,
   activityType,
   stats,
-  achievementMessage,
   pbLabel,
-  badges = [],
-  mapComponent,
-  routePositions,
-  onDone,
-  postData,
-  ratingSection,
-  mapContainerRef,
   pointsEarned,
+  onDone,
 }: CompletionSummaryProps) {
-  const { user } = useAuth();
-  const [shareToFeed, setShareToFeed] = useState(true);
-  const [isPosting, setIsPosting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(true);
-  const [genProgress, setGenProgress] = useState(0);
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
-  const [showLightbox, setShowLightbox] = useState(false);
-  const [showAIOptions, setShowAIOptions] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const photoFileInputRef = useRef<HTMLInputElement>(null);
-  const autoGenerated = useRef(false);
+  const [format, setFormat] = useState<'square' | 'story'>('square');
+  const [isSharing, setIsSharing] = useState(false);
+  const captureRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
-  const internalMapRef = useRef<HTMLDivElement>(null);
-  const effectiveMapRef = mapContainerRef || internalMapRef;
 
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('profiles')
-      .select('avatar_url')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.avatar_url) setProfileAvatarUrl(data.avatar_url);
+  const heroMetrics = getHeroMetrics(activityType, stats);
+  const square = format === 'square';
+  const BASE_W = 1080, BASE_H = square ? 1080 : 1920;
+  const previewW = Math.min(window.innerWidth * 0.85, 380);
+  const scale = previewW / BASE_W;
+  const previewH = BASE_H * scale;
+
+  const handleShare = useCallback(async () => {
+    if (isSharing || !captureRef.current) return;
+    setIsSharing(true);
+    const el = captureRef.current;
+    try {
+      // Un-scale for full-res capture
+      el.style.transform = 'none';
+      el.style.width = `${BASE_W}px`;
+      el.style.height = `${BASE_H}px`;
+
+      const canvas = await html2canvas(el, {
+        width: BASE_W, height: BASE_H, scale: 1,
+        useCORS: true, backgroundColor: C.bg, logging: false,
       });
-  }, [user]);
 
-  const hasMapData = !!mapComponent;
+      el.style.transform = '';
+      el.style.width = '';
+      el.style.height = '';
 
-  // Auto-generate summary image on mount
-  // GPS activities → map + stats card (instant), others → AI cinematic
-  useEffect(() => {
-    if (autoGenerated.current || generatedImageUrl) return;
-    autoGenerated.current = true;
-
-    let progressInterval: ReturnType<typeof setInterval>;
-    const startProgress = (fast?: boolean) => {
-      setGenProgress(0);
-      progressInterval = setInterval(() => {
-        setGenProgress(prev => {
-          if (prev >= 92) { clearInterval(progressInterval); return 92; }
-          return prev + (fast ? Math.random() * 20 + 10 : Math.random() * 12 + 3);
-        });
-      }, fast ? 150 : 400);
-    };
-
-    const generateMapImage = async () => {
-      setIsGenerating(true);
-      startProgress(true);
-      try {
-        let dataUrl: string;
-        if (routePositions && routePositions.length >= 2) {
-          // Native canvas — instant, no CORS, Strava-style
-          dataUrl = await generateRouteCard(routePositions, activityTitle, stats);
-        } else if (effectiveMapRef.current) {
-          // html2canvas fallback for rendered map element
-          await new Promise(r => setTimeout(r, 800));
-          dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
-        } else {
-          dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
-        }
-        setGenProgress(100);
-        await new Promise(r => setTimeout(r, 200));
-        setGeneratedImageUrl(dataUrl);
-      } catch {
+      canvas.toBlob(async (blob) => {
+        if (!blob) { toast.error('Could not create image'); setIsSharing(false); return; }
+        const file = new File([blob], `hiit-${activityType || 'workout'}.png`, { type: 'image/png' });
         try {
-          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
-          setGeneratedImageUrl(dataUrl);
-        } catch {}
-      } finally {
-        clearInterval(progressInterval);
-        setIsGenerating(false);
-      }
-    };
-
-    const generateAIImage = async () => {
-      setIsGenerating(true);
-      startProgress();
-      try {
-        const session = await supabase.auth.getSession();
-        const token = session.data.session?.access_token;
-        
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-activity-image`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-            body: JSON.stringify({ activityType: activityType || activityTitle, stats }),
-          },
-        );
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.imageUrl) {
-            setGenProgress(100);
-            await new Promise(r => setTimeout(r, 400));
-            setGeneratedImageUrl(data.imageUrl);
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], title: `${activityTitle} — HIIT` });
+          } else if (navigator.share) {
+            await navigator.share({ title: activityTitle, text: heroMetrics.map(m => `${m.value}${m.unit ? ' ' + m.unit : ''} ${m.label}`).join(' · ') });
+          } else {
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = `hiit-${activityType || 'workout'}.png`;
+            a.click();
           }
-        } else {
-          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
-          setGenProgress(100);
-          await new Promise(r => setTimeout(r, 300));
-          setGeneratedImageUrl(dataUrl);
+        } catch (shareErr) {
+          if ((shareErr as Error)?.name !== 'AbortError') toast.error('Could not share');
         }
-      } catch {
-        try {
-          const dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
-          setGeneratedImageUrl(dataUrl);
-        } catch {}
-      } finally {
-        clearInterval(progressInterval);
-        setIsGenerating(false);
-      }
-    };
-
-    const timer = setTimeout(hasMapData ? generateMapImage : generateAIImage, 300);
-    return () => { clearTimeout(timer); clearInterval(progressInterval); };
-  }, [activityTitle, activityType, stats, effectiveMapRef, hasMapData]);
-
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-  // ── AI Cinematic generation (existing logic) ──
-  const handleAIGenerate = useCallback(async (photoSource?: 'profile' | 'selfie', selfieBase64?: string) => {
-    if (!user) { toast.error('Please log in'); return; }
-    setShowAIOptions(false);
-    setIsGenerating(true);
-    setGenProgress(0);
-    const progressInterval = setInterval(() => {
-      setGenProgress(prev => prev >= 90 ? (clearInterval(progressInterval), 90) : prev + Math.random() * 8 + 2);
-    }, 500);
-    try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      const body: Record<string, unknown> = { activityType: activityType || activityTitle, stats };
-      if (photoSource === 'profile' && profileAvatarUrl) body.userPhotoUrl = profileAvatarUrl;
-      else if (photoSource === 'selfie' && selfieBase64) body.userPhotoBase64 = selfieBase64;
-
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-activity-image`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify(body),
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        toast.error(res.status === 429 ? 'Rate limit reached.' : res.status === 402 ? 'AI credits exhausted.' : err.error || 'Failed');
-        return;
-      }
-      const data = await res.json();
-      if (data.imageUrl) { setGenProgress(100); setGeneratedImageUrl(data.imageUrl); toast.success('Share image generated! ✨'); }
-    } catch { toast.error('Failed to generate image.'); } finally { clearInterval(progressInterval); setIsGenerating(false); }
-  }, [user, activityType, activityTitle, stats, profileAvatarUrl]);
-
-  const handleAISelfieUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Please select an image'); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return; }
-    try { const b64 = await fileToBase64(file); handleAIGenerate('selfie', b64); } catch { toast.error('Failed to read image'); }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  // ── Canvas-based generators ──
-  const handleShareOption = useCallback(async (style: ShareStyle) => {
-    if (style === 'ai') { setShowAIOptions(true); return; }
-    if (style === 'photo') { photoFileInputRef.current?.click(); return; }
-    if (style === 'template') { setShowTemplates(true); return; }
-
-    setIsGenerating(true);
-    try {
-      let dataUrl: string;
-
-      if (style === 'map') {
-        if (routePositions && routePositions.length >= 2) {
-          dataUrl = await generateRouteCard(routePositions, activityTitle, stats);
-        } else if (effectiveMapRef.current) {
-          dataUrl = await generateMapCard(effectiveMapRef.current, activityTitle, stats);
-        } else {
-          dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, null, pbLabel);
-        }
-      } else if (style === 'transparent') {
-        dataUrl = await generateTransparentCard(routePositions ?? [], activityTitle, stats);
-      } else if (style === 'story') {
-        dataUrl = await generateStoryCard(routePositions ?? [], activityTitle, activityType || 'workout', stats);
-      } else {
-        dataUrl = await generateStatsCard(activityTitle, activityType || 'workout', stats, effectiveMapRef.current, pbLabel);
-      }
-
-      setGeneratedImageUrl(dataUrl);
-      toast.success('Share card created! 🎨');
-    } catch { toast.error('Failed to create card'); } finally { setIsGenerating(false); }
-  }, [activityTitle, activityType, stats, effectiveMapRef, routePositions]);
-
-  const handleQuickPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Please select an image'); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error('Image must be under 10MB'); return; }
-    setIsGenerating(true);
-    try {
-      const b64 = await fileToBase64(file);
-      const dataUrl = await generatePhotoCard(b64, activityTitle, stats);
-      setGeneratedImageUrl(dataUrl);
-      toast.success('Photo card created! 📸');
-    } catch { toast.error('Failed to create card'); } finally { setIsGenerating(false); }
-    if (photoFileInputRef.current) photoFileInputRef.current.value = '';
-  };
-
-  const handleDownload = () => {
-    if (!generatedImageUrl) return;
-    const a = document.createElement('a');
-    a.href = generatedImageUrl;
-    a.download = `hiit-${activityType || 'activity'}-${Date.now()}.png`;
-    a.target = '_blank';
-    a.click();
-  };
-
-  const handleReset = () => {
-    setGeneratedImageUrl(null);
-    setShowAIOptions(false);
-    setShowTemplates(false);
-    setGenProgress(0);
-    autoGenerated.current = false;
-  };
-
-  const handleDone = async () => {
-    if (shareToFeed && user) {
-      setIsPosting(true);
-      try {
-        const statsLine = stats.map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ''} ${s.label.toLowerCase()}`).join(' · ');
-        await supabase.from('community_posts').insert([{
-          user_id: user.id,
-          content: `Just completed "${activityTitle}"! 💪 ${statsLine}`,
-          post_type: 'workout',
-          category: 'fitness',
-          tags: ['workout', 'completed'],
-          workout_data: postData ?? {},
-          image_url: generatedImageUrl || null,
-        }]);
-        toast.success('Shared to feed!');
-      } catch { toast.error('Failed to share'); } finally { setIsPosting(false); }
+        onDone();
+      }, 'image/png');
+    } catch {
+      el.style.transform = '';
+      el.style.width = '';
+      el.style.height = '';
+      toast.error('Failed to prepare image');
+    } finally {
+      setIsSharing(false);
     }
-    onDone();
-  };
+  }, [activityTitle, activityType, heroMetrics, isSharing, BASE_W, BASE_H, onDone]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col animate-fade-in">
-      {/* Hidden file inputs */}
-      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="user" className="hidden" onChange={handleAISelfieUpload} />
-      <input ref={photoFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleQuickPhotoUpload} />
-
-      {/* Sticky header */}
-      <header
-        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4 py-3"
-        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}
-      >
-        <Button variant="ghost" size="icon" onClick={onDone}>
-          <X className="w-5 h-5" />
-        </Button>
-        <h1 className="text-base font-semibold">Workout Complete</h1>
-        <div className="w-10" />
-      </header>
-
-      {/* Drag handle — swipe down to dismiss */}
-      <div
-        className="flex justify-center pt-2.5 pb-0.5 touch-none"
-        onTouchStart={(e) => { dragStartY.current = e.touches[0].clientY }}
-        onTouchEnd={(e) => {
-          if (dragStartY.current === null) return
-          if (e.changedTouches[0].clientY - dragStartY.current > 60) onDone()
-          dragStartY.current = null
-        }}
-      >
-        <div className="w-10 h-1 rounded-full bg-border" />
+    <div
+      className="fixed inset-0 z-50 flex flex-col select-none"
+      style={{ background: C.bg, fontFamily: FONT_UI }}
+      onTouchStart={(e) => { dragStartY.current = e.touches[0].clientY; }}
+      onTouchEnd={(e) => {
+        if (dragStartY.current === null) return;
+        if (e.changedTouches[0].clientY - dragStartY.current > 80) onDone();
+        dragStartY.current = null;
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(var(--safe-area-inset-top, 0px) + 18px) 20px 6px' }}>
+        <button aria-label="Close" onClick={onDone} style={{ width: 38, height: 38, borderRadius: 999, border: 'none', cursor: 'pointer', background: C.panel, display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+          <X size={18} color={C.dim} />
+        </button>
+        <span style={{ fontSize: 15, fontWeight: 650, color: C.cream }}>Share workout</span>
+        <div style={{ width: 38 }} />
       </div>
 
-      {/* Hero header */}
-      <div className="relative bg-gradient-to-b from-primary/20 via-primary/5 to-background pt-6 pb-6 px-6 text-center overflow-hidden">
-        {/* Decorative particles */}
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1.5 h-1.5 rounded-full bg-primary/30 animate-pulse"
-              style={{
-                top: `${15 + i * 12}%`,
-                left: `${10 + i * 15}%`,
-                animationDelay: `${i * 0.3}s`,
-                animationDuration: `${2 + i * 0.5}s`,
-              }}
-            />
-          ))}
-        </div>
-        <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/25 to-primary/5 flex items-center justify-center mx-auto mb-3 animate-scale-in shadow-[0_0_40px_hsl(var(--primary)/0.2)]">
-          <HIITLogo size="lg" showGlow className="rounded-full" />
-        </div>
-        <h1 className="text-2xl font-bold text-foreground mb-0.5">{activityTitle}</h1>
-        <p className="text-sm text-muted-foreground">Completed</p>
-      </div>
-
-      {/* Stats grid */}
-      <div className="px-5 -mt-1">
-        <div className={cn('grid gap-2.5', stats.length <= 3 ? 'grid-cols-3' : 'grid-cols-2')}>
-          {stats.map((stat, i) => (
-            <div key={i} className="bg-card border border-border/60 rounded-2xl p-3.5 text-center relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent pointer-events-none" />
-              <p className="text-xl font-bold text-foreground leading-tight relative">
-                {stat.value}
-                {stat.unit && <span className="text-xs font-normal text-muted-foreground ml-1">{stat.unit}</span>}
-              </p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5 relative">{stat.label}</p>
-            </div>
-          ))}
+      {/* Format toggle */}
+      <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, paddingBottom: 4 }}>
+        <div style={{ display: 'flex', gap: 2, padding: 3, background: C.panel, border: `1px solid ${C.line}`, borderRadius: 999 }}>
+          <FormatSeg active={square} onClick={() => setFormat('square')} label="Square" icon={<Square size={15} color={square ? C.cream : C.dim} strokeWidth={2.1} />} />
+          <FormatSeg active={!square} onClick={() => setFormat('story')} label="Story" icon={<Smartphone size={15} color={!square ? C.cream : C.dim} strokeWidth={2.1} />} />
         </div>
       </div>
 
-      {/* Points earned banner */}
-      {pointsEarned != null && pointsEarned > 0 && (
-        <div className="px-5 mt-3 animate-fade-in" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-          <div className="relative bg-gradient-to-r from-primary/15 via-primary/10 to-accent/10 border border-primary/20 rounded-2xl p-4 flex items-center gap-4 overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,_hsl(var(--primary)/0.1),_transparent_60%)] pointer-events-none" />
-            <div className="relative w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 shadow-[0_0_20px_hsl(var(--primary)/0.3)]">
-              <Zap className="w-6 h-6 text-primary" />
-            </div>
-            <div className="relative flex-1">
-              <p className="text-2xl font-bold text-foreground">+{pointsEarned} <span className="text-sm font-semibold text-primary">pts</span></p>
-              <p className="text-xs text-muted-foreground">Leaderboard Points Earned</p>
-            </div>
-            <div className="relative flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-full">
-              <Star className="w-3 h-3 text-primary fill-primary" />
-              <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">XP</span>
-            </div>
+      {/* Creative preview */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 0, gap: 12, padding: '8px 0' }}>
+        <div style={{
+          width: previewW, height: previewH, borderRadius: 20, overflow: 'hidden', position: 'relative',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
+          transition: 'width 0.35s cubic-bezier(.4,0,.2,1), height 0.35s cubic-bezier(.4,0,.2,1)',
+        }}>
+          <div
+            ref={captureRef}
+            style={{ width: BASE_W, height: BASE_H, transform: `scale(${scale})`, transformOrigin: 'top left' }}
+          >
+            <Creative format={format} activityTitle={activityTitle} heroMetrics={heroMetrics} pbLabel={pbLabel} pointsEarned={pointsEarned} />
           </div>
         </div>
-      )}
-
-      {/* Achievement banner */}
-      {(achievementMessage || badges.length > 0) && (
-        <div className="px-5 mt-3">
-          <div className="bg-primary/10 border border-primary/20 rounded-2xl p-3.5 flex items-center gap-3">
-            <TrendingUp className="w-5 h-5 text-primary shrink-0" />
-            <div className="flex-1">
-              {achievementMessage && <p className="text-sm font-semibold text-foreground">{achievementMessage}</p>}
-              {badges.length > 0 && (
-                <div className="flex items-center gap-2 mt-1">
-                  {badges.map((b, i) => <span key={i} className="text-lg" title={b.name}>{b.icon}</span>)}
-                  <span className="text-xs text-muted-foreground">{badges.length} badge{badges.length > 1 ? 's' : ''} earned!</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Map snapshot */}
-      {mapComponent && (
-        <div className="px-5 mt-3">
-          <div ref={effectiveMapRef} className="rounded-2xl overflow-hidden border border-border h-[200px]">
-            {mapComponent}
-          </div>
-        </div>
-      )}
-
-      {/* AI Insight */}
-      <div className="px-5 mt-3">
-        <PostActivityInsight activityTitle={activityTitle} activityType={activityType} stats={stats} />
+        <span style={{ fontSize: 12, color: '#6f6f6f', letterSpacing: '0.04em' }}>
+          {square ? '1080 × 1080 · Feed post' : '1080 × 1920 · Story'}
+        </span>
       </div>
 
-      {/* Share image section */}
-      <div className="px-5 mt-3">
-        {isGenerating ? (
-          <div className="rounded-2xl border border-border bg-gradient-to-b from-card to-card/80 overflow-hidden p-5">
-            <div className="flex flex-col items-center gap-4 py-4">
-              {/* Pulsing ring + icon */}
-              <div className="relative w-14 h-14">
-                <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-20" />
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/25 to-primary/5 flex items-center justify-center shadow-[0_0_24px_hsl(var(--primary)/0.25)]">
-                  <Sparkles className="w-6 h-6 text-primary animate-pulse" />
-                </div>
-              </div>
-
-              {/* Title + percentage */}
-              <div className="text-center space-y-0.5">
-                <p className="text-sm font-semibold text-foreground">
-386:                   {hasMapData ? 'Creating your route card' : 'Generating your epic summary'}
-                  <span className="ml-1.5 text-primary">{Math.round(Math.min(genProgress, 100))}%</span>
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {hasMapData
-                    ? (genProgress < 40 ? 'Capturing your route…' : genProgress < 75 ? 'Overlaying stats…' : 'Finishing up ✨')
-                    : (genProgress < 25 ? 'Setting the scene…' : genProgress < 50 ? 'Composing your card…' : genProgress < 75 ? 'Adding cinematic effects…' : genProgress < 95 ? 'Final touches…' : 'Finishing up ✨')
-                  }
-                </p>
-              </div>
-
-              {/* Shimmer progress bar */}
-              <div className="w-full max-w-[220px]">
-                <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden relative">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-primary via-primary/80 to-primary transition-all duration-700 ease-out relative"
-                    style={{ width: `${Math.min(genProgress, 100)}%` }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[shimmer_1.5s_infinite] rounded-full" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : generatedImageUrl ? (
-          <div className="space-y-2">
-            <div className="rounded-2xl border border-border overflow-hidden cursor-pointer relative group" onClick={() => setShowLightbox(true)}>
-              <img src={generatedImageUrl} alt="Share card" className="w-full aspect-square object-cover" />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 active:bg-black/20 transition-colors flex items-center justify-center">
-                <p className="text-transparent group-hover:text-white active:text-white text-sm font-medium transition-colors">Tap to view</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1 gap-1.5 rounded-xl" onClick={handleDownload}>
-                <Download className="w-3.5 h-3.5" /> Save
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1 gap-1.5 rounded-xl" onClick={handleReset}>
-                <RefreshCw className="w-3.5 h-3.5" /> New Style
-              </Button>
-            </div>
-          </div>
-        ) : showAIOptions ? (
-          /* AI Cinematic sub-options */
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-3 animate-fade-in">
-            <div className="text-center mb-1">
-              <p className="text-sm font-semibold text-foreground">AI Cinematic Style</p>
-              <p className="text-xs text-muted-foreground">Choose your look (~15 seconds)</p>
-            </div>
-            {profileAvatarUrl && (
-              <button className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-secondary/50 active:bg-secondary transition-colors text-left" onClick={() => handleAIGenerate('profile')}>
-                <Avatar className="w-10 h-10 border-2 border-primary/30">
-                  <AvatarImage src={profileAvatarUrl} alt="Profile" />
-                  <AvatarFallback><User className="w-5 h-5" /></AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">Use Profile Picture</p>
-                  <p className="text-xs text-muted-foreground">AI will feature you</p>
-                </div>
-                <Sparkles className="w-4 h-4 text-primary shrink-0" />
-              </button>
-            )}
-            <button className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-secondary/50 active:bg-secondary transition-colors text-left" onClick={() => fileInputRef.current?.click()}>
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Camera className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">Take a Selfie / Upload</p>
-                <p className="text-xs text-muted-foreground">Use a fresh photo</p>
-              </div>
-              <Sparkles className="w-4 h-4 text-primary shrink-0" />
-            </button>
-            <button className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-secondary/50 active:bg-secondary transition-colors text-left" onClick={() => handleAIGenerate()}>
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">Silhouette Style</p>
-                <p className="text-xs text-muted-foreground">Dramatic scene, no photo</p>
-              </div>
-            </button>
-            <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setShowAIOptions(false)}>Back</Button>
-          </div>
-        ) : showTemplates ? (
-          <TemplateSharePicker
-            activityTitle={activityTitle}
-            activityType={activityType}
-            stats={stats}
-            pbLabel={pbLabel}
-            routePositions={routePositions}
-            onGenerated={(dataUrl) => { setGeneratedImageUrl(dataUrl); setShowTemplates(false); toast.success('Template created! 🎨'); }}
-            onCancel={() => setShowTemplates(false)}
-          />
-        ) : (
-          /* Main option grid */
-          <ShareOptionsGrid hasMap={!!mapComponent} onSelect={handleShareOption} isGenerating={isGenerating} />
-        )}
+      {/* Share button */}
+      <div style={{ display: 'flex', justifyContent: 'center', padding: `10px 24px calc(var(--safe-area-inset-bottom, 0px) + 28px)` }}>
+        <button
+          onClick={handleShare}
+          disabled={isSharing}
+          className={cn('touch-manipulation')}
+          style={{
+            width: '100%', maxWidth: 360, height: 56, borderRadius: 16, border: 'none', cursor: isSharing ? 'default' : 'pointer',
+            background: isSharing ? '#444' : `linear-gradient(135deg, ${C.primary}, ${C.primaryDeep})`,
+            color: '#1a0d04', fontFamily: FONT_UI, fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+            boxShadow: isSharing ? 'none' : '0 10px 26px rgba(249,115,22,0.42), 0 4px 10px rgba(0,0,0,0.4)',
+            transition: 'background 0.15s, box-shadow 0.15s',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <Share2 size={19} color="#1a0d04" strokeWidth={2.2} />
+          {isSharing ? 'Preparing…' : 'Share'}
+        </button>
       </div>
-
-      {/* Social sharing */}
-      <div className="px-5 mt-3">
-        <SocialShareButtons
-          imageUrl={generatedImageUrl}
-          activityTitle={activityTitle}
-          statsText={stats.map((s) => `${s.value}${s.unit ? ` ${s.unit}` : ''} ${s.label.toLowerCase()}`).join(' · ')}
-        />
-      </div>
-
-      {/* Rating section */}
-      {ratingSection && <div className="px-5 mt-3">{ratingSection}</div>}
-
-      {/* Share toggle + done */}
-      <div className="mt-auto px-5 pb-8 pt-5 space-y-3">
-        <div className="flex items-center justify-between bg-card border border-border rounded-2xl p-3.5">
-          <div className="flex items-center gap-3">
-            <Share2 className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium text-foreground">Share to Feed</p>
-              <p className="text-xs text-muted-foreground">{generatedImageUrl ? 'Post with your image' : 'Let friends see your achievement'}</p>
-            </div>
-          </div>
-          <Switch checked={shareToFeed} onCheckedChange={setShareToFeed} />
-        </div>
-        <Button className="w-full h-12 rounded-2xl text-base font-semibold" onClick={handleDone} disabled={isPosting}>
-          {isPosting ? 'Sharing…' : shareToFeed ? 'Share & Done' : 'Done'}
-        </Button>
-      </div>
-
-      {/* Lightbox */}
-      {showLightbox && generatedImageUrl && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4" onClick={() => setShowLightbox(false)}>
-          <button onClick={() => setShowLightbox(false)} className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center z-10">
-            <X className="h-5 w-5 text-white" />
-          </button>
-          <img src={generatedImageUrl} alt="Share card" className="max-w-full max-h-[80vh] object-contain rounded-xl" onClick={(e) => e.stopPropagation()} />
-          <div className="flex gap-3 mt-4">
-            <Button variant="outline" className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); handleDownload(); }}>
-              <Download className="w-4 h-4" /> Save
-            </Button>
-            <Button variant="outline" className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); setShowLightbox(false); handleReset(); }}>
-              <RefreshCw className="w-4 h-4" /> New Style
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
