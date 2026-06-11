@@ -526,7 +526,7 @@ const BodyScan = () => {
   // ── render ────────────────────────────────────────────────
 
   return (
-    <div className="h-dvh bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Fixed header */}
       <div
         className="flex-shrink-0 z-20 bg-background/90 backdrop-blur-md border-b border-border/40"
@@ -572,7 +572,7 @@ const BodyScan = () => {
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-lg mx-auto pb-24 w-full">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 max-w-lg mx-auto pb-24 w-full">
 
         {/* ═══════════════════════════════ SCAN TAB ═══════════════════════════════ */}
         {activeTab === "scan" && (
