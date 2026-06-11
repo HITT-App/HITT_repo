@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Plus, Calendar } from "lucide-react";
+import { Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
@@ -84,9 +84,25 @@ export const BottomNav = ({ onHIITClick, onQuickAddClick }: BottomNavProps) => {
                   {item.id === 'home'
                     ? <Home size={22} strokeWidth={isActive ? 2 : 1.5} className="transition-all duration-200" />
                     : item.id === 'quickadd'
-                    ? <Plus size={22} strokeWidth={1.5} />
+                    ? (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <rect x="3.25" y="3.25" width="17.5" height="17.5" rx="6.2" stroke="currentColor" strokeWidth="1.7" opacity="0.5" />
+                        <path d="M12 8V16M8 12H16" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
+                      </svg>
+                    )
                     : item.id === 'schedule'
-                    ? <Calendar size={22} strokeWidth={isActive ? 2 : 1.5} className="transition-all duration-200" />
+                    ? (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="transition-all duration-200">
+                        <rect x="3" y="5" width="18" height="16" rx="4.2" stroke="currentColor" strokeWidth={isActive ? 2.2 : 1.8} />
+                        <path d="M8 2.6V6M16 2.6V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        <path d="M3 9.6H21" stroke="currentColor" strokeWidth="1.6" />
+                        <circle cx="8" cy="13.6" r="1.25" fill="currentColor" />
+                        <circle cx="12" cy="13.6" r="1.25" fill="currentColor" />
+                        <circle cx="16" cy="13.6" r="1.25" fill="currentColor" />
+                        <circle cx="8" cy="17.4" r="1.25" fill="currentColor" />
+                        <circle cx="12" cy="17.4" r="1.25" fill="currentColor" />
+                      </svg>
+                    )
                     : item.id === 'community'
                     ? <HEmoji name="social" size={22} />
                     : null}
