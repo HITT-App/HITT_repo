@@ -1,11 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { HEmoji } from "@/components/HEmoji";
 import { 
-  Calendar, 
-  ChevronRight, 
-  Flame, 
-  Footprints, 
-  Plus, 
+  Calendar,
+  ChevronRight,
+  Flame,
+  Footprints,
   Timer,
   TrendingUp,
   Target
@@ -241,13 +240,6 @@ const ActivityDashboard = () => {
 
       </div>
 
-      {/* Floating Action Button */}
-      <Button
-        className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-lg"
-        onClick={() => navigate("/log-activity")}
-      >
-        <Plus className="w-6 h-6" />
-      </Button>
     </div>
   );
 };

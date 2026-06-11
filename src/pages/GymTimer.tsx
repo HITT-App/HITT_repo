@@ -226,7 +226,7 @@ const GymTimer = () => {
         activityType={isAIMode ? "workout" : activityType.toLowerCase()}
         stats={completionStats}
         pointsEarned={pointsEarned}
-        onDone={() => navigate("/activity-dashboard")}
+        onDone={() => navigate("/workout-schedule")}
       />
     );
   }
