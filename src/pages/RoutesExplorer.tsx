@@ -89,7 +89,7 @@ const RoutesExplorer = () => {
   // Init map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const center = userPos || [25.2048, 55.2708];
+    const center = userPos || [51.5074, -0.1278];
     const map = L.map(containerRef.current, {
       center,
       zoom: 13,

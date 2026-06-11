@@ -61,7 +61,7 @@ const CreateRoute = () => {
     if (!containerRef.current || mapRef.current) return;
     navigator.geolocation?.getCurrentPosition(
       (p) => initMap(p.coords.latitude, p.coords.longitude),
-      () => initMap(25.2048, 55.2708)
+      () => initMap(51.5074, -0.1278)
     );
 
     function initMap(lat: number, lng: number) {
