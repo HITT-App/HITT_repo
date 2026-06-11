@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react"
 import {
   ArrowLeft, Camera, Upload, TrendingUp, Loader2, X, Sparkles, User,
   SwitchCamera, Timer, Trash2, Share2, CheckCircle2, History,
@@ -152,6 +152,11 @@ const BodyScan = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [headerH, setHeaderH] = useState(0)
+  useLayoutEffect(() => {
+    if (headerRef.current) setHeaderH(headerRef.current.offsetHeight)
+  }, [])
 
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [analysis, setAnalysis] = useState<BodyAnalysis | null>(null)
@@ -526,10 +531,11 @@ const BodyScan = () => {
   // ── render ────────────────────────────────────────────────
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="bg-background">
       {/* Fixed header */}
       <div
-        className="flex-shrink-0 z-20 bg-background/90 backdrop-blur-md border-b border-border/40"
+        ref={headerRef}
+        className="fixed top-0 left-0 right-0 z-20 bg-background/90 backdrop-blur-md border-b border-border/40"
         style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}
       >
         <div className="flex items-center justify-between px-4 pb-3">
@@ -572,7 +578,7 @@ const BodyScan = () => {
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 max-w-lg mx-auto pb-24 w-full">
+      <div className="p-4 space-y-4 max-w-lg mx-auto pb-24 w-full" style={{ paddingTop: headerH ? `${headerH + 16}px` : undefined }}>
 
         {/* ═══════════════════════════════ SCAN TAB ═══════════════════════════════ */}
         {activeTab === "scan" && (
