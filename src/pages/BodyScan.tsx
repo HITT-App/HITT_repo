@@ -295,6 +295,14 @@ const BodyScan = () => {
     }
   }, [facingMode, startStream])
 
+  // Auto-open camera on mount — skip the empty picker, go straight to capture
+  const didAutoOpen = useRef(false)
+  useEffect(() => {
+    if (didAutoOpen.current || imagePreview || analysis) return
+    didAutoOpen.current = true
+    openCamera()
+  }, [openCamera, imagePreview, analysis])
+
   const flipCamera = useCallback(async () => {
     if (stream) stream.getTracks().forEach(t => t.stop())
     const newMode = facingMode === "user" ? "environment" : "user"
