@@ -142,7 +142,7 @@ serve(async (req) => {
       generation_type: "generate_ai_workout",
       model: "gemini-2.5-flash",
       prompt: { intent },
-      error: "Could not parse JSON from AI response",
+      error: `Could not parse JSON from AI response: ${rawText.slice(0, 500)}`,
       latency_ms: latencyMs,
     });
     return new Response(JSON.stringify({ error: "AI returned malformed response — try again" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -213,7 +213,11 @@ function parseWorkoutJSON(text: string): WorkoutShape | null {
 
   try {
     const parsed = JSON.parse(raw);
-    return (parsed?.workout ?? null) as WorkoutShape | null;
+    // Shape A: { workout: {...} }
+    if (parsed?.workout) return parsed.workout as WorkoutShape;
+    // Shape B: workout fields returned directly (Gemini sometimes skips the wrapper key)
+    if (parsed?.title && Array.isArray(parsed?.exercises)) return parsed as WorkoutShape;
+    return null;
   } catch {
     return null;
   }
