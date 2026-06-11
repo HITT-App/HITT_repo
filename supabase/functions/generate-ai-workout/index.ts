@@ -116,7 +116,7 @@ serve(async (req) => {
       { role: "user", content: userPrompt },
     ],
     response_format: { type: "json_object" },
-    max_tokens: 3000,
+    max_tokens: 8000,
   });
 
   const latencyMs = Date.now() - started;
