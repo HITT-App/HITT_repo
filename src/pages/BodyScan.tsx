@@ -544,12 +544,7 @@ const BodyScan = () => {
             )}
           </button>
           <h1 className="text-lg font-semibold text-foreground">Body Scan</h1>
-          <button
-            onClick={() => setActiveTab("progress")}
-            className="p-2 -mr-2 rounded-full hover:bg-secondary"
-          >
-            <History className="w-5 h-5 text-foreground" />
-          </button>
+          <div className="w-9" />
         </div>
 
         {/* Orange-pill segmented control */}
