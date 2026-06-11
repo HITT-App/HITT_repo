@@ -52,7 +52,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
       {!shouldHideNav && (
         <>
-          <BottomNav onHIITClick={() => setHiitMenuOpen(true)} onQuickAddClick={() => setQuickAddOpen(true)} />
+          <BottomNav onHIITClick={() => setHiitMenuOpen(true)} onQuickAddClick={() => setQuickAddOpen(prev => !prev)} quickAddOpen={quickAddOpen} />
           <FloatingActionButton onClick={() => navigate('/ai')} />
           <QuickAddSheet open={quickAddOpen} onOpenChange={setQuickAddOpen} />
           <HIITMenu open={hiitMenuOpen} onOpenChange={setHiitMenuOpen} />

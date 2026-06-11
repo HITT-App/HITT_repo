@@ -9,9 +9,10 @@ import { HEmoji } from "@/components/HEmoji";
 interface BottomNavProps {
   onHIITClick?: () => void;
   onQuickAddClick?: () => void;
+  quickAddOpen?: boolean;
 }
 
-export const BottomNav = ({ onHIITClick, onQuickAddClick }: BottomNavProps) => {
+export const BottomNav = ({ onHIITClick, onQuickAddClick, quickAddOpen }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { flags } = useFeatureFlags();
@@ -85,7 +86,14 @@ export const BottomNav = ({ onHIITClick, onQuickAddClick }: BottomNavProps) => {
                     ? <Home size={22} strokeWidth={isActive ? 2 : 1.5} className="transition-all duration-200" />
                     : item.id === 'quickadd'
                     ? (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        style={{
+                          transform: quickAddOpen ? "rotate(45deg)" : "rotate(0deg)",
+                          transition: "transform 0.2s ease",
+                          transformBox: "fill-box",
+                          transformOrigin: "center",
+                        } as React.CSSProperties}
+                      >
                         <rect x="3.25" y="3.25" width="17.5" height="17.5" rx="6.2" stroke="currentColor" strokeWidth="1.7" opacity="0.5" />
                         <path d="M12 8V16M8 12H16" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
                       </svg>
