@@ -3,6 +3,7 @@ import { X, Square, Smartphone, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
+import hiitLogo from '@/assets/hiit-watermark.png';
 
 import type { Json } from '@/integrations/supabase/types';
 import type { RoutePoint } from './ShareCardCanvas';
@@ -161,15 +162,11 @@ function Creative({ format, activityTitle, heroMetrics, pbLabel, pointsEarned }:
       <div style={{ width: contentW, display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 46 : 60 }}>
         {/* Logo + title */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 22 : 28 }}>
-          <div style={{
-            width: square ? 132 : 168, height: square ? 132 : 168, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #f97316, #ea580c)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 60px rgba(249,115,22,0.35)',
-            flexShrink: 0,
-          }}>
-            <span style={{ fontFamily: FONT_COND, fontWeight: 700, fontSize: square ? 52 : 66, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>H</span>
-          </div>
+          <img
+            src={hiitLogo}
+            alt="HIIT"
+            style={{ width: square ? 132 : 168, height: square ? 132 : 168, objectFit: 'contain', display: 'block', flexShrink: 0 }}
+          />
           {!square && (
             <span style={{ fontFamily: FONT_COND, fontWeight: 600, fontSize: 32, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.primary, whiteSpace: 'nowrap' }}>
               WORKOUT COMPLETE
