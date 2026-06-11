@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { ChooseSportSheet } from "@/components/ChooseSportSheet";
 import {
   Home, Activity, Moon, Apple, Calendar, Bot,
   LogOut, User, Trophy, Target, MessageCircle,
@@ -17,7 +19,6 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "sonner";
 
 type HIITMenuProps = {
   open: boolean;
@@ -33,10 +34,11 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
   const { toast: uiToast } = useToast();
   const { theme, setTheme } = useTheme();
 
-  // TODO Task 3: wire this to open ChooseSportSheet
+  const [showSportPicker, setShowSportPicker] = useState(false);
+
   const handleChooseSport = () => {
     onOpenChange(false);
-    toast.info("Sport picker coming next");
+    setShowSportPicker(true);
   };
 
   const go = (path: string) => {
@@ -163,7 +165,6 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
           <div className="px-4 py-5 space-y-6">
 
             {/* Choose a Sport — primary branded action */}
-            {/* TODO Task 3: replace handler with ChooseSportSheet open */}
             <button
               onClick={handleChooseSport}
               className={cn(
@@ -251,5 +252,7 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
         </ScrollArea>
       </DrawerContent>
     </Drawer>
+
+    <ChooseSportSheet open={showSportPicker} onOpenChange={setShowSportPicker} />
   );
 }
