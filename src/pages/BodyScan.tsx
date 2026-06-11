@@ -589,7 +589,7 @@ const BodyScan = () => {
                       <button
                         key={pose.label}
                         onClick={() => setPoseIndex(i)}
-                        className={`flex-1 rounded-xl py-2 text-center border transition-colors ${
+                        className={`flex-1 rounded-xl py-2.5 text-center border transition-colors ${
                           isDone
                             ? "border-primary/50 bg-primary/13"
                             : isNext
@@ -607,9 +607,6 @@ const BodyScan = () => {
                             {pose.label}
                           </span>
                         </div>
-                        <span className={`text-[9.5px] ${isNext ? "text-primary" : "text-muted-foreground/60"}`}>
-                          {isDone ? "captured" : "next"}
-                        </span>
                       </button>
                     )
                   })}
@@ -654,61 +651,44 @@ const BodyScan = () => {
                     </div>
                   )}
 
-                  {/* Bottom controls — inside the viewport */}
-                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-10 pb-4 px-4 flex flex-col gap-3">
-                    {/* Gallery + Analyze row */}
-                    <div className="flex gap-2.5">
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex-1 flex items-center justify-center gap-1.5 bg-white/15 border border-white/25 text-white font-semibold text-[13px] rounded-xl py-3"
-                      >
-                        <Upload className="w-[15px] h-[15px]" /> Gallery
-                      </button>
-                      <button
-                        onClick={() => { closeCamera(); analyzeBody() }}
-                        className="flex-[2] flex items-center justify-center gap-1.5 bg-primary text-white font-bold text-[13px] rounded-xl py-3"
-                      >
-                        <Sparkles className="w-4 h-4" /> Analyze photos
-                      </button>
-                    </div>
-                    {/* Shutter controls row */}
-                    <div className="flex items-center justify-center gap-5">
-                      <button
-                        onClick={closeCamera}
-                        className="w-11 h-11 rounded-full bg-white/20 border border-white/30 flex items-center justify-center"
-                      >
-                        <X className="w-5 h-5 text-white" />
-                      </button>
-                      <button
-                        onClick={flipCamera}
-                        className="w-11 h-11 rounded-full bg-white/20 border border-white/30 flex items-center justify-center"
-                      >
-                        <SwitchCamera className="w-[19px] h-[19px] text-white" />
-                      </button>
-                      <button
-                        onClick={handleShutter}
-                        disabled={!cameraReady || countdown !== null}
-                        className="w-[66px] h-[66px] rounded-full border-4 border-white bg-white/20 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <div className="w-[50px] h-[50px] rounded-full bg-white" />
-                      </button>
-                      <button
-                        onClick={cycleTimer}
-                        disabled={countdown !== null}
-                        className={`w-11 h-11 rounded-full border flex items-center justify-center ${
-                          timerSeconds > 0
-                            ? "bg-primary/70 border-primary/60"
-                            : "bg-white/20 border-white/30"
-                        }`}
-                      >
-                        {timerSeconds === 0
-                          ? <Timer className="w-[19px] h-[19px] text-white" />
-                          : <span className="text-[13px] font-bold text-white">{timerSeconds}s</span>
-                        }
-                      </button>
-                    </div>
+                  {/* Controls — single row overlaid on bottom of viewport */}
+                  <div
+                    className="absolute bottom-0 inset-x-0 flex items-center justify-center gap-[22px] px-2 pb-4 pt-10"
+                    style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.72) 100%)" }}
+                  >
+                    {/* X */}
+                    <button onClick={closeCamera} className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}>
+                      <X className="w-5 h-5 text-white" />
+                    </button>
+                    {/* Gallery */}
+                    <button onClick={() => fileInputRef.current?.click()} className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}>
+                      <Upload className="w-[19px] h-[19px] text-white" />
+                    </button>
+                    {/* Shutter — centre */}
+                    <button onClick={handleShutter} disabled={!cameraReady || countdown !== null} className="w-[66px] h-[66px] rounded-full border-4 border-white flex items-center justify-center disabled:opacity-40" style={{ background: "rgba(255,255,255,0.12)" }}>
+                      <div className="w-[50px] h-[50px] rounded-full bg-white" />
+                    </button>
+                    {/* Flip */}
+                    <button onClick={flipCamera} className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}>
+                      <SwitchCamera className="w-[19px] h-[19px] text-white" />
+                    </button>
+                    {/* Timer */}
+                    <button onClick={cycleTimer} disabled={countdown !== null} className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: timerSeconds > 0 ? "rgba(249,115,22,0.13)" : "rgba(0,0,0,0.45)", border: timerSeconds > 0 ? "1px solid rgba(249,115,22,0.32)" : "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}>
+                      {timerSeconds === 0
+                        ? <Timer className="w-[19px] h-[19px] text-white" />
+                        : <span className="text-[13px] font-bold text-primary">{timerSeconds}s</span>
+                      }
+                    </button>
                   </div>
                 </div>
+
+                {/* Analyse button — standalone below the frame */}
+                <button
+                  onClick={analyzeBody}
+                  className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold text-[13px] rounded-xl py-3"
+                >
+                  <Sparkles className="w-4 h-4" /> Analyse 3 photos
+                </button>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
               </>
             ) : imagePreview && !analysis ? (
