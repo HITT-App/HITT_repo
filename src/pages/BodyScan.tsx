@@ -305,13 +305,11 @@ const BodyScan = () => {
     }
   }, [facingMode, startStream])
 
-  // Auto-open camera on mount — skip the empty picker, go straight to capture
-  const didAutoOpen = useRef(false)
+  // Reopen camera whenever there are no photos and no analysis — camera is always the entry point
   useEffect(() => {
-    if (didAutoOpen.current || Object.keys(capturedImages).length > 0 || analysis) return
-    didAutoOpen.current = true
+    if (isCameraOpen || Object.keys(capturedImages).length > 0 || analysis || isAnalyzing) return
     openCamera()
-  }, [openCamera, capturedImages, analysis])
+  }, [isCameraOpen, capturedImages, analysis, isAnalyzing, openCamera])
 
   const flipCamera = useCallback(async () => {
     if (stream) stream.getTracks().forEach(t => t.stop())
@@ -1013,31 +1011,7 @@ const BodyScan = () => {
                   AI estimates are approximations, not medical assessments.
                 </p>
               </div>
-            ) : (
-              /* Empty state */
-              <>
-                <Card className="rounded-[18px] border-dashed border-2 border-muted-foreground/30 bg-secondary/50">
-                  <div className="flex flex-col items-center justify-center py-16 px-6 gap-4">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-primary" />
-                    </div>
-                    <div className="text-center">
-                      <p className="font-semibold text-foreground">Take or upload a body photo</p>
-                      <p className="text-sm text-muted-foreground mt-1">AI will estimate body composition and provide feedback</p>
-                    </div>
-                    <div className="flex gap-3 w-full">
-                      <Button onClick={() => openCamera()} className="flex-1 gap-2">
-                        <Camera className="w-4 h-4" /> Camera
-                      </Button>
-                      <Button onClick={() => fileInputRef.current?.click()} className="flex-1 gap-2" variant="outline">
-                        <Upload className="w-4 h-4" /> Gallery
-                      </Button>
-                    </div>
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                  </div>
-                </Card>
-              </>
-            )}
+            ) : null}
           </>
         )}
 
