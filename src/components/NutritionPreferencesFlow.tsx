@@ -31,6 +31,7 @@ type Step =
 interface NutritionPreferencesFlowProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onComplete?: () => void
 }
 
 function ChipButton({
@@ -114,7 +115,7 @@ function calculateCalorieTarget(
   return Math.round((bmr * activityMultiplier[activityLevel] + goalAdjustment[weightGoal]) / 50) * 50
 }
 
-export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPreferencesFlowProps) {
+export function NutritionPreferencesFlow({ open, onOpenChange, onComplete }: NutritionPreferencesFlowProps) {
   const { save } = useNutritionPreferences()
   const { user } = useAuth()
   const keyboardHeight = useKeyboardHeight()
@@ -190,6 +191,7 @@ export function NutritionPreferencesFlow({ open, onOpenChange }: NutritionPrefer
 
     setSaving(false)
     handleClose()
+    onComplete?.()
   }
 
   const questionsValid =

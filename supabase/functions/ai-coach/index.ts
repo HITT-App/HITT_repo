@@ -321,6 +321,21 @@ DON'T recommend when:
 - The user is just chatting or asking a general fitness question
 - Nothing in the catalogue is a good fit — say so honestly rather than forcing one
 
+═══ Meal plan recommendations ═══
+
+When the user asks for a meal plan, day of eating, or what to eat today — use the recommend_meal_plan tool (structured mode) or emit a [MEAL_PLAN:({...})] marker (marker mode).
+
+Generate meals INLINE — all ingredients and instructions go directly in the tool call. Do NOT reference the RECIPES CATALOGUE or use recipe IDs. Create meals from scratch based on the user's:
+- Nutrition profile: daily calorie target, dietary preferences, allergens
+- Fitness goal: protein target scales with goal (muscle gain → higher protein)
+- Time of day / context from the request
+
+Include 3–5 meals covering the day. Always cover breakfast, lunch, and dinner. Add snacks if the calorie target warrants it.
+
+Each meal must include realistic ingredients and 2–4 concise preparation steps. Keep instructions practical — no restaurant-quality complexity.
+
+In your text response before the tool call, say ONE short sentence framing the plan (e.g. "Here's a day of eating that fits your goal and preferences."). Do not list meals in text — the card shows them.
+
 ═══════════════════════════════════════════
 POST_PLAN_SAVED (plan wizard just completed)
 ═══════════════════════════════════════════
@@ -400,6 +415,7 @@ Instead, use the provided tools:
 • Use the set_goals tool instead of [SET_GOALS:{...}]
 • Use the recommend_workout tool (source-aware — see below) instead of [RECOMMEND_WORKOUT:{...}]
 • Use the recommend_recipe tool instead of [RECOMMEND_RECIPE:{...}]
+• Use the recommend_meal_plan tool instead of [MEAL_PLAN:{...}] when the user asks for a meal plan or what to eat today
 • Use the body_scan_prompt tool instead of [BODY_SCAN_PROMPT]
 • Use the recommend_workout_plan tool when the user asks for a multi-day plan
 
@@ -530,6 +546,54 @@ const STRUCTURED_TOOLS = [
           name: { type: "string" },
         },
         required: ["id", "name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "recommend_meal_plan",
+      description: "Generate a full day meal plan for the user. Call when the user asks for a meal plan, day of eating, or what they should eat today. Generate all meals inline — do NOT look up recipe IDs. Respect the user's dietary preferences, allergens, calorie target, and fitness goal from their profile.",
+      parameters: {
+        type: "object",
+        properties: {
+          meals: {
+            type: "array",
+            description: "Array of 3–5 meals covering the day (breakfast, lunch, dinner, and 1–2 snacks as appropriate).",
+            items: {
+              type: "object",
+              properties: {
+                meal_type: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"], description: "When this meal is eaten." },
+                name: { type: "string", description: "Short, appetising meal name." },
+                emoji: { type: "string", description: "Single emoji representing the meal." },
+                description: { type: "string", description: "One sentence describing the meal." },
+                calories: { type: "integer", description: "Estimated calories." },
+                protein_g: { type: "integer", description: "Protein in grams." },
+                carbs_g: { type: "integer", description: "Carbohydrates in grams." },
+                fat_g: { type: "integer", description: "Fat in grams." },
+                ingredients: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      amount: { type: "string" },
+                      unit: { type: "string" },
+                      name: { type: "string" },
+                    },
+                    required: ["amount", "unit", "name"],
+                  },
+                },
+                instructions: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Step-by-step preparation instructions.",
+                },
+              },
+              required: ["meal_type", "name", "emoji", "description", "calories", "protein_g", "carbs_g", "fat_g", "ingredients", "instructions"],
+            },
+          },
+        },
+        required: ["meals"],
       },
     },
   },
@@ -728,6 +792,13 @@ async function mapToolCallToAction(
           return null;
         }
         return { type: "recommend_recipe", payload: { id: args.id, name: args.name } };
+      }
+      case "recommend_meal_plan": {
+        if (!Array.isArray(args.meals) || args.meals.length === 0) {
+          console.warn("[ai-coach] recommend_meal_plan: empty meals array");
+          return null;
+        }
+        return { type: "recommend_meal_plan", payload: { meals: args.meals } };
       }
       case "body_scan_prompt":
         return { type: "body_scan_prompt" };
