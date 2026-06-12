@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Play, Pause, SkipForward, Flag, Waves, Bike, Footprints,
-  Trophy, Lock, Unlock, Watch, ChevronRight, Check, Minus, Plus, Share2,
+  Trophy, Lock, Unlock, Watch, ChevronRight, Check, Minus, Plus, Share2, Medal,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -170,7 +170,7 @@ const Triathlon = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [screen, setScreen] = useState<'setup' | 'race' | 'finished'>('setup');
+  const [screen, setScreen] = useState<'setup' | 'ready' | 'race' | 'finished'>('setup');
   const [activeLeg, setActiveLeg] = useState(0);
   const [running, setRunning] = useState(false);
   const [locked, setLocked] = useState(false);
@@ -437,7 +437,7 @@ const Triathlon = () => {
                 : <><Watch size={16} color={C.dim} strokeWidth={2.2} /> {watchSending ? 'Sending…' : 'Send plan to Apple Watch'}</>}
             </button>
             <button
-              onClick={() => { setScreen('race'); setRunning(true); startedAtRef.current = new Date().toISOString(); }}
+              onClick={() => setScreen('ready')}
               style={{
                 width: '100%', height: 54, borderRadius: 16, cursor: 'pointer', border: 'none',
                 background: C.primary, color: '#0a0a0a',
@@ -450,6 +450,36 @@ const Triathlon = () => {
               <Play size={18} color="#0a0a0a" strokeWidth={2.6} style={{ marginLeft: 3 }} /> Start race
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── READY ────────────────────────────────────────────────────
+  if (screen === 'ready') {
+    return (
+      <div style={{ height: '100dvh', background: C.bg, display: 'flex', flexDirection: 'column', color: C.fg, paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)' }}>
+        <div style={{ padding: '0 16px 12px' }}>
+          <button onClick={() => setScreen('setup')} style={{ width: 38, height: 38, borderRadius: 99, border: `1px solid ${C.line}`, background: C.card, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+            <ArrowLeft size={18} color={C.fg} strokeWidth={2.2} />
+          </button>
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: '0 32px' }}>
+          <div style={{ width: 96, height: 96, borderRadius: 28, background: tint(C.gold, 0.14), border: `1px solid ${tint(C.gold, 0.4)}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Medal size={44} color={C.gold} strokeWidth={1.8} />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: 30, fontWeight: 800, color: C.fg, letterSpacing: -0.5, margin: 0 }}>Triathlon</h1>
+            <p style={{ fontSize: 13, color: C.dim, marginTop: 8 }}>{raceName} · {(targetKm[0] + targetKm[1] + targetKm[2]).toFixed(1)} km</p>
+          </div>
+        </div>
+        <div style={{ padding: '0 16px 32px' }}>
+          <button
+            onClick={() => { startedAtRef.current = new Date().toISOString(); setRunning(true); setScreen('race'); }}
+            style={{ width: '100%', height: 60, borderRadius: 18, background: C.primary, border: 'none', color: '#0a0a0a', fontSize: 18, fontWeight: 800, cursor: 'pointer', boxShadow: `0 6px 20px ${tint(C.primary, 0.32)}`, WebkitTapHighlightColor: 'transparent' }}
+          >
+            Ready?
+          </button>
         </div>
       </div>
     );
