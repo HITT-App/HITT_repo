@@ -9,8 +9,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const buildBodyAnalysisPrompt = (workoutSummary: string) =>
-  `You are an expert fitness and body composition analyst. Analyze this body photo and speak directly to the person — use second person throughout ("you", "your"). Never refer to the subject in third person ("they", "the person", "their").
+const buildBodyAnalysisPrompt = (workoutSummary: string, imageCount: number) =>
+  `You are an expert fitness and body composition analyst. Analyze ${imageCount > 1 ? `these ${imageCount} body photos (front, side, and back views)` : "this body photo"} and speak directly to the person — use second person throughout ("you", "your"). Never refer to the subject in third person ("they", "the person", "their").
 
 User's recent workout history (last 30 days): ${workoutSummary}
 
@@ -84,18 +84,34 @@ serve(async (req) => {
       prompt: { redacted: true },
     });
 
-    const { imageBase64, workoutSummary } = await req.json();
-    if (!imageBase64) {
+    const body = await req.json();
+    // Accept either multi-image { images: string[] } or legacy { imageBase64: string }
+    const rawImages: string[] = Array.isArray(body.images)
+      ? body.images
+      : body.imageBase64
+      ? [body.imageBase64]
+      : [];
+
+    if (rawImages.length === 0) {
       return new Response(JSON.stringify({ error: "No image provided" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
+    const { workoutSummary } = body;
     const prompt = buildBodyAnalysisPrompt(
       typeof workoutSummary === "string" && workoutSummary.trim()
         ? workoutSummary.trim()
-        : "No workout data available."
+        : "No workout data available.",
+      rawImages.length,
     );
+
+    const imageParts = rawImages.map(img => ({
+      type: "image_url",
+      image_url: {
+        url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
+      }
+    }));
 
     const response = await aiChatCompletion({
       model: "gemini-2.5-flash",
@@ -103,12 +119,7 @@ serve(async (req) => {
         role: "user",
         content: [
           { type: "text", text: prompt },
-          {
-            type: "image_url",
-            image_url: {
-              url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
-            }
-          }
+          ...imageParts,
         ]
       }],
       max_tokens: 5000,
