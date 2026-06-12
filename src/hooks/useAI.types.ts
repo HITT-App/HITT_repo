@@ -18,6 +18,7 @@ export type Action =
   | { type: 'recommend_workout'; payload: RecommendWorkoutPayload }
   | { type: 'recommend_workout_plan'; payload: RecommendWorkoutPlanPayload }
   | { type: 'recommend_recipe'; payload: RecommendRecipePayload }
+  | { type: 'recommend_meal_plan'; payload: RecommendMealPlanPayload }
   | { type: 'body_scan_prompt' };
 
 export type SchedulePlanPayload = {
@@ -86,6 +87,23 @@ export type RecommendRecipePayload = {
   id: string;
   name: string;
 };
+
+export type MealInPlan = {
+  meal_type: string
+  name: string
+  emoji: string | null
+  description: string | null
+  calories: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  ingredients: Array<{ amount: string; unit: string; name: string }>
+  instructions: string[]
+}
+
+export type RecommendMealPlanPayload = {
+  meals: MealInPlan[]
+}
 
 // SSE chunk format emitted by the structured edge function path
 export type StreamChunk =

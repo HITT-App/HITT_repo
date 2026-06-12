@@ -15,7 +15,9 @@ import { AIWorkoutPlanCard } from './AIWorkoutPlanCard';
 import { FoodConfirmCard } from './FoodConfirmCard';
 import { GoalConfirmCard } from './GoalConfirmCard';
 import { MultiChoiceCard } from './MultiChoiceCard';
-import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload } from '@/hooks/useAI.types';
+import { JarvisMealPlanCard } from './JarvisMealPlanCard';
+import { NutritionPreferencesFlow } from '@/components/NutritionPreferencesFlow';
+import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload, RecommendMealPlanPayload } from '@/hooks/useAI.types';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
 // Strips excessive emoji usage (keeps max 1 per paragraph).
@@ -96,6 +98,10 @@ async function queryUserGoal(): Promise<string> {
     return `Your goal is ${prefs.workout_goal}.${level}`;
   }
   return "You haven't set a goal yet. Want me to help you set one?";
+}
+
+function isMealPlanRequest(text: string): boolean {
+  return /\b(meal plan|plan (my )?(meals|day|eating|food)|what should i eat (today|for)|suggest (me |a )?(meals|a meal plan|what to eat)|give me a (meal|food|eating) plan|today'?s? (meals|eating|food) plan|full day (of )?eating|day of (meals|eating|food))\b/i.test(text);
 }
 
 function isFoodRecallQuestion(text: string): boolean {
@@ -198,6 +204,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [aiWorkout, setAIWorkout] = useState<(RecommendWorkoutPayload & { source: 'ai_generated' }) | null>(null);
   const [aiWorkoutPlan, setAIWorkoutPlan] = useState<RecommendWorkoutPlanPayload | null>(null);
   const [pendingNoPlanPrompt, setPendingNoPlanPrompt] = useState(false);
+  const [mealPlan, setMealPlan] = useState<RecommendMealPlanPayload | null>(null);
+  const [showNutritionPrefs, setShowNutritionPrefs] = useState(false);
+  const [pendingMealPlanRequest, setPendingMealPlanRequest] = useState<string | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -220,6 +229,23 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     } else if (isFoodRecallQuestion(text)) {
       const answer = await queryTodayDiary();
       await ai.directAnswer(text, answer);
+    } else if (isMealPlanRequest(text)) {
+      // Gate: ensure dietary preferences are set before generating a plan
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: prefs } = await supabase
+          .from('nutrition_profiles')
+          .select('food_preferences, allergens')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        const hasPrefs = prefs && (prefs.food_preferences?.length || prefs.allergens?.length);
+        if (!hasPrefs) {
+          setPendingMealPlanRequest(text);
+          setShowNutritionPrefs(true);
+          return;
+        }
+      }
+      ai.send(text);
     } else {
       ai.send(text);
     }
@@ -696,6 +722,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         case 'recommend_recipe':
           fetchRecommendedRecipe(action.payload.id).then(r => { if (r) setRecommendedRecipe(r); });
           break;
+        case 'recommend_meal_plan':
+          setMealPlan(action.payload);
+          break;
         case 'body_scan_prompt':
           setPendingBodyScan(true);
           break;
@@ -1058,6 +1087,17 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           </div>
         )}
 
+        {/* Meal plan card */}
+        {mealPlan && (
+          <JarvisMealPlanCard
+            plan={mealPlan}
+            onDismiss={() => setMealPlan(null)}
+            onLogged={(name) => {
+              ai.appendAssistantMessage(`✅ Logged ${name}.`);
+            }}
+          />
+        )}
+
         {/* Recipe recommendation card */}
         {recommendedRecipe && (
           <div className="bg-accent/10 border border-accent/30 rounded-2xl px-4 py-3 space-y-3">
@@ -1196,6 +1236,18 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           </Button>
         </div>
       </div>
+
+      <NutritionPreferencesFlow
+        open={showNutritionPrefs}
+        onOpenChange={setShowNutritionPrefs}
+        onComplete={() => {
+          if (pendingMealPlanRequest) {
+            const request = pendingMealPlanRequest;
+            setPendingMealPlanRequest(null);
+            ai.send(request);
+          }
+        }}
+      />
     </div>
   );
 }
