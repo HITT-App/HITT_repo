@@ -459,22 +459,22 @@ const Triathlon = () => {
   // ── READY ────────────────────────────────────────────────────
   if (screen === 'ready') {
     return (
-      <div style={{ height: '100dvh', background: C.bg, display: 'flex', flexDirection: 'column', color: C.fg, paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)' }}>
-        <div style={{ padding: '0 16px 12px' }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: C.bg, display: 'flex', flexDirection: 'column', color: C.fg, paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)', paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 32px)' }}>
+        <div style={{ padding: '0 16px 8px' }}>
           <button onClick={() => setScreen('setup')} style={{ width: 38, height: 38, borderRadius: 99, border: `1px solid ${C.line}`, background: C.card, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
             <ArrowLeft size={18} color={C.fg} strokeWidth={2.2} />
           </button>
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: '0 32px' }}>
-          <div style={{ width: 96, height: 96, borderRadius: 28, background: tint(C.gold, 0.14), border: `1px solid ${tint(C.gold, 0.4)}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Medal size={44} color={C.gold} strokeWidth={1.8} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, padding: '0 32px' }}>
+          <div style={{ width: 88, height: 88, borderRadius: 26, background: tint(C.gold, 0.14), border: `1px solid ${tint(C.gold, 0.4)}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Medal size={40} color={C.gold} strokeWidth={1.8} />
           </div>
           <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: 30, fontWeight: 800, color: C.fg, letterSpacing: -0.5, margin: 0 }}>Triathlon</h1>
-            <p style={{ fontSize: 13, color: C.dim, marginTop: 8 }}>{raceName} · {(targetKm[0] + targetKm[1] + targetKm[2]).toFixed(1)} km</p>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: C.fg, letterSpacing: -0.5, margin: 0 }}>Triathlon</h1>
+            <p style={{ fontSize: 13, color: C.dim, marginTop: 6 }}>{raceName} · {(targetKm[0] + targetKm[1] + targetKm[2]).toFixed(1)} km</p>
           </div>
         </div>
-        <div style={{ padding: '0 16px 32px' }}>
+        <div style={{ padding: '0 16px' }}>
           <button
             onClick={() => { startedAtRef.current = new Date().toISOString(); setRunning(true); setScreen('race'); }}
             style={{ width: '100%', height: 60, borderRadius: 18, background: C.primary, border: 'none', color: '#0a0a0a', fontSize: 18, fontWeight: 800, cursor: 'pointer', boxShadow: `0 6px 20px ${tint(C.primary, 0.32)}`, WebkitTapHighlightColor: 'transparent' }}
@@ -507,7 +507,7 @@ const Triathlon = () => {
     }
 
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.fg }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', background: C.bg, color: C.fg }}>
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px 12px',
