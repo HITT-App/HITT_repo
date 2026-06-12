@@ -13,11 +13,13 @@ import { AIFormAnalysis } from '@/components/workout/AIFormAnalysis';
 import { NewBadgeModal } from '@/components/gamification/NewBadgeModal';
 import { CompletionSummary } from '@/components/workout/CompletionSummary';
 import { startWorkoutMirroring, endWorkoutMirroring, sendWorkoutToWatch } from '@/plugins/WatchPlugin';
-import { 
-  ArrowLeft, Play, Pause, SkipForward, SkipBack, 
-  MoreHorizontal, Volume2, Settings, Download, Share2, Camera
+import {
+  ArrowLeft, Play, Pause, SkipForward, SkipBack,
+  MoreHorizontal, Volume2, Settings, Download, Share2, Camera, Dumbbell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const RC = { bg: '#0a0a0a', card: '#141414', line: '#262626', fg: '#fafafa', dim: '#9a9a9a', primary: '#f97316' };
 import { getYouTubeEmbedUrl } from '@/lib/video';
 
 type Workout = {
@@ -148,6 +150,7 @@ export default function WorkoutPlayer() {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [ready, setReady] = useState(false);
   const [playerState, setPlayerState] = useState<PlayerState>('countdown');
   const [countdown, setCountdown] = useState(3);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -173,6 +176,7 @@ export default function WorkoutPlayer() {
   }, [id]);
 
   useEffect(() => {
+    if (!ready) return;
     if (playerState === 'countdown' && countdown > 0) {
       countdownRef.current = setTimeout(() => setCountdown(c => c - 1), 1000);
     } else if (playerState === 'countdown' && countdown === 0) {
@@ -181,7 +185,7 @@ export default function WorkoutPlayer() {
     return () => {
       if (countdownRef.current) clearTimeout(countdownRef.current);
     };
-  }, [countdown, playerState]);
+  }, [countdown, playerState, ready]);
 
   useEffect(() => {
     if (playerState === 'playing' && timeRemaining > 0) {
@@ -398,6 +402,38 @@ export default function WorkoutPlayer() {
   const currentExercise = exercises[currentExerciseIndex];
   const progress = exercises.length > 0 ? ((currentExerciseIndex + 1) / exercises.length) * 100 : 0;
   const totalDuration = exercises.reduce((acc, ex) => acc + (ex.duration_seconds || 45), 0);
+
+  // Pre-start Ready overlay
+  if (!ready) {
+    return (
+      <div style={{ height: '100dvh', background: RC.bg, display: 'flex', flexDirection: 'column', color: RC.fg, paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)' }}>
+        <div style={{ padding: '0 16px 12px' }}>
+          <button onClick={() => navigate(-1)} style={{ width: 38, height: 38, borderRadius: 99, border: `1px solid ${RC.line}`, background: RC.card, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+            <ArrowLeft size={18} color={RC.fg} strokeWidth={2.2} />
+          </button>
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: '0 32px' }}>
+          <div style={{ width: 96, height: 96, borderRadius: 28, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Dumbbell size={44} color={RC.primary} strokeWidth={1.8} />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: RC.fg, letterSpacing: -0.5, margin: 0 }}>{workout?.title ?? 'Workout'}</h1>
+            {exercises.length > 0 && (
+              <p style={{ fontSize: 13, color: RC.dim, marginTop: 8 }}>{exercises.length} exercises</p>
+            )}
+          </div>
+        </div>
+        <div style={{ padding: '0 16px 32px' }}>
+          <button
+            onClick={() => setReady(true)}
+            style={{ width: '100%', height: 60, borderRadius: 18, background: RC.primary, border: 'none', color: '#0a0a0a', fontSize: 18, fontWeight: 800, cursor: 'pointer', boxShadow: '0 6px 20px rgba(249,115,22,0.32)', WebkitTapHighlightColor: 'transparent' }}
+          >
+            Ready?
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Countdown Screen
   if (playerState === 'countdown') {

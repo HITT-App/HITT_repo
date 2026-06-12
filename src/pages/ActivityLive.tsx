@@ -18,9 +18,12 @@ import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { CompletionSummary } from "@/components/workout/CompletionSummary";
 import { Analytics } from "@/lib/analytics";
+import { getSportConfig } from "@/lib/sports";
 
 import { GpsFilter, haversineDistance, type GpsPoint } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
+
+const RC = { bg: '#0a0a0a', card: '#141414', line: '#262626', fg: '#fafafa', dim: '#9a9a9a', primary: '#f97316' };
 
 // --- MET values ---
 const MET_VALUES: Record<string, number> = {
@@ -351,45 +354,45 @@ const ActivityLive = () => {
 
   // ========== PRE-START SCREEN ==========
   if (!started) {
-    const sportIcons: Record<string, string> = {
-      running: '🏃', cycling: '🚴', walking: '🚶', swimming: '🏊',
-      hiking: '🥾', yoga: '🧘', hiit: '🔥', workout: '💪', jogging: '🏃',
-    };
-    const icon = sportIcons[activityType.toLowerCase()] || '🏃';
+    const sportCfg = getSportConfig(activityType);
     const label = activityType.charAt(0).toUpperCase() + activityType.slice(1);
-    const gpsLabel = gpsStatus === 'active' ? '🟢 GPS ready' : gpsStatus === 'denied' ? '🔴 GPS denied' : '🟡 Acquiring GPS…';
+    const SportIcon = sportCfg?.icon;
+    const iconColor = sportCfg ? '#f97316' : '#f97316';
+    const gpsColor = gpsStatus === 'active' ? '#4ade80' : gpsStatus === 'denied' ? '#ef4444' : '#facc15';
+    const gpsLabel = gpsStatus === 'active' ? 'GPS ready' : gpsStatus === 'denied' ? 'GPS denied' : 'Acquiring GPS…';
 
     return (
-      <div className="h-[100dvh] bg-background flex flex-col" style={{ paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 0.5rem)' }}>
-        <div className="flex items-center px-4 pb-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+      <div style={{ height: '100dvh', background: RC.bg, display: 'flex', flexDirection: 'column', color: RC.fg, paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)' }}>
+        <div style={{ padding: '0 16px 12px' }}>
+          <button onClick={() => navigate(-1)} style={{ width: 38, height: 38, borderRadius: 99, border: `1px solid ${RC.line}`, background: RC.card, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+            <ArrowLeft size={18} color={RC.fg} strokeWidth={2.2} />
+          </button>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-6 px-8">
-          <div className="text-8xl">{icon}</div>
-          <div className="text-center">
-            <h1 className="text-3xl font-black text-foreground">{label}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{gpsLabel}</p>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: '0 32px' }}>
+          <div style={{ width: 96, height: 96, borderRadius: 28, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {SportIcon ? <SportIcon size={44} color={iconColor} strokeWidth={1.8} /> : <Flame size={44} color={iconColor} strokeWidth={1.8} />}
           </div>
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: 30, fontWeight: 800, color: RC.fg, letterSpacing: -0.5, margin: 0 }}>{label}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+              <span style={{ width: 7, height: 7, borderRadius: 99, background: gpsColor }} />
+              <span style={{ fontSize: 13, color: RC.dim }}>{gpsLabel}</span>
+            </div>
+          </div>
+        </div>
 
-          <div className="w-full space-y-3 pt-4">
-            <Button
-              className="w-full h-16 text-xl font-black rounded-2xl"
-              onClick={() => {
-                setStarted(true);
-                // Reset filter so early positions from setup don't affect recording
-                gpsFilterRef.current.reset();
-                positionsRef.current = [];
-              }}
-            >
-              Start
-            </Button>
-            <p className="text-xs text-center text-muted-foreground">
-              Hold your phone steady for a few seconds while GPS locks on
-            </p>
-          </div>
+        <div style={{ padding: '0 16px 32px' }}>
+          <button
+            onClick={() => {
+              setStarted(true);
+              gpsFilterRef.current.reset();
+              positionsRef.current = [];
+            }}
+            style={{ width: '100%', height: 60, borderRadius: 18, background: RC.primary, border: 'none', color: '#0a0a0a', fontSize: 18, fontWeight: 800, cursor: 'pointer', boxShadow: '0 6px 20px rgba(249,115,22,0.32)', WebkitTapHighlightColor: 'transparent' }}
+          >
+            Ready?
+          </button>
         </div>
       </div>
     );

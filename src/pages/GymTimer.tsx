@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Plus, Minus, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Pause, Play, Plus, Minus, Settings, ChevronDown, ChevronUp, Flame } from "lucide-react";
+
+const RC = { bg: '#0a0a0a', card: '#141414', line: '#262626', fg: '#fafafa', dim: '#9a9a9a', primary: '#f97316' };
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -79,6 +81,8 @@ const GymTimer = () => {
   const [settings, setSettings] = useState({ autoVibrate: true, showCalories: true });
   const [pointsEarned, setPointsEarned] = useState(0);
 
+  const [ready, setReady] = useState(false);
+
   const startTimeRef = useRef(Date.now());
   const pausedAtRef = useRef(0);
   const holdTimerRef = useRef<ReturnType<typeof setInterval>>();
@@ -117,7 +121,7 @@ const GymTimer = () => {
 
   // Timer
   useEffect(() => {
-    if (showCompleted) return;
+    if (!ready || showCompleted) return;
     const id = setInterval(() => {
       if (!isPaused) {
         setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000) - pausedAtRef.current);
@@ -213,6 +217,38 @@ const GymTimer = () => {
   const hrColor = elapsed < 300 ? "text-blue-400" : elapsed < 1200 ? "text-green-400" : elapsed < 2400 ? "text-orange-400" : "text-red-400";
 
   const displayTitle = isAIMode ? (aiContent?.title ?? "Workout") : activityType;
+  const SportIconComp = sport?.icon;
+
+  if (!ready) {
+    return (
+      <div style={{ height: '100dvh', background: RC.bg, display: 'flex', flexDirection: 'column', color: RC.fg, paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)' }}>
+        <div style={{ padding: '0 16px 12px' }}>
+          <button onClick={() => navigate(-1)} style={{ width: 38, height: 38, borderRadius: 99, border: `1px solid ${RC.line}`, background: RC.card, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+            <ArrowLeft size={18} color={RC.fg} strokeWidth={2.2} />
+          </button>
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: '0 32px' }}>
+          <div style={{ width: 96, height: 96, borderRadius: 28, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {SportIconComp ? <SportIconComp size={44} color={RC.primary} strokeWidth={1.8} /> : <Flame size={44} color={RC.primary} strokeWidth={1.8} />}
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: 30, fontWeight: 800, color: RC.fg, letterSpacing: -0.5, margin: 0 }}>{displayTitle}</h1>
+            {isAIMode && aiContent?.estimated_duration_minutes && (
+              <p style={{ fontSize: 13, color: RC.dim, marginTop: 8 }}>~{aiContent.estimated_duration_minutes} min · {aiContent.estimated_calories} kcal</p>
+            )}
+          </div>
+        </div>
+        <div style={{ padding: '0 16px 32px' }}>
+          <button
+            onClick={() => { startTimeRef.current = Date.now(); setReady(true); }}
+            style={{ width: '100%', height: 60, borderRadius: 18, background: RC.primary, border: 'none', color: '#0a0a0a', fontSize: 18, fontWeight: 800, cursor: 'pointer', boxShadow: '0 6px 20px rgba(249,115,22,0.32)', WebkitTapHighlightColor: 'transparent' }}
+          >
+            Ready?
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (showCompleted) {
     const completionStats = [
