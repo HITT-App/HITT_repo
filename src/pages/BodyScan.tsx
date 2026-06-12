@@ -677,7 +677,7 @@ const BodyScan = () => {
                     style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.72) 100%)" }}
                   >
                     {/* X */}
-                    <button onClick={() => { closeCamera(); setCapturedImages({}); setPoseIndex(0) }} className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}>
+                    <button onClick={closeCamera} className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}>
                       <X className="w-5 h-5 text-white" />
                     </button>
                     {/* Gallery */}
