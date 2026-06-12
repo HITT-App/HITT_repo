@@ -1015,23 +1015,23 @@ serve(async (req) => {
       { data: recipesCatalogue },
       { data: recentBodyScans },
     ] = await Promise.all([
-      supabase.from('profiles').select('*, user_memory').eq('user_id', userId).maybeSingle(),
-      supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
-      supabase.from('nutrition_profiles').select('*').eq('user_id', userId).maybeSingle(),
-      supabase.from('user_streaks').select('*').eq('user_id', userId).maybeSingle(),
-      supabase.from('daily_checkins').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('daily_checkins').select('mood, energy, date').eq('user_id', userId).order('date', { ascending: false }).limit(7),
-      supabase.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('workout_progress').select('*').eq('user_id', userId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(5),
-      supabase.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
-      supabase.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
-      supabase.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('health_metrics').select('value').eq('user_id', userId).eq('metric_type', 'steps').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
-      supabase.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
-      supabase.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g').limit(50),
-      (supabase as any).from('body_scans').select('estimated_body_fat, confidence_level, scanned_at, analysis').eq('user_id', userId).order('scanned_at', { ascending: false }).limit(2),
+      supabaseAdmin.from('profiles').select('*, user_memory').eq('user_id', userId).maybeSingle(),
+      supabaseAdmin.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
+      supabaseAdmin.from('nutrition_profiles').select('*').eq('user_id', userId).maybeSingle(),
+      supabaseAdmin.from('user_streaks').select('*').eq('user_id', userId).maybeSingle(),
+      supabaseAdmin.from('daily_checkins').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('daily_checkins').select('mood, energy, date').eq('user_id', userId).order('date', { ascending: false }).limit(7),
+      supabaseAdmin.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('workout_progress').select('*').eq('user_id', userId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(5),
+      supabaseAdmin.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
+      supabaseAdmin.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
+      supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('health_metrics').select('value').eq('user_id', userId).eq('metric_type', 'steps').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
+      supabaseAdmin.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
+      supabaseAdmin.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g').limit(50),
+      supabaseAdmin.from('body_scans').select('estimated_body_fat, confidence_level, scanned_at, analysis').eq('user_id', userId).order('scanned_at', { ascending: false }).limit(2),
     ]);
 
     // Fetch active goal separately so errors are visible and we can fall back gracefully.
@@ -1065,7 +1065,7 @@ serve(async (req) => {
     }
 
     const todayBoundary = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString();
-    const { data: todayMealLogs } = await supabase
+    const { data: todayMealLogs } = await supabaseAdmin
       .from('meal_logs')
       .select('custom_name, category, calories, protein_grams, carbs_grams, fat_grams, logged_at')
       .eq('user_id', userId)
