@@ -720,6 +720,41 @@ const BodyScan = () => {
                 })()}
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
               </div>
+            ) : Object.keys(capturedImages).length > 0 && !analysis ? (
+              /* Photos captured — ready to analyse */
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                  {POSE_GUIDES.map((pose, i) => (
+                    <div key={pose.label} className="flex-1 flex flex-col items-center gap-1.5">
+                      <div className="w-full rounded-[14px] overflow-hidden border border-border/60 bg-black" style={{ aspectRatio: "3/4" }}>
+                        {capturedImages[i]
+                          ? <img src={capturedImages[i]} alt={pose.label} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center">
+                              <Camera className="w-5 h-5 text-muted-foreground/30" />
+                            </div>
+                        }
+                      </div>
+                      <span className={`text-[11px] font-semibold ${capturedImages[i] ? "text-primary" : "text-muted-foreground"}`}>
+                        {pose.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={analyzeBody}
+                  disabled={isAnalyzing}
+                  className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold text-[13px] rounded-xl py-3.5 disabled:opacity-50"
+                >
+                  {isAnalyzing
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Analysing...</>
+                    : <><Sparkles className="w-4 h-4" /> Analyse {Object.keys(capturedImages).length} photo{Object.keys(capturedImages).length > 1 ? "s" : ""}</>
+                  }
+                </button>
+                <button onClick={resetCapture} className="text-[12.5px] text-muted-foreground text-center py-1">
+                  Retake photos
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              </div>
             ) : analysis ? (
               /* Result view */
               <div className="space-y-3.5 animate-in fade-in slide-in-from-bottom-4 duration-500">
