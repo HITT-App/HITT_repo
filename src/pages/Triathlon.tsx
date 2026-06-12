@@ -27,6 +27,7 @@ const C = {
   primary: '#f97316',
   good:    '#4ade80',
   info:    '#38bdf8',
+  gold:    '#F0B53C',
   mono:    "'SFMono-Regular',ui-monospace,Menlo,monospace" as string,
 };
 
