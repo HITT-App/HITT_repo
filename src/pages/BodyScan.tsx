@@ -247,13 +247,14 @@ const BodyScan = () => {
     if (!ctx) return
     ctx.drawImage(video, 0, 0)
     const dataUrl = resizeToDataUrl(canvas)
+    const isRetake = capturedImages[poseIndex] !== undefined
     setCapturedImages(prev => ({ ...prev, [poseIndex]: dataUrl }))
-    if (poseIndex < POSE_GUIDES.length - 1) {
+    if (!isRetake && poseIndex < POSE_GUIDES.length - 1) {
       setPoseIndex(p => p + 1)
     } else {
       closeCamera()
     }
-  }, [closeCamera, poseIndex])
+  }, [closeCamera, poseIndex, capturedImages])
 
   // Countdown tick
   useEffect(() => {
@@ -723,10 +724,20 @@ const BodyScan = () => {
               <div className="flex flex-col gap-3">
                 <div className="flex gap-2">
                   {POSE_GUIDES.map((pose, i) => (
-                    <div key={pose.label} className="flex-1 flex flex-col items-center gap-1.5">
-                      <div className="w-full rounded-[14px] overflow-hidden border border-border/60 bg-black" style={{ aspectRatio: "3/4" }}>
+                    <button
+                      key={pose.label}
+                      className="flex-1 flex flex-col items-center gap-1.5 touch-manipulation"
+                      onClick={() => { setPoseIndex(i); openCamera() }}
+                    >
+                      <div className="w-full rounded-[14px] overflow-hidden border border-border/60 bg-black relative" style={{ aspectRatio: "3/4" }}>
                         {capturedImages[i]
-                          ? <img src={capturedImages[i]} alt={pose.label} className="w-full h-full object-cover" />
+                          ? <>
+                              <img src={capturedImages[i]} alt={pose.label} className="w-full h-full object-cover" />
+                              <div className="absolute bottom-0 inset-x-0 flex items-center justify-center pb-2 pt-6"
+                                style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.55) 100%)" }}>
+                                <span className="text-white text-[10px] font-bold">Retake</span>
+                              </div>
+                            </>
                           : <div className="w-full h-full flex items-center justify-center">
                               <Camera className="w-5 h-5 text-muted-foreground/30" />
                             </div>
@@ -735,7 +746,7 @@ const BodyScan = () => {
                       <span className={`text-[11px] font-semibold ${capturedImages[i] ? "text-primary" : "text-muted-foreground"}`}>
                         {pose.label}
                       </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
                 <button
