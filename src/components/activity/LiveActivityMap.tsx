@@ -32,7 +32,7 @@ const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount }: LiveActivit
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      center: [25.2048, 55.2708],
+      center: [51.5074, -0.1278],
       zoom: 16,
       scrollWheelZoom: false,
       zoomControl: false,

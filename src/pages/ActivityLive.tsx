@@ -19,6 +19,7 @@ import confetti from "canvas-confetti";
 import { CompletionSummary } from "@/components/workout/CompletionSummary";
 import { Analytics } from "@/lib/analytics";
 import { getSportConfig } from "@/lib/sports";
+import { App as CapApp } from "@capacitor/app";
 
 import { GpsFilter, haversineDistance, type GpsPoint } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
@@ -359,7 +360,10 @@ const ActivityLive = () => {
     const SportIcon = sportCfg?.icon;
     const iconColor = sportCfg ? '#f97316' : '#f97316';
     const gpsColor = gpsStatus === 'active' ? '#4ade80' : gpsStatus === 'denied' ? '#ef4444' : '#facc15';
-    const gpsLabel = gpsStatus === 'active' ? 'GPS ready' : gpsStatus === 'denied' ? 'GPS denied' : 'Acquiring GPS…';
+    const gpsLabel = gpsStatus === 'active' ? 'GPS ready' : gpsStatus === 'denied' ? 'Location access denied' : 'Acquiring GPS…';
+    const isDenied = gpsStatus === 'denied';
+
+    const openSettings = () => CapApp.openUrl({ url: 'app-settings:' }).catch(() => {});
 
     return (
       <div style={{ height: '100dvh', background: RC.bg, display: 'flex', flexDirection: 'column', color: RC.fg, paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)' }}>
@@ -380,6 +384,20 @@ const ActivityLive = () => {
               <span style={{ fontSize: 13, color: RC.dim }}>{gpsLabel}</span>
             </div>
           </div>
+
+          {isDenied && (
+            <div style={{ width: '100%', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 16, padding: '14px 16px', textAlign: 'center' }}>
+              <p style={{ fontSize: 13, color: '#fca5a5', margin: '0 0 10px', lineHeight: 1.5 }}>
+                Location access is off. Enable it so this activity can track your route and distance.
+              </p>
+              <button
+                onClick={openSettings}
+                style={{ padding: '8px 20px', borderRadius: 10, background: '#ef4444', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+              >
+                Open Settings
+              </button>
+            </div>
+          )}
         </div>
 
         <div style={{ padding: '0 16px 32px' }}>

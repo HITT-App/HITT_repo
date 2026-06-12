@@ -11,6 +11,7 @@ import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { App as CapApp } from "@capacitor/app";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: "#22c55e",
@@ -33,6 +34,7 @@ const RoutesExplorer = () => {
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [showSaved, setShowSaved] = useState(false);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const [locationDenied, setLocationDenied] = useState(false);
   const [savedRouteIds, setSavedRouteIds] = useState<Set<string>>(new Set());
 
   // Load saved routes
@@ -81,8 +83,8 @@ const RoutesExplorer = () => {
   // Get user location
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
-      (p) => setUserPos([p.coords.latitude, p.coords.longitude]),
-      () => setUserPos([25.2048, 55.2708]) // Default Dubai
+      (p) => { setUserPos([p.coords.latitude, p.coords.longitude]); setLocationDenied(false); },
+      (err) => { setUserPos([51.5074, -0.1278]); if (err.code === 1) setLocationDenied(true); }
     );
   }, []);
 
@@ -172,6 +174,19 @@ const RoutesExplorer = () => {
             <Bookmark size={20} />
           </Button>
         </div>
+
+        {/* Location denied banner */}
+        {locationDenied && (
+          <div style={{ margin: '0 16px 8px', padding: '10px 14px', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <span style={{ fontSize: 12, color: '#fca5a5', flex: 1, lineHeight: 1.4 }}>Location access off — map shows London by default.</span>
+            <button
+              onClick={() => CapApp.openUrl({ url: 'app-settings:' }).catch(() => {})}
+              style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 8, background: '#ef4444', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+            >
+              Settings
+            </button>
+          </div>
+        )}
 
         {/* Filter chips */}
         <div className="flex gap-2 px-4 pb-2 overflow-x-auto no-scrollbar">
