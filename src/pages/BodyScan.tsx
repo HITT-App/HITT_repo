@@ -158,7 +158,7 @@ const BodyScan = () => {
     if (headerRef.current) setHeaderH(headerRef.current.offsetHeight)
   }, [])
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [capturedImages, setCapturedImages] = useState<Record<number, string>>({})
   const [analysis, setAnalysis] = useState<BodyAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isCameraOpen, setIsCameraOpen] = useState(false)
@@ -246,9 +246,14 @@ const BodyScan = () => {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
     ctx.drawImage(video, 0, 0)
-    setImagePreview(resizeToDataUrl(canvas))
-    closeCamera()
-  }, [closeCamera])
+    const dataUrl = resizeToDataUrl(canvas)
+    setCapturedImages(prev => ({ ...prev, [poseIndex]: dataUrl }))
+    if (poseIndex < POSE_GUIDES.length - 1) {
+      setPoseIndex(p => p + 1)
+    } else {
+      closeCamera()
+    }
+  }, [closeCamera, poseIndex])
 
   // Countdown tick
   useEffect(() => {
@@ -303,10 +308,10 @@ const BodyScan = () => {
   // Auto-open camera on mount — skip the empty picker, go straight to capture
   const didAutoOpen = useRef(false)
   useEffect(() => {
-    if (didAutoOpen.current || imagePreview || analysis) return
+    if (didAutoOpen.current || Object.keys(capturedImages).length > 0 || analysis) return
     didAutoOpen.current = true
     openCamera()
-  }, [openCamera, imagePreview, analysis])
+  }, [openCamera, capturedImages, analysis])
 
   const flipCamera = useCallback(async () => {
     if (stream) stream.getTracks().forEach(t => t.stop())
@@ -334,7 +339,11 @@ const BodyScan = () => {
         canvas.width = img.width
         canvas.height = img.height
         canvas.getContext("2d")?.drawImage(img, 0, 0)
-        setImagePreview(resizeToDataUrl(canvas))
+        const dataUrl = resizeToDataUrl(canvas)
+        setCapturedImages(prev => ({ ...prev, [poseIndex]: dataUrl }))
+        if (poseIndex < POSE_GUIDES.length - 1) {
+          setPoseIndex(p => p + 1)
+        }
       }
       img.src = reader.result as string
     }
@@ -344,7 +353,7 @@ const BodyScan = () => {
   }
 
   const analyzeBody = async () => {
-    if (!imagePreview || !user) return
+    if (Object.keys(capturedImages).length === 0 || !user) return
     setIsAnalyzing(true)
     setAnalysis(null)
     try {
@@ -377,7 +386,10 @@ const BodyScan = () => {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ imageBase64: imagePreview, workoutSummary }),
+        body: JSON.stringify({
+          images: Object.keys(capturedImages).map(Number).sort().map(k => capturedImages[k]),
+          workoutSummary,
+        }),
       })
       let json: any
       try {
@@ -484,11 +496,13 @@ const BodyScan = () => {
     toast.success("Scan deleted")
   }
 
-  const clearImage = () => {
-    setImagePreview(null)
+  const resetCapture = useCallback(() => {
     setAnalysis(null)
+    setCapturedImages({})
+    setPoseIndex(0)
     setIsSaved(false)
-  }
+    openCamera()
+  }, [openCamera])
 
   const shareResults = async () => {
     if (!analysis) return
@@ -589,7 +603,7 @@ const BodyScan = () => {
                 {/* Pose strip */}
                 <div className="flex gap-2">
                   {POSE_GUIDES.map((pose, i) => {
-                    const isDone = i < poseIndex
+                    const isDone = capturedImages[i] !== undefined
                     const isNext = i === poseIndex
                     return (
                       <button
@@ -663,7 +677,7 @@ const BodyScan = () => {
                     style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.72) 100%)" }}
                   >
                     {/* X */}
-                    <button onClick={closeCamera} className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}>
+                    <button onClick={() => { closeCamera(); setCapturedImages({}); setPoseIndex(0) }} className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}>
                       <X className="w-5 h-5 text-white" />
                     </button>
                     {/* Gallery */}
@@ -689,35 +703,23 @@ const BodyScan = () => {
                 </div>
 
                 {/* Analyse button — standalone below the frame */}
-                <button
-                  onClick={analyzeBody}
-                  className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold text-[13px] rounded-xl py-3"
-                >
-                  <Sparkles className="w-4 h-4" /> Analyse 3 photos
-                </button>
+                {(() => {
+                  const photoCount = Object.keys(capturedImages).length
+                  return (
+                    <button
+                      onClick={analyzeBody}
+                      disabled={photoCount === 0 || isAnalyzing}
+                      className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold text-[13px] rounded-xl py-3 disabled:opacity-40"
+                    >
+                      {isAnalyzing
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Analysing...</>
+                        : <><Sparkles className="w-4 h-4" /> {photoCount > 0 ? `Analyse ${photoCount} photo${photoCount > 1 ? "s" : ""}` : "Analyse photos"}</>
+                      }
+                    </button>
+                  )
+                })()}
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
               </div>
-            ) : imagePreview && !analysis ? (
-              /* Image preview — no analysis yet */
-              <>
-                <div className="relative overflow-hidden rounded-[18px]">
-                  <img src={imagePreview} alt="Body scan" className="w-full aspect-[3/4] object-cover" />
-                  <button
-                    onClick={clearImage}
-                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background"
-                  >
-                    <X className="w-4 h-4 text-foreground" />
-                  </button>
-                </div>
-                <Button onClick={analyzeBody} disabled={isAnalyzing} className="w-full gap-2 h-12 text-base">
-                  {isAnalyzing ? (
-                    <><Loader2 className="w-5 h-5 animate-spin" /> Analyzing...</>
-                  ) : (
-                    <><Sparkles className="w-5 h-5" /> Analyze Body Composition</>
-                  )}
-                </Button>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-              </>
             ) : analysis ? (
               /* Result view */
               <div className="space-y-3.5 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -730,7 +732,7 @@ const BodyScan = () => {
                     </span>
                   </div>
                   <button
-                    onClick={clearImage}
+                    onClick={resetCapture}
                     className="inline-flex items-center gap-1.5 border border-primary/32 bg-primary/13 text-primary text-[12.5px] font-semibold rounded-[10px] px-3 py-[7px]"
                   >
                     <Camera className="w-3.5 h-3.5" /> New scan
