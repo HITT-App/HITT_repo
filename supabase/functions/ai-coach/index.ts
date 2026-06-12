@@ -1005,6 +1005,7 @@ serve(async (req) => {
       { data: recentCheckins },
       { data: recentSleep },
       { data: recentWorkouts },
+      { data: recentActivities },
       { data: activityGoals },
       { data: latestWeight },
       { data: latestHeartRate },
@@ -1022,6 +1023,7 @@ serve(async (req) => {
       supabase.from('daily_checkins').select('mood, energy, date').eq('user_id', userId).order('date', { ascending: false }).limit(7),
       supabase.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('workout_progress').select('*').eq('user_id', userId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(5),
+      supabase.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
       supabase.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
@@ -1092,12 +1094,24 @@ serve(async (req) => {
       userContext += `• Target body areas: ${workoutPrefs.target_body_areas?.join(', ') || 'Not specified'}\n`;
     }
 
-    if (nutritionProfile) {
+    {
       userContext += `\nNutrition Profile:\n`;
-      userContext += `• Daily calorie target: ${nutritionProfile.daily_calorie_target || 'Not set'}\n`;
-      userContext += `• Diet preferences: ${nutritionProfile.food_preferences?.join(', ') || 'Not specified'}\n`;
-      userContext += `• Allergies: ${nutritionProfile.allergies?.join(', ') || 'None'}\n`;
-      userContext += `• Protein intake: ${nutritionProfile.protein_intake || 'Not set'}\n`;
+      if (nutritionProfile?.daily_calorie_target) {
+        userContext += `• Daily calorie target: ${nutritionProfile.daily_calorie_target} kcal/day (user-set)\n`;
+      } else if (latestWeight) {
+        const weightKg = latestWeight.unit === 'lbs' ? latestWeight.value * 0.453592 : latestWeight.value;
+        const maintenance = Math.round(weightKg * 32);
+        const goal = workoutPrefs?.workout_goal ?? '';
+        const adjusted = goal.includes('fat') ? maintenance - 400 : goal.includes('muscle') ? maintenance + 250 : maintenance;
+        userContext += `• Daily calorie target: not set by user — estimated from weight: ~${adjusted} kcal/day (${goal.includes('fat') ? 'fat loss deficit' : goal.includes('muscle') ? 'muscle gain surplus' : 'maintenance'})\n`;
+      } else {
+        userContext += `• Daily calorie target: not set and no weight on file. Ask the user their weight, then calculate: maintenance = weight_kg × 32, adjust for goal.\n`;
+      }
+      if (nutritionProfile) {
+        userContext += `• Diet preferences: ${nutritionProfile.food_preferences?.join(', ') || 'Not specified'}\n`;
+        userContext += `• Allergies: ${nutritionProfile.allergies?.join(', ') || 'None'}\n`;
+        userContext += `• Protein intake: ${nutritionProfile.protein_intake || 'Not set'}\n`;
+      }
     }
 
     if (streaks) {
@@ -1144,6 +1158,17 @@ serve(async (req) => {
       for (const w of recentWorkouts) {
         const mins = w.duration_seconds ? Math.round(w.duration_seconds / 60) : '?';
         userContext += `• ${w.completed_at?.split('T')[0]} — ${mins} min, ${w.calories_burned || '?'} cal\n`;
+      }
+    }
+
+    if (recentActivities && recentActivities.length > 0) {
+      userContext += `\nRecent Activities (HealthKit + manual, last ${recentActivities.length}):\n`;
+      for (const a of recentActivities) {
+        const date = a.started_at?.split('T')[0] ?? 'unknown date';
+        const mins = a.duration_seconds ? Math.round(a.duration_seconds / 60) : '?';
+        const dist = a.distance_km ? `, ${Number(a.distance_km).toFixed(1)} km` : '';
+        const cals = a.calories_burned ? `, ${a.calories_burned} cal` : '';
+        userContext += `• ${date} — ${a.activity_type}, ${mins} min${dist}${cals}\n`;
       }
     }
 
