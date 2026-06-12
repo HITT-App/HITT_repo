@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, SkipForward, Flag, Waves, Bike, Footprints, Trophy, Lock, Unlock, Watch, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft, Play, Pause, SkipForward, Flag, Waves, Bike, Footprints,
+  Trophy, Lock, Unlock, Watch, ChevronRight, Check, Minus, Plus, Share2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
@@ -11,6 +13,53 @@ import { startGpsWatch } from "@/lib/native-gps";
 import type { GpsPoint } from "@/lib/gps-filter";
 import { sendTriathlonToWatch } from "@/plugins/WatchPlugin";
 
+// ── Design tokens ─────────────────────────────────────────────
+const C = {
+  bg:      '#0a0a0a',
+  card:    '#141414',
+  sec:     '#1b1b1b',
+  line:    '#262626',
+  line2:   '#333333',
+  fg:      '#fafafa',
+  dim:     '#9a9a9a',
+  dim2:    '#6f6f6f',
+  dim3:    '#525252',
+  primary: '#f97316',
+  good:    '#4ade80',
+  info:    '#38bdf8',
+  mono:    "'SFMono-Regular',ui-monospace,Menlo,monospace" as string,
+};
+
+const tint = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+};
+
+const fmt = (s: number) => {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = Math.floor(s % 60);
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+};
+
+const paceStr = (secs: number) =>
+  `${Math.floor(secs / 60)}:${String(Math.round(secs % 60)).padStart(2, '0')}`;
+
+// ── Leg definitions ───────────────────────────────────────────
+const LEGS = [
+  { key: 'swim', label: 'Swim', Icon: Waves,      tone: C.info,    met: 8.0, gps: false, metric: 'pace100' as const, sub: 'Open-water swim', step: 0.05, dec: 2 },
+  { key: 'bike', label: 'Bike', Icon: Bike,       tone: C.primary, met: 7.5, gps: true,  metric: 'speed'   as const, sub: 'Cycling',         step: 1,    dec: 0 },
+  { key: 'run',  label: 'Run',  Icon: Footprints, tone: C.good,    met: 9.8, gps: true,  metric: 'pace'    as const, sub: 'Road run',        step: 0.1,  dec: 1 },
+];
+
+const PRESETS = [
+  { label: 'Long Course',     short: 'Long',    d: [3.8, 180, 42.2] },
+  { label: 'Middle Distance', short: 'Middle',  d: [1.9, 90,  21.1] },
+  { label: 'Olympic',         short: 'Olympic', d: [1.5, 40,  10.0] },
+  { label: 'Sprint',          short: 'Sprint',  d: [0.75, 20,  5.0] },
+];
+const ALL_PILLS = [...PRESETS, { label: 'Custom', short: 'Custom', d: null as number[] | null }];
+
 interface LegData {
   elapsed: number;
   distance: number;
@@ -18,41 +67,116 @@ interface LegData {
   positions: GpsPoint[];
 }
 
-const LEGS = [
-  { key: "swim", label: "Swim", icon: Waves, color: "from-blue-500 to-blue-600", met: 8.0, gps: false },
-  { key: "bike", label: "Bike", icon: Bike, color: "from-cyan-500 to-cyan-600", met: 7.5, gps: true },
-  { key: "run", label: "Run", icon: Footprints, color: "from-green-500 to-green-600", met: 9.8, gps: true },
-] as const;
+const weightKg = 75;
 
-const fmt = (s: number) => {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return h > 0
-    ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
-    : `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-};
+// ── Subcomponents ─────────────────────────────────────────────
 
-const PRESETS = [
-  { label: "Long Course",    distances: [3.8, 180, 42.2] },
-  { label: "Middle Distance", distances: [1.9, 90,  21.1] },
-  { label: "Olympic",       distances: [1.5, 40,  10.0] },
-  { label: "Sprint",        distances: [0.75, 20,  5.0] },
-  { label: "Custom",        distances: null },
-] as const;
+function Stat({ value, unit, label, accent }: { value: string; unit?: string; label: string; accent?: string }) {
+  return (
+    <div style={{ flex: 1, textAlign: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 3 }}>
+        <span style={{ fontSize: 22, fontWeight: 800, fontFamily: C.mono, color: accent || C.fg, letterSpacing: -0.4 }}>{value}</span>
+        {unit && <span style={{ fontSize: 10, fontWeight: 600, color: C.dim2 }}>{unit}</span>}
+      </div>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: C.dim2, marginTop: 3, fontFamily: C.mono, textTransform: 'uppercase' }}>{label}</div>
+    </div>
+  );
+}
 
+function LegStepper({ active, data }: { active: number; data: LegData[] }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'stretch', padding: '0 16px 12px', gap: 0 }}>
+      {LEGS.map((leg, i) => {
+        const isActive = i === active, isDone = i < active;
+        return (
+          <div key={leg.key} style={{ display: 'flex', alignItems: 'center', flex: isActive ? 1.5 : 1, transition: 'flex 0.4s', gap: 0 }}>
+            <div style={{
+              flex: 1, borderRadius: 14, padding: '11px 10px',
+              border: `1px solid ${isActive ? tint(leg.tone, 0.4) : C.line}`,
+              background: isActive ? tint(leg.tone, 0.1) : isDone ? C.card : 'transparent',
+              opacity: !isActive && !isDone ? 0.5 : 1,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+                  background: isActive ? leg.tone : 'transparent',
+                  border: isActive ? 'none' : `1px solid ${isDone ? tint(leg.tone, 0.5) : C.line2}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {isDone
+                    ? <Check size={12} color={leg.tone} strokeWidth={2.6} />
+                    : <leg.Icon size={13} color={isActive ? '#0a0a0a' : C.dim2} strokeWidth={isActive ? 2.6 : 2.2} />}
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: isActive ? C.fg : isDone ? C.dim : C.dim2 }}>{leg.label}</span>
+                {isActive && <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: 99, background: leg.tone, boxShadow: `0 0 0 3px ${tint(leg.tone, 0.2)}` }} />}
+              </div>
+              {(isActive || isDone) && (
+                <div style={{ fontSize: 11, fontFamily: C.mono, color: isActive ? C.dim : C.dim2, marginTop: 5 }}>
+                  {fmt(data[i].elapsed)}
+                </div>
+              )}
+            </div>
+            {i < 2 && (
+              <div style={{ width: 14, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                <ChevronRight size={14} color={i < active ? LEGS[i].tone : C.dim3} strokeWidth={2.4} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SwimHero({ elapsed, distance, target }: { elapsed: number; distance: number; target: number }) {
+  const pct = Math.min(distance / target, 1);
+  return (
+    <div style={{
+      position: 'relative', flex: 1, minHeight: 0, borderRadius: 18, overflow: 'hidden',
+      border: `1px solid ${C.line}`,
+      background: `radial-gradient(120% 80% at 50% 30%, ${tint(C.info, 0.12)}, #0c0c0c 70%)`,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+    }}>
+      <div style={{
+        width: 84, height: 84, borderRadius: 99, background: tint(C.info, 0.14),
+        border: `1px solid ${tint(C.info, 0.4)}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Waves size={38} color={C.info} strokeWidth={2} />
+      </div>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 52, fontWeight: 800, fontFamily: C.mono, color: C.fg, letterSpacing: -1, lineHeight: 1 }}>{fmt(elapsed)}</div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.4, color: C.dim2, marginTop: 8, fontFamily: C.mono }}>TIMER MODE · NO GPS IN WATER</div>
+      </div>
+      <div style={{
+        position: 'absolute', left: 12, right: 12, bottom: 12,
+        background: 'rgba(0,0,0,0.4)', border: `1px solid ${C.line2}`, borderRadius: 13, padding: '10px 12px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 11, color: C.dim, whiteSpace: 'nowrap' }}>
+            <b style={{ color: C.fg, fontFamily: C.mono }}>{distance.toFixed(2)}</b> / {target} km
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: C.info, fontFamily: C.mono }}>{Math.round(pct * 100)}%</span>
+        </div>
+        <div style={{ height: 5, borderRadius: 4, background: C.sec, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct * 100}%`, background: C.info, borderRadius: 4 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────
 const Triathlon = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const [screen, setScreen] = useState<'setup' | 'race' | 'finished'>('setup');
   const [activeLeg, setActiveLeg] = useState(0);
   const [running, setRunning] = useState(false);
   const [locked, setLocked] = useState(false);
-  const [finished, setFinished] = useState(false);
 
-  // Race setup
+  const [raceName, setRaceName] = useState('Long Course');
   const [targetKm, setTargetKm] = useState([3.8, 180, 42.2]);
-  const [raceName, setRaceName] = useState("Long Course");
-  const [showSetup, setShowSetup] = useState(true);
   const [watchSent, setWatchSent] = useState(false);
   const [watchSending, setWatchSending] = useState(false);
   const [legData, setLegData] = useState<LegData[]>([
@@ -60,18 +184,17 @@ const Triathlon = () => {
     { elapsed: 0, distance: 0, calories: 0, positions: [] },
     { elapsed: 0, distance: 0, calories: 0, positions: [] },
   ]);
-  const [gpsStatus, setGpsStatus] = useState<"searching" | "active" | "unavailable" | "denied">("searching");
+  const [gpsStatus, setGpsStatus] = useState<'searching' | 'active' | 'unavailable' | 'denied'>('searching');
   const [transitioning, setTransitioning] = useState(false);
 
   const gpsWatchRef = useRef<{ stop: () => void } | null>(null);
   const gpsFilterRef = useRef(new GpsFilter());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<string>(new Date().toISOString());
-  const weightKg = 75; // fallback
 
   // Timer
   useEffect(() => {
-    if (running && !finished) {
+    if (running && screen === 'race') {
       timerRef.current = setInterval(() => {
         setLegData((prev) => {
           const next = [...prev];
@@ -84,39 +207,33 @@ const Triathlon = () => {
       }, 1000);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [running, activeLeg, finished]);
+  }, [running, activeLeg, screen]);
 
-  // GPS for bike & run legs (Kalman-filtered, native-capable)
+  // GPS for bike & run legs
   useEffect(() => {
-    if (!running || !LEGS[activeLeg].gps) return;
-
-    setGpsStatus("searching");
+    if (!running || !LEGS[activeLeg].gps || screen !== 'race') return;
+    setGpsStatus('searching');
     gpsFilterRef.current.reset();
     let cancelled = false;
 
     startGpsWatch({
       onPosition: (pos) => {
         if (cancelled) return;
-        const result = gpsFilterRef.current.process(
-          pos.lat, pos.lng, pos.timestamp, pos.accuracy, pos.altitude,
-        );
+        const result = gpsFilterRef.current.process(pos.lat, pos.lng, pos.timestamp, pos.accuracy, pos.altitude);
         if (!result.accepted) return;
-
-        setGpsStatus("active");
+        setGpsStatus('active');
         setLegData((prev) => {
           const next = [...prev];
           const leg = { ...next[activeLeg] };
           leg.positions = [...leg.positions, result.point];
-          if (result.distanceDelta > 0) {
-            leg.distance += result.distanceDelta / 1000; // convert m to km
-          }
+          if (result.distanceDelta > 0) leg.distance += result.distanceDelta / 1000;
           next[activeLeg] = leg;
           return next;
         });
       },
       onError: (code) => {
         if (cancelled) return;
-        setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
+        setGpsStatus(code === 'permission_denied' ? 'denied' : 'unavailable');
       },
     }).then((handle) => {
       if (cancelled) { handle.stop(); return; }
@@ -128,7 +245,7 @@ const Triathlon = () => {
       gpsWatchRef.current?.stop();
       gpsWatchRef.current = null;
     };
-  }, [running, activeLeg]);
+  }, [running, activeLeg, screen]);
 
   const handleNextLeg = useCallback(() => {
     if (activeLeg >= 2) return;
@@ -144,91 +261,25 @@ const Triathlon = () => {
 
   const handleFinish = useCallback(async () => {
     setRunning(false);
-    setFinished(true);
+    setScreen('finished');
     gpsWatchRef.current?.stop();
-
     if (!user) return;
     const totals = legData.reduce(
       (acc, l) => ({ elapsed: acc.elapsed + l.elapsed, distance: acc.distance + l.distance, calories: acc.calories + l.calories }),
-      { elapsed: 0, distance: 0, calories: 0 }
+      { elapsed: 0, distance: 0, calories: 0 },
     );
-
-    await supabase.from("activity_logs").insert({
+    await supabase.from('activity_logs').insert({
       user_id: user.id,
-      activity_type: "Triathlon",
+      activity_type: 'Triathlon',
       started_at: startedAtRef.current,
       ended_at: new Date().toISOString(),
       duration_seconds: totals.elapsed,
       distance_km: Math.round(totals.distance * 100) / 100,
       calories_burned: totals.calories,
-      status: "completed",
+      status: 'completed',
       notes: `Swim: ${fmt(legData[0].elapsed)} | Bike: ${fmt(legData[1].elapsed)} ${legData[1].distance.toFixed(2)}km | Run: ${fmt(legData[2].elapsed)} ${legData[2].distance.toFixed(2)}km`,
     });
-
-    toast({ title: "🏆 Triathlon Complete!", description: `Total: ${fmt(totals.elapsed)} • ${totals.distance.toFixed(2)} km • ${totals.calories} kcal` });
   }, [user, legData]);
-
-  const totals = legData.reduce(
-    (acc, l) => ({ elapsed: acc.elapsed + l.elapsed, distance: acc.distance + l.distance, calories: acc.calories + l.calories }),
-    { elapsed: 0, distance: 0, calories: 0 }
-  );
-
-  const currentLeg = LEGS[activeLeg];
-  const CurrentIcon = currentLeg.icon;
-
-  // ── Finished Screen ──
-  if (finished) {
-    return (
-      <div className="min-h-[100dvh] bg-background flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center shadow-2xl shadow-yellow-500/30">
-            <Trophy size={36} className="text-black" />
-          </div>
-          <h1 className="text-2xl font-black text-foreground">Triathlon Complete</h1>
-
-          <div className="w-full max-w-sm space-y-3">
-            {LEGS.map((leg, i) => {
-              const Icon = leg.icon;
-              const d = legData[i];
-              return (
-                <div key={leg.key} className="rounded-2xl bg-card/80 backdrop-blur-xl border border-border/30 p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${leg.color} flex items-center justify-center`}>
-                      <Icon size={16} className="text-white" />
-                    </div>
-                    <span className="font-bold text-foreground">{leg.label}</span>
-                    <span className="ml-auto font-mono text-sm text-muted-foreground">{fmt(d.elapsed)}</span>
-                  </div>
-                  <div className="flex gap-4 text-xs text-muted-foreground">
-                    <span>{d.distance.toFixed(2)} km</span>
-                    <span>{d.calories} kcal</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-4 w-full max-w-sm">
-            <div className="text-center">
-              <p className="text-xs text-yellow-500 font-bold tracking-wider mb-1">TOTAL</p>
-              <p className="text-3xl font-black text-foreground font-mono">{fmt(totals.elapsed)}</p>
-              <div className="flex justify-center gap-6 mt-2 text-sm text-muted-foreground">
-                <span>{totals.distance.toFixed(2)} km</span>
-                <span>{totals.calories} kcal</span>
-              </div>
-            </div>
-          </div>
-
-          <Button onClick={() => navigate("/")} className="w-full max-w-sm bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-bold hover:from-yellow-400 hover:to-amber-500">
-            Done
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Scroll to top whenever setup screen is shown
-  useEffect(() => { window.scrollTo(0, 0); }, [showSetup]);
 
   const sendToWatch = async () => {
     setWatchSending(true);
@@ -236,254 +287,405 @@ const Triathlon = () => {
       await sendTriathlonToWatch({
         name: raceName,
         legs: [
-          { type: "swim", targetKm: targetKm[0] },
-          { type: "bike", targetKm: targetKm[1] },
-          { type: "run",  targetKm: targetKm[2] },
+          { type: 'swim', targetKm: targetKm[0] },
+          { type: 'bike', targetKm: targetKm[1] },
+          { type: 'run',  targetKm: targetKm[2] },
         ],
       });
-    } catch { /* best-effort — plan delivered via applicationContext when Watch app opens */ }
+    } catch { /* best-effort */ }
     setWatchSent(true);
     setWatchSending(false);
-    toast({ title: "Plan sent to Watch ⌚", description: "Your Watch will open the Race screen automatically." });
+    toast({ title: 'Plan sent to Watch ⌚', description: 'Your Watch will open the Race screen automatically.' });
   };
 
-  // Setup screen shown before race starts
-  if (showSetup) {
+  const totals = legData.reduce(
+    (acc, l) => ({ elapsed: acc.elapsed + l.elapsed, distance: acc.distance + l.distance, calories: acc.calories + l.calories }),
+    { elapsed: 0, distance: 0, calories: 0 },
+  );
 
+  const isCustom = raceName === 'Custom';
+
+  const adjust = (i: number, dir: number) => {
+    setRaceName('Custom');
+    setTargetKm((prev) => {
+      const n = [...prev];
+      const step = LEGS[i].step;
+      n[i] = Math.max(step, +((parseFloat(String(n[i])) + dir * step).toFixed(LEGS[i].dec)));
+      return n;
+    });
+  };
+
+  // ── SETUP ────────────────────────────────────────────────────
+  if (screen === 'setup') {
     return (
-      <div className="min-h-[100dvh] bg-background flex flex-col">
-        <div className="flex items-center gap-3 px-4 pb-2 sticky top-0 z-10 bg-background" style={{ paddingTop: "calc(var(--safe-area-inset-top, 44px) + 0.5rem)" }}>
-          <button onClick={() => navigate(-1)} aria-label="Go back" className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
-            <ArrowLeft size={18} />
+      <div style={{ background: C.bg, minHeight: '100dvh', display: 'flex', flexDirection: 'column', color: C.fg }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px 12px',
+          paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)', flexShrink: 0,
+        }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{ width: 38, height: 38, borderRadius: 99, border: `1px solid ${C.line}`, background: C.card, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
+          >
+            <ArrowLeft size={18} color={C.fg} strokeWidth={2.2} />
           </button>
-          <h1 className="text-sm font-bold flex items-center gap-2">
-            <Trophy size={14} className="text-yellow-500" /> RACE SETUP
-          </h1>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 18, fontWeight: 750, color: C.fg, letterSpacing: -0.2 }}>Triathlon Setup</div>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-4">
-          {/* Preset selector */}
+        <div style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Race type pills */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-2 tracking-wider uppercase">Race Type</p>
-            <div className="grid grid-cols-2 gap-2">
-              {PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  onClick={() => {
-                    setRaceName(p.label);
-                    if (p.distances) setTargetKm([...p.distances]);
-                  }}
-                  className={`p-3 rounded-xl border text-left transition-colors ${
-                    raceName === p.label
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card text-foreground"
-                  }`}
-                >
-                  <p className="text-xs font-bold">{p.label}</p>
-                  {p.distances && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {p.distances[0]}km / {p.distances[1]}km / {p.distances[2]}km
-                    </p>
-                  )}
-                </button>
-              ))}
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: C.dim2, marginBottom: 10, textTransform: 'uppercase', fontFamily: C.mono }}>Race type</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {ALL_PILLS.map((p) => {
+                const on = raceName === p.label;
+                return (
+                  <button
+                    key={p.label}
+                    onClick={() => { setRaceName(p.label); if (p.d) setTargetKm([...p.d]); }}
+                    style={{
+                      flex: 1, cursor: 'pointer', borderRadius: 11, padding: '9px 0',
+                      border: `1px solid ${on ? tint(C.primary, 0.34) : C.line}`,
+                      background: on ? tint(C.primary, 0.13) : C.card,
+                      color: on ? C.primary : C.dim2,
+                      fontSize: 11.5, fontWeight: 700, WebkitTapHighlightColor: 'transparent',
+                    }}
+                  >{p.short}</button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Distance editors */}
+          {/* Target distances */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-2 tracking-wider uppercase">Target Distances</p>
-            <div className="space-y-2">
-              {[
-                { label: "Swim", icon: Waves, color: "text-blue-400" },
-                { label: "Bike", icon: Bike,  color: "text-cyan-400" },
-                { label: "Run",  icon: Footprints, color: "text-green-400" },
-              ].map(({ label, icon: Icon, color }, i) => (
-                <div key={label} className="flex items-center gap-3 bg-card rounded-xl p-3 border border-border">
-                  <Icon size={18} className={color} />
-                  <span className="text-sm font-medium flex-1">{label}</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    value={targetKm[i]}
-                    readOnly={raceName !== "Custom"}
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value) || 0;
-                      setTargetKm((prev) => { const n = [...prev]; n[i] = v; return n; });
-                    }}
-                    className={`w-20 text-right border rounded-lg px-2 py-1 text-sm font-mono transition-colors ${
-                      raceName === "Custom"
-                        ? "bg-secondary border-border"
-                        : "bg-muted border-transparent text-muted-foreground cursor-default"
-                    }`}
-                  />
-                  <span className="text-xs text-muted-foreground">km</span>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: C.dim2, marginBottom: 10, textTransform: 'uppercase', fontFamily: C.mono }}>Target distances</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {LEGS.map((leg, i) => (
+                <div key={leg.key} style={{
+                  display: 'flex', alignItems: 'center', gap: 13, background: C.card,
+                  border: `1px solid ${C.line}`, borderRadius: 16, padding: '13px 14px',
+                }}>
+                  <div style={{
+                    width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                    background: tint(leg.tone, 0.12), border: `1px solid ${tint(leg.tone, 0.3)}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <leg.Icon size={20} color={leg.tone} strokeWidth={2.1} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: C.fg }}>{leg.label}</div>
+                    <div style={{ fontSize: 11, color: C.dim2, marginTop: 1 }}>{leg.sub}</div>
+                  </div>
+                  {isCustom ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <button onClick={() => adjust(i, -1)} style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', border: `1px solid ${C.line2}`, background: C.sec, display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+                        <Minus size={15} color={C.fg} strokeWidth={2.4} />
+                      </button>
+                      <span style={{ fontSize: 19, fontWeight: 750, fontFamily: C.mono, color: C.fg, minWidth: 54, textAlign: 'center' }}>
+                        {Number(targetKm[i]).toFixed(leg.dec)}
+                      </span>
+                      <button onClick={() => adjust(i, 1)} style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', border: `1px solid ${C.line2}`, background: C.sec, display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+                        <Plus size={15} color={C.fg} strokeWidth={2.4} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                      <span style={{ fontSize: 22, fontWeight: 750, fontFamily: C.mono, color: C.fg, letterSpacing: -0.5 }}>{targetKm[i]}</span>
+                      <span style={{ fontSize: 11, color: C.dim2, fontFamily: C.mono }}>km</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Send to Watch */}
-          <Button
-            variant="outline"
-            className="w-full gap-2 active:scale-95 active:bg-secondary transition-all"
-            onClick={sendToWatch}
-            disabled={watchSending}
-          >
-            <Watch size={16} className={watchSent ? "text-green-500" : "text-muted-foreground"} />
-            {watchSending ? "Sending…" : watchSent ? "Sent to Watch ✓" : "Send Plan to Apple Watch"}
-          </Button>
+          {/* Total + composition bar */}
+          <div style={{ background: C.sec, border: `1px solid ${C.line}`, borderRadius: 14, padding: '13px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 11 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: C.dim2, fontFamily: C.mono, textTransform: 'uppercase' }}>Total distance</span>
+              <span style={{ fontSize: 16, fontWeight: 750, fontFamily: C.mono, color: C.fg }}>
+                {(targetKm[0] + targetKm[1] + targetKm[2]).toFixed(1)} <span style={{ fontSize: 11, color: C.dim2 }}>km</span>
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 3, height: 7 }}>
+              {LEGS.map((leg, i) => (
+                <div key={leg.key} style={{ flex: Math.max(targetKm[i], 0.01), background: leg.tone, borderRadius: 3, minWidth: 7, opacity: 0.9 }} />
+              ))}
+            </div>
+          </div>
 
-          {/* Start */}
-          <Button
-            className="w-full h-12 gap-2 bg-primary text-primary-foreground rounded-xl"
-            onClick={() => setShowSetup(false)}
-          >
-            <Play size={16} /> Start Race
-          </Button>
+          {/* Actions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 8 }}>
+            <button
+              onClick={sendToWatch}
+              disabled={watchSending}
+              style={{
+                width: '100%', cursor: 'pointer', borderRadius: 14, padding: '13px 0',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+                fontSize: 13.5, fontWeight: 650,
+                border: `1px solid ${watchSent ? tint(C.good, 0.4) : C.line2}`,
+                background: watchSent ? tint(C.good, 0.1) : C.card,
+                color: watchSent ? C.good : C.fg,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              {watchSent
+                ? <><Check size={16} color={C.good} strokeWidth={2.2} /> Sent to Apple Watch</>
+                : <><Watch size={16} color={C.dim} strokeWidth={2.2} /> {watchSending ? 'Sending…' : 'Send plan to Apple Watch'}</>}
+            </button>
+            <button
+              onClick={() => { setScreen('race'); setRunning(true); startedAtRef.current = new Date().toISOString(); }}
+              style={{
+                width: '100%', height: 54, borderRadius: 16, cursor: 'pointer', border: 'none',
+                background: C.primary, color: '#0a0a0a',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+                fontSize: 15.5, fontWeight: 750, whiteSpace: 'nowrap',
+                boxShadow: `0 6px 20px ${tint(C.primary, 0.32)}`,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <Play size={18} color="#0a0a0a" strokeWidth={2.6} style={{ marginLeft: 3 }} /> Start race
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-[100dvh] bg-background flex flex-col relative">
-      {/* Header */}
-      <div className="relative z-10 px-4 pb-2 flex items-center gap-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 44px) + 0.5rem)" }}>
-        <button onClick={() => setShowSetup(true)} className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-xl border border-border/30 flex items-center justify-center">
-          <ArrowLeft size={18} className="text-foreground" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-sm font-bold text-foreground flex items-center gap-2">
-            <Trophy size={14} className="text-yellow-500" /> {raceName.toUpperCase()}
-          </h1>
-        </div>
-        <button
-          onClick={() => setLocked(!locked)}
-          className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-xl border border-border/30 flex items-center justify-center"
-        >
-          {locked ? <Lock size={16} className="text-yellow-500" /> : <Unlock size={16} className="text-muted-foreground" />}
-        </button>
-      </div>
+  // ── RACE ─────────────────────────────────────────────────────
+  if (screen === 'race') {
+    const leg = LEGS[activeLeg];
+    const d = legData[activeLeg];
 
-      {/* Leg progress indicator */}
-      <div className="px-4 pb-3">
-        <div className="flex gap-2">
-          {LEGS.map((leg, i) => {
-            const Icon = leg.icon;
-            const isActive = i === activeLeg;
-            const isDone = i < activeLeg;
-            return (
-              <div
-                key={leg.key}
-                className={`flex-1 rounded-xl p-2.5 transition-all duration-500 ${
-                  isActive
-                    ? `bg-gradient-to-br ${leg.color} shadow-lg`
-                    : isDone
-                    ? "bg-card/60 border border-border/30"
-                    : "bg-card/30 border border-border/20 opacity-50"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Icon size={14} className={isActive ? "text-white" : isDone ? "text-green-400" : "text-muted-foreground"} />
-                  <span className={`text-xs font-bold ${isActive ? "text-white" : isDone ? "text-green-400" : "text-muted-foreground"}`}>
-                    {leg.label}
+    let metricValue: string, metricUnit: string, metricLabel: string;
+    if (leg.metric === 'speed') {
+      const spd = d.elapsed > 0 && d.distance > 0 ? d.distance / (d.elapsed / 3600) : 0;
+      metricValue = spd > 0 ? spd.toFixed(1) : '—';
+      metricUnit = 'km/h'; metricLabel = 'SPEED';
+    } else if (leg.metric === 'pace') {
+      const p = d.distance > 0 ? d.elapsed / d.distance : 0;
+      metricValue = p > 0 ? paceStr(p) : '—';
+      metricUnit = '/km'; metricLabel = 'PACE';
+    } else {
+      const p = d.distance > 0 ? d.elapsed / (d.distance * 10) : 0;
+      metricValue = p > 0 ? paceStr(p) : '—';
+      metricUnit = '/100m'; metricLabel = 'PACE';
+    }
+
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.fg }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px 12px',
+          paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)', flexShrink: 0,
+        }}>
+          <button
+            onClick={() => { setRunning(false); setScreen('setup'); }}
+            style={{ width: 38, height: 38, borderRadius: 99, border: `1px solid ${C.line}`, background: C.card, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
+          >
+            <ArrowLeft size={18} color={C.fg} strokeWidth={2.2} />
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1.6, color: C.dim2, fontFamily: C.mono }}>
+              {raceName.toUpperCase()} · LEG {activeLeg + 1}/3
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 750, color: C.fg, letterSpacing: -0.2 }}>{leg.label} leg</div>
+          </div>
+          <button
+            onClick={() => setLocked((l) => !l)}
+            style={{
+              width: 38, height: 38, borderRadius: 99, cursor: 'pointer', flexShrink: 0,
+              border: `1px solid ${locked ? tint(leg.tone, 0.4) : C.line}`,
+              background: locked ? tint(leg.tone, 0.12) : C.card,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            {locked
+              ? <Lock size={16} color={leg.tone} strokeWidth={2.2} />
+              : <Unlock size={16} color={C.dim} strokeWidth={2.2} />}
+          </button>
+        </div>
+
+        <LegStepper active={activeLeg} data={legData} />
+
+        {/* Hero */}
+        <div style={{ flex: 1, minHeight: 180, padding: '0 16px', display: 'flex', position: 'relative' }}>
+          {leg.gps ? (
+            <div style={{ flex: 1, position: 'relative', borderRadius: 18, overflow: 'hidden', border: `1px solid ${C.line}` }}>
+              <LiveActivityMap positions={d.positions} gpsStatus={gpsStatus} />
+              {/* LIVE badge */}
+              <div style={{
+                position: 'absolute', top: 12, left: 12, display: 'inline-flex', alignItems: 'center', gap: 7,
+                background: 'rgba(0,0,0,0.55)', border: `1px solid ${C.line2}`, backdropFilter: 'blur(8px)',
+                borderRadius: 99, padding: '5px 10px 5px 8px', zIndex: 10,
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: 99, background: C.good, boxShadow: `0 0 0 3px ${tint(C.good, 0.2)}` }} />
+                <span style={{ fontSize: 10, fontWeight: 700, fontFamily: C.mono, letterSpacing: 1, color: C.fg }}>LIVE · GPS</span>
+              </div>
+              {/* Progress overlay */}
+              <div style={{
+                position: 'absolute', left: 12, right: 12, bottom: 12, zIndex: 10,
+                background: 'rgba(0,0,0,0.5)', border: `1px solid ${C.line2}`, backdropFilter: 'blur(8px)',
+                borderRadius: 13, padding: '10px 12px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, color: C.dim, whiteSpace: 'nowrap' }}>
+                    <b style={{ color: C.fg, fontFamily: C.mono }}>{d.distance.toFixed(2)}</b> / {targetKm[activeLeg]} km
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: leg.tone, fontFamily: C.mono }}>
+                    {Math.round(Math.min(d.distance / targetKm[activeLeg], 1) * 100)}%
                   </span>
                 </div>
-                {(isActive || isDone) && (
-                  <p className={`text-[10px] font-mono mt-0.5 ${isActive ? "text-white/80" : "text-muted-foreground"}`}>
-                    {fmt(legData[i].elapsed)}
-                  </p>
-                )}
+                <div style={{ height: 5, borderRadius: 4, background: C.sec, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(d.distance / targetKm[activeLeg], 1) * 100}%`, background: leg.tone, borderRadius: 4 }} />
+                </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Map / Timer area */}
-      <div className="flex-1 relative">
-        {currentLeg.gps ? (
-          <LiveActivityMap positions={legData[activeLeg].positions} gpsStatus={gpsStatus} />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-blue-950/50 to-background gap-4">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/30 animate-pulse">
-              <Waves size={40} className="text-white" />
             </div>
-            <p className="text-muted-foreground text-sm">Timer mode – GPS not used in water</p>
-          </div>
-        )}
-
-        {/* Transition overlay */}
-        {transitioning && (
-          <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-xl flex flex-col items-center justify-center gap-4">
-            <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${LEGS[activeLeg + 1]?.color || ""} flex items-center justify-center shadow-xl animate-bounce`}>
-              {activeLeg < 2 && (() => { const NI = LEGS[activeLeg + 1].icon; return <NI size={28} className="text-white" />; })()}
-            </div>
-            <p className="text-lg font-bold text-foreground">Transitioning to {LEGS[activeLeg + 1]?.label}…</p>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom stats & controls */}
-      <div className="relative z-10 bg-card/80 backdrop-blur-xl border-t border-border/30 px-4 pb-6 pt-4">
-        {/* Current leg stats */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="text-center">
-            <p className="text-2xl font-black text-foreground font-mono">{fmt(legData[activeLeg].elapsed)}</p>
-            <p className="text-[10px] text-muted-foreground font-bold tracking-wider">DURATION</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-black text-foreground font-mono">{legData[activeLeg].distance.toFixed(2)}</p>
-            <p className="text-[10px] text-muted-foreground font-bold tracking-wider">KM</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-black text-foreground font-mono">{legData[activeLeg].calories}</p>
-            <p className="text-[10px] text-muted-foreground font-bold tracking-wider">KCAL</p>
-          </div>
-        </div>
-
-        {/* Total bar */}
-        <div className="flex items-center justify-between bg-yellow-500/10 rounded-xl px-3 py-2 mb-4 border border-yellow-500/20">
-          <span className="text-[10px] font-bold text-yellow-500 tracking-wider">TOTAL</span>
-          <span className="text-xs font-mono text-foreground">{fmt(totals.elapsed)}</span>
-          <span className="text-xs font-mono text-foreground">{totals.distance.toFixed(2)} km</span>
-          <span className="text-xs font-mono text-foreground">{totals.calories} kcal</span>
-        </div>
-
-        {/* Controls */}
-        <div className={`flex items-center justify-center gap-4 ${locked ? "opacity-30 pointer-events-none" : ""}`}>
-          <button
-            onClick={() => setRunning(!running)}
-            className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-90 ${
-              running
-                ? "bg-gradient-to-br from-yellow-500 to-amber-600"
-                : `bg-gradient-to-br ${currentLeg.color}`
-            }`}
-          >
-            {running ? <Pause size={28} className="text-black" /> : <Play size={28} className="text-white ml-1" />}
-          </button>
-
-          {running && activeLeg < 2 && (
-            <button
-              onClick={handleNextLeg}
-              className="h-14 px-5 rounded-full bg-card/80 backdrop-blur-xl border border-border/30 flex items-center gap-2 active:scale-95 transition-all"
-            >
-              <SkipForward size={18} className="text-foreground" />
-              <span className="text-sm font-bold text-foreground">Next: {LEGS[activeLeg + 1].label}</span>
-            </button>
+          ) : (
+            <SwimHero elapsed={d.elapsed} distance={d.distance} target={targetKm[0]} />
           )}
 
-          {running && activeLeg === 2 && (
-            <button
-              onClick={handleFinish}
-              className="h-14 px-5 rounded-full bg-gradient-to-r from-yellow-500 to-amber-600 flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-yellow-500/25"
-            >
-              <Flag size={18} className="text-black" />
-              <span className="text-sm font-bold text-black">Finish</span>
-            </button>
+          {/* Transition overlay */}
+          {transitioning && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(10,10,10,0.9)', backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, borderRadius: 18 }}>
+              {activeLeg < 2 && (() => { const NL = LEGS[activeLeg + 1]; return (
+                <>
+                  <div style={{ width: 64, height: 64, borderRadius: 99, background: tint(NL.tone, 0.14), border: `1px solid ${tint(NL.tone, 0.4)}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <NL.Icon size={28} color={NL.tone} strokeWidth={2} />
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: C.fg }}>Moving to {NL.label}…</div>
+                </>
+              ); })()}
+            </div>
           )}
+        </div>
+
+        {/* Stats + controls */}
+        <div style={{ padding: '14px 16px 16px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: '14px 8px', marginBottom: 12 }}>
+            <Stat value={fmt(d.elapsed)} label="DURATION" />
+            <div style={{ width: 1, height: 30, background: C.line }} />
+            <Stat value={d.distance.toFixed(2)} unit="km" label="DISTANCE" />
+            <div style={{ width: 1, height: 30, background: C.line }} />
+            <Stat value={metricValue} unit={metricUnit} label={metricLabel} accent={leg.tone} />
+          </div>
+
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between',
+            background: C.sec, border: `1px solid ${C.line}`, borderRadius: 12, padding: '9px 14px', marginBottom: 14,
+          }}>
+            <span style={{ fontSize: 9.5, fontWeight: 750, letterSpacing: 1, color: C.dim2, fontFamily: C.mono }}>RACE TOTAL</span>
+            <span style={{ fontSize: 12, fontFamily: C.mono, color: C.fg }}>{fmt(totals.elapsed)}</span>
+            <span style={{ fontSize: 12, fontFamily: C.mono, color: C.dim }}>{totals.distance.toFixed(1)} km</span>
+            <span style={{ fontSize: 12, fontFamily: C.mono, color: C.dim }}>{totals.calories.toLocaleString()} kcal</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: locked ? 0.35 : 1, pointerEvents: locked ? 'none' : 'auto' }}>
+            <button
+              onClick={() => setRunning((r) => !r)}
+              style={{
+                width: 60, height: 60, borderRadius: 99, flexShrink: 0, cursor: 'pointer', border: 'none',
+                background: running ? C.card : leg.tone,
+                boxShadow: running ? `inset 0 0 0 1px ${C.line2}` : `0 6px 20px ${tint(leg.tone, 0.35)}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              {running
+                ? <Pause size={24} color={C.fg} strokeWidth={2.4} />
+                : <Play size={24} color="#0a0a0a" strokeWidth={2.4} style={{ marginLeft: 3 }} />}
+            </button>
+
+            {activeLeg < 2 ? (
+              <button
+                onClick={handleNextLeg}
+                style={{
+                  flex: 1, height: 60, borderRadius: 18, cursor: 'pointer',
+                  border: `1px solid ${C.line2}`, background: C.card, color: C.fg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+                  fontSize: 14.5, fontWeight: 700, WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <SkipForward size={18} color={C.fg} strokeWidth={2.2} />
+                Next · {LEGS[activeLeg + 1].label}
+                {(() => { const NL = LEGS[activeLeg + 1]; return <NL.Icon size={16} color={NL.tone} strokeWidth={2.2} />; })()}
+              </button>
+            ) : (
+              <button
+                onClick={handleFinish}
+                style={{
+                  flex: 1, height: 60, borderRadius: 18, cursor: 'pointer', border: 'none',
+                  background: C.primary, color: '#0a0a0a',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+                  fontSize: 14.5, fontWeight: 750,
+                  boxShadow: `0 6px 20px ${tint(C.primary, 0.32)}`, WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <Flag size={18} color="#0a0a0a" strokeWidth={2.4} /> Finish race
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── FINISHED ─────────────────────────────────────────────────
+  return (
+    <div style={{ minHeight: '100dvh', background: C.bg, color: C.fg, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+        <div style={{ padding: 'calc(var(--safe-area-inset-top, 44px) + 26px) 16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Hero */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ width: 72, height: 72, borderRadius: 99, margin: '0 auto 16px', background: tint(C.primary, 0.13), border: `1px solid ${tint(C.primary, 0.34)}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Trophy size={32} color={C.primary} strokeWidth={2} />
+            </div>
+            <div style={{ fontSize: 9.5, fontWeight: 750, letterSpacing: 1.6, color: C.dim2, fontFamily: C.mono }}>{raceName.toUpperCase()} · COMPLETE</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: C.fg, marginTop: 4, letterSpacing: -0.4 }}>Triathlon finished</div>
+          </div>
+
+          {/* Total */}
+          <div style={{ background: `linear-gradient(180deg, ${tint(C.primary, 0.08)}, ${tint(C.primary, 0.02)})`, border: `1px solid ${tint(C.primary, 0.34)}`, borderRadius: 18, padding: 18, textAlign: 'center' }}>
+            <div style={{ fontSize: 10, fontWeight: 750, letterSpacing: 1.6, color: C.primary, fontFamily: C.mono }}>FINISH TIME</div>
+            <div style={{ fontSize: 44, fontWeight: 800, fontFamily: C.mono, color: C.fg, letterSpacing: -1.5, margin: '4px 0 8px' }}>{fmt(totals.elapsed)}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 22 }}>
+              <span style={{ fontSize: 13, fontFamily: C.mono, color: C.dim }}>{totals.distance.toFixed(1)} km</span>
+              <span style={{ fontSize: 13, fontFamily: C.mono, color: C.dim }}>{totals.calories.toLocaleString()} kcal</span>
+            </div>
+          </div>
+
+          {/* Leg breakdown */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {LEGS.map((leg, i) => {
+              const x = legData[i];
+              return (
+                <div key={leg.key} style={{ display: 'flex', alignItems: 'center', gap: 12, background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: '13px 14px' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: tint(leg.tone, 0.12), border: `1px solid ${tint(leg.tone, 0.3)}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <leg.Icon size={17} color={leg.tone} strokeWidth={2.2} />
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.fg }}>{leg.label}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 700, fontFamily: C.mono, color: C.fg }}>{fmt(x.elapsed)}</span>
+                  <span style={{ fontSize: 11, color: C.dim2, fontFamily: C.mono, width: 58, textAlign: 'right' }}>{x.distance.toFixed(1)} km</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button style={{ flex: 1, cursor: 'pointer', borderRadius: 14, padding: '13px 0', border: `1px solid ${C.line2}`, background: C.card, color: C.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13.5, fontWeight: 650, WebkitTapHighlightColor: 'transparent' }}>
+              <Share2 size={15} color={C.fg} strokeWidth={2.1} /> Share
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              style={{ flex: 1.6, cursor: 'pointer', borderRadius: 14, padding: '13px 0', border: 'none', background: C.fg, color: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13.5, fontWeight: 750, WebkitTapHighlightColor: 'transparent' }}
+            >
+              <Check size={16} color="#0a0a0a" strokeWidth={2.6} /> Save to history
+            </button>
+          </div>
         </div>
       </div>
     </div>
