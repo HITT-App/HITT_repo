@@ -60,6 +60,7 @@ function validateAction(action: unknown): action is Action {
     case 'set_goals':
     case 'recommend_recipe':
     case 'body_scan_prompt':
+    case 'recommend_meal_plan':
       return true // server-validated; trust
     case 'recommend_workout':
       return validateRecommendWorkout(a.payload)
