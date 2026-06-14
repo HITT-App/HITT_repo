@@ -15,6 +15,19 @@ You work from four things: the user's GOAL, a PLAN, a BASELINE (where they are n
 Your encouragement is earned and specific. You acknowledge real progress and real effort. You do not sprinkle praise, you do not celebrate trivia, and you do not fill messages with motivational filler. A trainer's authority comes from noticing specifics, not from enthusiasm.
 
 ═══════════════════════════════════════════
+CRITICAL — DATA ACCESS RULES (READ FIRST)
+═══════════════════════════════════════════
+You have FULL access to the user's data. It is loaded into this conversation before every message. NEVER say you "cannot access", "don't have access to", or "can't see" the user's data — that is always false. Instead:
+
+• If data IS present in context → use it.
+• If data is ABSENT or empty → say what you found: "You haven't logged any activities recently" or "I don't have a weight on file for you" — then act: ask the question you need, or calculate from what you have.
+
+Specifically:
+- Asked about past activities → say what's in context ("no recent activities logged" if empty, or list them). Never say you cannot see activities.
+- Asked about calorie target → give a number. Use the saved target if set; estimate from weight if available; if no weight, give a general range (1800–2400 kcal for most adults) and ask their weight to refine it. Never say you cannot calculate this.
+- Asked about any profile data → answer from context or ask for the missing input. Never claim you cannot access the data.
+
+═══════════════════════════════════════════
 PROACTIVITY RULE
 ═══════════════════════════════════════════
 Two kinds of proactivity, and the difference matters:
@@ -1105,7 +1118,7 @@ serve(async (req) => {
         const adjusted = goal.includes('fat') ? maintenance - 400 : goal.includes('muscle') ? maintenance + 250 : maintenance;
         userContext += `• Daily calorie target: not set by user — estimated from weight: ~${adjusted} kcal/day (${goal.includes('fat') ? 'fat loss deficit' : goal.includes('muscle') ? 'muscle gain surplus' : 'maintenance'})\n`;
       } else {
-        userContext += `• Daily calorie target: not set and no weight on file. Ask the user their weight, then calculate: maintenance = weight_kg × 32, adjust for goal.\n`;
+        userContext += `• Daily calorie target: not set. No weight on file. Suggest a starting range of 1800–2200 kcal/day and ask for their weight to personalise it.\n`;
       }
       if (nutritionProfile) {
         userContext += `• Diet preferences: ${nutritionProfile.food_preferences?.join(', ') || 'Not specified'}\n`;
@@ -1340,9 +1353,41 @@ serve(async (req) => {
     if (rawMemory.preferences) memoryParts.push(`Preferences: ${rawMemory.preferences}`);
     if (rawMemory.lifestyle)   memoryParts.push(`Lifestyle: ${rawMemory.lifestyle}`);
     if (rawMemory.notes)       memoryParts.push(rawMemory.notes);
-    const userMemoryTurn: string | null = memoryParts.length > 0
-      ? `Here's what I know about ${nameForReminder !== 'there' ? nameForReminder : 'you'}: ${memoryParts.join('. ')}.`
-      : null;
+
+    // Activity summary — always include so the AI never claims it can't see activities
+    const allActivities = [
+      ...(recentActivities ?? []).map((a: any) => ({
+        date: a.started_at?.split('T')[0] ?? 'unknown',
+        label: `${a.activity_type} — ${a.duration_seconds ? Math.round(a.duration_seconds / 60) : '?'} min${a.calories_burned ? `, ${a.calories_burned} cal` : ''}${a.distance_km ? `, ${Number(a.distance_km).toFixed(1)} km` : ''}`,
+      })),
+      ...(recentWorkouts ?? []).map((w: any) => ({
+        date: w.completed_at?.split('T')[0] ?? 'unknown',
+        label: `${w.workout_title ?? 'workout'} — ${w.duration_seconds ? Math.round(w.duration_seconds / 60) : '?'} min${w.calories_burned ? `, ${w.calories_burned} cal` : ''}`,
+      })),
+    ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
+
+    if (allActivities.length > 0) {
+      memoryParts.push(`Recent activities (from app database): ${allActivities.map(a => `${a.date}: ${a.label}`).join(' | ')}`);
+    } else {
+      memoryParts.push(`Recent activities (from app database): I checked the activity log — there are zero completed activities recorded in the last 7 days`);
+    }
+
+    // Calorie target — always include an estimate so the AI never refuses to answer
+    if (nutritionProfile?.daily_calorie_target) {
+      memoryParts.push(`Daily calorie target: ${nutritionProfile.daily_calorie_target} kcal (user-set)`);
+    } else if (latestWeight) {
+      const wKg = latestWeight.unit === 'lbs' ? latestWeight.value * 0.453592 : latestWeight.value;
+      const maintenance = Math.round(wKg * 32);
+      const goalStr = workoutPrefs?.workout_goal ?? '';
+      const adjusted = goalStr.includes('fat') ? maintenance - 400 : goalStr.includes('muscle') ? maintenance + 250 : maintenance;
+      memoryParts.push(`Daily calorie target: not set by user — my estimate from their weight (${latestWeight.value} ${latestWeight.unit}): ~${adjusted} kcal/day`);
+    } else {
+      memoryParts.push(`Daily calorie target: not set, no weight on file. A typical adult range is 1800–2400 kcal. I should ask their weight to personalise this`);
+    }
+
+    // Always emit the memory turn (at minimum it will have activities + calorie context)
+    const userMemoryTurn: string =
+      `Here's what I have on file for ${nameForReminder !== 'there' ? nameForReminder : 'you'}: ${memoryParts.join('. ')}.`;
 
     // Build the messages array for the API
     let apiMessages: any[] = [{ role: "system", content: personalizedPrompt }];
@@ -1366,9 +1411,7 @@ serve(async (req) => {
     // Position 1 (immediately after the system prompt, before any real history) makes it
     // look like the oldest thing Jarvis said. The model treats its own prior turns as recall,
     // not as injected data — so it answers goal/physique questions correctly without denial.
-    if (userMemoryTurn) {
-      apiMessages.splice(1, 0, { role: "assistant", content: userMemoryTurn });
-    }
+    apiMessages.splice(1, 0, { role: "assistant", content: userMemoryTurn });
 
     // Insert a name reminder as a system message immediately before the final user turn.
     // This positions the directive after the chat history where it carries the most weight,
@@ -1443,6 +1486,7 @@ serve(async (req) => {
       const structuredMessages = lastUserIdx !== -1
         ? [
             ...baseStructured.slice(0, lastUserIdx),
+            { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
             { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool." },
             baseStructured[lastUserIdx],
           ]
