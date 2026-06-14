@@ -1020,6 +1020,7 @@ serve(async (req) => {
       { data: recentWorkouts },
       { data: recentActivities },
       { data: scheduledWorkouts },
+      { data: planItems },
       { data: activityGoals },
       { data: latestWeight },
       { data: latestHeartRate },
@@ -1036,9 +1037,10 @@ serve(async (req) => {
       supabaseAdmin.from('daily_checkins').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('daily_checkins').select('mood, energy, date').eq('user_id', userId).order('date', { ascending: false }).limit(7),
       supabaseAdmin.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
-      supabaseAdmin.from('workout_progress').select('*').eq('user_id', userId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(5),
+      supabaseAdmin.from('workout_progress').select('completed_at, duration_seconds, workouts(title, category)').eq('user_id', userId).order('completed_at', { ascending: false }).limit(10),
       supabaseAdmin.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
-      supabaseAdmin.from('scheduled_workouts').select('workout_title, scheduled_date, status, completed_at, duration_minutes, calories_burned, workout_source').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
+      supabaseAdmin.from('scheduled_workouts').select('scheduled_date, status, completed_at, duration_minutes, calories_burned, workouts(title, category)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
+      supabaseAdmin.from('user_workout_plan_items').select('scheduled_date, status, completed_at, workouts(title, duration_minutes)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
       supabaseAdmin.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
@@ -1357,8 +1359,11 @@ serve(async (req) => {
     if (rawMemory.notes)       memoryParts.push(rawMemory.notes);
 
     // Activity summary — always include so the AI never claims it can't see activities
+    const todayStr = new Date().toISOString().split('T')[0];
     const completedScheduled = (scheduledWorkouts ?? []).filter((w: any) => w.status === 'completed' && w.completed_at);
-    const upcomingScheduled = (scheduledWorkouts ?? []).filter((w: any) => w.status !== 'completed' && w.scheduled_date >= new Date().toISOString().split('T')[0]);
+    const upcomingScheduled = (scheduledWorkouts ?? []).filter((w: any) => w.status !== 'completed' && w.scheduled_date >= todayStr);
+    const completedPlanItems = (planItems ?? []).filter((w: any) => w.status === 'completed' && w.completed_at);
+    const upcomingPlanItems = (planItems ?? []).filter((w: any) => w.status === 'scheduled' && w.scheduled_date >= todayStr);
 
     const allActivities = [
       ...(recentActivities ?? []).map((a: any) => ({
@@ -1367,11 +1372,15 @@ serve(async (req) => {
       })),
       ...(recentWorkouts ?? []).map((w: any) => ({
         date: w.completed_at?.split('T')[0] ?? 'unknown',
-        label: `${w.workout_title ?? 'workout'} — ${w.duration_seconds ? Math.round(w.duration_seconds / 60) : '?'} min${w.calories_burned ? `, ${w.calories_burned} cal` : ''}`,
+        label: `${(w.workouts as any)?.title ?? 'workout'} — ${w.duration_seconds ? Math.round(w.duration_seconds / 60) : '?'} min`,
       })),
       ...completedScheduled.map((w: any) => ({
         date: w.completed_at?.split('T')[0] ?? 'unknown',
-        label: `${w.workout_title ?? 'workout'} (scheduled) — ${w.duration_minutes ? `${w.duration_minutes} min` : '?'}${w.calories_burned ? `, ${w.calories_burned} cal` : ''}`,
+        label: `${(w.workouts as any)?.title ?? 'workout'} — ${w.duration_minutes ? `${w.duration_minutes} min` : '?'}${w.calories_burned ? `, ${w.calories_burned} cal` : ''}`,
+      })),
+      ...completedPlanItems.map((w: any) => ({
+        date: w.completed_at?.split('T')[0] ?? 'unknown',
+        label: `${(w.workouts as any)?.title ?? 'workout'} (plan)`,
       })),
     ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
 
@@ -1381,9 +1390,12 @@ serve(async (req) => {
       memoryParts.push(`Recent completed activities (from app database): I checked all activity logs and completed workouts — none recorded yet`);
     }
 
-    if (upcomingScheduled.length > 0) {
-      const upcoming = upcomingScheduled.slice(0, 5).map((w: any) => `${w.scheduled_date}: ${w.workout_title ?? 'workout'}`).join(' | ');
-      memoryParts.push(`Upcoming scheduled workouts: ${upcoming}`);
+    const allUpcoming = [
+      ...upcomingScheduled.map((w: any) => `${w.scheduled_date}: ${(w.workouts as any)?.title ?? 'workout'}`),
+      ...upcomingPlanItems.map((w: any) => `${w.scheduled_date}: ${(w.workouts as any)?.title ?? 'workout'} (plan)`),
+    ].sort().slice(0, 7);
+    if (allUpcoming.length > 0) {
+      memoryParts.push(`Upcoming scheduled workouts: ${allUpcoming.join(' | ')}`);
     }
 
     // Calorie target — always include an estimate so the AI never refuses to answer
