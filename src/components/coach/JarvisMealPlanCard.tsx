@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { cn } from '@/lib/utils'
+import { Plus, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerFooter,
-} from '@/components/ui/drawer'
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 import type { MealInPlan, RecommendMealPlanPayload } from '@/hooks/useAI.types'
@@ -22,9 +24,9 @@ interface JarvisMealPlanCardProps {
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack']
 
 export function JarvisMealPlanCard({ plan, onDismiss, onLogged }: JarvisMealPlanCardProps) {
-  const [selectedMeal, setSelectedMeal] = useState<MealInPlan | null>(null)
+  const [pendingMeal, setPendingMeal] = useState<MealInPlan | null>(null)
+  const [loggingName, setLoggingName] = useState<string | null>(null)
   const [loggedNames, setLoggedNames] = useState<Set<string>>(new Set())
-  const [isLogging, setIsLogging] = useState(false)
 
   const sorted = [...plan.meals].sort((a, b) => {
     const ai = MEAL_ORDER.indexOf(a.meal_type)
@@ -35,9 +37,11 @@ export function JarvisMealPlanCard({ plan, onDismiss, onLogged }: JarvisMealPlan
   const totalCals = plan.meals.reduce((s, m) => s + m.calories, 0)
   const totalProtein = plan.meals.reduce((s, m) => s + m.protein_g, 0)
 
-  const logMeal = async (meal: MealInPlan) => {
-    if (isLogging) return
-    setIsLogging(true)
+  const confirmLog = async () => {
+    if (!pendingMeal) return
+    const meal = pendingMeal
+    setPendingMeal(null)
+    setLoggingName(meal.name)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
@@ -54,12 +58,11 @@ export function JarvisMealPlanCard({ plan, onDismiss, onLogged }: JarvisMealPlan
       })
       if (error) throw error
       setLoggedNames(prev => new Set([...prev, meal.name]))
-      setSelectedMeal(null)
       onLogged(meal.name)
     } catch {
       toast.error("Couldn't log meal — try again")
     } finally {
-      setIsLogging(false)
+      setLoggingName(null)
     }
   }
 
@@ -83,138 +86,62 @@ export function JarvisMealPlanCard({ plan, onDismiss, onLogged }: JarvisMealPlan
           </Button>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory">
+        <div className="flex flex-col gap-2">
           {sorted.map((meal) => {
             const logged = loggedNames.has(meal.name)
+            const logging = loggingName === meal.name
             return (
-              <button
+              <div
                 key={meal.name}
-                onClick={() => setSelectedMeal(meal)}
-                className={cn(
-                  'flex-shrink-0 w-28 rounded-xl p-2.5 text-left snap-start transition-colors border',
-                  logged
-                    ? 'bg-primary/10 border-primary/30 opacity-60'
-                    : 'bg-background border-border/60 active:bg-secondary',
-                )}
+                className="flex items-center gap-3 bg-background rounded-xl px-3 py-2.5 border border-border/60"
               >
-                <span className="text-2xl">{meal.emoji ?? '🍽️'}</span>
-                <p className="text-xs font-semibold text-foreground mt-1.5 leading-snug line-clamp-2">
-                  {meal.name}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{meal.meal_type}</p>
-                <p className="text-[10px] text-muted-foreground">{meal.calories} kcal</p>
-                {logged && (
-                  <p className="text-[10px] text-primary font-medium mt-1">✓ Logged</p>
-                )}
-              </button>
+                <span className="text-2xl shrink-0">{meal.emoji ?? '🍽️'}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground leading-snug truncate">{meal.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {meal.meal_type} · {meal.calories} kcal · {meal.protein_g}g protein
+                  </p>
+                </div>
+                <button
+                  onClick={() => !logged && !logging && setPendingMeal(meal)}
+                  disabled={logged || logging}
+                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+                  style={{ background: logged ? 'hsl(var(--primary)/0.15)' : 'hsl(var(--primary))' }}
+                >
+                  {logging ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-primary-foreground" />
+                  ) : logged ? (
+                    <Check className="w-4 h-4 text-primary" />
+                  ) : (
+                    <Plus className="w-4 h-4 text-primary-foreground" />
+                  )}
+                </button>
+              </div>
             )
           })}
         </div>
-
-        <p className="text-[10px] text-muted-foreground">Tap a meal to see ingredients and log it</p>
       </div>
 
-      {selectedMeal && (
-        <MealDetailDrawer
-          meal={selectedMeal}
-          logged={loggedNames.has(selectedMeal.name)}
-          isLogging={isLogging}
-          onLog={() => logMeal(selectedMeal)}
-          onClose={() => setSelectedMeal(null)}
-        />
-      )}
+      <AlertDialog open={!!pendingMeal} onOpenChange={open => { if (!open) setPendingMeal(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log this meal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingMeal && (
+                <>
+                  <span className="font-medium text-foreground">{pendingMeal.name}</span>
+                  {' '}will be added to your {pendingMeal.meal_type} diary —{' '}
+                  {pendingMeal.calories} kcal, {pendingMeal.protein_g}g protein.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLog}>Log now</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
-  )
-}
-
-function MealDetailDrawer({
-  meal,
-  logged,
-  isLogging,
-  onLog,
-  onClose,
-}: {
-  meal: MealInPlan
-  logged: boolean
-  isLogging: boolean
-  onLog: () => void
-  onClose: () => void
-}) {
-  return (
-    <Drawer open onOpenChange={open => { if (!open) onClose() }}>
-      <DrawerContent className="max-h-[85vh]">
-        <div className="h-24 w-full bg-gradient-to-br from-accent/20 to-secondary flex items-center justify-center shrink-0">
-          <span className="text-5xl">{meal.emoji ?? '🍽️'}</span>
-        </div>
-
-        <div className="overflow-y-auto">
-          <DrawerHeader className="pb-1">
-            <DrawerTitle>{meal.name}</DrawerTitle>
-            {meal.description && (
-              <p className="text-sm text-muted-foreground mt-1">{meal.description}</p>
-            )}
-          </DrawerHeader>
-
-          <div className="px-4 pb-4 flex flex-col gap-4">
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: 'Calories', value: meal.calories, unit: 'kcal' },
-                { label: 'Protein', value: meal.protein_g, unit: 'g' },
-                { label: 'Carbs', value: meal.carbs_g, unit: 'g' },
-                { label: 'Fat', value: meal.fat_g, unit: 'g' },
-              ].map(({ label, value, unit }) => (
-                <div key={label} className="rounded-xl bg-secondary p-2.5 text-center">
-                  <p className="text-sm font-semibold">
-                    {value}
-                    <span className="text-xs font-normal text-muted-foreground ml-0.5">{unit}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-                </div>
-              ))}
-            </div>
-
-            {meal.ingredients.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-1.5">Ingredients</p>
-                <ul className="flex flex-col gap-1">
-                  {meal.ingredients.map((item, idx) => (
-                    <li key={idx} className="text-sm text-foreground flex items-start gap-2">
-                      <span className="text-primary mt-0.5 shrink-0">•</span>
-                      <span>{[item.amount, item.unit, item.name].filter(Boolean).join(' ')}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {meal.instructions.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-1.5">Instructions</p>
-                <ol className="flex flex-col gap-2">
-                  {meal.instructions.map((step, idx) => (
-                    <li key={idx} className="text-sm text-foreground flex items-start gap-2.5">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center mt-0.5">
-                        {idx + 1}
-                      </span>
-                      <span>{step}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <DrawerFooter>
-          {logged ? (
-            <Button disabled className="w-full opacity-60">✓ Already logged</Button>
-          ) : (
-            <Button onClick={onLog} disabled={isLogging} className="w-full">
-              {isLogging ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Log to diary'}
-            </Button>
-          )}
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
   )
 }
