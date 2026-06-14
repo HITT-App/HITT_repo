@@ -5,6 +5,7 @@ import {
   Trophy, Lock, Unlock, Watch, ChevronRight, Check, Minus, Plus, Share2, Medal,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import LiveActivityMap from "@/components/activity/LiveActivityMap";
@@ -547,15 +548,36 @@ const Triathlon = () => {
           {leg.gps ? (
             <div style={{ flex: 1, position: 'relative', borderRadius: 18, overflow: 'hidden', border: `1px solid ${C.line}` }}>
               <LiveActivityMap positions={d.positions} gpsStatus={gpsStatus} />
-              {/* LIVE badge */}
-              <div style={{
-                position: 'absolute', top: 12, left: 12, display: 'inline-flex', alignItems: 'center', gap: 7,
-                background: 'rgba(0,0,0,0.55)', border: `1px solid ${C.line2}`, backdropFilter: 'blur(8px)',
-                borderRadius: 99, padding: '5px 10px 5px 8px', zIndex: 10,
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: 99, background: C.good, boxShadow: `0 0 0 3px ${tint(C.good, 0.2)}` }} />
-                <span style={{ fontSize: 10, fontWeight: 700, fontFamily: C.mono, letterSpacing: 1, color: C.fg }}>LIVE · GPS</span>
-              </div>
+
+              {/* GPS denied overlay */}
+              {gpsStatus === 'denied' && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 20, background: 'rgba(10,10,10,0.88)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '0 24px', textAlign: 'center' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 99, background: '#ef4444', boxShadow: '0 0 0 4px rgba(239,68,68,0.2)' }} />
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: C.fg, marginBottom: 4 }}>Location access denied</div>
+                    <div style={{ fontSize: 12, color: C.dim, lineHeight: 1.5 }}>Enable location in Settings to track this leg.</div>
+                  </div>
+                  <button
+                    onClick={() => CapApp.openUrl({ url: 'app-settings:' }).catch(() => {})}
+                    style={{ padding: '10px 24px', borderRadius: 12, background: '#ef4444', border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    Open Settings
+                  </button>
+                </div>
+              )}
+
+              {/* LIVE / searching badge */}
+              {gpsStatus !== 'denied' && (
+                <div style={{
+                  position: 'absolute', top: 12, left: 12, display: 'inline-flex', alignItems: 'center', gap: 7,
+                  background: 'rgba(0,0,0,0.55)', border: `1px solid ${C.line2}`, backdropFilter: 'blur(8px)',
+                  borderRadius: 99, padding: '5px 10px 5px 8px', zIndex: 10,
+                }}>
+                  <span style={{ width: 7, height: 7, borderRadius: 99, background: gpsStatus === 'active' ? C.good : '#facc15', boxShadow: `0 0 0 3px ${tint(gpsStatus === 'active' ? C.good : '#facc15', 0.2)}` }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, fontFamily: C.mono, letterSpacing: 1, color: C.fg }}>{gpsStatus === 'active' ? 'LIVE · GPS' : 'SEARCHING…'}</span>
+                </div>
+              )}
+
               {/* Progress overlay */}
               <div style={{
                 position: 'absolute', left: 12, right: 12, bottom: 12, zIndex: 10,
