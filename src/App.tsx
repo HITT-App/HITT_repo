@@ -118,6 +118,7 @@ const CreateRoute = lazy(() => import("./pages/CreateRoute"));
 const BarcodeScanner = lazy(() => import("./pages/BarcodeScanner"));
 const WeeklyReport = lazy(() => import("./pages/WeeklyReport"));
 const BodyScan = lazy(() => import("./pages/BodyScan"));
+const UploadWorkoutPlan = lazy(() => import("./pages/UploadWorkoutPlan"));
 const Triathlon = lazy(() => import("./pages/Triathlon"));
 const GoalSetup = lazy(() => import("./pages/GoalSetup"));
 const ScheduleSetup = lazy(() => import("./pages/ScheduleSetup"));
@@ -266,6 +267,7 @@ const App = () => (
             <Route path="/barcode-scanner" element={<ProtectedRoute><BarcodeScanner /></ProtectedRoute>} />
             <Route path="/weekly-report" element={<ProtectedRoute><WeeklyReport /></ProtectedRoute>} />
             <Route path="/body-scan" element={<ProtectedRoute><BodyScan /></ProtectedRoute>} />
+            <Route path="/upload-workout-plan" element={<ProtectedRoute><UploadWorkoutPlan /></ProtectedRoute>} />
             <Route path="/triathlon" element={<ProtectedRoute><Triathlon /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

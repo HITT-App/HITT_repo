@@ -8,7 +8,7 @@ import {
   Bell, Search, Settings, Footprints, Droplets,
   Scale, Gauge, Smile, Camera, UtensilsCrossed,
   Clock, X, Shield, Sun, ScanLine, Crosshair,
-  Barcode,
+  Barcode, Upload,
 } from "lucide-react";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -66,6 +66,7 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
       title: "Fitness",
       items: [
         { icon: Calendar, label: "Schedule", path: "/workout-schedule" },
+        { icon: Upload, label: "Import Plan", path: "/upload-workout-plan" },
         ...(flags.activity_enabled ? [
           { icon: Activity, label: "Activity", path: "/activity-dashboard" },
           { icon: Target, label: "Goals", path: "/activity-goals" },
