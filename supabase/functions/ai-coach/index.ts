@@ -1019,6 +1019,7 @@ serve(async (req) => {
       { data: recentSleep },
       { data: recentWorkouts },
       { data: recentActivities },
+      { data: scheduledWorkouts },
       { data: activityGoals },
       { data: latestWeight },
       { data: latestHeartRate },
@@ -1037,6 +1038,7 @@ serve(async (req) => {
       supabaseAdmin.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('workout_progress').select('*').eq('user_id', userId).eq('status', 'completed').order('completed_at', { ascending: false }).limit(5),
       supabaseAdmin.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
+      supabaseAdmin.from('scheduled_workouts').select('workout_title, scheduled_date, status, completed_at, duration_minutes, calories_burned, workout_source').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
       supabaseAdmin.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
@@ -1355,6 +1357,9 @@ serve(async (req) => {
     if (rawMemory.notes)       memoryParts.push(rawMemory.notes);
 
     // Activity summary — always include so the AI never claims it can't see activities
+    const completedScheduled = (scheduledWorkouts ?? []).filter((w: any) => w.status === 'completed' && w.completed_at);
+    const upcomingScheduled = (scheduledWorkouts ?? []).filter((w: any) => w.status !== 'completed' && w.scheduled_date >= new Date().toISOString().split('T')[0]);
+
     const allActivities = [
       ...(recentActivities ?? []).map((a: any) => ({
         date: a.started_at?.split('T')[0] ?? 'unknown',
@@ -1364,12 +1369,21 @@ serve(async (req) => {
         date: w.completed_at?.split('T')[0] ?? 'unknown',
         label: `${w.workout_title ?? 'workout'} — ${w.duration_seconds ? Math.round(w.duration_seconds / 60) : '?'} min${w.calories_burned ? `, ${w.calories_burned} cal` : ''}`,
       })),
-    ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
+      ...completedScheduled.map((w: any) => ({
+        date: w.completed_at?.split('T')[0] ?? 'unknown',
+        label: `${w.workout_title ?? 'workout'} (scheduled) — ${w.duration_minutes ? `${w.duration_minutes} min` : '?'}${w.calories_burned ? `, ${w.calories_burned} cal` : ''}`,
+      })),
+    ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
 
     if (allActivities.length > 0) {
-      memoryParts.push(`Recent activities (from app database): ${allActivities.map(a => `${a.date}: ${a.label}`).join(' | ')}`);
+      memoryParts.push(`Recent completed activities (from app database): ${allActivities.map(a => `${a.date}: ${a.label}`).join(' | ')}`);
     } else {
-      memoryParts.push(`Recent activities (from app database): I checked the activity log — there are zero completed activities recorded in the last 7 days`);
+      memoryParts.push(`Recent completed activities (from app database): I checked all activity logs and completed workouts — none recorded yet`);
+    }
+
+    if (upcomingScheduled.length > 0) {
+      const upcoming = upcomingScheduled.slice(0, 5).map((w: any) => `${w.scheduled_date}: ${w.workout_title ?? 'workout'}`).join(' | ');
+      memoryParts.push(`Upcoming scheduled workouts: ${upcoming}`);
     }
 
     // Calorie target — always include an estimate so the AI never refuses to answer
