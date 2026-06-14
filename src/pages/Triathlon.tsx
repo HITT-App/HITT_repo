@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { App as CapApp } from "@capacitor/app";
+import { CompletionSummary } from "@/components/workout/CompletionSummary";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import LiveActivityMap from "@/components/activity/LiveActivityMap";
@@ -173,6 +174,7 @@ const Triathlon = () => {
   const { user } = useAuth();
 
   const [screen, setScreen] = useState<'setup' | 'ready' | 'race' | 'finished'>('setup');
+  const [showShare, setShowShare] = useState(false);
   const [activeLeg, setActiveLeg] = useState(0);
   const [running, setRunning] = useState(false);
   const [locked, setLocked] = useState(false);
@@ -688,6 +690,18 @@ const Triathlon = () => {
   // ── FINISHED ─────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100dvh', background: C.bg, color: C.fg, display: 'flex', flexDirection: 'column' }}>
+      {showShare && (
+        <CompletionSummary
+          activityTitle={`${raceName === 'Custom' ? 'Custom' : raceName} Triathlon`}
+          activityType="triathlon"
+          stats={[
+            { label: 'Duration', value: fmt(totals.elapsed) },
+            { label: 'Distance', value: totals.distance.toFixed(1), unit: 'km' },
+            { label: 'Calories', value: String(totals.calories), unit: 'kcal' },
+          ]}
+          onDone={() => setShowShare(false)}
+        />
+      )}
       <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         <div style={{ padding: 'calc(var(--safe-area-inset-top, 44px) + 26px) 16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -729,7 +743,10 @@ const Triathlon = () => {
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button style={{ flex: 1, cursor: 'pointer', borderRadius: 14, padding: '13px 0', border: `1px solid ${C.line2}`, background: C.card, color: C.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13.5, fontWeight: 650, WebkitTapHighlightColor: 'transparent' }}>
+            <button
+              onClick={() => setShowShare(true)}
+              style={{ flex: 1, cursor: 'pointer', borderRadius: 14, padding: '13px 0', border: `1px solid ${C.line2}`, background: C.card, color: C.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13.5, fontWeight: 650, WebkitTapHighlightColor: 'transparent' }}
+            >
               <Share2 size={15} color={C.fg} strokeWidth={2.1} /> Share
             </button>
             <button

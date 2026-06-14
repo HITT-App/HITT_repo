@@ -54,7 +54,10 @@ function getHeroMetrics(activityType: string | undefined, stats: CompletionStat[
   const exercises = find('exercise', 'set', 'rep', 'round', 'count');
   const laps      = find('lap', 'length');
 
-  if (/run|cycl|walk|bike|hike|triath|route/.test(type)) {
+  if (/triath/.test(type)) {
+    return [duration, distance, calories].filter(Boolean) as CompletionStat[];
+  }
+  if (/run|cycl|walk|bike|hike|route/.test(type)) {
     return [duration, distance, elevation].filter(Boolean) as CompletionStat[];
   }
   if (/swim|pool|aqua/.test(type)) {
