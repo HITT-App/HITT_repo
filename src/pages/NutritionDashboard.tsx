@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfDay, endOfDay, getDay, isToday } from "date-fns";
+import { getMealPlan, markMealPlanLogged } from "@/lib/mealPlanStorage";
+import type { MealInPlan } from "@/hooks/useAI.types";
 
 type MealLog = {
   id: string;
@@ -110,6 +112,8 @@ export default function NutritionDashboard() {
   });
   const [editSaving, setEditSaving] = useState(false);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [suggestedMeals, setSuggestedMeals] = useState<MealInPlan[]>([]);
+  const [suggestedLogged, setSuggestedLogged] = useState<Set<string>>(new Set());
   const keyboardHeight = useKeyboardHeight();
 
   const currentDayIndex = getDay(selectedDate);
@@ -143,6 +147,10 @@ export default function NutritionDashboard() {
   useEffect(() => {
     if (!user) return;
     fetchData();
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const stored = getMealPlan(user.id, dateStr);
+    setSuggestedMeals(stored?.meals ?? []);
+    setSuggestedLogged(new Set(stored?.loggedNames ?? []));
   }, [user, selectedDate]);
 
   useEffect(() => {
@@ -194,6 +202,25 @@ export default function NutritionDashboard() {
       .order("logged_at", { ascending: false });
 
     if (logsData) setMealLogs(logsData as MealLog[]);
+  };
+
+  const logSuggestedMeal = async (meal: MealInPlan) => {
+    if (!user || suggestedLogged.has(meal.name)) return;
+    const { error } = await supabase.from('meal_logs').insert({
+      user_id: user.id,
+      custom_name: meal.name,
+      category: meal.meal_type,
+      calories: meal.calories,
+      protein_grams: meal.protein_g,
+      carbs_grams: meal.carbs_g,
+      fat_grams: meal.fat_g,
+      fiber_grams: 0,
+      logged_at: selectedDate.toISOString(),
+    });
+    if (!error) {
+      markMealPlanLogged(user.id, meal.name);
+      setSuggestedLogged(prev => new Set([...prev, meal.name]));
+    }
   };
 
   const openEdit = (log: MealLog) => {
@@ -458,6 +485,7 @@ export default function NutritionDashboard() {
               {diaryMeals.map((meal) => {
                 const logs = logsByCategory[meal.label.toLowerCase()] || [];
                 const mealCalories = logs.reduce((s, l) => s + (l.calories || 0), 0);
+                const suggestions = suggestedMeals.filter(s => s.meal_type === meal.label.toLowerCase());
 
                 return (
                   <Card key={meal.label} className="border-0 bg-card">
@@ -483,9 +511,42 @@ export default function NutritionDashboard() {
                           </Button>
                         </div>
                       </div>
+
+                      {/* Jarvis-suggested meals for this category */}
+                      {suggestions.length > 0 && (
+                        <div className="px-5 pb-3 space-y-1 border-t border-border/30 pt-2">
+                          <p className="text-[10px] font-medium text-primary/70 uppercase tracking-wide mb-1.5">Suggested by Jarvis</p>
+                          {suggestions.map((s) => {
+                            const alreadyLogged = suggestedLogged.has(s.name);
+                            return (
+                              <div key={s.name} className="flex items-center justify-between py-1 text-xs">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span>{s.emoji ?? '🍽️'}</span>
+                                  <span className="truncate text-muted-foreground">{s.name}</span>
+                                  <span className="text-muted-foreground/60 shrink-0">{s.calories} kcal</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => logSuggestedMeal(s)}
+                                  disabled={alreadyLogged}
+                                  className={cn(
+                                    "shrink-0 ml-2 text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors touch-manipulation",
+                                    alreadyLogged
+                                      ? "text-muted-foreground/40 border border-border/30"
+                                      : "text-primary border border-primary/40 active:bg-primary/10"
+                                  )}
+                                >
+                                  {alreadyLogged ? "✓ Logged" : "Log"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
                       {/* Show logged items */}
                       {logs.length > 0 && (
-                        <div className="px-5 pb-3 space-y-1">
+                        <div className={cn("px-5 pb-3 space-y-1", suggestions.length > 0 ? "" : "")}>
                           {logs.map((log) => (
                             <div key={log.id} className="flex items-center justify-between py-1.5 text-xs text-muted-foreground">
                               <span className="flex-1 truncate">{log.custom_name || log.meals?.name || "Meal"}</span>

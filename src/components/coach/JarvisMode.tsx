@@ -17,6 +17,7 @@ import { GoalConfirmCard } from './GoalConfirmCard';
 import { MultiChoiceCard } from './MultiChoiceCard';
 import { JarvisMealPlanCard } from './JarvisMealPlanCard';
 import { NutritionPreferencesFlow } from '@/components/NutritionPreferencesFlow';
+import { saveMealPlan } from '@/lib/mealPlanStorage';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload, RecommendMealPlanPayload } from '@/hooks/useAI.types';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
@@ -724,6 +725,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           break;
         case 'recommend_meal_plan':
           setMealPlan(action.payload);
+          supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) saveMealPlan(user.id, action.payload.meals);
+          });
           break;
         case 'body_scan_prompt':
           setPendingBodyScan(true);
