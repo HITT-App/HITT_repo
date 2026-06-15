@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, CalendarDays, Dumbbell } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -28,18 +28,6 @@ function getDayLabel(dateStr: string) {
   if (dateStr === todayStr()) return "Today"
   if (dateStr === tomorrowStr()) return "Tomorrow"
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long' })
-}
-
-function DayBadge({ dateStr }: { dateStr: string }) {
-  const d = new Date(dateStr + 'T00:00:00')
-  const dateNum = d.getDate()
-  const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()
-  return (
-    <div className="w-10 h-10 rounded-xl bg-primary/10 flex flex-col items-center justify-center shrink-0">
-      <span className="text-[15px] font-bold text-primary leading-none">{dateNum}</span>
-      <span className="text-[9px] font-semibold text-primary/70 leading-tight">{dayName}</span>
-    </div>
-  )
 }
 
 export function ScheduleCard() {
@@ -70,69 +58,87 @@ export function ScheduleCard() {
     return (
       <div className="mx-5 mt-[22px] mb-2">
         <div className="flex items-center justify-between mb-2.5">
-          <h2 className="text-base font-bold text-foreground">Schedule</h2>
+          <h2 className="text-base font-bold text-foreground">Next up</h2>
         </div>
-        <div className="bg-card border border-border/60 rounded-[18px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.4)]">
-          <p className="font-semibold text-foreground text-sm">No activities scheduled</p>
-          <p className="text-xs text-muted-foreground mt-1 mb-3">
-            Let HIIT AI Coach build you a plan
-          </p>
+        {/* Empty hero card */}
+        <div style={{ borderRadius: 18, padding: 20, background: 'linear-gradient(180deg, rgba(249,115,22,0.10), rgba(249,115,22,0.03))', border: '1px solid rgba(249,115,22,0.22)' }}>
+          {/* Calendar chip */}
+          <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+            <CalendarDays size={24} color="#f97316" strokeWidth={1.8} />
+          </div>
+          <p style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--foreground)', marginBottom: 6 }}>No sessions scheduled</p>
+          <p style={{ fontSize: 12.5, color: 'var(--muted-foreground)', lineHeight: 1.5, maxWidth: 244, marginBottom: 18 }}>Let your AI coach build a week around your goals, fitness level, and free time.</p>
+          {/* AI CTA */}
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('hitt:open-jarvis'))}
-            className="text-sm font-semibold text-primary active:opacity-70 transition-opacity"
+            style={{ width: '100%', height: 44, borderRadius: 12, background: '#f97316', border: 'none', color: '#0a0a0a', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 10, WebkitTapHighlightColor: 'transparent' }}
           >
-            Build my plan →
+            ✦ Plan my week with AI
+          </button>
+          <button
+            onClick={() => navigate('/workout-schedule')}
+            style={{ width: '100%', background: 'none', border: 'none', fontSize: 12.5, fontWeight: 600, color: 'var(--muted-foreground)', cursor: 'pointer', padding: '4px 0', WebkitTapHighlightColor: 'transparent' }}
+          >
+            Add a session manually
           </button>
         </div>
       </div>
     )
   }
 
+  const item = items[0]
+  const title = item.workout?.title ?? item.workout_title ?? 'Workout'
+  const duration = item.workout?.duration_minutes ?? item.estimated_duration_minutes
+  const handleTap = () => item.workout_source === 'ai_generated'
+    ? navigate(`/gym-timer?scheduled_id=${item.id}`)
+    : navigate(`/workout/${item.workout?.id}`)
+
   return (
     <div className="mx-5 mt-[22px] mb-2">
       <div className="flex items-center justify-between mb-2.5">
         <h2 className="text-base font-bold text-foreground">Next up</h2>
-        <button
-          onClick={() => navigate('/workout-schedule')}
-          className="text-sm font-medium text-primary active:opacity-70 transition-opacity flex items-center gap-0.5"
-        >
+        <button onClick={() => navigate('/workout-schedule')} className="text-sm font-medium text-primary active:opacity-70 transition-opacity flex items-center gap-0.5">
           View all <ChevronRight className="w-3 h-3" />
         </button>
       </div>
-      <div className="bg-card border border-border/60 rounded-[18px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.4)]">
-        <div className="space-y-2">
-          {items.map((item) => {
-            const title = item.workout?.title ?? item.workout_title ?? 'Workout'
-            const duration = item.workout?.duration_minutes ?? item.estimated_duration_minutes
-            const handleTap = () => item.workout_source === 'ai_generated'
-              ? navigate(`/gym-timer?scheduled_id=${item.id}`)
-              : navigate(`/workout/${item.workout?.id}`)
-            return (
-              <button
-                key={item.id}
-                onClick={handleTap}
-                className="w-full flex items-center gap-3 py-2 active:opacity-70 transition-opacity text-left"
-              >
-                <DayBadge dateStr={item.scheduled_date} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground text-sm truncate">{title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {getDayLabel(item.scheduled_date)}{duration ? ` · ${duration}min` : ''}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </button>
-            )
-          })}
+      {/* Hero card */}
+      <div style={{ position: 'relative', borderRadius: 18, padding: 16, overflow: 'hidden', background: 'linear-gradient(180deg, rgba(249,115,22,0.12), rgba(249,115,22,0.02))', border: '1px solid rgba(249,115,22,0.30)' }}>
+        {/* glow blob */}
+        <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: 999, background: 'rgba(249,115,22,0.12)', filter: 'blur(30px)', pointerEvents: 'none' }} />
+        {/* Top row: sport chip + eyebrow + day pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Dumbbell size={18} color="#f97316" strokeWidth={2} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#f97316', marginBottom: 2 }}>Next up</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--foreground)', lineHeight: 1.1 }}>{title}</div>
+          </div>
+          <div style={{ flexShrink: 0, background: 'rgba(249,115,22,0.15)', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, color: '#f97316' }}>
+            {getDayLabel(items[0].scheduled_date)}
+          </div>
         </div>
-        {items.length === 1 && (
+        {/* Meta */}
+        {duration && (
+          <div style={{ fontSize: 12.5, color: 'var(--muted-foreground)', marginBottom: 14 }}>
+            {duration} min
+          </div>
+        )}
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={handleTap}
+            style={{ flex: 1, height: 42, borderRadius: 12, background: '#f97316', border: 'none', color: '#0a0a0a', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, WebkitTapHighlightColor: 'transparent' }}
+          >
+            ▶ Start
+          </button>
           <button
             onClick={() => navigate('/workout-schedule')}
-            className="mt-3 pt-3 border-t border-border/40 w-full text-xs text-muted-foreground text-left active:opacity-70 transition-opacity"
+            style={{ flex: 1, height: 42, borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--foreground)', fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}
           >
-            Plan the rest of your week →
+            Reschedule
           </button>
-        )}
+        </div>
       </div>
     </div>
   )
