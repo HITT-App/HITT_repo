@@ -214,7 +214,7 @@ export default function UploadWorkoutPlan() {
         workout_description: result.assessment,
         estimated_duration_minutes: session.duration_minutes,
         estimated_calories: session.calories_burned || null,
-        workout_source: "uploaded",
+        workout_source: "ai_generated",
         workout_id: null,
         exercises_snapshot: session.exercises,
         status: "scheduled",
