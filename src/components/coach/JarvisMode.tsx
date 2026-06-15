@@ -16,7 +16,6 @@ import { FoodConfirmCard } from './FoodConfirmCard';
 import { GoalConfirmCard } from './GoalConfirmCard';
 import { MultiChoiceCard } from './MultiChoiceCard';
 import { JarvisMealPlanCard } from './JarvisMealPlanCard';
-import { NutritionPreferencesFlow } from '@/components/NutritionPreferencesFlow';
 import { saveMealPlan } from '@/lib/mealPlanStorage';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload, RecommendMealPlanPayload } from '@/hooks/useAI.types';
 
@@ -206,8 +205,6 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [aiWorkoutPlan, setAIWorkoutPlan] = useState<RecommendWorkoutPlanPayload | null>(null);
   const [pendingNoPlanPrompt, setPendingNoPlanPrompt] = useState(false);
   const [mealPlan, setMealPlan] = useState<RecommendMealPlanPayload | null>(null);
-  const [showNutritionPrefs, setShowNutritionPrefs] = useState(false);
-  const [pendingMealPlanRequest, setPendingMealPlanRequest] = useState<string | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -230,23 +227,6 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     } else if (isFoodRecallQuestion(text)) {
       const answer = await queryTodayDiary();
       await ai.directAnswer(text, answer);
-    } else if (isMealPlanRequest(text)) {
-      // Gate: ensure dietary preferences are set before generating a plan
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: prefs } = await supabase
-          .from('nutrition_profiles')
-          .select('food_preferences, allergies')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const hasPrefs = prefs && (prefs.food_preferences?.length || (prefs as any).allergies?.length);
-        if (!hasPrefs) {
-          setPendingMealPlanRequest(text);
-          setShowNutritionPrefs(true);
-          return;
-        }
-      }
-      ai.send(text);
     } else {
       ai.send(text);
     }
@@ -1245,17 +1225,6 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         </div>
       </div>
 
-      <NutritionPreferencesFlow
-        open={showNutritionPrefs}
-        onOpenChange={setShowNutritionPrefs}
-        onComplete={() => {
-          if (pendingMealPlanRequest) {
-            const request = pendingMealPlanRequest;
-            setPendingMealPlanRequest(null);
-            ai.send(request);
-          }
-        }}
-      />
     </div>
   );
 }
