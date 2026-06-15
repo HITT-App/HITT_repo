@@ -37,6 +37,7 @@ const HealthMetrics = lazy(() => import("./pages/HealthMetrics"));
 const ActivityTracker = lazy(() => import("./pages/ActivityTracker"));
 const ActivityOnboarding = lazy(() => import("./pages/ActivityOnboarding"));
 const ActivityDashboard = lazy(() => import("./pages/ActivityDashboard"));
+const ActivityDetail = lazy(() => import("./pages/ActivityDetail"));
 const ActivityLive = lazy(() => import("./pages/ActivityLive"));
 const GymTimer = lazy(() => import("./pages/GymTimer"));
 const ActivityHistory = lazy(() => import("./pages/ActivityHistory"));
@@ -182,6 +183,7 @@ const App = () => (
             <Route path="/activity" element={<ProtectedRoute><ActivityTracker /></ProtectedRoute>} />
             <Route path="/activity-onboarding" element={<ProtectedRoute><ActivityOnboarding /></ProtectedRoute>} />
             <Route path="/activity-dashboard" element={<ProtectedRoute><ActivityDashboard /></ProtectedRoute>} />
+            <Route path="/activity/:id" element={<ProtectedRoute><ActivityDetail /></ProtectedRoute>} />
             <Route path="/activity-live" element={<ProtectedRoute><ActivityLive /></ProtectedRoute>} />
             <Route path="/gym-timer" element={<ProtectedRoute><GymTimer /></ProtectedRoute>} />
             <Route path="/activity-history" element={<ProtectedRoute><ActivityHistory /></ProtectedRoute>} />
