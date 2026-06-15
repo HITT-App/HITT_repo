@@ -1,5 +1,16 @@
 # HITT App Changelog
 
+## [2026-06-15] — Home screen refinement, activity detail page, triathlon share card
+
+- **Stats grid updated** — cards are now dark graphite with warm-neon accents (orange, red, pink, amber) instead of coloured glass
+- **Schedule card is now a hero card** — shows your next session with a Start button and Reschedule option; empty state has a full-width "Plan my week with AI" CTA
+- **Recent Activity is now a swipeable carousel** — horizontal cards replace the stacked list; includes weekly progress bar
+- **Activity detail page** — tapping an activity in the dashboard now opens a full detail screen showing duration, distance, calories, heart rate, intensity, route addresses, and notes (wherever data exists)
+- **Triathlon Share button now works** — opens the same share card designer as all other sports, showing total time, distance, and calories
+- **GPS denied on triathlon bike/run legs** — shows an "Open Settings" overlay instead of just a status badge
+- **GPS denied on Routes Explorer** — banner with "Open Settings" button replaces silent London fallback
+- **Ready? screen on all activities** — every sport, gym timer, workout player, and triathlon now shows a pre-start overlay before the session begins
+
 ## [2026-06-15] — Jarvis collects dietary preferences before generating meal plan
 
 - **Jarvis now asks for your dietary requirements** before generating a meal plan if none are on file — no more generic plans
