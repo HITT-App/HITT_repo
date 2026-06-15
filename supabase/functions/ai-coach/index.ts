@@ -1124,10 +1124,12 @@ serve(async (req) => {
       } else {
         userContext += `• Daily calorie target: not set. No weight on file. Suggest a starting range of 1800–2200 kcal/day and ask for their weight to personalise it.\n`;
       }
-      if (nutritionProfile) {
-        userContext += `• Diet preferences: ${nutritionProfile.food_preferences?.join(', ') || 'Not specified'}\n`;
-        userContext += `• Allergies: ${nutritionProfile.allergies?.join(', ') || 'None'}\n`;
-        userContext += `• Protein intake: ${nutritionProfile.protein_intake || 'Not set'}\n`;
+      if (nutritionProfile && ((nutritionProfile.food_preferences?.length) || (nutritionProfile.allergies?.length) || (nutritionProfile as any).allergens?.length)) {
+        userContext += `• Diet preferences: ${nutritionProfile.food_preferences?.join(', ') || 'None set'}\n`;
+        userContext += `• Allergies/intolerances: ${nutritionProfile.allergies?.join(', ') || 'None'}\n`;
+        userContext += `• Protein intake preference: ${nutritionProfile.protein_intake || 'Not set'}\n`;
+      } else {
+        userContext += `• Diet preferences: NOT COLLECTED — no dietary preferences or allergens on file for this user\n`;
       }
     }
 
@@ -1519,19 +1521,40 @@ serve(async (req) => {
           ]
         : baseStructured;
 
-      // Force the meal plan tool when the user is clearly asking for one.
-      // Text-based instructions alone aren't reliable enough with Gemini.
+      // Force the meal plan tool when the user is clearly asking for one —
+      // BUT only if dietary preferences are already on file. If not, let the
+      // AI ask for them conversationally so the plan can be personalised.
       const lastUserContent = String(
         (structuredMessages as any[]).filter(m => m.role === 'user').pop()?.content ?? ''
       ).toLowerCase();
       const isMealPlanRequest = /meal plan|what (should|can) i eat|day of eating|what to eat|plan (my )?(meals|eating|food|day)|full day (of )?eating|food plan/.test(lastUserContent);
 
+      const hasNutritionPrefs = !!(
+        (nutritionProfile?.food_preferences?.length) ||
+        (nutritionProfile?.allergies?.length) ||
+        (nutritionProfile as any)?.allergens?.length
+      );
+
+      // If meal plan requested but no prefs on file, inject a system message
+      // telling the AI to collect them before generating a plan.
+      let finalMessages = structuredMessages;
+      if (isMealPlanRequest && !hasNutritionPrefs) {
+        const lastIdx = (structuredMessages as any[]).findLastIndex((m: any) => m.role === 'user');
+        if (lastIdx !== -1) {
+          finalMessages = [
+            ...(structuredMessages as any[]).slice(0, lastIdx),
+            { role: 'system', content: 'CRITICAL — DIETARY PREFERENCES MISSING: The user has no dietary preferences or allergens on file. Before generating any meal plan, you MUST ask the user the following in a single friendly message: (1) Do they have any food allergies or intolerances? (2) Do they follow any dietary style (e.g. vegetarian, vegan, pescatarian, gluten-free, keto)? Tell them you need this to personalise their plan. Do NOT call any tool yet. Wait for their response.' },
+            (structuredMessages as any[])[lastIdx],
+          ];
+        }
+      }
+
       const gatewayResponse = await aiChatCompletion({
         model: "gemini-2.5-flash",
-        messages: structuredMessages,
+        messages: finalMessages,
         stream: true,
         tools: STRUCTURED_TOOLS,
-        tool_choice: isMealPlanRequest
+        tool_choice: (isMealPlanRequest && hasNutritionPrefs)
           ? { type: "function", function: { name: "recommend_meal_plan" } }
           : "auto",
       });

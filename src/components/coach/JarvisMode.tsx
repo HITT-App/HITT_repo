@@ -236,10 +236,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       if (user) {
         const { data: prefs } = await supabase
           .from('nutrition_profiles')
-          .select('food_preferences, allergens')
+          .select('food_preferences, allergies')
           .eq('user_id', user.id)
           .maybeSingle();
-        const hasPrefs = prefs && (prefs.food_preferences?.length || prefs.allergens?.length);
+        const hasPrefs = prefs && (prefs.food_preferences?.length || (prefs as any).allergies?.length);
         if (!hasPrefs) {
           setPendingMealPlanRequest(text);
           setShowNutritionPrefs(true);
