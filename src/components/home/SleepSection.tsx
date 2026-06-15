@@ -16,7 +16,8 @@ const QUALITY_OPTIONS = [
 
 export function SleepSection() {
   const navigate = useNavigate();
-  const { logs, logsLoading, logSleep } = useSleep();
+  const { logs, logsLoading, preferences, preferencesLoading, logSleep } = useSleep();
+  const wizardDone = !!preferences;
 
   const [showForm, setShowForm] = useState(false);
   const [bedtime, setBedtime] = useState("22:30");
@@ -99,9 +100,26 @@ export function SleepSection() {
       </div>
 
       <Card className="p-4 bg-card border border-border/60">
-        {logsLoading ? (
+        {logsLoading || preferencesLoading ? (
           <div className="h-24 flex items-center justify-center">
             <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          </div>
+        ) : !wizardDone ? (
+          /* ── Wizard not done: prompt to set up sleep preferences ── */
+          <div className="text-center py-4">
+            <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto mb-3">
+              <Moon className="w-6 h-6 text-indigo-500" />
+            </div>
+            <p className="text-[13px] font-semibold text-foreground mb-1">Set up sleep tracking</p>
+            <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+              Tell us your sleep goals and we'll help you track and improve your rest.
+            </p>
+            <button
+              onClick={() => navigate("/sleep-onboarding")}
+              className="w-full py-2.5 rounded-xl bg-primary text-white text-[13px] font-semibold touch-manipulation"
+            >
+              Set up sleep
+            </button>
           </div>
         ) : showForm || !hasData ? (
           /* ── Manual log form ── */
