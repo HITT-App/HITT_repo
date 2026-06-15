@@ -286,10 +286,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           .select('food_preferences, allergies')
           .eq('user_id', user.id)
           .maybeSingle();
-        hasPrefs = !!prefs && (
-          (prefs.food_preferences?.length ?? 0) > 0 ||
-          (prefs.allergies?.length ?? 0) > 0
+        const meaningfulFoodPrefs = (prefs?.food_preferences ?? []).filter(
+          (p: string) => p && p !== 'no_preference' && p !== 'omnivore'
         );
+        hasPrefs = meaningfulFoodPrefs.length > 0 || ((prefs?.allergies?.length ?? 0) > 0);
       }
       if (!hasPrefs) {
         await ai.appendAssistantMessage(

@@ -1124,12 +1124,20 @@ serve(async (req) => {
       } else {
         userContext += `• Daily calorie target: not set. No weight on file. Suggest a starting range of 1800–2200 kcal/day and ask for their weight to personalise it.\n`;
       }
-      if (nutritionProfile && ((nutritionProfile.food_preferences?.length) || (nutritionProfile.allergies?.length) || (nutritionProfile as any).allergens?.length)) {
-        userContext += `• Diet preferences: ${nutritionProfile.food_preferences?.join(', ') || 'None set'}\n`;
-        userContext += `• Allergies/intolerances: ${nutritionProfile.allergies?.join(', ') || 'None'}\n`;
-        userContext += `• Protein intake preference: ${nutritionProfile.protein_intake || 'Not set'}\n`;
-      } else {
-        userContext += `• Diet preferences: NOT COLLECTED — no dietary preferences or allergens on file for this user\n`;
+      {
+        const meaningfulPrefs = (nutritionProfile?.food_preferences ?? []).filter(
+          (p: string) => p && p !== 'no_preference' && p !== 'omnivore'
+        );
+        const hasAnyPrefs = meaningfulPrefs.length > 0 ||
+          (nutritionProfile?.allergies?.length) ||
+          (nutritionProfile as any)?.allergens?.length;
+        if (hasAnyPrefs) {
+          userContext += `• Diet preferences: ${meaningfulPrefs.join(', ') || 'No specific restrictions'}\n`;
+          userContext += `• Allergies/intolerances: ${nutritionProfile.allergies?.join(', ') || 'None'}\n`;
+          userContext += `• Protein intake preference: ${nutritionProfile?.protein_intake || 'Not set'}\n`;
+        } else {
+          userContext += `• Diet preferences: NOT COLLECTED — no dietary preferences or allergens on file for this user\n`;
+        }
       }
     }
 
@@ -1529,8 +1537,11 @@ serve(async (req) => {
       ).toLowerCase();
       const isMealPlanRequest = /meal plan|what (should|can) i eat|day of eating|what to eat|plan (my )?(meals|eating|food|day)|full day (of )?eating|food plan/.test(lastUserContent);
 
+      const meaningfulFoodPrefs = (nutritionProfile?.food_preferences ?? []).filter(
+        (p: string) => p && p !== 'no_preference' && p !== 'omnivore'
+      );
       const hasNutritionPrefs = !!(
-        (nutritionProfile?.food_preferences?.length) ||
+        meaningfulFoodPrefs.length > 0 ||
         (nutritionProfile?.allergies?.length) ||
         (nutritionProfile as any)?.allergens?.length
       );
