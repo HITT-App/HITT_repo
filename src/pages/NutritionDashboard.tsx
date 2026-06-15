@@ -521,7 +521,6 @@ export default function NutritionDashboard() {
                             return (
                               <div key={s.name} className="flex items-center justify-between py-1 text-xs">
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <span>{s.emoji ?? '🍽️'}</span>
                                   <span className="truncate text-muted-foreground">{s.name}</span>
                                   <span className="text-muted-foreground/60 shrink-0">{s.calories} kcal</span>
                                 </div>
