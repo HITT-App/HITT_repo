@@ -45,9 +45,10 @@ const CATEGORY_COLORS: Record<string, string> = {
 const scoreColor = (n: number) =>
   n >= 80 ? "#4ade80" : n >= 60 ? "#facc15" : "#f87171"
 
-const nextMonday = () => {
+const thisOrNextMonday = () => {
   const d = new Date()
   const dow = getDay(d)
+  if (dow === 1) return format(d, "yyyy-MM-dd") // today is Monday
   return format(addDays(d, dow === 0 ? 1 : 8 - dow), "yyyy-MM-dd")
 }
 
@@ -101,8 +102,8 @@ export default function UploadWorkoutPlan() {
   const [result, setResult] = useState<ParseResult | null>(null)
   const [useAdjusted, setUseAdjusted] = useState(false)
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
-  const [startDate, setStartDate] = useState(nextMonday)
-  const [endDate, setEndDate] = useState(() => format(addWeeks(new Date(nextMonday()), 8), "yyyy-MM-dd"))
+  const [startDate, setStartDate] = useState(thisOrNextMonday)
+  const [endDate, setEndDate] = useState(() => format(addWeeks(new Date(thisOrNextMonday()), 8), "yyyy-MM-dd"))
   const [showConflict, setShowConflict] = useState(false)
   const [conflictCount, setConflictCount] = useState(0)
 
@@ -436,21 +437,21 @@ export default function UploadWorkoutPlan() {
                 <Calendar className="w-4 h-4 text-primary" />
                 <p className="text-[13px] font-bold text-foreground">Schedule duration</p>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <p className="text-[11px] text-muted-foreground mb-1.5">Start date</p>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[12px] text-muted-foreground w-20 flex-shrink-0">Start date</p>
                   <input type="date" value={startDate} min={format(new Date(), "yyyy-MM-dd")}
                     onChange={e => {
                       setStartDate(e.target.value)
                       if (e.target.value >= endDate) setEndDate(format(addWeeks(new Date(e.target.value), 8), "yyyy-MM-dd"))
                     }}
-                    className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-[12.5px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                    className="flex-1 bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-[12.5px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                 </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground mb-1.5">Train until</p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[12px] text-muted-foreground w-20 flex-shrink-0">Train until</p>
                   <input type="date" value={endDate} min={startDate}
                     onChange={e => setEndDate(e.target.value)}
-                    className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-[12.5px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                    className="flex-1 bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-[12.5px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                 </div>
               </div>
 
