@@ -228,7 +228,7 @@ export default function UploadWorkoutPlan() {
       if (error) throw error
 
       toast.success(`${rows.length} sessions added to your schedule!`)
-      navigate("/schedule")
+      navigate("/workout-schedule")
     } catch (err: any) {
       toast.error(err.message || "Failed to save plan.")
       setStep("review")
