@@ -212,15 +212,11 @@ export default function UploadWorkoutPlan() {
       if (!userId) throw new Error("Not authenticated")
 
       if (strategy === "replace") {
-        const dates = rows.map((r: any) => r.scheduled_date)
-        const minDate = dates.reduce((a: string, b: string) => a < b ? a : b)
-        const maxDate = dates.reduce((a: string, b: string) => a > b ? a : b)
         const { error: delErr } = await supabase
           .from("scheduled_workouts")
           .delete()
           .eq("user_id", userId)
-          .gte("scheduled_date", minDate)
-          .lte("scheduled_date", maxDate)
+          .gte("scheduled_date", startDate)
         if (delErr) throw delErr
       }
 
