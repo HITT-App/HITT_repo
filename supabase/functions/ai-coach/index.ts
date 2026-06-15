@@ -1519,12 +1519,21 @@ serve(async (req) => {
           ]
         : baseStructured;
 
+      // Force the meal plan tool when the user is clearly asking for one.
+      // Text-based instructions alone aren't reliable enough with Gemini.
+      const lastUserContent = String(
+        (structuredMessages as any[]).filter(m => m.role === 'user').pop()?.content ?? ''
+      ).toLowerCase();
+      const isMealPlanRequest = /meal plan|what (should|can) i eat|day of eating|what to eat|plan (my )?(meals|eating|food|day)|full day (of )?eating|food plan/.test(lastUserContent);
+
       const gatewayResponse = await aiChatCompletion({
         model: "gemini-2.5-flash",
         messages: structuredMessages,
         stream: true,
         tools: STRUCTURED_TOOLS,
-        tool_choice: "auto",
+        tool_choice: isMealPlanRequest
+          ? { type: "function", function: { name: "recommend_meal_plan" } }
+          : "auto",
       });
 
       if (!gatewayResponse.ok) {
