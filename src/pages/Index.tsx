@@ -126,7 +126,7 @@ const Index = () => {
     fitness_metrics: <FitnessMetricsCard hasData={true} />,
     activity: <ActivitySection />,
     nutrition: <NutritionSection hasData={true} />,
-    sleep: <SleepSection hasData={true} />,
+    sleep: <SleepSection />,
     ai_coach: <AICoachSection />,
     resources: <ResourcesSection />,
   };
@@ -147,7 +147,7 @@ const Index = () => {
           {flags.nutrition_enabled && <NutritionSection hasData={true} />}
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
           {flags.activity_enabled && <ActivitySection />}
-          {flags.sleep_enabled && <SleepSection hasData={true} />}
+          {flags.sleep_enabled && <SleepSection />}
           {flags.ai_coach_enabled && <AICoachSection />}
           {flags.resources_enabled && <ResourcesSection />}
         </>
