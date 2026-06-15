@@ -103,7 +103,6 @@ export const StatsGrid = () => {
                 borderRadius: 18,
                 padding: 15,
                 border: '1px solid hsl(228 12% 26%)',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
                 background: 'linear-gradient(150deg, hsl(228 16% 17%), hsl(228 18% 11%))',
               }}
             >
