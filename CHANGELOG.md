@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-06-15] — Jarvis collects dietary preferences before generating meal plan
+
+- **Jarvis now asks for your dietary requirements** before generating a meal plan if none are on file — no more generic plans
+- Asks two questions: food allergies/intolerances and dietary style (vegan, vegetarian, pescatarian, etc.)
+- Your answer is saved to your profile and the meal plan is generated immediately after
+- If dietary prefs are already set, Jarvis goes straight to generating the plan
+
 ## [2026-06-11] — Schedule card selection; hold-to-finish text fix; completion screen exit
 
 - **Tapping a workout in the schedule now selects it** (orange highlight) and reveals a play button — tapping play starts the workout; tapping again deselects

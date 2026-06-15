@@ -104,6 +104,44 @@ function isMealPlanRequest(text: string): boolean {
   return /\b(meal plan|plan (my )?(meals|day|eating|food)|what should i eat (today|for)|suggest (me |a )?(meals|a meal plan|what to eat)|give me a (meal|food|eating) plan|today'?s? (meals|eating|food) plan|full day (of )?eating|day of (meals|eating|food))\b/i.test(text);
 }
 
+async function saveDietaryPrefsFromText(text: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const lower = text.toLowerCase();
+
+  const allergenGroups = [
+    ['gluten', 'celiac', 'coeliac', 'wheat'],
+    ['dairy', 'lactose', 'milk'],
+    ['nuts', 'nut', 'peanut'],
+    ['eggs', 'egg'],
+    ['soy', 'soya'],
+    ['shellfish', 'shrimp', 'prawn', 'crab'],
+    ['fish'],
+  ];
+  const foundAllergens: string[] = [];
+  for (const group of allergenGroups) {
+    if (group.some(k => lower.includes(k))) foundAllergens.push(group[0]);
+  }
+
+  const styles: string[] = [];
+  if (/\bvegan\b/.test(lower)) styles.push('vegan');
+  else if (/\bvegetar/.test(lower)) styles.push('vegetarian');
+  if (/\bpescatarian\b/.test(lower)) styles.push('pescatarian');
+  if (/\bketo\b/.test(lower)) styles.push('keto');
+  if (/\bpaleo\b/.test(lower)) styles.push('paleo');
+  if (/\bgluten.?free\b/.test(lower)) styles.push('gluten-free');
+  if (/\bdairy.?free\b/.test(lower)) styles.push('dairy-free');
+
+  // Always save something so hasNutritionPrefs becomes true on the server
+  const food_preferences = styles.length > 0 ? styles : ['omnivore'];
+
+  await supabase.from('nutrition_profiles').upsert(
+    { user_id: user.id, food_preferences, allergies: foundAllergens },
+    { onConflict: 'user_id' }
+  );
+}
+
 function isFoodRecallQuestion(text: string): boolean {
   const t = text.trim();
   return (
@@ -205,6 +243,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [aiWorkoutPlan, setAIWorkoutPlan] = useState<RecommendWorkoutPlanPayload | null>(null);
   const [pendingNoPlanPrompt, setPendingNoPlanPrompt] = useState(false);
   const [mealPlan, setMealPlan] = useState<RecommendMealPlanPayload | null>(null);
+  const [awaitingDietaryPrefs, setAwaitingDietaryPrefs] = useState(false);
+  const awaitingDietaryPrefsRef = useRef(false);
+  const pendingMealPlanRequestRef = useRef<string | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -227,6 +268,39 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     } else if (isFoodRecallQuestion(text)) {
       const answer = await queryTodayDiary();
       await ai.directAnswer(text, answer);
+    } else if (awaitingDietaryPrefsRef.current) {
+      // User just answered the dietary prefs question — save and trigger the original meal plan request
+      const pending = pendingMealPlanRequestRef.current;
+      awaitingDietaryPrefsRef.current = false;
+      setAwaitingDietaryPrefs(false);
+      pendingMealPlanRequestRef.current = null;
+      await saveDietaryPrefsFromText(text);
+      if (pending) ai.send(pending);
+    } else if (isMealPlanRequest(text)) {
+      // Check whether dietary prefs exist before generating a plan
+      const { data: { user } } = await supabase.auth.getUser();
+      let hasPrefs = false;
+      if (user) {
+        const { data: prefs } = await supabase
+          .from('nutrition_profiles')
+          .select('food_preferences, allergies')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        hasPrefs = !!prefs && (
+          (prefs.food_preferences?.length ?? 0) > 0 ||
+          (prefs.allergies?.length ?? 0) > 0
+        );
+      }
+      if (!hasPrefs) {
+        await ai.appendAssistantMessage(
+          "Before I build your meal plan, I need to know two things:\n\n1. Do you have any food allergies or intolerances — for example, gluten, dairy, or nuts?\n2. Do you follow a dietary style — vegetarian, vegan, pescatarian, or do you eat everything?\n\nFeel free to say 'none' if neither applies."
+        );
+        awaitingDietaryPrefsRef.current = true;
+        setAwaitingDietaryPrefs(true);
+        pendingMealPlanRequestRef.current = text;
+        return;
+      }
+      ai.send(text);
     } else {
       ai.send(text);
     }
