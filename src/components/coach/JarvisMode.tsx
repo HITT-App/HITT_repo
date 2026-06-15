@@ -846,12 +846,16 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           </div>
         )}
 
-        {/* Processing indicator (before first token) */}
+        {/* Processing indicator (before first token) — tap to cancel if stuck */}
         {ai.status === 'streaming' && !ai.streamingText && (
-          <div className="flex items-center gap-2 px-4 py-3 bg-secondary/40 rounded-2xl">
+          <button
+            type="button"
+            onClick={() => ai.abort()}
+            className="flex items-center gap-2 px-4 py-3 bg-secondary/40 rounded-2xl w-full text-left active:opacity-70"
+          >
             <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
-            <span className="text-sm text-muted-foreground">Thinking…</span>
-          </div>
+            <span className="text-sm text-muted-foreground">Thinking… (tap to cancel)</span>
+          </button>
         )}
 
         {/* Current in-progress transcript (while mic is active) */}
