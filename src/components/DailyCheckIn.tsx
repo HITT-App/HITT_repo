@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -109,6 +109,8 @@ export function DailyCheckIn({ onComplete }: DailyCheckInProps) {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DialogContent className="sm:max-w-[380px] p-0 overflow-hidden border-border/50 gap-0 [&>button]:hidden">
+        <DialogTitle className="sr-only">Daily Check-in</DialogTitle>
+        <DialogDescription className="sr-only">Log your mood and energy for today</DialogDescription>
         {/* Header */}
         <div className="relative px-5 pt-5 pb-3">
           {step === "energy" && (
