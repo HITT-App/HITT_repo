@@ -38,60 +38,63 @@ export function useDailyNutrition(): DailyNutrition {
     startOfDay.setHours(0, 0, 0, 0);
     const startISO = startOfDay.toISOString();
 
-    const [goalsRes, mealsRes, waterRes, prefsRes] = await Promise.all([
-      supabase
-        .from("nutrition_goals")
-        .select("daily_calories, daily_protein_grams, daily_carbs_grams, daily_fat_grams")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-      supabase
-        .from("meal_logs")
-        .select("calories, protein_grams, carbs_grams, fat_grams")
-        .eq("user_id", user.id)
-        .is("deleted_at", null)
-        .gte("logged_at", startISO),
-      supabase
-        .from("health_metrics")
-        .select("value, unit")
-        .eq("user_id", user.id)
-        .eq("metric_type", "hydration")
-        .gte("recorded_at", startISO),
-      supabase
-        .from("nutrition_profiles")
-        .select("daily_calorie_target")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-    ]);
+    try {
+      const [goalsRes, mealsRes, waterRes, prefsRes] = await Promise.all([
+        supabase
+          .from("nutrition_goals")
+          .select("daily_calories, daily_protein_grams, daily_carbs_grams, daily_fat_grams")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("meal_logs")
+          .select("calories, protein_grams, carbs_grams, fat_grams")
+          .eq("user_id", user.id)
+          .is("deleted_at", null)
+          .gte("logged_at", startISO),
+        supabase
+          .from("health_metrics")
+          .select("value, unit")
+          .eq("user_id", user.id)
+          .eq("metric_type", "hydration")
+          .gte("recorded_at", startISO),
+        supabase
+          .from("nutrition_profiles")
+          .select("daily_calorie_target")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
 
-    const meals = mealsRes.data ?? [];
-    const consumed = meals.reduce(
-      (acc, m) => ({
-        calories: acc.calories + (m.calories ?? 0),
-        protein: acc.protein + Number(m.protein_grams ?? 0),
-        carbs: acc.carbs + Number(m.carbs_grams ?? 0),
-        fat: acc.fat + Number(m.fat_grams ?? 0),
-      }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
-    );
+      const meals = mealsRes.data ?? [];
+      const consumed = meals.reduce(
+        (acc, m) => ({
+          calories: acc.calories + (m.calories ?? 0),
+          protein: acc.protein + Number(m.protein_grams ?? 0),
+          carbs: acc.carbs + Number(m.carbs_grams ?? 0),
+          fat: acc.fat + Number(m.fat_grams ?? 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
 
-    // Treat hydration metric values as ml by default; assume "glass"-logged
-    // entries without a unit are 250ml each.
-    const waterMl = (waterRes.data ?? []).reduce((acc, row) => {
-      const v = Number(row.value ?? 0);
-      return acc + (row.unit === "glass" ? v * 250 : v);
-    }, 0);
+      // Treat hydration metric values as ml by default; assume "glass"-logged
+      // entries without a unit are 250ml each.
+      const waterMl = (waterRes.data ?? []).reduce((acc, row) => {
+        const v = Number(row.value ?? 0);
+        return acc + (row.unit === "glass" ? v * 250 : v);
+      }, 0);
 
-    setState({
-      consumed: { ...consumed, waterMl },
-      targets: {
-        calories: prefsRes.data?.daily_calorie_target ?? goalsRes.data?.daily_calories ?? DEFAULT_TARGETS.calories,
-        protein: goalsRes.data?.daily_protein_grams ?? DEFAULT_TARGETS.protein,
-        carbs: goalsRes.data?.daily_carbs_grams ?? DEFAULT_TARGETS.carbs,
-        fat: goalsRes.data?.daily_fat_grams ?? DEFAULT_TARGETS.fat,
-        waterMl: DEFAULT_TARGETS.waterMl,
-      },
-    });
-    setLoading(false);
+      setState({
+        consumed: { ...consumed, waterMl },
+        targets: {
+          calories: prefsRes.data?.daily_calorie_target ?? goalsRes.data?.daily_calories ?? DEFAULT_TARGETS.calories,
+          protein: goalsRes.data?.daily_protein_grams ?? DEFAULT_TARGETS.protein,
+          carbs: goalsRes.data?.daily_carbs_grams ?? DEFAULT_TARGETS.carbs,
+          fat: goalsRes.data?.daily_fat_grams ?? DEFAULT_TARGETS.fat,
+          waterMl: DEFAULT_TARGETS.waterMl,
+        },
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
