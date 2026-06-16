@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Settings, Plus, Target, Flame, Check } from "lucide-react";
+import { ArrowLeft, Plus, Target, Flame, Check } from "lucide-react";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 import { toast } from "sonner";
 import { format, isToday } from "date-fns";
@@ -134,10 +134,7 @@ const Hydration = () => {
     <div className="min-h-screen bg-background pb-28 text-foreground">
 
       {/* ── Header ── */}
-      <header
-        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4"
-        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)", paddingBottom: 12 }}
-      >
+      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4 py-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
         <button
           onClick={() => navigate(-1)}
           className="w-[38px] h-[38px] rounded-[11px] bg-secondary border border-border/60 flex items-center justify-center active:opacity-70 transition-opacity"
@@ -145,12 +142,7 @@ const Hydration = () => {
           <ArrowLeft size={18} className="text-foreground" strokeWidth={2.2} />
         </button>
         <h1 className="text-base font-semibold">Hydration</h1>
-        <button
-          onClick={() => navigate("/profile")}
-          className="w-[38px] h-[38px] rounded-[11px] bg-secondary border border-border/60 flex items-center justify-center active:opacity-70 transition-opacity"
-        >
-          <Settings size={17} className="text-foreground" strokeWidth={2} />
-        </button>
+        <div className="w-[38px]" />
       </header>
 
       <div className="px-5 space-y-4 pt-5">
