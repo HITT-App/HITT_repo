@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react
 import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, Send, Loader2, ChevronDown, MessageCircle, Users,
+  ArrowLeft, ArrowRight, Send, Loader2, ChevronDown, MessageCircle, Users,
   Plus, Image as ImageIcon, Smile, X, Reply, Play, Pause,
   Shield, Trash2, Pin, MoreVertical, PinOff, Settings, Megaphone,
   Paintbrush, Check, ArrowDown,
@@ -134,12 +134,64 @@ function VoicePlayer({ src }: { src: string }) {
   );
 }
 
+const CHAT_GUIDELINES_KEY = "hitt-community-guidelines-accepted";
+
+const GUIDELINES = [
+  { id: "kind", text: "Be kind and respectful to everyone" },
+  { id: "toxic", text: "No toxic behaviour or hate speech" },
+  { id: "follow", text: "Keep it fitness-related and positive" },
+];
+
+function GuidelinesGate({ onAccept, onBack }: { onAccept: () => void; onBack: () => void }) {
+  return (
+    <div className="flex flex-col h-[100svh] bg-background">
+      <header className="flex items-center gap-3 px-4 py-3 border-b border-border/60 shrink-0" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+        <button onClick={onBack} className="p-1.5 -ml-1.5 rounded-full text-muted-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="font-semibold text-[15px]">Community Guidelines</h1>
+      </header>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+        <span className="text-7xl">💬</span>
+        <div className="text-center">
+          <h2 className="text-xl font-bold mb-1">Before you chat</h2>
+          <p className="text-sm text-muted-foreground">Keep the community positive for everyone.</p>
+        </div>
+        <div className="w-full space-y-3">
+          {GUIDELINES.map((g) => (
+            <div key={g.id} className="flex items-center gap-3 p-4 rounded-xl border border-border bg-muted/30">
+              <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+                <Check className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-sm">{g.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="p-5 pb-8 space-y-3">
+        <button
+          className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2"
+          onClick={onAccept}
+        >
+          Got it, let's chat <ArrowRight className="w-4 h-4" />
+        </button>
+        <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <button className="text-primary">Terms & Conditions</button>
+          <span>·</span>
+          <button className="text-primary">Privacy Policy</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CommunityChatroom() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile } = useProfile();
   const { uploadImage, uploading } = useImageUpload();
   const { isAdmin } = useAdminRole();
+  const [guidelinesAccepted, setGuidelinesAccepted] = useState(() => !!localStorage.getItem(CHAT_GUIDELINES_KEY));
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -693,6 +745,18 @@ export default function CommunityChatroom() {
         return <span>{msg.content}</span>;
     }
   };
+
+  if (!guidelinesAccepted) {
+    return (
+      <GuidelinesGate
+        onAccept={() => {
+          localStorage.setItem(CHAT_GUIDELINES_KEY, "1");
+          setGuidelinesAccepted(true);
+        }}
+        onBack={() => navigate(-1)}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-[100svh] bg-background overflow-hidden overscroll-none">

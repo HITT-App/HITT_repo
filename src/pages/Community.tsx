@@ -78,7 +78,7 @@ const Community = () => {
       <div className="p-4">
         <Button
           className="w-full"
-          onClick={() => navigate("/community/onboarding")}
+          onClick={() => navigate("/community/feed")}
         >
           Explore Community <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
