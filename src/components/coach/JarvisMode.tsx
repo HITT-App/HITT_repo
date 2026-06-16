@@ -16,6 +16,7 @@ import { FoodConfirmCard } from './FoodConfirmCard';
 import { GoalConfirmCard } from './GoalConfirmCard';
 import { MultiChoiceCard } from './MultiChoiceCard';
 import { JarvisMealPlanCard } from './JarvisMealPlanCard';
+import { JarvisDietaryPrefsCard } from './JarvisDietaryPrefsCard';
 import { saveMealPlan } from '@/lib/mealPlanStorage';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload, RecommendMealPlanPayload } from '@/hooks/useAI.types';
 
@@ -104,43 +105,6 @@ function isMealPlanRequest(text: string): boolean {
   return /\b(meal plan|plan (my )?(meals|day|eating|food)|what should i eat (today|for)|suggest (me |a )?(meals|a meal plan|what to eat)|give me a (meal|food|eating) plan|today'?s? (meals|eating|food) plan|full day (of )?eating|day of (meals|eating|food))\b/i.test(text);
 }
 
-async function saveDietaryPrefsFromText(text: string) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const lower = text.toLowerCase();
-
-  const allergenGroups = [
-    ['gluten', 'celiac', 'coeliac', 'wheat'],
-    ['dairy', 'lactose', 'milk'],
-    ['nuts', 'nut', 'peanut'],
-    ['eggs', 'egg'],
-    ['soy', 'soya'],
-    ['shellfish', 'shrimp', 'prawn', 'crab'],
-    ['fish'],
-  ];
-  const foundAllergens: string[] = [];
-  for (const group of allergenGroups) {
-    if (group.some(k => lower.includes(k))) foundAllergens.push(group[0]);
-  }
-
-  const styles: string[] = [];
-  if (/\bvegan\b/.test(lower)) styles.push('vegan');
-  else if (/\bvegetar/.test(lower)) styles.push('vegetarian');
-  if (/\bpescatarian\b/.test(lower)) styles.push('pescatarian');
-  if (/\bketo\b/.test(lower)) styles.push('keto');
-  if (/\bpaleo\b/.test(lower)) styles.push('paleo');
-  if (/\bgluten.?free\b/.test(lower)) styles.push('gluten-free');
-  if (/\bdairy.?free\b/.test(lower)) styles.push('dairy-free');
-
-  // Always save something so hasNutritionPrefs becomes true on the server
-  const food_preferences = styles.length > 0 ? styles : ['omnivore'];
-
-  await supabase.from('nutrition_profiles').upsert(
-    { user_id: user.id, food_preferences, allergies: foundAllergens },
-    { onConflict: 'user_id' }
-  );
-}
 
 function isFoodRecallQuestion(text: string): boolean {
   const t = text.trim();
@@ -243,9 +207,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [aiWorkoutPlan, setAIWorkoutPlan] = useState<RecommendWorkoutPlanPayload | null>(null);
   const [pendingNoPlanPrompt, setPendingNoPlanPrompt] = useState(false);
   const [mealPlan, setMealPlan] = useState<RecommendMealPlanPayload | null>(null);
-  const [awaitingDietaryPrefs, setAwaitingDietaryPrefs] = useState(false);
-  const awaitingDietaryPrefsRef = useRef(false);
-  const pendingMealPlanRequestRef = useRef<string | null>(null);
+  const [pendingDietaryPrefsPrompt, setPendingDietaryPrefsPrompt] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -268,39 +230,6 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     } else if (isFoodRecallQuestion(text)) {
       const answer = await queryTodayDiary();
       await ai.directAnswer(text, answer);
-    } else if (awaitingDietaryPrefsRef.current) {
-      // User just answered the dietary prefs question — save and trigger the original meal plan request
-      const pending = pendingMealPlanRequestRef.current;
-      awaitingDietaryPrefsRef.current = false;
-      setAwaitingDietaryPrefs(false);
-      pendingMealPlanRequestRef.current = null;
-      await saveDietaryPrefsFromText(text);
-      if (pending) ai.send(pending);
-    } else if (isMealPlanRequest(text)) {
-      // Check whether dietary prefs exist before generating a plan
-      const { data: { user } } = await supabase.auth.getUser();
-      let hasPrefs = false;
-      if (user) {
-        const { data: prefs } = await supabase
-          .from('nutrition_profiles')
-          .select('food_preferences, allergies')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const meaningfulFoodPrefs = (prefs?.food_preferences ?? []).filter(
-          (p: string) => p && p !== 'no_preference' && p !== 'omnivore'
-        );
-        hasPrefs = meaningfulFoodPrefs.length > 0 || ((prefs?.allergies?.length ?? 0) > 0);
-      }
-      if (!hasPrefs) {
-        await ai.appendAssistantMessage(
-          "Before I build your meal plan, I need to know two things:\n\n1. Do you have any food allergies or intolerances — for example, gluten, dairy, or nuts?\n2. Do you follow a dietary style — vegetarian, vegan, pescatarian, or do you eat everything?\n\nFeel free to say 'none' if neither applies."
-        );
-        awaitingDietaryPrefsRef.current = true;
-        setAwaitingDietaryPrefs(true);
-        pendingMealPlanRequestRef.current = text;
-        return;
-      }
-      ai.send(text);
     } else {
       ai.send(text);
     }
@@ -684,6 +613,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       let hasGoal = false;
       let hasSchedule = false;
       let hasWorkoutToday = false;
+      let hasDietaryPrefs = false;
 
       try {
         const { data: session } = await supabase.auth.getSession();
@@ -694,14 +624,20 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
             { data: prefs },
             { count: futureCount },
             { count: todayCount },
+            { data: dietPrefs },
           ] = await Promise.all([
             supabase.from('workout_preferences').select('workout_goal').eq('user_id', userId).maybeSingle(),
             supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('scheduled_date', today),
             supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('scheduled_date', today),
+            supabase.from('nutrition_profiles').select('food_preferences, allergies').eq('user_id', userId).maybeSingle(),
           ]);
           hasGoal = !!prefs?.workout_goal;
           hasSchedule = (futureCount ?? 0) > 0;
           hasWorkoutToday = (todayCount ?? 0) > 0;
+          const meaningfulFoodPrefs = ((dietPrefs?.food_preferences ?? []) as string[]).filter(
+            p => p && p !== 'no_preference' && p !== 'omnivore'
+          );
+          hasDietaryPrefs = meaningfulFoodPrefs.length > 0 || ((dietPrefs?.allergies?.length ?? 0) > 0);
         }
       } catch {
         // Default: no goal, no schedule — show goal card
@@ -718,6 +654,12 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       // Goal set but no plan → show plan setup card (no AI call)
       if (!hasSchedule) {
         setPendingNoPlanPrompt(true);
+        return;
+      }
+
+      // No dietary prefs → show dietary prefs card (no AI call)
+      if (!hasDietaryPrefs) {
+        setPendingDietaryPrefsPrompt(true);
         return;
       }
 
@@ -887,6 +829,19 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                 onSelect: () => setPendingNoPlanPrompt(false),
               },
             ]}
+          />
+        )}
+
+        {/* Dietary prefs card — shown when no meaningful dietary preferences are on file */}
+        {pendingDietaryPrefsPrompt && (
+          <JarvisDietaryPrefsCard
+            onSaved={async () => {
+              setPendingDietaryPrefsPrompt(false);
+              await ai.appendAssistantMessage(
+                "Saved — I've got your dietary requirements. Ask me for a meal plan whenever you're ready.",
+              );
+            }}
+            onSkip={() => setPendingDietaryPrefsPrompt(false)}
           />
         )}
 
