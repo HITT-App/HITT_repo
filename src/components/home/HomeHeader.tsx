@@ -48,6 +48,7 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
             onClick={() => navigate('/profile')}
             className="rounded-xl active:opacity-70 transition-opacity"
             aria-label="Go to profile"
+            data-tutorial="avatar"
           >
             <Avatar className="w-11 h-11 rounded-xl">
               <AvatarImage src={avatarUrl || undefined} alt={userName} className="rounded-xl" />

@@ -49,6 +49,7 @@ export const BottomNav = ({ onHIITClick, onQuickAddClick, quickAddOpen }: Bottom
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto"
       style={{ paddingBottom: "var(--safe-area-inset-bottom, 0px)" }}
+      data-tutorial="nav"
     >
       <div className="w-full px-4">
         <div className="mb-1 rounded-2xl bg-background/95 backdrop-blur-md border border-border/40 shadow-elevated">
@@ -61,6 +62,7 @@ export const BottomNav = ({ onHIITClick, onQuickAddClick, quickAddOpen }: Bottom
                     onClick={() => onHIITClick?.()}
                     className="relative -mt-5 transition-transform duration-200 active:scale-95 touch-manipulation"
                     aria-label="Open HIIT menu"
+                    data-tutorial="hiit-logo"
                   >
                     <div className="w-14 h-14 rounded-full border-2 border-primary shadow-card overflow-hidden bg-white">
                       <img src={hiitLogo} alt="HIIT" className="w-full h-full object-cover" />
