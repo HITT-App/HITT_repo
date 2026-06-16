@@ -1039,7 +1039,7 @@ serve(async (req) => {
       supabaseAdmin.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('workout_progress').select('completed_at, duration_seconds, workouts(title, category)').eq('user_id', userId).order('completed_at', { ascending: false }).limit(10),
       supabaseAdmin.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
-      supabaseAdmin.from('scheduled_workouts').select('scheduled_date, status, completed_at, duration_minutes, calories_burned, workouts(title, category)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
+      supabaseAdmin.from('scheduled_workouts').select('scheduled_date, status, completed_at, duration_minutes, calories_burned, workout_source, workout_title, workout_description, exercises_snapshot, workouts(title, category, difficulty, body_areas, equipment)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
       supabaseAdmin.from('user_workout_plan_items').select('scheduled_date, status, completed_at, workouts(title, duration_minutes)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
       supabaseAdmin.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
@@ -1204,6 +1204,35 @@ serve(async (req) => {
       if (activityGoals.weekly_activities) userContext += `• Activities: ${activityGoals.weekly_activities}/week\n`;
       if (activityGoals.weekly_calories) userContext += `• Calories: ${activityGoals.weekly_calories}/week\n`;
       if (activityGoals.weekly_duration_minutes) userContext += `• Duration: ${activityGoals.weekly_duration_minutes} min/week\n`;
+    }
+
+    {
+      const todayStr2 = new Date().toISOString().split('T')[0];
+      const upcoming = (scheduledWorkouts ?? []).filter((w: any) => w.status !== 'completed' && w.scheduled_date >= todayStr2).slice(0, 7);
+      if (upcoming.length > 0) {
+        userContext += `\nUpcoming Scheduled Workouts (full detail):\n`;
+        for (const w of upcoming) {
+          const title = w.workout_title ?? (w.workouts as any)?.title ?? 'Workout';
+          const source = w.workout_source ?? 'catalogue';
+          const cat = (w.workouts as any)?.category ?? '';
+          const diff = (w.workouts as any)?.difficulty ?? '';
+          const equip = (w.workouts as any)?.equipment;
+          const equipStr = Array.isArray(equip) ? equip.join(', ') : '';
+          const bodyAreas = (w.workouts as any)?.body_areas;
+          const bodyStr = Array.isArray(bodyAreas) ? bodyAreas.join(', ') : '';
+          userContext += `• ${w.scheduled_date}: "${title}"${cat ? ` (${cat}` : ''}${diff ? `, ${diff}` : ''}${cat || diff ? ')' : ''}`;
+          if (bodyStr) userContext += ` — targets: ${bodyStr}`;
+          if (equipStr) userContext += ` — equipment: ${equipStr}`;
+          userContext += '\n';
+          if (source === 'ai_generated' && Array.isArray(w.exercises_snapshot) && w.exercises_snapshot.length > 0) {
+            userContext += `  Exercises:\n`;
+            for (const ex of w.exercises_snapshot) {
+              const repsStr = ex.sets && ex.reps ? `${ex.sets}×${ex.reps}` : ex.duration_seconds ? `${Math.round(ex.duration_seconds / 60)} min` : '';
+              userContext += `  — ${ex.title}${repsStr ? ` (${repsStr})` : ''}${ex.body_area ? ` [${ex.body_area}]` : ''}\n`;
+            }
+          }
+        }
+      }
     }
 
     // Health metrics context
@@ -1401,7 +1430,13 @@ serve(async (req) => {
     }
 
     const allUpcoming = [
-      ...upcomingScheduled.map((w: any) => `${w.scheduled_date}: ${(w.workouts as any)?.title ?? 'workout'}`),
+      ...upcomingScheduled.map((w: any) => {
+        const title = w.workout_title ?? (w.workouts as any)?.title ?? 'workout';
+        const exSummary = w.workout_source === 'ai_generated' && Array.isArray(w.exercises_snapshot) && w.exercises_snapshot.length > 0
+          ? ` [${w.exercises_snapshot.map((ex: any) => ex.title).slice(0, 4).join(', ')}${w.exercises_snapshot.length > 4 ? '…' : ''}]`
+          : '';
+        return `${w.scheduled_date}: ${title}${exSummary}`;
+      }),
       ...upcomingPlanItems.map((w: any) => `${w.scheduled_date}: ${(w.workouts as any)?.title ?? 'workout'} (plan)`),
     ].sort().slice(0, 7);
     if (allUpcoming.length > 0) {
