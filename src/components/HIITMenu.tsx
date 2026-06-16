@@ -223,7 +223,7 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
                             "touch-manipulation"
                           )}
                         >
-                          <Icon size={20} className="text-muted-foreground" strokeWidth={1.5} />
+                          <Icon size={20} className="text-primary" strokeWidth={1.5} />
                           <span className="font-medium text-foreground text-[15px]">{item.label}</span>
                         </button>
                       );

@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
 import hiitLogo from "@/assets/hiit-logo.webp";
+import { HEmoji } from "@/components/HEmoji";
 
 interface BottomNavProps {
   onHIITClick?: () => void;
@@ -111,14 +112,7 @@ export const BottomNav = ({ onHIITClick, onQuickAddClick, quickAddOpen }: Bottom
                       </svg>
                     )
                     : item.id === 'community'
-                    ? (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="transition-all duration-200">
-                        <circle cx="9" cy="6.5" r="3" stroke="currentColor" strokeWidth={isActive ? 2 : 1.6} />
-                        <path d="M2 20c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke="currentColor" strokeWidth={isActive ? 2 : 1.6} strokeLinecap="round" />
-                        <circle cx="18" cy="7" r="2.2" stroke="currentColor" strokeWidth={isActive ? 1.8 : 1.4} />
-                        <path d="M15.2 20c0-2.6 1.2-4.8 3.4-5.6" stroke="currentColor" strokeWidth={isActive ? 1.8 : 1.4} strokeLinecap="round" />
-                      </svg>
-                    )
+                    ? <HEmoji name="social" size={22} />
                     : null}
                   {item.id === "community" && unreadCount > 0 && (
                     <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
