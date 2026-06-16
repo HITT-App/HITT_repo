@@ -63,7 +63,7 @@ const SleepDashboard = () => {
 
       <div className="flex-1 overflow-y-auto">
       {/* Content */}
-      <div className="px-4 pt-4 pb-28 space-y-3">
+      <div className="px-4 pt-4 pb-64 space-y-3">
 
         {/* Score + week dots */}
         <div className="flex items-center gap-4 bg-card border border-border/60 rounded-2xl p-4">
@@ -193,8 +193,8 @@ const SleepDashboard = () => {
       </div>
       </div>
 
-      {/* CTA */}
-      <div className="shrink-0 px-4 py-3 border-t border-border/60 bg-background">
+      {/* CTA — fixed above FAB */}
+      <div className="fixed bottom-48 left-0 right-0 z-30 px-4 py-3 border-t border-border/60 bg-background">
         <button
           onClick={() => navigate("/log-sleep")}
           className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-[15px] touch-manipulation active:opacity-90 transition-opacity"
