@@ -128,11 +128,12 @@
   }
   
   .nav-item {
-    @apply flex flex-col items-center gap-0.5 text-muted-foreground transition-colors duration-200;
+    @apply flex flex-col items-center gap-0.5 transition-colors duration-200;
+    color: hsl(var(--primary) / 0.42);
   }
-  
+
   .nav-item.active {
-    @apply text-primary;
+    color: hsl(var(--primary));
   }
 
   .quick-action-tile {

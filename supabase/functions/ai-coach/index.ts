@@ -63,6 +63,33 @@ If "Active goal: not yet set" — say: "You haven't set a goal yet — want me t
 That is the ONLY case where a goal is absent. It does not mean access failure.
 
 ═══════════════════════════════════════════
+DIETARY PREFERENCES — MANDATORY RULES
+═══════════════════════════════════════════
+The USER PROFILE / MEMORY block always contains a "dietary preferences" line. It is always present.
+
+When the user asks about their dietary preferences, restrictions, or allergens in ANY form:
+1. Find the "dietary preferences:" line in USER PROFILE / MEMORY.
+2. Answer directly. Example: "Your dietary preference is Kosher."
+3. Do not hedge. Do not say you cannot see it. It is always there.
+
+RECIPE FILTERING — CRITICAL:
+When recommending any recipe, you MUST respect the user's dietary requirements:
+• Kosher → only recommend recipes tagged [kosher_friendly]. Never recommend shellfish, pork, or recipes that mix meat/poultry with dairy.
+• Halal → only recommend recipes tagged [halal_friendly].
+• Vegetarian → only recommend recipes tagged [vegetarian] or [vegan].
+• Vegan → only recommend recipes tagged [vegan].
+• Gluten-free → only recommend recipes tagged [gluten_free].
+• Dairy-free → only recommend recipes tagged [dairy_free].
+• For allergens: the recipe catalogue lists allergens using UK names (milk=dairy, soya=soy, nuts includes tree nuts, fish includes shellfish only when listed separately). Never recommend a recipe containing the user's allergen.
+
+ALLERGEN NOTE: The user's allergens are saved using consumer terms (e.g. "Dairy"). Recipe allergens use UK labelling (e.g. "milk"). These are the same thing — treat them as equivalent when cross-checking.
+
+HARD PROHIBITIONS:
+✗ "I can't see your dietary preferences"
+✗ "I don't have access to your diet information"
+✗ Any sentence implying you lack dietary/allergen data
+
+═══════════════════════════════════════════
 RESPONSE LENGTH
 ═══════════════════════════════════════════
 • Keep responses SHORT. Aim for 4-8 lines max for general chat.
@@ -1047,7 +1074,7 @@ serve(async (req) => {
       supabaseAdmin.from('health_metrics').select('value').eq('user_id', userId).eq('metric_type', 'steps').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
-      supabaseAdmin.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g').limit(50),
+      supabaseAdmin.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g, dietary_tags, allergens').limit(50),
       supabaseAdmin.from('body_scans').select('estimated_body_fat, confidence_level, scanned_at, analysis').eq('user_id', userId).order('scanned_at', { ascending: false }).limit(2),
     ]);
 
@@ -1278,8 +1305,11 @@ serve(async (req) => {
 
     if (recipesCatalogue && recipesCatalogue.length > 0) {
       userContext += `\n═══ RECIPES CATALOGUE — only recommend recipes from this exact list ═══\n`;
+      userContext += `Each recipe lists dietary_tags (use these to match user's dietary preferences) and allergens (UK naming: milk=dairy, soya=soy).\n`;
       for (const r of recipesCatalogue) {
-        userContext += `[${r.id}] ${r.name} — ${r.meal_type}, ${r.category}, ${r.calories}cal, ${r.protein_g}g protein\n`;
+        const tags = Array.isArray(r.dietary_tags) && r.dietary_tags.length > 0 ? ` [${r.dietary_tags.join(', ')}]` : '';
+        const allergenStr = Array.isArray(r.allergens) && r.allergens.length > 0 ? ` ⚠️allergens:${r.allergens.join(',')}` : '';
+        userContext += `[${r.id}] ${r.name} — ${r.meal_type}, ${r.category}, ${r.calories}cal, ${r.protein_g}g protein${tags}${allergenStr}\n`;
       }
     }
 
@@ -1352,7 +1382,22 @@ serve(async (req) => {
         scanLines = '• Body scan: no scan on record yet';
       }
 
-      userMD = `\n═══ USER PROFILE / MEMORY ═══\n${goalLine}\n${scanLines}\n`;
+      // Dietary preferences line — always include so the AI never claims it can't see them
+      const meaningfulDietPrefs = (nutritionProfile?.food_preferences ?? []).filter(
+        (p: string) => p && p !== 'no_preference' && p !== 'omnivore'
+      );
+      const userAllergens = nutritionProfile?.allergies ?? [];
+      let dietLine = '';
+      if (meaningfulDietPrefs.length > 0 || userAllergens.length > 0) {
+        const parts: string[] = [];
+        if (meaningfulDietPrefs.length > 0) parts.push(`dietary preferences: ${meaningfulDietPrefs.join(', ')}`);
+        if (userAllergens.length > 0) parts.push(`allergens to avoid: ${userAllergens.join(', ')}`);
+        dietLine = `• ${parts.join(' | ')}`;
+      } else {
+        dietLine = `• dietary preferences: none set`;
+      }
+
+      userMD = `\n═══ USER PROFILE / MEMORY ═══\n${goalLine}\n${dietLine}\n${scanLines}\n`;
     }
 
     // Position-0 fallback: append compact MD to the userContext string
@@ -1441,6 +1486,22 @@ serve(async (req) => {
     ].sort().slice(0, 7);
     if (allUpcoming.length > 0) {
       memoryParts.push(`Upcoming scheduled workouts: ${allUpcoming.join(' | ')}`);
+    }
+
+    // Dietary preferences — always include so the AI never claims it can't see them
+    {
+      const dietPrefs = (nutritionProfile?.food_preferences ?? []).filter(
+        (p: string) => p && p !== 'no_preference' && p !== 'omnivore'
+      );
+      const allergens = nutritionProfile?.allergies ?? [];
+      if (dietPrefs.length > 0 || allergens.length > 0) {
+        const parts: string[] = [];
+        if (dietPrefs.length > 0) parts.push(`diet: ${dietPrefs.join(', ')}`);
+        if (allergens.length > 0) parts.push(`allergens to avoid: ${allergens.join(', ')}`);
+        memoryParts.push(`Dietary requirements on file: ${parts.join('; ')}. When recommending recipes, ONLY suggest ones whose dietary_tags include the relevant tag (e.g. kosher_friendly for Kosher, halal_friendly for Halal, vegetarian for Vegetarian) and which don't contain the user's allergens.`);
+      } else {
+        memoryParts.push(`Dietary requirements: none set — no dietary preferences or allergens on file`);
+      }
     }
 
     // Calorie target — always include an estimate so the AI never refuses to answer
