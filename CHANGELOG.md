@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-06-16] — Build 175: Hydration card, home reorder, sleep overhaul, Import Plan
+
+- **Hydration home card** — moved out of health metrics into its own card with a progress ring and +250/500/750 ml quick-log buttons
+- **Home page reordered** — Next Up → Nutrition → Recommended Meals → Hydration
+- **Chat settings** (AI personalisation, voice, personal context) moved to the Jarvis header cog; removed from HIIT menu
+- **Sleep home card** — now shows real HealthKit/logged data; manual bedtime/wake/quality log form for users without HealthKit; wizard CTA for first-time setup
+- **Sleep dashboard** — sticky header, "Log Sleep" CTA correctly positioned above the nav bar, compact single-screen layout
+- **Import Plan** — weekly repeat scheduling from start to end date, conflict modal (Replace / Add alongside / Cancel), Replace now wipes all sessions from today onwards, start date defaults to current Monday, date pickers no longer overlap on iOS
+
 ## [2026-06-14] — Hydration redesign: ring hero, vessel quick-add, weekly streak, today timeline
 
 - **Progress ring** — large SVG ring shows daily intake vs. 2500 ml goal with a pacing chip (green = on track, orange = behind)
