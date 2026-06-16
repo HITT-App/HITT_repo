@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-16] — Build 183: Fix stats grid showing zero data
+
+- **Stats grid data fix** — weekly stats (calories, workouts, minutes, active days) were always showing zero because the query filtered on `status = "completed"`, but neither GymTimer nor WorkoutPlayer write that field to `workout_progress`; now filters on `completed_at` not null, matching the pattern used by WeeklySummaryCard
+
 ## [2026-06-16] — Fix hold-to-finish on all activities
 
 - **Hold to finish — iOS interruption fix** — tapping "hold to finish" no longer gets stuck if a call, notification, or system gesture interrupts the touch; applies to all gym timer sports (boxing, HIIT, yoga, etc.) and GPS activities (run, walk, cycling)

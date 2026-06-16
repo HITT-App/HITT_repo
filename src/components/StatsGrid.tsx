@@ -61,7 +61,7 @@ export const StatsGrid = () => {
       .from("workout_progress")
       .select("duration_seconds, calories_burned, completed_at")
       .eq("user_id", user.id)
-      .eq("status", "completed")
+      .not("completed_at", "is", null)
       .gte("completed_at", weekStart)
 
     if (!data) return
