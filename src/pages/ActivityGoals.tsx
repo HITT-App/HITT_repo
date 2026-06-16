@@ -45,16 +45,17 @@ const ActivityGoals = () => {
   const activitiesProgress = Math.min((weeklyStats.activities / weeklyActivities) * 100, 100);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-3 p-4 border-b border-border">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="text-lg font-semibold">Activity Goal</h1>
       </header>
 
-      <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 space-y-6 pb-28">
         {/* Weekly Progress Ring */}
         <Card className="p-6 text-center">
           <div className="relative w-32 h-32 mx-auto mb-4">
@@ -187,6 +188,7 @@ const ActivityGoals = () => {
         >
           {saveGoals.isPending ? "Saving..." : "Update Goal"}
         </Button>
+      </div>
       </div>
     </div>
   );

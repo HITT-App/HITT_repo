@@ -199,19 +199,19 @@ const Notifications = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <header className="flex items-center justify-between p-4 border-b border-border/40 sticky top-0 bg-background/80 backdrop-blur-xl z-20">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-bold">Notifications</h1>
+        <h1 className="text-base font-semibold">Notifications</h1>
         <div className="flex gap-1">
           {unreadCount > 0 && (
             <Button variant="ghost" size="icon" onClick={markAllAsRead} className="rounded-full">
@@ -221,7 +221,8 @@ const Notifications = () => {
         </div>
       </header>
 
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 pb-28">
         <Tabs defaultValue={unreadCount > 0 ? "unread" : "all"}>
           <TabsList className="w-full grid grid-cols-2 bg-muted/30">
             <TabsTrigger value="unread" className="relative">
@@ -259,6 +260,7 @@ const Notifications = () => {
             )}
           </TabsContent>
         </Tabs>
+      </div>
       </div>
     </div>
   );

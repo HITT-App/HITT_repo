@@ -86,21 +86,20 @@ const SleepSchedule = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="bg-card p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <span className="font-semibold">New Sleep Schedule</span>
-          </div>
-          <div className="w-10" />
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <span className="text-base font-semibold">New Sleep Schedule</span>
         </div>
+        <div className="w-10" />
       </header>
 
-      <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 pb-8 space-y-6">
         {/* Active Days */}
         <div>
           <h3 className="font-medium mb-3">Active Days</h3>
@@ -327,11 +326,12 @@ const SleepSchedule = () => {
           </Card>
         </div>
       </div>
+      </div>
 
       {/* Save Button */}
-      <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto">
-        <Button 
-          className="w-full" 
+      <div className="shrink-0 p-4 border-t border-border/60 bg-background">
+        <Button
+          className="w-full"
           size="lg"
           onClick={handleSave}
           disabled={isLoading}

@@ -136,12 +136,12 @@ const ActivityDetail = () => {
   const hasRoute = log.route_start_address || log.route_end_address;
 
   return (
-    <div style={{ minHeight: '100dvh', background: C.bg, color: C.fg, paddingBottom: 40 }}>
+    <div style={{ position: 'fixed', inset: 0, background: C.bg, color: C.fg, display: 'flex', flexDirection: 'column' }}>
 
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px 12px',
-        paddingTop: 'calc(var(--safe-area-inset-top, 44px) + 8px)',
+        paddingTop: 12, flexShrink: 0, borderBottom: `1px solid ${C.line}`,
       }}>
         <button
           onClick={() => navigate(-1)}
@@ -157,7 +157,8 @@ const ActivityDetail = () => {
         )}
       </div>
 
-      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 40 }}>
 
         {/* Hero — sport icon + date */}
         <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 20, padding: 20, display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -273,6 +274,7 @@ const ActivityDetail = () => {
             Synced from {log.source_platform.replace(/_/g, ' ')}
           </p>
         )}
+      </div>
       </div>
     </div>
   );

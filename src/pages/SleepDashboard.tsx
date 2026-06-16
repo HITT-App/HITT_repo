@@ -43,13 +43,10 @@ const SleepDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
 
-      {/* Sticky header */}
-      <header
-        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4 pb-3"
-        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}
-      >
+      {/* Header */}
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors touch-manipulation">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
@@ -64,8 +61,9 @@ const SleepDashboard = () => {
         </div>
       </header>
 
-      {/* Content — padded so nothing hides behind fixed CTA */}
-      <div className="px-4 pt-4 space-y-3" style={{ paddingBottom: "120px" }}>
+      <div className="flex-1 overflow-y-auto">
+      {/* Content */}
+      <div className="px-4 pt-4 pb-28 space-y-3">
 
         {/* Score + week dots */}
         <div className="flex items-center gap-4 bg-card border border-border/60 rounded-2xl p-4">
@@ -193,12 +191,10 @@ const SleepDashboard = () => {
           </button>
         </div>
       </div>
+      </div>
 
-      {/* CTA — sits directly above the nav bar pill, no extra space below */}
-      <div
-        className="fixed left-0 right-0 z-40 px-4 pb-3"
-        style={{ bottom: "calc(var(--safe-area-inset-bottom, 0px) + 56px)" }}
-      >
+      {/* CTA */}
+      <div className="shrink-0 px-4 py-3 border-t border-border/60 bg-background">
         <button
           onClick={() => navigate("/log-sleep")}
           className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-[15px] touch-manipulation active:opacity-90 transition-opacity"

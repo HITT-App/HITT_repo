@@ -18,18 +18,18 @@ const CommunityMessages = () => {
   ) || [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="flex items-center gap-3 p-4">
+      <div className="shrink-0 bg-background border-b border-border/60">
+        <div className="flex items-center gap-3 px-4 py-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold">Messages</h1>
+          <h1 className="text-base font-bold">Messages</h1>
         </div>
 
         {/* Search */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -43,7 +43,7 @@ const CommunityMessages = () => {
       </div>
 
       {/* Conversations List */}
-      <div className="divide-y">
+      <div className="flex-1 overflow-y-auto divide-y">
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">
             Loading conversations...

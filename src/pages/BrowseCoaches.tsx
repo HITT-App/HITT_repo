@@ -45,9 +45,9 @@ export default function BrowseCoaches() {
   const hasActiveFilters = Object.keys(filters).length > 0 || searchQuery;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm border-b border-border px-4 py-3">
+      <header className="shrink-0 bg-background border-b border-border/60 px-4 py-3">
         <div className="flex items-center gap-3 mb-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -98,7 +98,8 @@ export default function BrowseCoaches() {
         </div>
       </header>
 
-      <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 space-y-6 pb-28">
         {/* Featured Coaches */}
         {featuredCoaches.length > 0 && !searchQuery && (
           <section>
@@ -146,6 +147,7 @@ export default function BrowseCoaches() {
             </div>
           )}
         </section>
+      </div>
       </div>
 
       {/* Filter Sheet */}

@@ -65,14 +65,14 @@ const CommunitySearch = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 bg-background z-10 p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
+      <header className="shrink-0 bg-background border-b border-border/60 px-4 py-3">
+        <div className="flex items-center justify-between mb-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-lg font-semibold">Search Community</h1>
+          <h1 className="text-base font-semibold">Search Community</h1>
           <Button variant="ghost" size="icon" onClick={() => navigate("/community/create")}>
             <Plus className="w-5 h-5" />
           </Button>
@@ -95,7 +95,8 @@ const CommunitySearch = () => {
       </header>
 
       {/* Tabs */}
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 pb-28">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full grid grid-cols-2 bg-muted/30">
             <TabsTrigger value="tags">Tags</TabsTrigger>
@@ -180,6 +181,7 @@ const CommunitySearch = () => {
             )}
           </TabsContent>
         </Tabs>
+      </div>
       </div>
     </div>
   );

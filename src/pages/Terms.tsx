@@ -6,16 +6,17 @@ export default function Terms() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="font-semibold">Terms of Service</h1>
+        <h1 className="text-base font-semibold">Terms of Service</h1>
       </header>
 
-      <div className="p-4 max-w-2xl mx-auto prose prose-sm dark:prose-invert">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 max-w-2xl mx-auto prose prose-sm dark:prose-invert pb-28">
         <p className="text-muted-foreground text-sm mb-6">
           Last updated: January 22, 2026
         </p>
@@ -91,6 +92,7 @@ export default function Terms() {
             </a>
           </p>
         </section>
+      </div>
       </div>
     </div>
   );

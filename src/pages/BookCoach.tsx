@@ -146,9 +146,9 @@ export default function BookCoach() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => step === 'info' ? navigate(-1) : setStep('info')}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -156,6 +156,7 @@ export default function BookCoach() {
         <div className="w-10" />
       </header>
 
+      <div className="flex-1 overflow-y-auto pb-24">
       {/* Progress Steps */}
       <div className="flex items-center justify-center gap-2 py-4 px-6">
         {['Personal Info', 'Date & Time', 'Payment'].map((label, idx) => {
@@ -398,8 +399,9 @@ export default function BookCoach() {
         )}
       </div>
 
+      </div>
       {/* Fixed Bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t border-border">
+      <div className="shrink-0 p-4 bg-background/80 backdrop-blur-sm border-t border-border">
         <Button
           className="w-full h-12 rounded-2xl"
           disabled={

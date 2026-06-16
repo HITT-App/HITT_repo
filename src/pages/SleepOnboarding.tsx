@@ -238,9 +238,9 @@ const SleepOnboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="p-4 flex items-center">
+      <header className="shrink-0 bg-background p-4 flex items-center">
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -264,12 +264,12 @@ const SleepOnboarding = () => {
       )}
 
       {/* Content */}
-      <div className="flex-1 px-4 pb-8">
+      <div className="flex-1 overflow-y-auto px-4 pb-8">
         {renderStep()}
       </div>
 
       {/* Footer */}
-      <div className="p-4 space-y-3">
+      <div className="shrink-0 p-4 space-y-3">
         {step === 0 ? (
           <>
             <Button className="w-full" onClick={handleNext}>

@@ -370,10 +370,7 @@ export default function ScheduleSetup() {
   return (
     <div className="fixed inset-0 bg-background flex flex-col">
       {/* Header */}
-      <header
-        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-3"
-        style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 12px)' }}
-      >
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
         <button onClick={handleBack} className="text-muted-foreground p-1 -ml-1">
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -564,10 +561,7 @@ export default function ScheduleSetup() {
 
       {/* Footer */}
       {(step === 2 || step === 3) && (
-        <div
-          className="px-5 py-4 border-t border-border/40 bg-background/90 backdrop-blur-sm"
-          style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 16px)' }}
-        >
+        <div className="shrink-0 px-5 py-4 border-t border-border/60 bg-background">
           {step === 3 ? (
             <Button
               className="w-full h-12 rounded-xl font-semibold"

@@ -120,9 +120,9 @@ export default function BrowseMeals() {
   ].filter(Boolean).length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border z-10">
+      <header className="shrink-0 bg-background border-b border-border/60">
         <div className="flex items-center gap-3 px-4 py-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
@@ -164,8 +164,8 @@ export default function BrowseMeals() {
         </div>
       </header>
 
-      <ScrollArea className="h-[calc(100vh-140px)]">
-        <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 space-y-6 pb-28">
           {/* Category Tabs */}
           <div className="flex gap-2 overflow-x-auto pb-2">
             {CATEGORIES.map((cat) => (
@@ -278,7 +278,7 @@ export default function BrowseMeals() {
             )}
           </section>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Filter Sheet */}
       <Sheet open={showFilters} onOpenChange={setShowFilters}>

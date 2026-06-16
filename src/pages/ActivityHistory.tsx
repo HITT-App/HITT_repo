@@ -77,9 +77,9 @@ const ActivityHistory = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-3 p-4 border-b border-border">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -89,7 +89,8 @@ const ActivityHistory = () => {
         </Button>
       </header>
 
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 pb-28">
         {/* Search */}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -290,6 +291,7 @@ const ActivityHistory = () => {
           </div>
         </SheetContent>
       </Sheet>
+      </div>
     </div>
   );
 };

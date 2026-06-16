@@ -86,7 +86,8 @@ const CommunityProfile = () => {
     : '';
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <div className="flex-1 overflow-y-auto pb-24">
       {/* Cover Photo */}
       <div className="relative h-48 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 overflow-hidden">
         {profile?.banner_url ? (
@@ -341,6 +342,7 @@ const CommunityProfile = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 };

@@ -152,10 +152,9 @@ const Search = () => {
     (dateRange !== "all" ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-md min-h-screen relative">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      {/* Header */}
+      <header className="shrink-0 bg-background border-b border-border/60">
           <div className="flex items-center gap-3 p-4">
             <Button
               variant="ghost"
@@ -282,10 +281,11 @@ const Search = () => {
               </SheetContent>
             </Sheet>
           </div>
-        </div>
+      </header>
 
+      <div className="flex-1 overflow-y-auto">
         {/* Content */}
-        <div className="p-4">
+        <div className="p-4 pb-28">
           {!query ? (
             /* Recent Searches */
             <div>
@@ -347,5 +347,6 @@ const Search = () => {
     </div>
   );
 };
+
 
 export default Search;

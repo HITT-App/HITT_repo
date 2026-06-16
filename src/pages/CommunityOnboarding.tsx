@@ -27,13 +27,14 @@ const CommunityOnboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center px-4 py-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold ml-2">Community Guidelines</h1>
+        <h1 className="text-base font-semibold ml-2">Community Guidelines</h1>
       </header>
+      <div className="flex-1 overflow-y-auto flex flex-col">
       {/* Hero Image */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="relative w-64 h-64">
@@ -77,6 +78,7 @@ const CommunityOnboarding = () => {
           <span className="text-muted-foreground">·</span>
           <button className="text-primary hover:underline">Privacy Policy</button>
         </div>
+      </div>
       </div>
     </div>
   );

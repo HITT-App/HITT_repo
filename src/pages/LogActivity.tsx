@@ -53,16 +53,16 @@ const LogActivity = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-3 p-4 border-b border-border">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => step > 0 ? setStep(0) : navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold">Add New Activity</h1>
+        <h1 className="text-base font-semibold">Add New Activity</h1>
       </header>
 
-      <div className="flex-1 p-6">
+      <div className="flex-1 overflow-y-auto p-6 pb-28">
         {/* Step 0: Select Activity Type */}
         {step === 0 && (
           <div>
