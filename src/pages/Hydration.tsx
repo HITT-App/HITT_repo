@@ -131,10 +131,10 @@ const Hydration = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-28 text-foreground overflow-x-hidden">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4 py-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <button
           onClick={() => navigate(-1)}
           className="w-[38px] h-[38px] rounded-[11px] bg-secondary border border-border/60 flex items-center justify-center active:opacity-70 transition-opacity"
@@ -145,7 +145,8 @@ const Hydration = () => {
         <div className="w-[38px]" />
       </header>
 
-      <div className="px-5 space-y-4 pt-5">
+      <div className="flex-1 overflow-y-auto">
+      <div className="px-5 space-y-4 pt-5 pb-28">
 
         {/* ── Ring hero ── */}
         <div className="bg-card border border-border/60 rounded-[18px] p-6 text-center shadow-sm">
@@ -361,6 +362,7 @@ const Hydration = () => {
         </div>
 
       </div>
+      </div>
 
       {/* ── Custom log modal ── */}
       {showCustom && (
@@ -402,6 +404,7 @@ const Hydration = () => {
       )}
 
     </div>
+
   );
 };
 
