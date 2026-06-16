@@ -3,7 +3,7 @@ import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from 'react-router-dom';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, X, Loader2, StopCircle, Target, Send, Flag } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, StopCircle, Target, Send, Flag, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -801,6 +801,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       >
         <h2 className="text-base font-semibold text-foreground">Voice Mode</h2>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => { handleClose(); navigate('/chat-settings'); }} className="text-muted-foreground h-9 w-9">
+            <Settings className="w-4 h-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground h-9 w-9">
             <X className="w-4 h-4" />
           </Button>
