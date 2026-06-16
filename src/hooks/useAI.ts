@@ -218,6 +218,7 @@ export function useAI(): UseAIReturn {
       accessToken: string,
       signal: AbortSignal,
     ): Promise<{ text: string; actions: Action[] }> => {
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`,
         {
@@ -394,7 +395,7 @@ export function useAI(): UseAIReturn {
         setStreamingText('');
         setStatus('idle');
       } catch (err) {
-        if ((err as Error).name === 'AbortError') {
+        if ((err as Error).name === 'AbortError' || abortRef.current?.signal.aborted) {
           setStatus('idle');
           return;
         }
@@ -479,7 +480,7 @@ export function useAI(): UseAIReturn {
         setStreamingText('');
         setStatus('idle');
       } catch (err) {
-        if ((err as Error).name === 'AbortError') {
+        if ((err as Error).name === 'AbortError' || abortRef.current?.signal.aborted) {
           setStatus('idle');
           return;
         }
