@@ -65,7 +65,7 @@ const SleepDashboard = () => {
       </header>
 
       {/* Content — padded so nothing hides behind fixed CTA */}
-      <div className="px-4 pt-4 space-y-3" style={{ paddingBottom: "144px" }}>
+      <div className="px-4 pt-4 space-y-3" style={{ paddingBottom: "120px" }}>
 
         {/* Score + week dots */}
         <div className="flex items-center gap-4 bg-card border border-border/60 rounded-2xl p-4">
@@ -194,10 +194,10 @@ const SleepDashboard = () => {
         </div>
       </div>
 
-      {/* CTA — fixed above bottom nav bar */}
+      {/* CTA — sits directly above the nav bar pill, no extra space below */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-40 px-4 bg-background/90 backdrop-blur-sm border-t border-border/40"
-        style={{ paddingTop: "12px", paddingBottom: "calc(var(--safe-area-inset-bottom, 0px) + 72px)" }}
+        className="fixed left-0 right-0 z-40 px-4 pb-3"
+        style={{ bottom: "calc(var(--safe-area-inset-bottom, 0px) + 56px)" }}
       >
         <button
           onClick={() => navigate("/log-sleep")}
