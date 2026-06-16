@@ -100,20 +100,23 @@ const AchievementDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-3 p-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => navigate(-1)}
           className="rounded-full"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
+        <h1 className="text-base font-semibold text-foreground">Achievement</h1>
+        <div className="w-[38px]" />
       </header>
 
-      <div className="px-4 pb-8">
+      <div className="flex-1 overflow-y-auto">
+      <div className="px-4 pb-28">
         {/* Achievement Badge */}
         <div className="flex flex-col items-center mb-8">
           <div className="relative mb-4">
@@ -269,6 +272,7 @@ const AchievementDetail = () => {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };

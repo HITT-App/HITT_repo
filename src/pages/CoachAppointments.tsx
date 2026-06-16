@@ -203,15 +203,16 @@ const CoachAppointments = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <header className="flex items-center gap-3 p-4 border-b border-border">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold text-foreground">My Appointments</h1>
+        <h1 className="text-base font-semibold text-foreground">My Appointments</h1>
       </header>
 
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 pb-28">
         <Tabs defaultValue="upcoming" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="upcoming">
@@ -267,6 +268,7 @@ const CoachAppointments = () => {
             )}
           </TabsContent>
         </Tabs>
+      </div>
       </div>
 
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>

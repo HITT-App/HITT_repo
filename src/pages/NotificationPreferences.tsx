@@ -135,8 +135,8 @@ export default function NotificationPreferences() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2 sticky top-0 bg-background/95 backdrop-blur z-10 border-b border-border/30">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
         <button
           onClick={() => navigate(-1)}
           className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center"
@@ -145,9 +145,10 @@ export default function NotificationPreferences() {
         </button>
         <h1 className="font-bold text-foreground">Notifications</h1>
         {saving && <span className="ml-auto text-xs text-muted-foreground">Saving…</span>}
-      </div>
+      </header>
 
-      <div className="px-4 pt-4 space-y-4">
+      <div className="flex-1 overflow-y-auto">
+      <div className="px-4 pt-4 pb-8 space-y-4">
         {systemDenied && (
           <div className="rounded-xl bg-destructive/10 border border-destructive/30 p-4">
             <div className="flex items-center gap-2 mb-1">
@@ -198,6 +199,7 @@ export default function NotificationPreferences() {
         <p className="text-xs text-muted-foreground text-center px-4">
           You can change these at any time. Some critical notifications (security, payments) are always sent.
         </p>
+      </div>
       </div>
     </div>
   );

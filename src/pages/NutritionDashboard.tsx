@@ -291,9 +291,9 @@ export default function NutritionDashboard() {
   }, {});
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      {/* Sticky header — date picker + quick actions always visible */}
-      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 px-5 pb-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      {/* Header — date picker always visible */}
+      <header className="shrink-0 bg-background border-b border-border/60 px-5 py-3">
         <div className="flex items-center justify-between">
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
@@ -330,7 +330,8 @@ export default function NutritionDashboard() {
           </div>
         </div>
       </header>
-      <div className="px-5 pt-4 pb-8 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="px-5 pt-4 pb-28 space-y-6">
 
           {/* Week Day Selector */}
           <div className="flex items-center gap-1">
@@ -569,6 +570,7 @@ export default function NutritionDashboard() {
             </div>
           </div>
         </div>
+      </div>
 
       {/* Action sheet — Edit or Delete */}
       <Drawer open={!!actionLog && !editLog && !deleteLog} onOpenChange={(open) => { if (!open) setActionLog(null); }}>

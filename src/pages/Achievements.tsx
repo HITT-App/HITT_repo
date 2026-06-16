@@ -17,24 +17,25 @@ const Achievements = () => {
   const [activeTab, setActiveTab] = useState("achievement");
 
   return (
-    <div className="min-h-screen bg-background pb-6">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-border">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => navigate(-1)}
           className="rounded-full"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold">Achievements</h1>
+        <h1 className="text-base font-semibold">Achievements</h1>
         <Button variant="ghost" size="icon" className="rounded-full">
           <Settings className="w-5 h-5" />
         </Button>
       </header>
 
       {/* Main Tabs */}
+      <div className="flex-1 overflow-y-auto">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="px-4 pt-4">
           <TabsList className="w-full grid grid-cols-3 bg-muted/50 rounded-full p-1">
@@ -71,6 +72,7 @@ const Achievements = () => {
           <StatsTab />
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 };

@@ -120,7 +120,8 @@ const MealDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <div className="flex-1 overflow-y-auto pb-24">
       {/* Hero Image */}
       <div className="relative h-64">
         <img 
@@ -145,7 +146,7 @@ const MealDetail = () => {
         </div>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-16rem)]">
+      <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
           {/* Category Badge */}
           <div className="flex justify-center">
@@ -375,9 +376,10 @@ const MealDetail = () => {
           </section>
         </div>
       </ScrollArea>
+      </div>
 
       {/* Fixed Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border space-y-2">
+      <div className="shrink-0 p-4 bg-background border-t border-border space-y-2">
         <Button
           onClick={handleAddMeal}
           className="w-full h-12 rounded-xl gap-2"

@@ -66,14 +66,17 @@ const HealthRecommendations = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background pb-6">
-      <header className="flex items-center justify-between p-4">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
+        <h1 className="text-base font-semibold text-foreground">Recommendations</h1>
+        <div className="w-[38px]" />
       </header>
 
-      <div className="px-4 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="px-4 space-y-6 pb-28">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Health Metrics Recommendations</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -148,6 +151,7 @@ const HealthRecommendations = () => {
             <RecommendationCard key={rec.id} rec={rec} />
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

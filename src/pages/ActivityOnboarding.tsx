@@ -90,9 +90,9 @@ const ActivityOnboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-3 p-4 border-b border-border">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => step > 0 ? setStep(s => s - 1) : navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -102,7 +102,7 @@ const ActivityOnboarding = () => {
         <span className="text-sm text-muted-foreground">{step + 1}/{totalSteps}</span>
       </header>
 
-      <div className="flex-1 flex flex-col p-6">
+      <div className="flex-1 overflow-y-auto flex flex-col p-6">
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <HIITLogo size="md" />

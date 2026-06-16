@@ -142,7 +142,7 @@ export default function WorkoutDetail() {
 
   if (isLoading || !workout) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
       </div>
     );
@@ -159,10 +159,9 @@ export default function WorkoutDetail() {
   const totalReps = exercises.reduce((sum, e) => sum + (e.reps || 0) * (e.sets || 1), 0);
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Sticky header — always visible regardless of scroll position */}
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur border-b border-border/40 flex items-center justify-between px-4 py-3"
-        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground overflow-x-hidden">
+      {/* Header */}
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -175,8 +174,9 @@ export default function WorkoutDetail() {
             <Bookmark className={cn("w-4 h-4", isSaved && "fill-primary text-primary")} />
           </Button>
         </div>
-      </div>
+      </header>
 
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
       {/* Hero / Video Section */}
       <div className="bg-gradient-to-br from-primary/30 to-secondary">
         {embedUrl ? (
@@ -399,6 +399,7 @@ export default function WorkoutDetail() {
 
           <div className="h-8" />
         </div>
+      </div>
       </div>
 
       {/* Schedule Sheet */}

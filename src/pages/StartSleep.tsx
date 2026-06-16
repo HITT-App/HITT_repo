@@ -41,16 +41,16 @@ const StartSleep = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Close Button */}
-      <header className="p-4 flex justify-end">
+      <header className="shrink-0 bg-background p-4 flex justify-end">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <X className="w-5 h-5" />
         </Button>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 text-center overflow-y-auto">
         {/* Target Icon */}
         <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-8">
           <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
@@ -80,7 +80,7 @@ const StartSleep = () => {
       </div>
 
       {/* Sleep Schedule Preview */}
-      <div className="p-4 bg-card border-t border-border">
+      <div className="shrink-0 p-4 bg-card border-t border-border">
         <div className="flex items-center justify-around mb-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-1">

@@ -53,14 +53,15 @@ const BloodPressure = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-6">
-      <header className="flex items-center justify-between p-4 border-b border-border">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></Button>
-        <h1 className="text-lg font-semibold text-foreground">Blood Pressure</h1>
+        <h1 className="text-base font-semibold text-foreground">Blood Pressure</h1>
         <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}><Settings className="w-5 h-5" /></Button>
       </header>
 
-      <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 space-y-6 pb-28">
         <Card className="p-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Activity className="w-6 h-6 text-purple-500" />
@@ -163,6 +164,7 @@ const BloodPressure = () => {
           <Activity className="w-5 h-5 mr-2" />
           Log Blood Pressure
         </Button>
+      </div>
       </div>
     </div>
   );

@@ -67,24 +67,25 @@ const Challenges = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background pb-6">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-3 p-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => navigate('/')}
           className="rounded-full"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
-          <h1 className="text-xl font-bold text-foreground">Browse Challenges</h1>
-          <p className="text-sm text-muted-foreground">Supporting Text</p>
+          <h1 className="text-base font-bold text-foreground">Browse Challenges</h1>
+          <p className="text-xs text-muted-foreground">Supporting Text</p>
         </div>
       </header>
 
-      <div className="px-4 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="px-4 space-y-6 pb-28">
         {/* Featured Challenge */}
         <section>
           <h2 className="font-semibold text-foreground mb-3">Featured Challenge</h2>
@@ -153,6 +154,7 @@ const Challenges = () => {
           <Plus className="w-4 h-4 mr-2" />
           Load More
         </Button>
+      </div>
       </div>
     </div>
   );

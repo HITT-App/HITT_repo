@@ -121,19 +121,19 @@ export default function MyConversations() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-3 px-4 py-4 border-b border-border">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg font-semibold">My Conversations</h1>
+          <h1 className="text-base font-semibold">My Conversations</h1>
           <p className="text-xs text-muted-foreground">Customize your AI setting here</p>
         </div>
       </header>
 
-      <div className="p-4 space-y-4 flex-1 flex flex-col">
+      <div className="flex-1 overflow-y-auto flex flex-col p-4 gap-4">
         {/* Filters */}
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
@@ -162,7 +162,7 @@ export default function MyConversations() {
         </div>
 
         {/* Conversations List */}
-        <ScrollArea className="flex-1">
+        <div className="flex-1">
           <div className="space-y-4 pb-20">
             {Object.entries(groupedConversations).map(([date, convs]) => (
               <div key={date}>
@@ -217,7 +217,7 @@ export default function MyConversations() {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Add New Conversation Button */}
         <Button

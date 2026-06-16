@@ -88,18 +88,19 @@ const LogSleep = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="bg-card p-4 border-b border-border">
+      <header className="shrink-0 bg-background border-b border-border/60 px-4 py-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <span className="font-semibold">Log Sleep</span>
+          <span className="text-base font-semibold">Log Sleep</span>
         </div>
       </header>
 
-      <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 space-y-6 pb-28">
         {/* Date Selection */}
         <Card className="p-4">
           <label className="text-sm text-muted-foreground mb-2 block">Sleep Date</label>
@@ -234,6 +235,7 @@ const LogSleep = () => {
         >
           {isLoading ? "Saving..." : "Log Sleep"}
         </Button>
+      </div>
       </div>
     </div>
   );

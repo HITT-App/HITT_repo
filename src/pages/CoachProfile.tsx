@@ -43,7 +43,8 @@ export default function CoachProfile() {
   }));
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <div className="flex-1 overflow-y-auto pb-24">
       {/* Hero Section */}
       <div className="relative h-64">
         <img
@@ -325,8 +326,9 @@ export default function CoachProfile() {
         </TabsContent>
       </Tabs>
 
+      </div>
       {/* Fixed Bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t border-border">
+      <div className="shrink-0 p-4 bg-background/80 backdrop-blur-sm border-t border-border">
         <div className="flex gap-3 max-w-md mx-auto">
           <Button
             variant="outline"

@@ -228,12 +228,9 @@ export default function WorkoutSchedule() {
     : []
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header
-        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4 pb-3"
-        style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 12px)' }}
-      >
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <button
           onClick={() => navigate(-1)}
           className="w-9 h-9 flex items-center justify-center rounded-xl text-foreground"
@@ -259,6 +256,7 @@ export default function WorkoutSchedule() {
         </button>
       </header>
 
+      <div className="flex-1 overflow-y-auto">
       {/* Week strip — always shown */}
       <div className="px-5 pb-4 pt-4">
         <div className="flex items-center justify-between mb-3">
@@ -517,6 +515,7 @@ export default function WorkoutSchedule() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Action sheet — Move or Delete */}
       <Sheet open={showActionSheet} onOpenChange={setShowActionSheet}>

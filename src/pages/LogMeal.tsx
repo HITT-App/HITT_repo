@@ -291,11 +291,10 @@ export default function LogMeal() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col overflow-hidden">
-      {/* Sticky header */}
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground overflow-hidden">
+      {/* Header */}
       <header
-        className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40"
-        style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 12px)' }}
+        className="shrink-0 bg-background border-b border-border/60"
       >
         <div className="flex items-center justify-between px-4 pb-3">
           <button

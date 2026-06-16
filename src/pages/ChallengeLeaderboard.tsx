@@ -100,19 +100,20 @@ const ChallengeLeaderboard = () => {
   const rest = currentData?.slice(3) || [];
 
   return (
-    <div className="min-h-screen bg-background pb-6">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 sticky top-0 bg-background/95 backdrop-blur-sm z-10 border-b border-border/50">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold text-foreground">Leaderboard</h1>
+        <h1 className="text-base font-semibold text-foreground">Leaderboard</h1>
         <Button variant="ghost" size="icon" className="rounded-full" onClick={handleRefresh}>
           <RefreshCw className={`w-4 h-4 transition-transform ${isRefreshing ? "animate-spin" : ""}`} />
         </Button>
       </header>
 
-      <div className="px-4 space-y-4 mt-2">
+      <div className="flex-1 overflow-y-auto">
+      <div className="px-4 space-y-4 mt-2 pb-28">
         {/* Your Place */}
         <Card className="p-4 bg-primary/5 border-primary/20 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -translate-y-8 translate-x-8" />
@@ -228,6 +229,7 @@ const ChallengeLeaderboard = () => {
             </TabsContent>
           ))}
         </Tabs>
+      </div>
       </div>
 
       {/* Jump to my rank FAB */}

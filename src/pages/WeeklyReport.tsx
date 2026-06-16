@@ -57,9 +57,9 @@ const WeeklyReport = () => {
   const formatDate = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
-    <div className="min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-md min-h-screen relative">
-        {/* Header */}
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+      <div className="flex-1 overflow-y-auto">
+        {/* Hero Header */}
         <div className="relative bg-gradient-to-b from-primary/15 via-primary/5 to-background pt-12 pb-8 px-5">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_hsl(var(--primary)/0.1),_transparent_70%)] pointer-events-none" />
           <button onClick={() => navigate(-1)} className="relative mb-4 p-2 -ml-2 rounded-xl hover:bg-primary/10 transition-colors">
@@ -80,7 +80,7 @@ const WeeklyReport = () => {
         </div>
 
         {/* Content */}
-        <div className="px-5 pb-24">
+        <div className="px-5 pb-28">
           {loading ? (
             <div className="space-y-4 pt-2">
               {[...Array(4)].map((_, i) => (

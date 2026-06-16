@@ -227,7 +227,7 @@ const CreatePost = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Hidden file inputs */}
       <input
         type="file"
@@ -252,18 +252,19 @@ const CreatePost = () => {
       />
 
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-border">
+      <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold">{editPostId ? "Edit Post" : "Add New Post"}</h1>
+        <h1 className="text-base font-semibold">{editPostId ? "Edit Post" : "Add New Post"}</h1>
         <Button variant="ghost" size="icon" onClick={() => navigate("/community/profile/settings")}>
           <Settings className="w-5 h-5" />
         </Button>
       </header>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-4 pb-28">
         <div className="flex gap-3 mb-4">
           <Avatar className="w-10 h-10">
             <AvatarImage src="" />
@@ -516,6 +517,7 @@ const CreatePost = () => {
             editPostId ? "Update Post →" : "Submit Post →"
           )}
         </Button>
+      </div>
       </div>
 
       {/* Media Sheet */}

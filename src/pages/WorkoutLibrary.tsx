@@ -145,14 +145,14 @@ export default function WorkoutLibrary() {
   const activeFilterCount = selectedBodyAreas.length + selectedEquipment.length + (selectedDifficulty ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-background pb-24 flex justify-center overflow-x-hidden">
-      <div className="w-full max-w-md overflow-x-hidden">
-        {/* Sticky header with logo */}
-        <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4 py-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+    <div className="fixed inset-0 flex flex-col bg-background text-foreground overflow-x-hidden">
+        {/* Header with logo */}
+        <header className="shrink-0 bg-background border-b border-border/60 flex items-center justify-between px-4 py-3">
           <HIITLogo size="sm" />
           <p className="text-xs text-muted-foreground">Workouts</p>
         </header>
-        <div className="px-4 py-3 pr-5 space-y-4 overflow-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="px-4 py-3 pr-5 pb-28 space-y-4 overflow-hidden">
 
           {/* Tab switcher */}
           <div className="flex gap-2">
