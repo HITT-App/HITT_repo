@@ -418,6 +418,7 @@ const GymTimer = () => {
               onMouseLeave={handleHoldEnd}
               onTouchStart={handleHoldStart}
               onTouchEnd={handleHoldEnd}
+              onTouchCancel={handleHoldEnd}
             >
               <span className="text-destructive-foreground text-[10px] font-semibold leading-tight text-center">
                 Hold to<br />Finish

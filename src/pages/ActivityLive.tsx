@@ -572,6 +572,7 @@ const ActivityLive = () => {
               onMouseLeave={handleHoldEnd}
               onTouchStart={handleHoldStart}
               onTouchEnd={handleHoldEnd}
+              onTouchCancel={handleHoldEnd}
             >
               <span className="text-destructive-foreground text-[10px] font-semibold leading-tight text-center select-none pointer-events-none">
                 Hold to<br />Finish

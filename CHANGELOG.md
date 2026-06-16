@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-16] — Fix hold-to-finish on all activities
+
+- **Hold to finish — iOS interruption fix** — tapping "hold to finish" no longer gets stuck if a call, notification, or system gesture interrupts the touch; applies to all gym timer sports (boxing, HIIT, yoga, etc.) and GPS activities (run, walk, cycling)
+
 ## [2026-06-16] — Build 182: Charged Orange Quadrant stats cards
 
 - **Stats grid — Charged Orange** — all four weekly stats cards now use a full HIIT-orange gradient with the "Float" treatment: dark halo ring, orange glow shadow, golden top-highlight line, and white text throughout; value text size up to 30 px; labels now near-white (not muted grey)
