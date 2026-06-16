@@ -762,7 +762,7 @@ export default function CommunityChatroom() {
     <div className="flex flex-col h-[100svh] bg-background overflow-hidden overscroll-none">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-3 shrink-0" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => navigate("/community")}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => navigate("/community/feed")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">
