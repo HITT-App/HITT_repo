@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-06-14] — Hydration redesign: ring hero, vessel quick-add, weekly streak, today timeline
+
+- **Progress ring** — large SVG ring shows daily intake vs. 2500 ml goal with a pacing chip (green = on track, orange = behind)
+- **2×2 vessel quick-add grid** — tap Glass (250 ml), Mug (350 ml), Bottle (500 ml), or Flask (700 ml) to log instantly; + Custom opens a bottom sheet for any amount
+- **Weekly streak chart** — 7-column bar chart with goal-hit highlights and consecutive-day streak counter
+- **Today timeline** — chronological list of today's logs with vessel icon, time, and amount
+- **Goal footer** — shows total log count + daily total with an Adjust link
+
 ## [2026-06-15] — Home screen refinement, activity detail page, triathlon share card
 
 - **Stats grid updated** — cards are now dark graphite with warm-neon accents (orange, red, pink, amber) instead of coloured glass
