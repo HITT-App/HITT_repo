@@ -131,7 +131,7 @@ const Hydration = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-28 text-foreground">
+    <div className="min-h-screen bg-background pb-28 text-foreground overflow-x-hidden">
 
       {/* ── Header ── */}
       <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center justify-between px-4 py-3" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
