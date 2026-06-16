@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { App as CapApp } from "@capacitor/app";
+import { getCurrentPosition } from "@/lib/native-gps";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: "#22c55e",
@@ -82,16 +83,20 @@ const RoutesExplorer = () => {
 
   // Get user location
   useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
-      (p) => { setUserPos([p.coords.latitude, p.coords.longitude]); setLocationDenied(false); },
-      (err) => { setUserPos([51.5074, -0.1278]); if (err.code === 1) setLocationDenied(true); }
-    );
+    getCurrentPosition().then((pos) => {
+      if (pos) {
+        setUserPos([pos.lat, pos.lng]);
+        setLocationDenied(false);
+      } else {
+        setLocationDenied(true);
+      }
+    });
   }, []);
 
-  // Init map
+  // Init map — wait for a real position before creating the map
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-    const center = userPos || [51.5074, -0.1278];
+    if (!containerRef.current || mapRef.current || !userPos) return;
+    const center = userPos;
     const map = L.map(containerRef.current, {
       center,
       zoom: 13,

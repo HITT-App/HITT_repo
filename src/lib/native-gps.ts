@@ -112,3 +112,37 @@ export async function startGpsWatch(opts: GpsWatchOptions): Promise<GpsWatchHand
   }
   return watchWeb(opts);
 }
+
+export async function getCurrentPosition(): Promise<GpsPosition | null> {
+  if (isNativePlatform()) {
+    try {
+      const { Geolocation } = await import("@capacitor/geolocation");
+      const perm = await Geolocation.requestPermissions();
+      if (perm.location !== "granted" && perm.coarseLocation !== "granted") return null;
+      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 });
+      return {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        altitude: pos.coords.altitude,
+        timestamp: pos.timestamp,
+      };
+    } catch {
+      return null;
+    }
+  }
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        altitude: pos.coords.altitude,
+        timestamp: Date.now(),
+      }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  });
+}

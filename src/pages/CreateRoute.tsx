@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRoutes, RouteCoordinate } from "@/hooks/useRoutes";
 import { ROUTES } from "@/lib/routes";
+import { getCurrentPosition } from "@/lib/native-gps";
 import { cn } from "@/lib/utils";
 
 const DIFFICULTIES = ["easy", "moderate", "hard"] as const;
@@ -59,10 +60,9 @@ const CreateRoute = () => {
   // Init map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    navigator.geolocation?.getCurrentPosition(
-      (p) => initMap(p.coords.latitude, p.coords.longitude),
-      () => initMap(51.5074, -0.1278)
-    );
+    getCurrentPosition().then((pos) => {
+      if (pos) initMap(pos.lat, pos.lng);
+    });
 
     function initMap(lat: number, lng: number) {
       const map = L.map(containerRef.current!, {

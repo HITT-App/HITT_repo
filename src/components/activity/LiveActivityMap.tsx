@@ -27,12 +27,18 @@ const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount }: LiveActivit
   const handleZoomIn = () => mapRef.current?.zoomIn();
   const handleZoomOut = () => mapRef.current?.zoomOut();
 
-  // Initialize map
+  // Initialize map — defer until first real position to avoid showing London
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const firstPos = positions.length > 0 ? positions[0] : null;
+    if (!firstPos && gpsStatus !== "active") return;
+
+    const initialCenter: [number, number] = firstPos
+      ? [firstPos.lat, firstPos.lng]
+      : [51.5074, -0.1278];
 
     const map = L.map(containerRef.current, {
-      center: [51.5074, -0.1278],
+      center: initialCenter,
       zoom: 16,
       scrollWheelZoom: false,
       zoomControl: false,
@@ -53,7 +59,7 @@ const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount }: LiveActivit
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [gpsStatus, positions.length > 0]);
   // Update trail & position
   useEffect(() => {
     const map = mapRef.current;
