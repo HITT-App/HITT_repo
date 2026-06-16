@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-16] — Fix stats grid: include GPS activities in weekly totals
+
+- **Stats grid data fix** — GPS activities (runs, walks, cycling) were missing from the weekly stats because they go to `activity_logs` not `workout_progress`; now queries both tables and merges the results
+
 ## [2026-06-16] — Stats grid: multi-colour quadrant (ember · crimson · teal · gold)
 
 - **Stats grid redesigned** — each card now has its own colour: ember (kcal), crimson (workouts), teal (minutes), gold (active days); softer per-card glow, white highlight line, dark semi-transparent icon chips

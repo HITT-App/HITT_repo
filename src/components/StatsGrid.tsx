@@ -57,22 +57,34 @@ export const StatsGrid = () => {
     monday.setHours(0, 0, 0, 0)
     const weekStart = monday.toISOString()
 
-    const { data } = await supabase
-      .from("workout_progress")
-      .select("duration_seconds, calories_burned, completed_at")
-      .eq("user_id", user.id)
-      .not("completed_at", "is", null)
-      .gte("completed_at", weekStart)
+    const [{ data: workouts }, { data: activities }] = await Promise.all([
+      supabase
+        .from("workout_progress")
+        .select("duration_seconds, calories_burned, completed_at")
+        .eq("user_id", user.id)
+        .not("completed_at", "is", null)
+        .gte("completed_at", weekStart),
+      supabase
+        .from("activity_logs")
+        .select("duration_seconds, calories_burned, ended_at")
+        .eq("user_id", user.id)
+        .not("ended_at", "is", null)
+        .gte("ended_at", weekStart),
+    ])
 
-    if (!data) return
+    type Row = { duration_seconds: number | null; calories_burned: number | null; date: string | null }
+    const rows: Row[] = [
+      ...(workouts ?? []).map(r => ({ ...r, date: r.completed_at })),
+      ...(activities ?? []).map(r => ({ ...r, date: r.ended_at })),
+    ]
 
-    const totalSecs = data.reduce((acc, p) => acc + (p.duration_seconds || 0), 0)
-    const totalCals = data.reduce((acc, p) => acc + (p.calories_burned ?? Math.floor((p.duration_seconds || 0) / 60 * 7)), 0)
-    const distinctDays = new Set(data.map(p => p.completed_at?.slice(0, 10))).size
+    const totalSecs = rows.reduce((acc, r) => acc + (r.duration_seconds || 0), 0)
+    const totalCals = rows.reduce((acc, r) => acc + (r.calories_burned ?? Math.floor((r.duration_seconds || 0) / 60 * 7)), 0)
+    const distinctDays = new Set(rows.map(r => r.date?.slice(0, 10))).size
 
     setValues({
       calories: Math.floor(totalCals),
-      workouts: data.length,
+      workouts: rows.length,
       minutes: Math.floor(totalSecs / 60),
       activeDays: distinctDays,
     })
