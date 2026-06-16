@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart, Activity, Droplets, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles, Loader2, ScanLine } from "lucide-react";
+import { ArrowLeft, Heart, Activity, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles, Loader2, ScanLine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -47,21 +47,6 @@ const HealthMetrics = () => {
     enabled: !!user?.id,
   });
 
-  const { data: todayHydration } = useQuery({
-    queryKey: ["health-metrics-today", user?.id, "hydration"],
-    queryFn: async () => {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const { data } = await supabase
-        .from("health_metrics")
-        .select("value")
-        .eq("user_id", user!.id)
-        .eq("metric_type", "hydration")
-        .gte("recorded_at", todayStart.toISOString());
-      return (data || []).reduce((sum, row) => sum + Number(row.value), 0);
-    },
-    enabled: !!user?.id,
-  });
 
   // Format sleep from weekly stats
   const sleepValue = weeklyStats.avgMinutes > 0
@@ -114,16 +99,7 @@ const HealthMetrics = () => {
       bgColor: "bg-green-100",
       path: "/weight",
     },
-    {
-      label: "Hydration",
-      value: todayHydration != null && todayHydration > 0 ? todayHydration.toLocaleString() : null,
-      fallback: "0",
-      unit: "ml",
-      icon: Droplets,
-      color: "text-blue-500",
-      bgColor: "bg-blue-100",
-      path: "/hydration",
-    },
+
     {
       label: "Sleep",
       value: sleepValue,

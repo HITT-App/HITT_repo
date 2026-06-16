@@ -12,3 +12,4 @@ export { SmartDailyBriefing } from "./SmartDailyBriefing";
 export { HealthSyncPrompt } from "./HealthSyncPrompt";
 export { BodyScanCard } from "./BodyScanCard";
 export { ScheduleCard } from "./ScheduleCard";
+export { HydrationSection } from "./HydrationSection";

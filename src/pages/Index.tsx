@@ -30,6 +30,7 @@ import {
   ResourcesSection,
   SmartDailyBriefing,
   HealthSyncPrompt,
+  HydrationSection,
 } from "@/components/home";
 import { MealsCarousel } from "@/components/MealsCarousel";
 
@@ -146,6 +147,7 @@ const Index = () => {
           <MealsCarousel />
           {flags.nutrition_enabled && <NutritionSection hasData={true} />}
           {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
+          {flags.health_metrics_enabled && <HydrationSection />}
           {flags.activity_enabled && <ActivitySection />}
           {flags.sleep_enabled && <SleepSection />}
           {flags.ai_coach_enabled && <AICoachSection />}
