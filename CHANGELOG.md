@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-16] — Daily AI insight card on home screen
+
+- **AI Coach card wired up** — generates one personal sentence per day from real activity data; rule-based fallbacks for new users (no schedule, no sleep logs, no meals logged, no activity yet); cached in Supabase so the home screen never waits on an AI call
+- **Stale-while-revalidate** — shows yesterday's insight instantly then refreshes in the background when a new day starts
+- **Jarvis link removed** — the "See in Detail" button and fake "0:25 ago" timestamp are gone; card is now informational only
+
 ## [2026-06-16] — Fix stats grid: include GPS activities in weekly totals
 
 - **Stats grid data fix** — GPS activities (runs, walks, cycling) were missing from the weekly stats because they go to `activity_logs` not `workout_progress`; now queries both tables and merges the results
