@@ -144,10 +144,10 @@ const Index = () => {
           <StatsGrid />
           <BodyScanCard />
           <ScheduleCard />
-          <MealsCarousel />
           {flags.nutrition_enabled && <NutritionSection hasData={true} />}
-          {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
+          <MealsCarousel />
           {flags.health_metrics_enabled && <HydrationSection />}
+          {flags.health_metrics_enabled && <FitnessMetricsCard hasData={true} />}
           {flags.activity_enabled && <ActivitySection />}
           {flags.sleep_enabled && <SleepSection />}
           {flags.ai_coach_enabled && <AICoachSection />}
@@ -169,20 +169,25 @@ const Index = () => {
         renderedKeys.add(s.section_key);
         const el = <div key={s.section_key}>{sectionComponents[s.section_key]}</div>
         if (s.section_key === 'stats_grid')
-          return [el, <BodyScanCard key="body-scan-card" />, <ScheduleCard key="schedule-card" />, <MealsCarousel key="meals-carousel" />];
-        if (s.section_key === 'fitness_metrics' && flags.health_metrics_enabled)
-          return [el, <HydrationSection key="hydration" />];
+          return [el, <BodyScanCard key="body-scan-card" />, <ScheduleCard key="schedule-card" />];
+        if (s.section_key === 'nutrition')
+          return [el, <MealsCarousel key="meals-carousel" />, ...(flags.health_metrics_enabled ? [<HydrationSection key="hydration" />] : [])];
+        if (s.section_key === 'fitness_metrics')
+          return [el];
         return [el]
       });
 
     // Append sections whose DB rows are missing/disabled but feature flags are on
     const extras: ReactNode[] = [];
-    if (flags.nutrition_enabled && !renderedKeys.has('nutrition'))
+    if (flags.nutrition_enabled && !renderedKeys.has('nutrition')) {
       extras.push(<NutritionSection key="nutrition-extra" hasData={true} />);
-    if (flags.health_metrics_enabled && !renderedKeys.has('fitness_metrics')) {
-      extras.push(<FitnessMetricsCard key="fitness-metrics-extra" hasData={true} />);
+      extras.push(<MealsCarousel key="meals-extra" />);
+      if (flags.health_metrics_enabled) extras.push(<HydrationSection key="hydration-extra" />);
+    } else if (flags.health_metrics_enabled && !renderedKeys.has('fitness_metrics')) {
       extras.push(<HydrationSection key="hydration-extra" />);
     }
+    if (flags.health_metrics_enabled && !renderedKeys.has('fitness_metrics'))
+      extras.push(<FitnessMetricsCard key="fitness-metrics-extra" hasData={true} />);
 
     return [...mainSections, ...extras];
   };
