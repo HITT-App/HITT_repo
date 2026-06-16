@@ -19,6 +19,14 @@ dist-ssr
 # Supabase CLI local state
 supabase/.temp/
 
+# Local working artefacts from supabase_scripts (generated images, upload manifests, logs)
+_generated/
+supabase_scripts/_generated/
+supabase_scripts/_upload_manifest.json
+supabase_scripts/_upload.log
+supabase_scripts/_seed.stderr.log
+supabase_scripts/generated_seed.sql
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
