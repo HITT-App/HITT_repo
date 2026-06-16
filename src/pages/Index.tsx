@@ -165,9 +165,11 @@ const Index = () => {
       })
       .flatMap((s) => {
         const el = <div key={s.section_key}>{sectionComponents[s.section_key]}</div>
-        return s.section_key === 'stats_grid'
-          ? [el, <BodyScanCard key="body-scan-card" />, <ScheduleCard key="schedule-card" />, <MealsCarousel key="meals-carousel" />]
-          : [el]
+        if (s.section_key === 'stats_grid')
+          return [el, <BodyScanCard key="body-scan-card" />, <ScheduleCard key="schedule-card" />, <MealsCarousel key="meals-carousel" />];
+        if (s.section_key === 'fitness_metrics' && flags.health_metrics_enabled)
+          return [el, <HydrationSection key="hydration" />];
+        return [el]
       });
   };
 
