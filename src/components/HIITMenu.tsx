@@ -79,6 +79,7 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
       items: [
         { icon: Apple, label: "Nutrition", path: "/nutrition-dashboard" },
         { icon: UtensilsCrossed, label: "Meals", path: "/browse-meals" },
+        { icon: Droplets, label: "Hydration", path: "/hydration" },
       ],
     }] : []),
     {
@@ -95,7 +96,6 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
         { icon: Gauge, label: "Heart Rate", path: "/heart-rate" },
         { icon: Footprints, label: "Steps", path: "/steps" },
         { icon: Scale, label: "Weight", path: "/weight" },
-        { icon: Droplets, label: "Hydration", path: "/hydration" },
         ...(flags.sleep_enabled ? [{ icon: Moon, label: "Sleep", path: "/sleep" }] : []),
         { icon: Smile, label: "Mood", path: "/mood" },
       ],
