@@ -145,7 +145,7 @@ const GUIDELINES = [
 function GuidelinesGate({ onAccept, onBack }: { onAccept: () => void; onBack: () => void }) {
   return (
     <div className="flex flex-col h-[100svh] bg-background">
-      <header className="flex items-center gap-3 px-4 py-3 border-b border-border/60 shrink-0" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
+      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 flex items-center gap-3 px-4 py-3 shrink-0" style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}>
         <button onClick={onBack} className="p-1.5 -ml-1.5 rounded-full text-muted-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
