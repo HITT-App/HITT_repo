@@ -156,7 +156,9 @@ const Index = () => {
       );
     }
 
-    return sections
+    const renderedKeys = new Set<string>();
+
+    const mainSections = sections
       .filter((s) => {
         if (!s.enabled) return false;
         const flagKey = featureFlagMap[s.section_key];
@@ -164,6 +166,7 @@ const Index = () => {
         return true;
       })
       .flatMap((s) => {
+        renderedKeys.add(s.section_key);
         const el = <div key={s.section_key}>{sectionComponents[s.section_key]}</div>
         if (s.section_key === 'stats_grid')
           return [el, <BodyScanCard key="body-scan-card" />, <ScheduleCard key="schedule-card" />, <MealsCarousel key="meals-carousel" />];
@@ -171,6 +174,17 @@ const Index = () => {
           return [el, <HydrationSection key="hydration" />];
         return [el]
       });
+
+    // Append sections whose DB rows are missing/disabled but feature flags are on
+    const extras: ReactNode[] = [];
+    if (flags.nutrition_enabled && !renderedKeys.has('nutrition'))
+      extras.push(<NutritionSection key="nutrition-extra" hasData={true} />);
+    if (flags.health_metrics_enabled && !renderedKeys.has('fitness_metrics')) {
+      extras.push(<FitnessMetricsCard key="fitness-metrics-extra" hasData={true} />);
+      extras.push(<HydrationSection key="hydration-extra" />);
+    }
+
+    return [...mainSections, ...extras];
   };
 
   return (
