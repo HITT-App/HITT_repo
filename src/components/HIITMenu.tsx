@@ -5,7 +5,7 @@ import { ChooseSportSheet } from "@/components/ChooseSportSheet";
 import {
   Home, Activity, Moon, Apple, Calendar, Bot,
   LogOut, User, Trophy, Target, MessageCircle,
-  Bell, Search, Settings, Footprints, Droplets,
+  Bell, Search, Footprints, Droplets,
   Scale, Gauge, Smile, Camera, UtensilsCrossed,
   Clock, X, Shield, Sun, ScanLine, Crosshair,
   Barcode, Upload,
@@ -112,7 +112,6 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
       title: "Account",
       items: [
         { icon: User, label: "Profile", path: "/profile" },
-        { icon: Settings, label: "Settings", path: "/chat-settings" },
       ],
     },
   ];
