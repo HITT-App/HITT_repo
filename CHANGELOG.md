@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-16] — Build 182: Charged Orange Quadrant stats cards
+
+- **Stats grid — Charged Orange** — all four weekly stats cards now use a full HIIT-orange gradient with the "Float" treatment: dark halo ring, orange glow shadow, golden top-highlight line, and white text throughout; value text size up to 30 px; labels now near-white (not muted grey)
+- **Stats grid — card sizing** — gap widened to 20 px, min-height 108 px, matches the design spec exactly
+- **GymTimer dep fix** — `ready` added to the interval effect dependency array so the countdown doesn't tick before the timer is initialised
+
 ## [2026-06-16] — Build 175: Hydration card, home reorder, sleep overhaul, Import Plan
 
 - **Hydration home card** — moved out of health metrics into its own card with a progress ring and +250/500/750 ml quick-log buttons

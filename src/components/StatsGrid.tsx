@@ -32,10 +32,10 @@ const ZapIcon = () => (
 )
 
 const STATS_CONFIG = [
-  { id: "calories", Icon: FlameIcon, label: "Kcal this week", accent: "rgb(251,113,21)" },
-  { id: "workouts", Icon: TargetIcon, label: "Workouts this week", accent: "rgb(244,50,75)" },
-  { id: "minutes", Icon: ClockIcon, label: "Mins this week", accent: "rgb(255,46,136)" },
-  { id: "activeDays", Icon: ZapIcon, label: "Active days", accent: "rgb(255,176,32)" },
+  { id: "calories", Icon: FlameIcon, label: "Kcal this week" },
+  { id: "workouts", Icon: TargetIcon, label: "Workouts this week" },
+  { id: "minutes", Icon: ClockIcon, label: "Mins this week" },
+  { id: "activeDays", Icon: ZapIcon, label: "Active days" },
 ] as const
 
 export const StatsGrid = () => {
@@ -87,48 +87,54 @@ export const StatsGrid = () => {
 
   return (
     <div className="px-5 -mt-14 relative z-10">
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
-        {STATS_CONFIG.map(({ id, Icon, label, accent }) => (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        {STATS_CONFIG.map(({ id, Icon, label }) => (
           <div
             key={id}
             style={{
               position: "relative",
               overflow: "hidden",
-              borderRadius: 18,
-              padding: 15,
-              border: "1px solid hsl(228 12% 26%)",
-              background: "linear-gradient(150deg, hsl(228 16% 17%), hsl(228 18% 11%))",
-              boxShadow: "0 10px 24px -10px hsl(0 0% 0% / .6)",
+              borderRadius: 20,
+              padding: 17,
+              minHeight: 108,
+              border: "1px solid hsl(18 55% 12%)",
+              background: "linear-gradient(145deg, hsl(28 100% 56%), hsl(18 100% 47%))",
+              boxShadow: [
+                "0 0 0 6px hsl(228 18% 10%)",
+                "0 16px 32px -10px hsl(20 100% 45% / .55)",
+                "0 4px 10px -2px hsl(0 0% 0% / .6)",
+                "inset 0 1px 0 hsl(42 100% 84% / .32)",
+              ].join(", "),
+              color: "#fff",
             }}
           >
-            {/* Charged shimmer line */}
+            {/* Top highlight line */}
             <div style={{
               position: "absolute",
               inset: "0 0 auto 0",
               height: 1,
-              background: `linear-gradient(90deg, transparent, ${accent}, transparent)`,
-              opacity: 0.8,
+              background: "linear-gradient(90deg, transparent, hsl(42 100% 84% / .6), transparent)",
             }} />
 
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
               <div>
-                <p style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: "-0.5px", fontVariantNumeric: "tabular-nums", textShadow: "0 1px 4px hsl(0 0% 0% / .25)" }}>
+                <p style={{ fontSize: 30, fontWeight: 800, color: "#fff", letterSpacing: "-0.5px", fontVariantNumeric: "tabular-nums", textShadow: "0 1px 5px hsl(20 90% 18% / .45)" }}>
                   {displayValues[id]}
                 </p>
-                <p style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "hsl(228 8% 62%)", marginTop: 4, lineHeight: 1.3 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "hsl(36 100% 96% / .86)", marginTop: 5, lineHeight: 1.3 }}>
                   {label}
                 </p>
               </div>
               <div style={{
-                width: 34,
-                height: 34,
-                borderRadius: 11,
-                background: `color-mix(in srgb, ${accent} 22%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${accent} 40%, transparent)`,
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                background: "hsl(18 70% 14% / .5)",
+                border: "1px solid hsl(18 60% 8% / .6)",
                 display: "grid",
                 placeItems: "center",
                 flexShrink: 0,
-                color: accent,
+                color: "#fff",
               }}>
                 <Icon />
               </div>

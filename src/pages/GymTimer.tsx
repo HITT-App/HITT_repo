@@ -128,7 +128,7 @@ const GymTimer = () => {
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [isPaused, showCompleted]);
+  }, [ready, isPaused, showCompleted]);
 
   const togglePause = useCallback(() => {
     if (isPaused) {

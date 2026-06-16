@@ -139,9 +139,9 @@ const Index = () => {
         <>
           <HomeHero userName={displayName} />
           <HomeHeader userName={displayName} score={hiitScore ?? undefined} scoreComponents={hiitComponents} avatarUrl={profile?.avatar_url} />
+          <StatsGrid />
           <HealthSyncPrompt />
           <SmartDailyBriefing />
-          <StatsGrid />
           <BodyScanCard />
           <ScheduleCard />
           {flags.nutrition_enabled && <NutritionSection hasData={true} />}
