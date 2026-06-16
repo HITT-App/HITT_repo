@@ -105,6 +105,14 @@ function isMealPlanRequest(text: string): boolean {
   return /\b(meal plan|plan (my )?(meals|day|eating|food)|what should i eat (today|for)|suggest (me |a )?(meals|a meal plan|what to eat)|give me a (meal|food|eating) plan|today'?s? (meals|eating|food) plan|full day (of )?eating|day of (meals|eating|food))\b/i.test(text);
 }
 
+function isWorkoutSetupRequest(text: string): boolean {
+  return /\b(workout plan|training plan|build (me )?a (plan|schedule)|create (me )?a (plan|schedule)|plan my (week|workouts|training)|give me a (workout |training )?schedule|set up (my )?schedule)\b/i.test(text);
+}
+
+// localStorage keys — per user so multi-account devices work correctly
+const skipKey = (type: 'goal' | 'plan' | 'diet', uid: string) =>
+  `jarvis_skip_${type}_${uid}`;
+
 
 function isFoodRecallQuestion(text: string): boolean {
   const t = text.trim();
@@ -209,6 +217,14 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [mealPlan, setMealPlan] = useState<RecommendMealPlanPayload | null>(null);
   const [pendingDietaryPrefsPrompt, setPendingDietaryPrefsPrompt] = useState(false);
 
+  // Refs so handleSend can read setup state without stale closures
+  const currentUserIdRef = useRef<string | null>(null);
+  const hasGoalRef = useRef(false);
+  const hasScheduleRef = useRef(false);
+  const hasDietaryPrefsRef = useRef(false);
+  // Holds a message typed before a setup card was shown — sent automatically after setup completes
+  const pendingMsgAfterSetupRef = useRef<string | null>(null);
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number>();
@@ -224,12 +240,28 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const greetingFiredRef = useRef(false);
 
   const handleSend = useCallback(async (text: string) => {
+    const uid = currentUserIdRef.current;
+
     if (isGoalQuestion(text)) {
       const answer = await queryUserGoal();
       await ai.directAnswer(text, answer);
     } else if (isFoodRecallQuestion(text)) {
       const answer = await queryTodayDiary();
       await ai.directAnswer(text, answer);
+    } else if (isMealPlanRequest(text) && !hasDietaryPrefsRef.current) {
+      // Needs dietary prefs — clear skip flag and re-show card, hold the message
+      if (uid) localStorage.removeItem(skipKey('diet', uid));
+      pendingMsgAfterSetupRef.current = text;
+      setPendingDietaryPrefsPrompt(true);
+    } else if (isWorkoutSetupRequest(text) && (!hasGoalRef.current || !hasScheduleRef.current)) {
+      // Needs goal or plan — clear skip flag and re-show the relevant card
+      if (!hasGoalRef.current) {
+        if (uid) localStorage.removeItem(skipKey('goal', uid));
+        setPendingGoalPrompt(true);
+      } else {
+        if (uid) localStorage.removeItem(skipKey('plan', uid));
+        setPendingNoPlanPrompt(true);
+      }
     } else {
       ai.send(text);
     }
@@ -413,6 +445,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     const { data: session } = await supabase.auth.getSession();
     const userId = session?.session?.user?.id;
     if (!userId) return;
+    localStorage.setItem(skipKey('goal', userId), 'true');
     await (supabase as any).from('profiles').update({
       goal_prompt_preference: 'later',
       goal_prompt_last_at: new Date().toISOString(),
@@ -424,6 +457,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     const { data: session } = await supabase.auth.getSession();
     const userId = session?.session?.user?.id;
     if (!userId) return;
+    localStorage.setItem(skipKey('goal', userId), 'true');
     await (supabase as any).from('profiles').update({ goal_prompt_preference: 'never' }).eq('user_id', userId);
   }, []);
 
@@ -614,11 +648,13 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       let hasSchedule = false;
       let hasWorkoutToday = false;
       let hasDietaryPrefs = false;
+      let uid: string | undefined;
 
       try {
         const { data: session } = await supabase.auth.getSession();
-        const userId = session?.session?.user?.id;
-        if (userId) {
+        uid = session?.session?.user?.id;
+        if (uid) {
+          currentUserIdRef.current = uid;
           const today = new Date().toISOString().split('T')[0];
           const [
             { data: prefs },
@@ -626,10 +662,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
             { count: todayCount },
             { data: dietPrefs },
           ] = await Promise.all([
-            supabase.from('workout_preferences').select('workout_goal').eq('user_id', userId).maybeSingle(),
-            supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('scheduled_date', today),
-            supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('scheduled_date', today),
-            supabase.from('nutrition_profiles').select('food_preferences, allergies').eq('user_id', userId).maybeSingle(),
+            supabase.from('workout_preferences').select('workout_goal').eq('user_id', uid).maybeSingle(),
+            supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', uid).gte('scheduled_date', today),
+            supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('scheduled_date', today),
+            supabase.from('nutrition_profiles').select('food_preferences, allergies').eq('user_id', uid).maybeSingle(),
           ]);
           hasGoal = !!prefs?.workout_goal;
           hasSchedule = (futureCount ?? 0) > 0;
@@ -643,22 +679,27 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         // Default: no goal, no schedule — show goal card
       }
 
+      // Always update refs so handleSend has current state
+      hasGoalRef.current = hasGoal;
+      hasScheduleRef.current = hasSchedule;
+      hasDietaryPrefsRef.current = hasDietaryPrefs;
+
       await new Promise(r => setTimeout(r, 400));
 
-      // No goal → show goal setup card (no AI call)
-      if (!hasGoal) {
+      // No goal → show goal setup card (unless dismissed this session)
+      if (!hasGoal && uid && localStorage.getItem(skipKey('goal', uid)) !== 'true') {
         setPendingGoalPrompt(true);
         return;
       }
 
-      // Goal set but no plan → show plan setup card (no AI call)
-      if (!hasSchedule) {
+      // Goal set but no plan → show plan setup card (unless dismissed)
+      if (!hasSchedule && uid && localStorage.getItem(skipKey('plan', uid)) !== 'true') {
         setPendingNoPlanPrompt(true);
         return;
       }
 
-      // No dietary prefs → show dietary prefs card (no AI call)
-      if (!hasDietaryPrefs) {
+      // No dietary prefs → show dietary prefs card (unless dismissed)
+      if (!hasDietaryPrefs && uid && localStorage.getItem(skipKey('diet', uid)) !== 'true') {
         setPendingDietaryPrefsPrompt(true);
         return;
       }
@@ -826,7 +867,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
               {
                 label: 'Maybe later',
                 variant: 'ghost',
-                onSelect: () => setPendingNoPlanPrompt(false),
+                onSelect: () => {
+                  if (currentUserIdRef.current) localStorage.setItem(skipKey('plan', currentUserIdRef.current), 'true');
+                  setPendingNoPlanPrompt(false);
+                },
               },
             ]}
           />
@@ -837,11 +881,22 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           <JarvisDietaryPrefsCard
             onSaved={async () => {
               setPendingDietaryPrefsPrompt(false);
-              await ai.appendAssistantMessage(
-                "Saved — I've got your dietary requirements. Ask me for a meal plan whenever you're ready.",
-              );
+              hasDietaryPrefsRef.current = true;
+              if (currentUserIdRef.current) localStorage.removeItem(skipKey('diet', currentUserIdRef.current));
+              const pending = pendingMsgAfterSetupRef.current;
+              pendingMsgAfterSetupRef.current = null;
+              if (pending) {
+                ai.send(pending);
+              } else {
+                await ai.appendAssistantMessage(
+                  "Saved — I've got your dietary requirements. Ask me for a meal plan whenever you're ready.",
+                );
+              }
             }}
-            onSkip={() => setPendingDietaryPrefsPrompt(false)}
+            onSkip={() => {
+              if (currentUserIdRef.current) localStorage.setItem(skipKey('diet', currentUserIdRef.current), 'true');
+              setPendingDietaryPrefsPrompt(false);
+            }}
           />
         )}
 
