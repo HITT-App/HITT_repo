@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
-import { X, Square, Smartphone } from 'lucide-react';
+import { X, Square, Smartphone, Moon, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
-import hiitLogo from '@/assets/hiit-watermark.png';
+import hiitLogo from '@/assets/hiit-logo.webp';
 
 import type { Json } from '@/integrations/supabase/types';
 import type { RoutePoint } from './ShareCardCanvas';
@@ -36,8 +36,28 @@ const C = {
   line:        '#262626',
   dim:         '#8c8c8c',
   cream:       '#f1ebdf',
+  dark:        '#171717',
   primary:     '#f97316',
   primaryDeep: '#ea580c',
+};
+
+type Sport = 'run' | 'swim' | 'gym' | 'tri';
+type CardStyle = 'dark' | 'photo';
+
+function detectSport(activityType?: string): Sport {
+  const t = (activityType || '').toLowerCase();
+  if (/triath/.test(t)) return 'tri';
+  if (/run|jog|walk|cycl|bike|hike|route|outdoor|cardio/.test(t)) return 'run';
+  if (/swim|pool|aqua/.test(t)) return 'swim';
+  return 'gym';
+}
+
+// Sport-specific trace data — directly from the design spec
+const TRACES: Record<Sport, number[]> = {
+  run:  [62,62,61,62,60,61,59,60,57,59,56,57,54,55,52,50,48,49,46,44,42,43,41,57,24,46,38,48,42,47,51,54,57,59,60,61,60,61,60,61],
+  swim: [56,48,60,45,58,44,57,46,59,45,56,47,58,44,57,46,59,45,57,47,58,45,57,46,58,46,57,46,58],
+  gym:  [58,57,58,57,58,38,68,58,57,58,57,35,70,58,57,58,57,40,66,58,57,58,57,37,69,58,57,58,57],
+  tri:  [64,63,62,60,61,58,40,56,54,52,53,50,68,48,46,47,44,60,42,52,50,51,48,46,58,50,56,53,58],
 };
 
 const FONT_COND = "'Saira Condensed', 'Inter', sans-serif";
@@ -81,52 +101,76 @@ function GlowDivider({ width }: { width: number }) {
   );
 }
 
-function PulseLine({ width, height }: { width: number; height: number }) {
-  const ys = [60,58,61,57,60,56,59,55,58,57,60,58,62,59,63,74,52,38,49,46,54,51,56,55,58,57,59];
+function SportTrace({ sport, width, height }: { sport: Sport; width: number; height: number }) {
+  const ys = TRACES[sport];
   const W = 1000, H = 200, n = ys.length;
-  const px = (i: number) => 30 + (i / (n - 1)) * (W - 60);
+  const px = (i: number) => 16 + (i / (n - 1)) * (W - 32);
   const py = (v: number) => (v / 100) * H;
   let d = `M ${px(0).toFixed(1)} ${py(ys[0]).toFixed(1)}`;
   for (let i = 1; i < n; i++) d += ` L ${px(i).toFixed(1)} ${py(ys[i]).toFixed(1)}`;
-  const ex = px(n - 1), ey = py(ys[n - 1]);
+  const ni = Math.round((n - 1) * 0.82);
+  const nx = px(ni), ny = py(ys[ni]);
+  const fade = 'linear-gradient(90deg, transparent 0%, #000 17%, #000 83%, transparent 100%)';
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
+    <svg
+      width={width} height={height}
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      style={{ display: 'block', overflow: 'visible', WebkitMaskImage: fade, maskImage: fade }}
+    >
       <defs>
-        <filter id="sc-glow" x="-20%" y="-60%" width="140%" height="220%">
-          <feGaussianBlur stdDeviation="7" result="b" />
+        <filter id="sc-glow" x="-20%" y="-90%" width="140%" height="280%">
+          <feGaussianBlur stdDeviation="6" result="b" />
           <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
         <linearGradient id="sc-stroke" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#f97316" stopOpacity="0.55" />
-          <stop offset="0.5" stopColor="#fb923c" />
-          <stop offset="1" stopColor="#fdba74" />
+          <stop offset="0"    stopColor="#d65a12" />
+          <stop offset="0.2"  stopColor="#ff7d2a" />
+          <stop offset="0.45" stopColor="#ffab4e" />
+          <stop offset="0.62" stopColor="#ffe7ac" />
+          <stop offset="0.8"  stopColor="#ff8f3a" />
+          <stop offset="1"    stopColor="#e0600f" />
         </linearGradient>
       </defs>
-      <path d={d} fill="none" stroke="#ea580c" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" filter="url(#sc-glow)" />
-      <path d={d} fill="none" stroke="url(#sc-stroke)" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={ex} cy={ey} r="16" fill="#fb923c" opacity="0.35" filter="url(#sc-glow)" />
-      <circle cx={ex} cy={ey} r="8" fill="#fff" />
+      <path d={d} fill="none" stroke="#e0600f" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" opacity="0.42" filter="url(#sc-glow)" />
+      <path d={d} fill="none" stroke="url(#sc-stroke)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={nx} cy={ny} r="11" fill="#ffc98a" opacity="0.4" filter="url(#sc-glow)" />
+      <circle cx={nx} cy={ny} r="4.5" fill="#fff7ef" />
     </svg>
   );
 }
 
-function Metric({ stat, numSize, labelSize, align }: {
+function Metric({ stat, numSize, labelSize, align, valueColor, textShadow }: {
   stat: CompletionStat;
   numSize: number;
   labelSize: number;
   align: 'center' | 'left';
+  valueColor: string;
+  textShadow: string;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'left' ? 'flex-start' : 'center' }}>
-      <span style={{ fontFamily: FONT_COND, fontWeight: 600, fontSize: labelSize, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.dim, lineHeight: 1 }}>
+      <span style={{
+        fontFamily: FONT_COND, fontWeight: 600, fontSize: labelSize,
+        letterSpacing: '0.14em', textTransform: 'uppercase', color: C.primary,
+        lineHeight: 1, textShadow,
+      }}>
         {stat.label}
       </span>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: numSize * 0.04, marginTop: labelSize * 0.35 }}>
-        <span style={{ fontFamily: FONT_COND, fontWeight: 700, fontSize: numSize, letterSpacing: '-0.01em', color: C.cream, lineHeight: 0.86 }}>
+        <span style={{
+          fontFamily: FONT_COND, fontWeight: 700, fontSize: numSize,
+          letterSpacing: '-0.01em', color: valueColor, lineHeight: 0.86, textShadow,
+          fontVariantNumeric: 'tabular-nums',
+        }}>
           {stat.value}
         </span>
         {stat.unit && (
-          <span style={{ fontFamily: FONT_COND, fontWeight: 600, fontSize: numSize * 0.32, letterSpacing: '0.02em', textTransform: 'uppercase', color: C.primary, lineHeight: 1 }}>
+          <span style={{
+            fontFamily: FONT_COND, fontWeight: 600, fontSize: numSize * 0.32,
+            letterSpacing: '0.02em', textTransform: 'uppercase', color: C.primary,
+            lineHeight: 1, textShadow,
+          }}>
             {stat.unit}
           </span>
         )}
@@ -135,66 +179,81 @@ function Metric({ stat, numSize, labelSize, align }: {
   );
 }
 
-function Creative({ format, activityTitle, heroMetrics, pbLabel, pointsEarned }: {
+function Creative({ format, cardStyle, photoDataUrl, heroMetrics, sport, pbLabel, pointsEarned }: {
   format: 'square' | 'story';
-  activityTitle: string;
+  cardStyle: CardStyle;
+  photoDataUrl: string | null;
   heroMetrics: CompletionStat[];
+  sport: Sport;
   pbLabel?: string;
   pointsEarned?: number;
 }) {
   const square = format === 'square';
+  const photo  = cardStyle === 'photo';
   const W = 1080, H = square ? 1080 : 1920;
-  const align = square ? 'center' as const : 'left' as const;
-  const items = square ? 'center' : 'flex-start';
+  const align    = square ? 'center' as const : 'left' as const;
+  const items    = square ? 'center' : 'flex-start';
   const contentW = square ? 560 : 820;
-  const numSize = square ? 108 : 168;
+  const numSize  = square ? 108 : 168;
   const labelSize = square ? 27 : 40;
-  const padX = square ? 0 : 96;
-  const hasPB = !!(pbLabel || (pointsEarned && pointsEarned > 0));
+  const padX     = square ? 0 : 96;
+  const hasPB    = !!(pbLabel || (pointsEarned && pointsEarned > 0));
+
+  const valueColor = photo ? C.dark  : C.cream;
+  const textShadow = photo
+    ? '0 2px 26px rgba(255,255,255,0.65), 0 0 2px rgba(255,255,255,0.6)'
+    : 'none';
+
+  const bgStyle: React.CSSProperties = photo
+    ? photoDataUrl
+      ? { backgroundImage: `url("${photoDataUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
+      : { background: 'transparent' }
+    : { background: 'radial-gradient(120% 70% at 50% 0%, #171310 0%, #0a0807 42%, #050505 100%)' };
 
   return (
     <div style={{
       width: W, height: H, position: 'relative', overflow: 'hidden', boxSizing: 'border-box',
-      background: 'radial-gradient(120% 70% at 50% 0%, #171310 0%, #0a0807 42%, #050505 100%)',
       display: 'flex', flexDirection: 'column', alignItems: items, justifyContent: 'center',
       padding: square ? '60px 0' : `0 ${padX}px`, fontFamily: FONT_COND,
+      ...bgStyle,
     }}>
       {/* Brand frame */}
-      <div style={{ position: 'absolute', top: 56, left: 56, right: 56, bottom: 56, border: '1px solid rgba(249,115,22,0.10)', borderRadius: 18, pointerEvents: 'none' }} />
+      <div style={{
+        position: 'absolute', top: 56, left: 56, right: 56, bottom: 56,
+        border: '1px solid rgba(249,115,22,0.10)', borderRadius: 18, pointerEvents: 'none',
+      }} />
 
       <div style={{ width: contentW, display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 46 : 60 }}>
-        {/* Logo + title */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 22 : 28 }}>
-          <img
-            src={hiitLogo}
-            alt="HIIT"
-            style={{ width: square ? 132 : 168, height: square ? 132 : 168, objectFit: 'contain', display: 'block', flexShrink: 0 }}
-          />
-          {!square && (
-            <span style={{ fontFamily: FONT_COND, fontWeight: 600, fontSize: 32, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.primary, whiteSpace: 'nowrap' }}>
-              WORKOUT COMPLETE
-            </span>
-          )}
-          <span style={{ fontFamily: FONT_COND, fontWeight: 700, fontSize: square ? 32 : 62, letterSpacing: square ? '0.16em' : '0.02em', textTransform: 'uppercase', color: C.cream, lineHeight: 1, whiteSpace: 'nowrap' }}>
-            {activityTitle}
-          </span>
-        </div>
+        {/* Logo */}
+        <img
+          src={hiitLogo}
+          alt="HIIT"
+          style={{
+            width: square ? 132 : 168, height: square ? 132 : 168,
+            objectFit: 'contain', display: 'block', flexShrink: 0,
+            filter: photo ? 'none' : 'drop-shadow(0 0 10px rgba(239,106,26,0.45))',
+          }}
+        />
 
         {/* Metrics */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 30 : 36, width: contentW }}>
           {heroMetrics.map((m, i) => (
             <div key={m.label} style={{ display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 30 : 36, width: contentW }}>
-              <Metric stat={m} align={align} numSize={numSize} labelSize={labelSize} />
+              <Metric stat={m} align={align} numSize={numSize} labelSize={labelSize} valueColor={valueColor} textShadow={textShadow} />
               {i < heroMetrics.length - 1 && <GlowDivider width={contentW} />}
             </div>
           ))}
         </div>
 
-        {/* Pulse line + story footer */}
+        {/* Sport-specific trace + story footer */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: items, gap: square ? 0 : 42, width: contentW }}>
-          <PulseLine width={contentW} height={square ? 104 : 150} />
+          <SportTrace sport={sport} width={contentW} height={square ? 104 : 150} />
           {!square && hasPB && (
-            <span style={{ fontFamily: FONT_COND, fontWeight: 600, fontSize: 34, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.primary, whiteSpace: 'nowrap' }}>
+            <span style={{
+              fontFamily: FONT_COND, fontWeight: 600, fontSize: 34,
+              letterSpacing: '0.16em', textTransform: 'uppercase', color: C.primary,
+              whiteSpace: 'nowrap', textShadow,
+            }}>
               {pbLabel || 'Great Work'}{pointsEarned ? <> <span style={{ color: C.dim }}>·</span> +{pointsEarned} PTS</> : null}
             </span>
           )}
@@ -204,16 +263,17 @@ function Creative({ format, activityTitle, heroMetrics, pbLabel, pointsEarned }:
   );
 }
 
-function FormatSeg({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+function ControlSeg({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
     <button onClick={onClick} style={{
-      display: 'flex', alignItems: 'center', gap: 7, height: 38, padding: '0 18px', borderRadius: 999,
+      display: 'flex', alignItems: 'center', gap: 7, height: 38, padding: '0 16px', borderRadius: 999,
       border: 'none', cursor: 'pointer', fontFamily: FONT_UI, fontSize: 13.5, fontWeight: 600,
       background: active ? '#2a2a2a' : 'transparent',
       color: active ? C.cream : C.dim,
       boxShadow: active ? '0 1px 3px rgba(0,0,0,0.4)' : 'none',
       WebkitTapHighlightColor: 'transparent',
       transition: 'background 0.18s, color 0.18s',
+      whiteSpace: 'nowrap',
     }}>
       {icon} {label}
     </button>
@@ -228,35 +288,50 @@ export function CompletionSummary({
   pointsEarned,
   onDone,
 }: CompletionSummaryProps) {
-  const [format, setFormat] = useState<'square' | 'story'>('square');
+  const [format, setFormat]       = useState<'square' | 'story'>('square');
+  const [cardStyle, setCardStyle] = useState<CardStyle>('dark');
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
-  const captureRef = useRef<HTMLDivElement>(null);
-  const dragStartY = useRef<number | null>(null);
+  const captureRef  = useRef<HTMLDivElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const dragStartY  = useRef<number | null>(null);
 
+  const sport      = detectSport(activityType);
   const heroMetrics = getHeroMetrics(activityType, stats);
-  const square = format === 'square';
+  const square     = format === 'square';
+  const photo      = cardStyle === 'photo';
   const BASE_W = 1080, BASE_H = square ? 1080 : 1920;
   const previewW = Math.min(window.innerWidth * 0.85, 380);
-  const scale = previewW / BASE_W;
+  const scale    = previewW / BASE_W;
   const previewH = BASE_H * scale;
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhotoDataUrl(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const handleShare = useCallback(async () => {
     if (isSharing || !captureRef.current) return;
     setIsSharing(true);
     const el = captureRef.current;
     try {
-      // Un-scale for full-res capture
       el.style.transform = 'none';
-      el.style.width = `${BASE_W}px`;
+      el.style.width  = `${BASE_W}px`;
       el.style.height = `${BASE_H}px`;
+
+      // Transparent export when photo-style with no photo picked
+      const bgColor = (photo && !photoDataUrl) ? null : C.bg;
 
       const canvas = await html2canvas(el, {
         width: BASE_W, height: BASE_H, scale: 1,
-        useCORS: true, backgroundColor: C.bg, logging: false,
+        useCORS: true, backgroundColor: bgColor, logging: false,
       });
 
       el.style.transform = '';
-      el.style.width = '';
+      el.style.width  = '';
       el.style.height = '';
 
       canvas.toBlob(async (blob) => {
@@ -280,13 +355,13 @@ export function CompletionSummary({
       }, 'image/png');
     } catch {
       el.style.transform = '';
-      el.style.width = '';
+      el.style.width  = '';
       el.style.height = '';
       toast.error('Failed to prepare image');
     } finally {
       setIsSharing(false);
     }
-  }, [activityTitle, activityType, heroMetrics, isSharing, BASE_W, BASE_H, onDone]);
+  }, [activityTitle, activityType, heroMetrics, isSharing, BASE_W, BASE_H, photo, photoDataUrl, onDone]);
 
   return (
     <div
@@ -301,37 +376,110 @@ export function CompletionSummary({
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(var(--safe-area-inset-top, 0px) + 18px) 20px 6px' }}>
-        <button aria-label="Close" onClick={onDone} style={{ width: 38, height: 38, borderRadius: 999, border: 'none', cursor: 'pointer', background: C.panel, display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+        <button
+          aria-label="Close"
+          onClick={onDone}
+          style={{ width: 38, height: 38, borderRadius: 999, border: 'none', cursor: 'pointer', background: C.panel, display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}
+        >
           <X size={18} color={C.dim} />
         </button>
         <span style={{ fontSize: 15, fontWeight: 650, color: C.cream }}>Share workout</span>
         <div style={{ width: 38 }} />
       </div>
 
-      {/* Format toggle */}
-      <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, paddingBottom: 4 }}>
+      {/* Controls row — style + format toggles */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '8px 16px 4px', flexWrap: 'wrap' }}>
+        {/* Style toggle */}
         <div style={{ display: 'flex', gap: 2, padding: 3, background: C.panel, border: `1px solid ${C.line}`, borderRadius: 999 }}>
-          <FormatSeg active={square} onClick={() => setFormat('square')} label="Square" icon={<Square size={15} color={square ? C.cream : C.dim} strokeWidth={2.1} />} />
-          <FormatSeg active={!square} onClick={() => setFormat('story')} label="Story" icon={<Smartphone size={15} color={!square ? C.cream : C.dim} strokeWidth={2.1} />} />
+          <ControlSeg
+            active={cardStyle === 'dark'}
+            onClick={() => setCardStyle('dark')}
+            label="Dark"
+            icon={<Moon size={15} color={cardStyle === 'dark' ? C.cream : C.dim} strokeWidth={2.1} />}
+          />
+          <ControlSeg
+            active={cardStyle === 'photo'}
+            onClick={() => setCardStyle('photo')}
+            label="Photo"
+            icon={<ImageIcon size={15} color={cardStyle === 'photo' ? C.cream : C.dim} strokeWidth={2.1} />}
+          />
+        </div>
+
+        {/* Format toggle */}
+        <div style={{ display: 'flex', gap: 2, padding: 3, background: C.panel, border: `1px solid ${C.line}`, borderRadius: 999 }}>
+          <ControlSeg
+            active={square}
+            onClick={() => setFormat('square')}
+            label="Square"
+            icon={<Square size={15} color={square ? C.cream : C.dim} strokeWidth={2.1} />}
+          />
+          <ControlSeg
+            active={!square}
+            onClick={() => setFormat('story')}
+            label="Story"
+            icon={<Smartphone size={15} color={!square ? C.cream : C.dim} strokeWidth={2.1} />}
+          />
         </div>
       </div>
 
-      {/* Creative preview */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 0, gap: 12, padding: '8px 0' }}>
+      {/* Photo picker — only in photo mode */}
+      {photo && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 16px 2px' }}>
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7, height: 34, padding: '0 16px', borderRadius: 10,
+              border: `1px solid ${C.line}`, cursor: 'pointer', background: C.panel,
+              fontFamily: FONT_UI, fontSize: 13, fontWeight: 600, color: C.dim,
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            <ImageIcon size={14} color={C.dim} strokeWidth={2} />
+            {photoDataUrl ? 'Change photo' : 'Add your photo'}
+          </button>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handlePhotoChange}
+          />
+        </div>
+      )}
+
+      {/* Preview */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 0, gap: 10, padding: '6px 0' }}>
         <div style={{
           width: previewW, height: previewH, borderRadius: 20, overflow: 'hidden', position: 'relative',
           boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
           transition: 'width 0.35s cubic-bezier(.4,0,.2,1), height 0.35s cubic-bezier(.4,0,.2,1)',
         }}>
+          {/* Checkerboard hint — only in photo-mode with no photo, behind the capture div */}
+          {photo && !photoDataUrl && (
+            <div style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              backgroundImage: 'linear-gradient(45deg, rgba(80,80,80,0.18) 25%, transparent 25%, transparent 75%, rgba(80,80,80,0.18) 75%), linear-gradient(45deg, rgba(80,80,80,0.18) 25%, transparent 25%, transparent 75%, rgba(80,80,80,0.18) 75%)',
+              backgroundSize: '24px 24px', backgroundPosition: '0 0, 12px 12px',
+            }} />
+          )}
           <div
             ref={captureRef}
             style={{ width: BASE_W, height: BASE_H, transform: `scale(${scale})`, transformOrigin: 'top left' }}
           >
-            <Creative format={format} activityTitle={activityTitle} heroMetrics={heroMetrics} pbLabel={pbLabel} pointsEarned={pointsEarned} />
+            <Creative
+              format={format}
+              cardStyle={cardStyle}
+              photoDataUrl={photoDataUrl}
+              heroMetrics={heroMetrics}
+              sport={sport}
+              pbLabel={pbLabel}
+              pointsEarned={pointsEarned}
+            />
           </div>
         </div>
         <span style={{ fontSize: 12, color: '#6f6f6f', letterSpacing: '0.04em' }}>
           {square ? '1080 × 1080 · Feed post' : '1080 × 1920 · Story'}
+          {photo && !photoDataUrl ? ' · transparent PNG' : ''}
         </span>
       </div>
 
@@ -342,7 +490,8 @@ export function CompletionSummary({
           disabled={isSharing}
           className={cn('touch-manipulation')}
           style={{
-            width: '100%', maxWidth: 360, height: 56, borderRadius: 16, border: 'none', cursor: isSharing ? 'default' : 'pointer',
+            width: '100%', maxWidth: 360, height: 56, borderRadius: 16, border: 'none',
+            cursor: isSharing ? 'default' : 'pointer',
             background: isSharing ? '#444' : `linear-gradient(135deg, ${C.primary}, ${C.primaryDeep})`,
             color: '#1a0d04', fontFamily: FONT_UI, fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
