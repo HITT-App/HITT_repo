@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Settings, Upload } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,7 +29,6 @@ export default function ChatSettings() {
   const [shareData, setShareData] = useState(true);
   const [customMemory, setCustomMemory] = useState(() => localStorage.getItem('hiit-ai-custom-memory') ?? '');
   const [insightSuggestions, setInsightSuggestions] = useState(INSIGHT_SUGGESTIONS);
-  const [dataSharing, setDataSharing] = useState(true);
 
   const handleSave = () => {
     localStorage.setItem('hiit-ai-custom-response', customResponse.trim());
@@ -57,10 +56,6 @@ export default function ChatSettings() {
     setCustomMemory('');
     setCustomResponse('');
     toast({ title: 'Memory deleted', description: 'Your AI coach will start fresh.' });
-  };
-
-  const handleExportData = () => {
-    toast({ title: 'Export started', description: 'Your data will be ready for download shortly.' });
   };
 
   const toggleInsight = (id: string) => {
@@ -168,32 +163,6 @@ export default function ChatSettings() {
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-muted-foreground" />
                 <h2 className="font-semibold">Privacy & Data</h2>
-              </div>
-
-              {/* Data Sharing */}
-              <div className="space-y-3">
-                <Label>Data Sharing</Label>
-                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl">
-                  <p className="text-sm text-muted-foreground">
-                    Shake your phone to randomize your account balances.
-                  </p>
-                  <Switch checked={dataSharing} onCheckedChange={setDataSharing} />
-                </div>
-              </div>
-
-              {/* Export Data */}
-              <div className="space-y-2">
-                <Label>Export Data</Label>
-                <Button
-                  variant="outline"
-                  className="w-full justify-between"
-                  onClick={handleExportData}
-                >
-                  <span className="text-sm text-muted-foreground">
-                    Export your data and conversations with HIIT
-                  </span>
-                  <Upload className="w-4 h-4" />
-                </Button>
               </div>
 
               {/* Clear Chat History */}
