@@ -3,7 +3,7 @@ import { X, Square, Smartphone, Moon, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
-import hiitLogo from '@/assets/hiit-logo.webp';
+import hiitLogo from '@/assets/hiit-watermark.png';
 
 import type { Json } from '@/integrations/supabase/types';
 import type { RoutePoint } from './ShareCardCanvas';
@@ -63,6 +63,31 @@ const TRACES: Record<Sport, number[]> = {
 const FONT_COND = "'Saira Condensed', 'Inter', sans-serif";
 const FONT_UI   = "'Inter', -apple-system, sans-serif";
 
+function buildShareText(sport: Sport, activityTitle: string, heroMetrics: CompletionStat[]): string {
+  const find = (...kw: string[]) => heroMetrics.find(s => kw.some(k => s.label.toLowerCase().includes(k)));
+  const fmt = (s: CompletionStat | undefined) => s ? `${s.value}${s.unit ? ' ' + s.unit : ''}` : null;
+
+  const time = fmt(find('duration', 'time'));
+  const dist = fmt(find('distance', 'km', 'mile'));
+  const cals = fmt(find('calorie', 'kcal'));
+
+  if (sport === 'run') {
+    if (dist && time) return `Just completed ${activityTitle} — ${dist} in ${time} 🏃 #HIIT`;
+    if (time) return `Just completed ${activityTitle} in ${time} 🏃 #HIIT`;
+  }
+  if (sport === 'swim') {
+    const laps = fmt(find('lap', 'length'));
+    if (laps && time) return `Hit the pool — ${laps} laps in ${time} 🏊 #HIIT`;
+    if (time) return `Swim session done — ${time} in the water 🏊 #HIIT`;
+  }
+  if (sport === 'tri') {
+    if (time) return `Triathlon complete — ${time} total 🏅 #HIIT`;
+  }
+  if (cals && time) return `${activityTitle} done — ${cals} burned in ${time} 💪 #HIIT`;
+  if (time) return `${activityTitle} complete — ${time} 💪 #HIIT`;
+  return `${activityTitle} complete 💪 #HIIT`;
+}
+
 function getHeroMetrics(activityType: string | undefined, stats: CompletionStat[]): CompletionStat[] {
   const type = (activityType || '').toLowerCase();
   const find = (...kw: string[]) => stats.find(s => kw.some(k => s.label.toLowerCase().includes(k)));
@@ -95,6 +120,7 @@ function GlowDivider({ width }: { width: number }) {
   return (
     <div style={{
       width, height: 3, borderRadius: 2, flexShrink: 0,
+      margin: '6px 0',
       background: 'linear-gradient(90deg, transparent, #f97316 22%, #fb923c 50%, #f97316 78%, transparent)',
       boxShadow: '0 0 14px rgba(249,115,22,0.55)',
     }} />
@@ -160,7 +186,7 @@ function Metric({ stat, numSize, labelSize, align, valueColor, textShadow }: {
       <div style={{ display: 'flex', alignItems: 'baseline', gap: numSize * 0.04, marginTop: labelSize * 0.35 }}>
         <span style={{
           fontFamily: FONT_COND, fontWeight: 700, fontSize: numSize,
-          letterSpacing: '-0.01em', color: valueColor, lineHeight: 0.86, textShadow,
+          letterSpacing: '-0.01em', color: valueColor, lineHeight: 1, textShadow,
           fontVariantNumeric: 'tabular-nums',
         }}>
           {stat.value}
@@ -337,11 +363,12 @@ export function CompletionSummary({
       canvas.toBlob(async (blob) => {
         if (!blob) { toast.error('Could not create image'); setIsSharing(false); return; }
         const file = new File([blob], `hiit-${activityType || 'workout'}.png`, { type: 'image/png' });
+        const shareText = buildShareText(sport, activityTitle, heroMetrics);
         try {
           if (navigator.canShare?.({ files: [file] })) {
-            await navigator.share({ files: [file], title: `${activityTitle} — HIIT` });
+            await navigator.share({ files: [file], title: activityTitle, text: shareText });
           } else if (navigator.share) {
-            await navigator.share({ title: activityTitle, text: heroMetrics.map(m => `${m.value}${m.unit ? ' ' + m.unit : ''} ${m.label}`).join(' · ') });
+            await navigator.share({ title: activityTitle, text: shareText });
           } else {
             const a = document.createElement('a');
             a.href = canvas.toDataURL('image/png');
@@ -361,7 +388,7 @@ export function CompletionSummary({
     } finally {
       setIsSharing(false);
     }
-  }, [activityTitle, activityType, heroMetrics, isSharing, BASE_W, BASE_H, photo, photoDataUrl, onDone]);
+  }, [activityTitle, activityType, sport, heroMetrics, isSharing, BASE_W, BASE_H, photo, photoDataUrl, onDone]);
 
   return (
     <div
