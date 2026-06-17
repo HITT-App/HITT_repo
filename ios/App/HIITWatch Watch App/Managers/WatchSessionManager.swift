@@ -16,6 +16,8 @@ struct WatchExercise: Identifiable, Codable {
     let sets: Int?
     let reps: Int?
     let durationSeconds: Int?
+    let restAfterSetSeconds: Int?
+    let restAfterExerciseSeconds: Int?
 
     var setsRepsLabel: String {
         if let s = sets, let r = reps { return "\(s)×\(r)" }
@@ -38,9 +40,10 @@ struct TriathlonLegDef: Codable {
 enum WatchDayType: String { case open, recovery, rest }
 
 extension Notification.Name {
-    static let watchWorkoutReceived    = Notification.Name("hiit.watchWorkoutReceived")
-    static let watchTriathlonReceived  = Notification.Name("hiit.watchTriathlonReceived")
-    static let watchDayTypeChanged     = Notification.Name("hiit.watchDayTypeChanged")
+    static let watchWorkoutReceived           = Notification.Name("hiit.watchWorkoutReceived")
+    static let watchStructuredWorkoutReceived = Notification.Name("hiit.watchStructuredWorkoutReceived")
+    static let watchTriathlonReceived         = Notification.Name("hiit.watchTriathlonReceived")
+    static let watchDayTypeChanged            = Notification.Name("hiit.watchDayTypeChanged")
 }
 
 // MARK: - WatchSessionManager
@@ -52,8 +55,9 @@ final class WatchSessionManager: NSObject {
     private(set) var triathlonPlan: TriathlonPlan?
     private(set) var todayDayType: WatchDayType = .open
 
-    private static let planKey    = "hiit.triathlonPlan"
-    private static let workoutKey = "hiit.todayWorkout"
+    private static let planKey              = "hiit.triathlonPlan"
+    private static let workoutKey           = "hiit.todayWorkout"
+    private static let structuredWorkoutKey = "hiit.structuredWorkout"
 
     private override init() {
         super.init()
@@ -61,6 +65,11 @@ final class WatchSessionManager: NSObject {
         if let data = UserDefaults.standard.data(forKey: Self.workoutKey),
            let saved = try? JSONDecoder().decode(WatchWorkout.self, from: data) {
             todayWorkout = saved
+        }
+        // Restore pending structured workout
+        if let data = UserDefaults.standard.data(forKey: Self.structuredWorkoutKey),
+           let saved = try? JSONDecoder().decode(WatchWorkout.self, from: data) {
+            WorkoutCoordinator.shared.pendingStructuredWorkout = saved
         }
         // Restore triathlon plan that arrived while the app was closed
         if let data = UserDefaults.standard.data(forKey: Self.planKey),
@@ -111,6 +120,17 @@ final class WatchSessionManager: NSObject {
         if let t = message["dayType"] as? String, let dt = WatchDayType(rawValue: t) {
             todayDayType = dt
             NotificationCenter.default.post(name: .watchDayTypeChanged, object: dt)
+        }
+
+        // Structured workout — full exercise sequence from the phone
+        if let swData = message["structuredWorkout"] as? [String: Any],
+           let data = try? JSONSerialization.data(withJSONObject: swData),
+           let decoded = try? JSONDecoder().decode(WatchWorkout.self, from: data) {
+            if let encoded = try? JSONEncoder().encode(decoded) {
+                UserDefaults.standard.set(encoded, forKey: Self.structuredWorkoutKey)
+            }
+            WorkoutCoordinator.shared.receiveStructuredWorkout(decoded)
+            NotificationCenter.default.post(name: .watchStructuredWorkoutReceived, object: decoded)
         }
 
         // Mirror workout — iPhone started a workout, show Ready screen on Watch
