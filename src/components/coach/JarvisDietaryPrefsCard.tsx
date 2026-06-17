@@ -53,7 +53,8 @@ export function JarvisDietaryPrefsCard({ onSaved, onSkip }: JarvisDietaryPrefsCa
           user_id: user.id,
           food_preferences: [selectedStyle],
           allergies: Array.from(selectedAllergens),
-        },
+          onboarding_completed: true,
+        } as any,
         { onConflict: 'user_id' },
       )
       onSaved()
