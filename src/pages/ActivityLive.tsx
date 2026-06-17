@@ -407,6 +407,7 @@ const ActivityLive = () => {
         <div style={{ padding: '0 16px 32px' }}>
           <button
             onClick={() => {
+              lastMoveTimeRef.current = Date.now();
               setStarted(true);
               gpsFilterRef.current.reset();
               positionsRef.current = [];
