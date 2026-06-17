@@ -11,6 +11,7 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "sendWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sendMessage", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "sendStructuredWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startMirroredWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endMirroredWorkout", returnType: CAPPluginReturnPromise),
     ]
@@ -38,6 +39,14 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("Missing workout object"); return
         }
         WatchBridge.shared.sendWorkout(workout)
+        call.resolve()
+    }
+
+    @objc func sendStructuredWorkout(_ call: CAPPluginCall) {
+        guard let workout = call.getObject("workout") else {
+            call.reject("Missing workout object"); return
+        }
+        WatchBridge.shared.sendStructuredWorkout(workout)
         call.resolve()
     }
 

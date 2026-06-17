@@ -5,6 +5,7 @@ interface WatchPluginInterface {
   sendWorkout(options: { workout: WatchWorkout }): Promise<void>;
   clearWorkout(): Promise<void>;
   sendMessage(options: { message: Record<string, unknown> }): Promise<void>;
+  sendStructuredWorkout(options: { workout: WatchWorkout }): Promise<void>;
   startMirroredWorkout(options: { activityType: string; workoutName?: string }): Promise<{ mirroring: boolean }>;
   endMirroredWorkout(): Promise<void>;
   addListener(event: "workoutEvent", handler: (data: WatchWorkoutEvent) => void): Promise<{ remove: () => void }>;
@@ -33,6 +34,8 @@ export interface WatchExercise {
   sets?: number;
   reps?: number;
   durationSeconds?: number;
+  restAfterSetSeconds?: number;
+  restAfterExerciseSeconds?: number;
 }
 
 export interface WatchWorkoutEvent {
@@ -64,6 +67,11 @@ export const sendWorkoutToWatch = async (workout: WatchWorkout): Promise<void> =
 export const clearWatchWorkout = async (): Promise<void> => {
   if (!Capacitor.isNativePlatform()) return;
   await WatchPluginImpl.clearWorkout();
+};
+
+export const sendStructuredWorkoutToWatch = async (workout: WatchWorkout): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  await WatchPluginImpl.sendStructuredWorkout({ workout });
 };
 
 export const sendTriathlonToWatch = async (plan: TriathlonPlan): Promise<void> => {

@@ -35,6 +35,20 @@ class WatchBridge: NSObject, WCSessionDelegate {
         }
     }
 
+    // Send a structured workout (full exercise sequence) to the Watch.
+    // Uses transferUserInfo so delivery is guaranteed even when Watch isn't reachable.
+    func sendStructuredWorkout(_ workout: [String: Any]) {
+        guard WCSession.default.activationState == .activated else { return }
+        let payload = ["structuredWorkout": workout]
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(payload, replyHandler: nil, errorHandler: { [weak self] _ in
+                self?.transferQueued(payload)
+            })
+        } else {
+            transferQueued(payload)
+        }
+    }
+
     // Clear the workout from the Watch
     func clearWorkout() {
         let payload = ["clearWorkout": true]
