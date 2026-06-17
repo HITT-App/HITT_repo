@@ -118,8 +118,13 @@ async function handleRequest(req: Request): Promise<Response> {
     return json({ error: "startDate must be YYYY-MM-DD" }, 400);
   }
 
-  // Determine total plan days from timeline
-  const totalDays = calcTotalDays(timeline, eventDate, startDate);
+  // Determine total plan days from timeline.
+  // Cap the GENERATED window at 4 weeks (28 days) so the AI response stays
+  // small enough to complete before iOS WKWebView's ~60s fetch timeout.
+  // The full timeline is still passed to the AI as context so the plan
+  // structure reflects the long-term goal, we just only generate the first block.
+  const fullDays = calcTotalDays(timeline, eventDate, startDate);
+  const totalDays = Math.min(fullDays, 28);
   const totalWorkouts = daysPerWeek * Math.ceil(totalDays / 7);
 
   // Day-of-week labels (0=Sun … 6=Sat)
@@ -144,6 +149,7 @@ async function handleRequest(req: Request): Promise<Response> {
     bodyAreas,
     totalDays,
     totalWorkouts,
+    fullTimeline: timeline,
     startDate,
     bodyScanSummary,
     healthMetricsSummary: context.healthMetricsSummary,
@@ -265,6 +271,7 @@ function buildUserPrompt(p: {
   bodyAreas: string[];
   totalDays: number;
   totalWorkouts: number;
+  fullTimeline: string;
   startDate: string;
   bodyScanSummary: string;
   healthMetricsSummary: string;
@@ -282,7 +289,7 @@ function buildUserPrompt(p: {
   if (p.bodyAreas.length) lines.push(`Priority body areas: ${p.bodyAreas.join(", ")}`);
   if (p.bodyScanSummary) lines.push(`Body scan / physique: ${p.bodyScanSummary}`);
   lines.push(`Plan start: ${p.startDate}`);
-  lines.push(`Plan length: ${p.totalDays} days (${p.totalWorkouts} total sessions)`);
+  lines.push(`Overall training goal timeline: ${p.fullTimeline} (generate only the first ${p.totalDays} days / ${p.totalWorkouts} sessions — structure them as the foundation block of this longer plan)`);
   if (p.healthMetricsSummary && p.healthMetricsSummary !== "No health metrics on record.") {
     lines.push(p.healthMetricsSummary);
   }
