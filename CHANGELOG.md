@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-17] — Workout player revamp, sleep onboarding fix, training plan CTA
+
+- **Workout player rebuilt** — reps/set exercises now show the rep count and set progress instead of a timer; get-ready card appears before each exercise; rest screen between exercises with countdown; hold-to-finish button replaces a single tap to reduce accidental completions
+- **Sleep onboarding CTA fixed** — the "Yes, start" button was hidden behind the bottom nav bar on the set-up sleep tracking screen; nav is now correctly hidden on that screen
+- **Training plan CTA on home screen** — the plan button reflects whether an active plan exists; Jarvis now responds to plan status
+
 ## [2026-06-17] — Apple Watch integration fixes + GPS tracking fix
 
 - **Apple Watch workout completion is now reliable** — completion data is queued for guaranteed delivery even when the phone isn't reachable; previously a second watch workout finishing before the phone reconnected would silently overwrite the first
