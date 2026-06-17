@@ -96,14 +96,15 @@ function getHeroMetrics(activityType: string | undefined, stats: CompletionStat[
   const calories  = find('calorie', 'kcal', 'cal');
   const distance  = find('distance', 'km', 'mile');
   const elevation = find('elevation', 'climb', 'ascent', 'gain');
+  const pace      = find('pace', 'min/km');
   const exercises = find('exercise', 'set', 'rep', 'round', 'count');
   const laps      = find('lap', 'length');
 
   if (/triath/.test(type)) {
-    return [duration, distance, calories].filter(Boolean) as CompletionStat[];
+    return [duration, distance, pace || calories].filter(Boolean) as CompletionStat[];
   }
   if (/run|cycl|walk|bike|hike|route/.test(type)) {
-    return [duration, distance, elevation].filter(Boolean) as CompletionStat[];
+    return [duration, distance, pace || elevation].filter(Boolean) as CompletionStat[];
   }
   if (/swim|pool|aqua/.test(type)) {
     return [duration, laps || distance, calories].filter(Boolean) as CompletionStat[];
