@@ -6,7 +6,7 @@ export function QuickStartFAB() {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed bottom-24 right-4 z-40" data-tutorial="fab">
+    <div className="fixed bottom-24 right-4 z-40">
       <Button
         size="lg"
         className="w-14 h-14 rounded-full shadow-elevated p-0 bg-primary hover:bg-primary/90"

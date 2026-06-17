@@ -195,14 +195,28 @@ function HIITMenuMock() {
 export const AppTutorial = ({ onComplete }: { onComplete: () => void }) => {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  // Guard against iOS permission dialog taps advancing the tutorial on first appearance
+  const [clickable, setClickable] = useState(false);
 
   const s = STEPS[step];
   const isLast = step === STEPS.length - 1;
+
+  // One-time delay: ignore taps for the first 1.2s so iOS system dialogs can be dismissed
+  // without accidentally advancing the tutorial
+  useEffect(() => {
+    const t = setTimeout(() => setClickable(true), 1200);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const measure = () => {
       const el = document.querySelector(`[data-tutorial="${s.id}"]`);
       if (!el) { setRect(null); return; }
+      // Scroll element into view if it's off-screen (e.g. BodyScanCard below the fold)
+      const r0 = el.getBoundingClientRect();
+      if (r0.top > window.innerHeight - 80 || r0.bottom < 80) {
+        el.scrollIntoView({ behavior: "instant", block: "center" });
+      }
       const r = el.getBoundingClientRect();
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
     };
@@ -214,7 +228,7 @@ export const AppTutorial = ({ onComplete }: { onComplete: () => void }) => {
     return () => cancelAnimationFrame(raf1);
   }, [step, s.id]);
 
-  const advance = () => { if (isLast) onComplete(); else setStep((p) => p + 1); };
+  const advance = () => { if (!clickable) return; if (isLast) onComplete(); else setStep((p) => p + 1); };
   const back    = () => setStep((p) => Math.max(0, p - 1));
 
   const p = s.pad;
