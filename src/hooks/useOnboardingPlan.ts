@@ -87,7 +87,7 @@ export function useOnboardingPlan() {
       const data = await res.json();
       // data.plan_items: [{ day_index, workout_id, workout_title? }]
       const planItems: { day_index: number; workout_id: string; workout_title?: string }[] =
-        data.plan_items ?? [];
+        data.items ?? [];
 
       const mapped = mapToSelectedDays(planItems, answers.selectedDays);
       setScheduledItems(

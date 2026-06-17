@@ -201,6 +201,7 @@ serve(async (req) => {
       return json({ error: "Could not save generated plan" }, 500);
     }
 
+    const workoutMap = new Map(workouts.map(w => [w.id, w.title]));
     const itemsToInsert = validation.items.map((item) => ({
       plan_id: planRow.id,
       user_id: user.id,
@@ -224,7 +225,10 @@ serve(async (req) => {
       title,
       start_date: startDate,
       end_date: endDate,
-      items: itemsToInsert,
+      items: itemsToInsert.map(item => ({
+        ...item,
+        workout_title: workoutMap.get(item.workout_id) ?? "Workout",
+      })),
     });
   } catch (err) {
     console.error("generate-workout-plan error:", err);

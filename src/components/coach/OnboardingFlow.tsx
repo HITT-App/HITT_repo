@@ -274,10 +274,12 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
           )}
           <Button
             className="flex-1 h-12 rounded-2xl"
-            disabled={!canNext()}
+            disabled={!canNext() || isGenerating}
             onClick={handleNext}
           >
-            {step === TOTAL_STEPS - 1 ? 'Build my plan' : 'Next'}
+            {isGenerating && step === TOTAL_STEPS - 1
+              ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Building…</>
+              : step === TOTAL_STEPS - 1 ? 'Build my plan' : 'Next'}
           </Button>
         </div>
       </div>
