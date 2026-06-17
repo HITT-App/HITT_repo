@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-06-17] — GPS fix, XLSX upload, chat settings, plan CTA, nav hide on wizard
+
+- **GPS live location fixed** — positions were discarded after tapping Start due to a stale closure; map now centres on your real location instead of London
+- **XLSX upload support** — Excel files can now be uploaded directly to the workout plan analyser; no need to export as CSV first
+- **CSV parse fix** — quoted fields with commas are now correctly parsed; prose description columns stripped before sending to AI, preventing malformed JSON errors
+- **Chat settings** — Clear chat history now deletes messages from Supabase; Delete memory clears localStorage and resets the form; placeholder Data Sharing and Export stubs removed
+- **Training plan CTA** — card now queries your schedule to show "Build a plan" or "Modify your training plan" based on whether you have upcoming sessions; works regardless of which flow created the plan
+- **Nav bar hides during plan wizard** — bottom nav is hidden while the onboarding wizard is open
+
 ## [2026-06-17] — Workout player revamp, sleep onboarding fix, training plan CTA
 
 - **Workout player rebuilt** — reps/set exercises now show the rep count and set progress instead of a timer; get-ready card appears before each exercise; rest screen between exercises with countdown; hold-to-finish button replaces a single tap to reduce accidental completions

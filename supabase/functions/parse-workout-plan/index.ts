@@ -4,6 +4,51 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 
+// Minimal CSV parser that handles quoted fields containing commas and newlines.
+function parseCSVLine(line: string): string[] {
+  const fields: string[] = [];
+  let field = "";
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuote && line[i + 1] === '"') { field += '"'; i++; }
+      else inQuote = !inQuote;
+    } else if (ch === "," && !inQuote) {
+      fields.push(field); field = "";
+    } else {
+      field += ch;
+    }
+  }
+  fields.push(field);
+  return fields;
+}
+
+// Drop columns that contain long prose (step-by-step instructions etc.)
+// — they cause malformed JSON and add no scheduling value.
+function simplifyCSV(text: string): string {
+  const lines = text.split("\n").filter(Boolean);
+  if (lines.length < 2) return text;
+
+  const header = parseCSVLine(lines[0]);
+  const sampleRows = lines.slice(1, Math.min(6, lines.length)).map(parseCSVLine);
+
+  const proseHeader = /how|description|instruction|step|detail|note|tip|example/i;
+  const colLengths = header.map((_, ci) =>
+    sampleRows.reduce((sum, row) => sum + (row[ci]?.length ?? 0), 0) / sampleRows.length
+  );
+
+  const keepCols = header.map((h, ci) =>
+    !proseHeader.test(h) && colLengths[ci] <= 100
+  );
+
+  if (keepCols.every(Boolean)) return text;
+
+  return lines
+    .map((line) => parseCSVLine(line).filter((_, ci) => keepCols[ci]).join(","))
+    .join("\n");
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -68,8 +113,9 @@ User profile:
 ${userContext}
 
 Instructions:
-- Extract ALL sessions and exercises exactly as written — do not invent exercises
-- Assign each session a day_of_week (0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat) based on what the plan says, or spread evenly if not specified
+- If the content is a scheduled plan: extract sessions exactly as written
+- If the content is an exercise library (no schedule): group exercises into 3 balanced weekly sessions (Mon/Wed/Fri) across week 1, selecting the most relevant exercises for the user's goal
+- Assign each session a day_of_week (0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat)
 - Assign week_number starting at 1; if the plan is one repeating week, all sessions are week 1
 - For exercises: use sets+reps for strength, duration_seconds for cardio/timed, or both if specified
 - Estimate duration_minutes per session if not stated
@@ -117,14 +163,17 @@ Return ONLY valid JSON in this exact shape:
         image_url: { url: content.startsWith("data:") ? content : `data:image/jpeg;base64,${content}` },
       });
     } else {
-      messageContent.push({ type: "text", text: `\n\nPlan content:\n${content}` });
+      // Strip long description columns from CSVs — they contain quotes/newlines that cause
+      // the AI to produce malformed JSON, and they add no scheduling value
+      const cleaned = simplifyCSV(content);
+      const capped = cleaned.length > 12000 ? cleaned.slice(0, 12000) + "\n[truncated]" : cleaned;
+      messageContent.push({ type: "text", text: `\n\nPlan content:\n${capped}` });
     }
 
     const response = await aiChatCompletion({
       model: "gemini-2.5-flash",
       messages: [{ role: "user", content: messageContent }],
       max_tokens: 8000,
-      response_format: { type: "json_object" },
     });
 
     if (!response.ok) {
@@ -136,11 +185,34 @@ Return ONLY valid JSON in this exact shape:
     const raw = data.choices?.[0]?.message?.content;
     if (!raw) throw new Error("No response from AI");
 
-    const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-    const jsonMatch = stripped.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("AI did not return structured JSON");
+    // Strip thinking tags (Gemini 2.5 Flash prepends <antml_thinking>...</antml_thinking>),
+    // markdown code fences, and any leading/trailing prose
+    const detagged = raw
+      .replace(/<antml_thinking>[\s\S]*?<\/antml_thinking>/gi, "")
+      .replace(/^```(?:json)?\s*/im, "")
+      .replace(/\s*```\s*$/im, "")
+      .trim();
 
-    const result = JSON.parse(jsonMatch[0]);
+    const jsonMatch = detagged.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error("parse-workout-plan: no JSON in response. raw length:", raw.length, "first 300 chars:", raw.slice(0, 300));
+      throw new Error("Couldn't extract a structured plan from your file. Try pasting the text directly or exporting a cleaner CSV.");
+    }
+
+    let result: any;
+    try {
+      result = JSON.parse(jsonMatch[0]);
+    } catch {
+      // Attempt repair: strip control characters (non-printable except tab/newline/CR) then retry
+      const repaired = jsonMatch[0].replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "");
+      try {
+        result = JSON.parse(repaired);
+      } catch (parseErr) {
+        console.error("parse-workout-plan: JSON repair failed:", parseErr, "first 500:", jsonMatch[0].slice(0, 500));
+        throw new Error("The AI returned malformed JSON. Try pasting the key sessions as plain text instead of uploading the file.");
+      }
+    }
+
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

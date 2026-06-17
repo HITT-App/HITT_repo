@@ -199,6 +199,13 @@ export default function UploadWorkoutPlan() {
       const reader = new FileReader()
       reader.onload = () => processContent(reader.result as string, "image")
       reader.readAsDataURL(file)
+    } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+      const { read, utils } = await import("xlsx")
+      const buf = await file.arrayBuffer()
+      const wb = read(buf, { type: "array" })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const csv = utils.sheet_to_csv(ws)
+      processContent(csv, "text")
     } else {
       processContent(await file.text(), "text")
     }
@@ -304,7 +311,7 @@ export default function UploadWorkoutPlan() {
                   </div>
                   <div className="text-left">
                     <p className="text-[14px] font-semibold text-foreground">Upload file</p>
-                    <p className="text-[12px] text-muted-foreground">Text file or CSV exported from Excel/Sheets</p>
+                    <p className="text-[12px] text-muted-foreground">CSV, Excel (.xlsx) or plain text</p>
                   </div>
                 </button>
 
@@ -320,7 +327,7 @@ export default function UploadWorkoutPlan() {
                 </button>
 
                 <p className="text-[11px] text-muted-foreground/60 text-center pt-1">
-                  For XLS files, export as CSV from Excel or Google Sheets first
+                  Excel (.xlsx/.xls) and CSV files are both supported
                 </p>
               </div>
             ) : (
@@ -347,7 +354,7 @@ export default function UploadWorkoutPlan() {
             )}
 
             <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFileChange(e, true)} />
-            <input ref={fileInputRef} type="file" accept=".txt,.csv,text/plain,text/csv" className="hidden" onChange={e => handleFileChange(e, false)} />
+            <input ref={fileInputRef} type="file" accept=".txt,.csv,.xlsx,.xls,text/plain,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="hidden" onChange={e => handleFileChange(e, false)} />
           </>
         )}
 

@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useDailyInsight } from "@/hooks/useDailyInsight";
-import hiitLogo from "@/assets/hiit-logo.jpg";
+import { HIITLogo } from "@/components/HIITLogo";
 
 export function AICoachSection() {
   const { insight, loading } = useDailyInsight();
@@ -10,8 +10,8 @@ export function AICoachSection() {
     <div className="px-5 py-2">
       <Card className="p-4 bg-card border border-border/60 rounded-[18px] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.4)]">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
-            <img src={hiitLogo} alt="HIIT AI Coach" className="w-full h-full object-cover" />
+          <div className="flex-shrink-0">
+            <HIITLogo size="md" showGlow />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
