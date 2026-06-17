@@ -5,6 +5,7 @@ import { QuickAddSheet } from "@/components/QuickAddSheet";
 import { HIITMenu } from "@/components/HIITMenu";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavVisibility } from "@/contexts/NavVisibilityContext";
 
 // Pages where the bottom nav should be hidden (full-screen experiences)
 const HIDDEN_NAV_ROUTES = [
@@ -38,7 +39,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [hiitMenuOpen, setHiitMenuOpen] = useState(false);
 
-  const shouldHideNav = !user || HIDDEN_NAV_ROUTES.some(
+  const { navHidden } = useNavVisibility();
+  const shouldHideNav = !user || navHidden || HIDDEN_NAV_ROUTES.some(
     (route) => location.pathname.startsWith(route)
   );
 

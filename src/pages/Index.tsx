@@ -12,6 +12,7 @@ import { HomeHero } from "@/components/HomeHero";
 import { PostLoginWelcome } from "@/components/PostLoginWelcome";
 import { AppTutorial } from "@/components/AppTutorial";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavVisibility } from "@/contexts/NavVisibilityContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserLevel, XP_REWARDS } from "@/hooks/useUserLevel";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
@@ -47,6 +48,7 @@ const Index = () => {
 
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const { setNavHidden } = useNavVisibility();
 
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
@@ -248,7 +250,7 @@ const Index = () => {
         {planState !== 'loading' && (
           <div className="px-4 pb-6">
             <button
-              onClick={() => setShowOnboarding(true)}
+              onClick={() => { setShowOnboarding(true); setNavHidden(true); }}
               className="w-full rounded-2xl bg-primary/10 border border-primary/30 p-4 text-left flex items-center gap-4 active:bg-primary/20 transition-colors"
             >
               <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 text-xl">
@@ -276,7 +278,7 @@ const Index = () => {
 
       {showOnboarding && (
         <OnboardingFlow
-          onClose={() => setShowOnboarding(false)}
+          onClose={() => { setShowOnboarding(false); setNavHidden(false); }}
           activityLevel={activityLevel}
         />
       )}

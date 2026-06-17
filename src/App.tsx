@@ -14,6 +14,7 @@ import { VoiceController } from "@/components/coach/VoiceController";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppLayout } from "@/components/AppLayout";
+import { NavVisibilityProvider } from "@/contexts/NavVisibilityContext";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { PageLoader } from "@/components/PageLoader";
 import { useCacheVersion } from "@/hooks/useCacheVersion";
@@ -161,6 +162,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
       <TTSProvider>
+      <NavVisibilityProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -297,6 +299,7 @@ const App = () => (
           </AppLayout>
         </BrowserRouter>
       </TooltipProvider>
+      </NavVisibilityProvider>
     </TTSProvider>
     </AuthProvider>
   </QueryClientProvider>
