@@ -203,8 +203,12 @@ export default function UploadWorkoutPlan() {
       const { read, utils } = await import("xlsx")
       const buf = await file.arrayBuffer()
       const wb = read(buf, { type: "array" })
-      const ws = wb.Sheets[wb.SheetNames[0]]
-      const csv = utils.sheet_to_csv(ws)
+      const skipPattern = /read\s*me|intro|instruction|about|overview|disclaimer/i
+      const usable = wb.SheetNames.filter(n => !skipPattern.test(n))
+      const sheets = usable.length > 0 ? usable : wb.SheetNames
+      const csv = sheets
+        .map(n => `# ${n}\n${utils.sheet_to_csv(wb.Sheets[n])}`)
+        .join("\n\n")
       processContent(csv, "text")
     } else {
       processContent(await file.text(), "text")
