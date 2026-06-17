@@ -161,32 +161,46 @@ export default function ScheduleSetup() {
     };
   };
 
+  const isAbortError = (err: unknown) => {
+    if (!(err instanceof Error)) return false;
+    return err.name === 'AbortError' || err.name === 'NetworkError' ||
+      err.message?.toLowerCase().includes('abort') ||
+      err.message?.toLowerCase().includes('signal');
+  };
+
   const callGeneratePlan = async (params: Awaited<ReturnType<typeof buildPlanRequest>>) => {
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ai-workout-plan`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${params.accessToken}` },
-        body: JSON.stringify({
-          goal: params.goal,
-          fitnessLevel: params.fitnessLevel,
-          daysPerWeek: params.days,
-          sessionMinutes: params.mins,
-          preferredDays: params.prefDays,
-          equipment: params.equipment,
-          bodyAreas: params.bodyAreas,
-          timeline: params.timeline,
-          eventDate: params.eventDate,
-          bodyScanSummary: params.bodyScanSummary,
-          startDate: new Date().toISOString().split('T')[0],
-        }),
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 110_000);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ai-workout-plan`,
+        {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${params.accessToken}` },
+          body: JSON.stringify({
+            goal: params.goal,
+            fitnessLevel: params.fitnessLevel,
+            daysPerWeek: params.days,
+            sessionMinutes: params.mins,
+            preferredDays: params.prefDays,
+            equipment: params.equipment,
+            bodyAreas: params.bodyAreas,
+            timeline: params.timeline,
+            eventDate: params.eventDate,
+            bodyScanSummary: params.bodyScanSummary,
+            startDate: new Date().toISOString().split('T')[0],
+          }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error ?? `Plan generator returned ${res.status}`);
       }
-    );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error ?? `Plan generator returned ${res.status}`);
+      return res.json();
+    } finally {
+      clearTimeout(timeout);
     }
-    return res.json();
   };
 
   const handleGenerate = async () => {
@@ -209,7 +223,11 @@ export default function ScheduleSetup() {
       advance();
     } catch (err: any) {
       console.error('[ScheduleSetup] Generate failed:', err);
-      toast.error(err?.message ?? 'Could not build your plan. Please try again.');
+      if (isAbortError(err)) {
+        toast.error('This is taking longer than expected — please try again.');
+      } else {
+        toast.error(err?.message ?? 'Could not build your plan. Please try again.');
+      }
     } finally {
       setSaving(false);
     }
@@ -237,7 +255,11 @@ export default function ScheduleSetup() {
       );
     } catch (err) {
       console.error('[ScheduleSetup] Regenerate day failed:', err);
-      toast.error('Could not regenerate this session. Try again.');
+      if (isAbortError(err)) {
+        toast.error('This is taking longer than expected — please try again.');
+      } else {
+        toast.error('Could not regenerate this session. Try again.');
+      }
     } finally {
       setRegeneratingIndex(null);
     }

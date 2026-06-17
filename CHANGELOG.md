@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-17] — Fix: workout plan generator abort error
+
+- **ScheduleSetup abort error fixed** — plan generation fetch now has an explicit 110s AbortController timeout; abort/network errors are caught and show "This is taking longer than expected — try again" instead of the raw "signal has been aborted" text; same fix applied to the regenerate-day path
+
 ## [2026-06-16] — Daily AI insight card on home screen
 
 - **AI Coach card wired up** — generates one personal sentence per day from real activity data; rule-based fallbacks for new users (no schedule, no sleep logs, no meals logged, no activity yet); cached in Supabase so the home screen never waits on an AI call
