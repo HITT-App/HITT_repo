@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-06-17] — Sleep wizard fix, XLSX multi-sheet fix, slider fix, Build my plan fix
+
+- **Sleep wizard no longer loops** — completing the wizard now returns to the home screen; previously it navigated to a route that sent you back to the start due to a stale cache check
+- **XLSX upload reads correct sheet** — Excel files with multiple tabs (e.g. a "Read Me" intro tab) now skip the intro and use the exercise/plan sheets; fixes "No sessions found" error
+- **Sliders work on iOS** — hours-of-sleep slider and all other sliders (fitness level, weight, image crop zoom) now respond to touch; Radix pointer-event slider replaced with native iOS input
+- **Build my plan now works** — the onboarding wizard's final button was silently failing due to a mismatched response key (`plan_items` vs `items`); workout titles now display correctly in the review screen; button shows a loading spinner while the plan generates
+- **Training plan wizard layout shift fixed** — opening the plan wizard no longer causes a scroll jump
+
 ## [2026-06-17] — GPS fix, XLSX upload, chat settings, plan CTA, nav hide on wizard
 
 - **GPS live location fixed** — positions were discarded after tapping Start due to a stale closure; map now centres on your real location instead of London
