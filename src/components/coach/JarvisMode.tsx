@@ -800,7 +800,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       >
         <h2 className="text-base font-semibold text-foreground">Voice Mode</h2>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => { handleClose(); navigate('/chat-settings'); }} className="text-muted-foreground h-9 w-9">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/chat-settings')} className="text-muted-foreground h-9 w-9">
             <Settings className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground h-9 w-9">
