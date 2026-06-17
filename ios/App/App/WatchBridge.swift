@@ -77,6 +77,16 @@ class WatchBridge: NSObject, WCSessionDelegate {
             NotificationCenter.default.post(name: .watchWorkoutEvent, object: message)
         }
     }
+
+    // Receives fallback payloads sent via updateApplicationContext when the phone
+    // was not reachable at the time the Watch sent the message.
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        guard applicationContext["event"] != nil else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.onWorkoutEvent?(applicationContext)
+            NotificationCenter.default.post(name: .watchWorkoutEvent, object: applicationContext)
+        }
+    }
 }
 
 extension Notification.Name {

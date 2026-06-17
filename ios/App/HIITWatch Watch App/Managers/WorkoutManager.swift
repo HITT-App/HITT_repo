@@ -56,6 +56,7 @@ final class WorkoutManager: NSObject {
         stopTimer()
         let cal = activeCalories
         let hr = currentHeartRate
+        let elapsed = elapsedSeconds
         let w = activeWorkout
         session.end()
         b.endCollection(withEnd: Date()) { [weak self] _, _ in
@@ -67,7 +68,7 @@ final class WorkoutManager: NSObject {
                     self?.activeCalories = 0
                     self?.activeWorkout = nil
                     self?.onStateChange?(false, nil)
-                    if let workout = w { self?.notifyPhoneCompleted(workout, calories: cal, hr: hr) }
+                    if let workout = w { self?.notifyPhoneCompleted(workout, calories: cal, hr: hr, duration: elapsed) }
                 }
             }
         }
@@ -96,14 +97,20 @@ final class WorkoutManager: NSObject {
             replyHandler: nil, errorHandler: nil)
     }
 
-    private func notifyPhoneCompleted(_ workout: WatchWorkout, calories: Int, hr: Int) {
+    private func notifyPhoneCompleted(_ workout: WatchWorkout, calories: Int, hr: Int, duration: Int) {
         let payload: [String: Any] = [
-            "event": "workoutCompleted", "workoutId": workout.id,
-            "calories": calories, "averageHeartRate": hr,
+            "event": "workoutCompleted",
+            "workoutId": workout.id,
+            "workoutName": workout.name,
+            "calories": calories,
+            "averageHeartRate": hr,
+            "durationSeconds": duration,
         ]
         guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
         if WCSession.default.isReachable {
-            WCSession.default.sendMessage(payload, replyHandler: nil, errorHandler: nil)
+            WCSession.default.sendMessage(payload, replyHandler: nil, errorHandler: { _ in
+                try? WCSession.default.updateApplicationContext(payload)
+            })
         } else {
             try? WCSession.default.updateApplicationContext(payload)
         }

@@ -18,6 +18,10 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { PageLoader } from "@/components/PageLoader";
 import { useCacheVersion } from "@/hooks/useCacheVersion";
 import { useNativePush } from "@/hooks/useNativePush";
+import { initWatchEventHandler } from "@/lib/watch-event-handler";
+
+// Activate watch workout event → Supabase write-back (no-op on non-native)
+initWatchEventHandler();
 
 // Critical pages loaded eagerly
 import Index from "./pages/Index";
