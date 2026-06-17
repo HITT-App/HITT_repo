@@ -209,14 +209,30 @@ export const AppTutorial = ({ onComplete }: { onComplete: () => void }) => {
   }, []);
 
   useEffect(() => {
+    // Walk up the DOM to see if el or any ancestor is position:fixed
+    const isInFixedContext = (el: Element): boolean => {
+      let node: Element | null = el;
+      while (node && node !== document.documentElement) {
+        if (window.getComputedStyle(node).position === "fixed") return true;
+        node = node.parentElement;
+      }
+      return false;
+    };
+
     const measure = () => {
       const el = document.querySelector(`[data-tutorial="${s.id}"]`);
       if (!el) { setRect(null); return; }
-      // Scroll element into view if it's off-screen (e.g. BodyScanCard below the fold)
-      const r0 = el.getBoundingClientRect();
-      if (r0.top > window.innerHeight - 80 || r0.bottom < 80) {
-        el.scrollIntoView({ behavior: "instant", block: "center" });
+
+      if (isInFixedContext(el)) {
+        // Fixed elements (nav, FAB, HIIT logo button) are always in viewport;
+        // scroll page back to top so the surrounding UI looks natural
+        window.scrollTo({ top: 0, behavior: "instant" });
+      } else {
+        // Non-fixed: scroll so the element's top edge sits near the top of the viewport
+        const absTop = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: Math.max(0, absTop - 8), behavior: "instant" });
       }
+
       const r = el.getBoundingClientRect();
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
     };
