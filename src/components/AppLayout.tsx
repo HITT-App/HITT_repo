@@ -40,13 +40,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [hiitMenuOpen, setHiitMenuOpen] = useState(false);
 
   const { navHidden } = useNavVisibility();
-  const shouldHideNav = !user || navHidden || HIDDEN_NAV_ROUTES.some(
+  // Full-screen routes need no padding and no nav bar
+  const isFullScreenRoute = !user || HIDDEN_NAV_ROUTES.some(
     (route) => location.pathname.startsWith(route)
   );
+  // Modal overlays (navHidden) keep the padding to avoid layout shift — just hide the bar
+  const shouldHideNav = isFullScreenRoute || navHidden;
 
   return (
     <>
-      {shouldHideNav ? (
+      {isFullScreenRoute ? (
         children
       ) : (
         <div className="pb-24">
