@@ -510,6 +510,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         rows.map(r => ({ user_id: userId, workout_id: r.workout_id, scheduled_date: r.scheduled_date }))
       );
 
+      localStorage.setItem('hiit-plan-onboarding-done', 'true');
       await ai.appendAssistantMessage('✅ Your schedule is set! Taking you there now…');
 
       setTimeout(() => {

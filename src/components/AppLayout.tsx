@@ -27,6 +27,7 @@ const HIDDEN_NAV_ROUTES = [
   "/ai",
   "/goal-setup",
   "/schedule-setup",
+  "/sleep-onboarding",
   "/log-meal",
 ];
 

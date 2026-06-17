@@ -17,6 +17,7 @@ import { useUserLevel, XP_REWARDS } from "@/hooks/useUserLevel";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useHomeLayout } from "@/hooks/useHomeLayout";
 import { useHiitScore } from "@/hooks/useHiitScore";
+import { usePlanStatus } from "@/hooks/usePlanStatus";
 
 import {
   HomeHeader,
@@ -54,6 +55,7 @@ const Index = () => {
   const { sections, loading: layoutLoading } = useHomeLayout();
   const { score: hiitScore, components: hiitComponents } = useHiitScore();
   const { activityLevel } = useHealthProfile();
+  const planState = usePlanStatus();
   
   // While profile is loading, show null rather than the email-derived fallback.
   // HomeHero renders "…" for null; email fragment ("vanessajhutton") never flashes on screen.
@@ -242,23 +244,29 @@ const Index = () => {
           </div>
         )}
 
-        {/* Build my plan CTA — shown to users with no/low activity or no existing plan */}
-        {!localStorage.getItem('hiit-plan-onboarding-done') && (
+        {/* Training plan CTA — always visible; label reflects whether plan exists */}
+        {planState !== 'loading' && (
           <div className="px-4 pb-6">
             <button
               onClick={() => setShowOnboarding(true)}
               className="w-full rounded-2xl bg-primary/10 border border-primary/30 p-4 text-left flex items-center gap-4 active:bg-primary/20 transition-colors"
             >
               <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 text-xl">
-                {activityLevel === 'none' || activityLevel === 'light' ? <HEmoji name="ai" size={20}/> : <HEmoji name="workouts" size={20}/>}
+                <HEmoji name={planState === 'active' ? "workouts" : "ai"} size={20}/>
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-sm">
-                  {activityLevel === 'none' || activityLevel === 'light'
-                    ? "Let me build you a routine"
-                    : "Build a personalised training plan"}
+                  {planState === 'active'
+                    ? "Modify your training plan"
+                    : activityLevel === 'none' || activityLevel === 'light'
+                      ? "Let me build you a routine"
+                      : "Build a personalised training plan"}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">Answer 5 quick questions → AI creates your schedule</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {planState === 'active'
+                    ? "Update your schedule, goals or session length"
+                    : "Answer 5 quick questions → AI creates your schedule"}
+                </p>
               </div>
               <span className="text-primary text-lg">→</span>
             </button>
