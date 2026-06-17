@@ -35,6 +35,8 @@ type Exercise = {
   title: string;
   description: string;
   duration_seconds: number;
+  sets: number | null;
+  reps: number | null;
   body_area: string;
   order_index: number;
   thumbnail_url: string | null;
@@ -203,30 +205,27 @@ export default function WorkoutPlayer() {
 
   const fetchWorkoutData = async () => {
     try {
-      const { data: workoutData } = await supabase
-        .from('workouts')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const [{ data: workoutData }, { data: exercisesData }] = await Promise.all([
+        supabase.from('workouts').select('*').eq('id', id).single(),
+        supabase.from('workout_exercises').select('*').eq('workout_id', id).order('order_index'),
+      ]);
 
       if (workoutData) {
         setWorkout(workoutData);
-        // Tell Watch to navigate to Ready screen
         startWorkoutMirroring('hiit', workoutData.title);
-        // Also push workout plan to Watch via WatchConnectivity for older watchOS
         sendWorkoutToWatch({
           id: workoutData.id,
           name: workoutData.title,
           durationMinutes: workoutData.duration_minutes ?? 30,
-          exercises: [],
+          exercises: (exercisesData ?? []).map(ex => ({
+            id: ex.id,
+            name: ex.title,
+            sets: ex.sets ?? undefined,
+            reps: ex.reps ?? undefined,
+            durationSeconds: ex.duration_seconds ?? undefined,
+          })),
         });
       }
-
-      const { data: exercisesData } = await supabase
-        .from('workout_exercises')
-        .select('*')
-        .eq('workout_id', id)
-        .order('order_index');
 
       if (exercisesData && exercisesData.length > 0) {
         setExercises(exercisesData);
@@ -315,8 +314,8 @@ export default function WorkoutPlayer() {
           title: ex.title,
           description: ex.description ?? null,
           duration_seconds: ex.duration_seconds ?? null,
-          sets: (ex as any).sets ?? null,
-          reps: (ex as any).reps ?? null,
+          sets: ex.sets ?? null,
+          reps: ex.reps ?? null,
           order_index: ex.order_index,
           body_area: ex.body_area ?? null,
           thumbnail_url: ex.thumbnail_url ?? null,
