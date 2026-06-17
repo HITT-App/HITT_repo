@@ -61,11 +61,6 @@ const Index = () => {
                       user?.user_metadata?.display_name ||
                       (profileLoading ? null : "Athlete");
 
-  // TEMP: reset tutorial state so it can be re-tested — remove after testing
-  useEffect(() => {
-    localStorage.removeItem("hiit_tutorial_complete");
-    sessionStorage.removeItem("hiit_welcomed");
-  }, []);
 
   useEffect(() => {
     if (user && !sessionStorage.getItem("hiit_welcomed")) {
