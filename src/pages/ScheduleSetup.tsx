@@ -171,6 +171,8 @@ export default function ScheduleSetup() {
   const callGeneratePlan = async (params: Awaited<ReturnType<typeof buildPlanRequest>>) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 110_000);
+    const t0 = Date.now();
+    console.log('[ScheduleSetup] callGeneratePlan start', { goal: params.goal, days: params.days, mins: params.mins, timeline: params.timeline });
     try {
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ai-workout-plan`,
@@ -193,9 +195,11 @@ export default function ScheduleSetup() {
           }),
         }
       );
+      console.log('[ScheduleSetup] response received', { status: res.status, ok: res.ok, ms: Date.now() - t0 });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error ?? `Plan generator returned ${res.status}`);
+        const errBody = await res.json().catch(() => ({}));
+        console.error('[ScheduleSetup] server error body', errBody);
+        throw new Error(errBody?.error ?? `Plan generator returned ${res.status}`);
       }
       return res.json();
     } finally {
@@ -222,7 +226,7 @@ export default function ScheduleSetup() {
       setPlanPreview(workouts);
       advance();
     } catch (err: any) {
-      console.error('[ScheduleSetup] Generate failed:', err);
+      console.error('[ScheduleSetup] Generate failed — name:', err?.name, 'message:', err?.message, 'raw:', err);
       if (isAbortError(err)) {
         toast.error('This is taking longer than expected — please try again.');
       } else {
