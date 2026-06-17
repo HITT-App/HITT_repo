@@ -65,7 +65,7 @@ const SleepOnboarding = () => {
       });
 
       toast.success("Sleep preferences saved!");
-      navigate("/sleep");
+      navigate("/");
     } catch (error) {
       console.error("Error saving preferences:", error);
       toast.error("Failed to save preferences");
