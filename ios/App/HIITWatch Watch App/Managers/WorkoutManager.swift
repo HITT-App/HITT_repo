@@ -109,10 +109,10 @@ final class WorkoutManager: NSObject {
         guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
         if WCSession.default.isReachable {
             WCSession.default.sendMessage(payload, replyHandler: nil, errorHandler: { _ in
-                try? WCSession.default.updateApplicationContext(payload)
+                WCSession.default.transferUserInfo(payload)
             })
         } else {
-            try? WCSession.default.updateApplicationContext(payload)
+            WCSession.default.transferUserInfo(payload)
         }
     }
 }

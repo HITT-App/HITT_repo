@@ -31,6 +31,7 @@ struct StructuredWorkoutView: View {
     @State private var prePhase: SWPhase = .exercise
     @State private var mainTicker: Timer?
     @State private var showEndConfirm = false
+    @State private var isAdvancing = false
 
     private var currentExercise: WatchExercise? {
         guard exerciseIndex < workout.exercises.count else { return nil }
@@ -337,40 +338,44 @@ struct StructuredWorkoutView: View {
     }
 
     private func enterExercisePhase() {
+        isAdvancing = false
         if let dur = currentExercise?.durationSeconds { stepSeconds = dur }
         phase = .exercise
         WKInterfaceDevice.current().play(.click)
     }
 
     private func completeSet() {
-        guard let ex = currentExercise else { return }
+        guard !isAdvancing, let ex = currentExercise else { return }
+        isAdvancing = true
         let totalSets = ex.sets ?? 1
         WKInterfaceDevice.current().play(.success)
 
         if setIndex + 1 < totalSets {
-            // More sets — increment so rest view shows "next set"
             setIndex += 1
             restIsExerciseBreak = false
             stepSeconds = ex.restAfterSetSeconds ?? SET_REST_DEFAULT
             phase = .rest
+            isAdvancing = false
         } else if exerciseIndex + 1 < workout.exercises.count {
-            // Last set, more exercises — advance so rest view shows "next exercise"
             exerciseIndex += 1
             setIndex = 0
             restIsExerciseBreak = true
             stepSeconds = ex.restAfterExerciseSeconds ?? EXERCISE_REST_DEFAULT
             phase = .rest
             WKInterfaceDevice.current().play(.notification)
+            isAdvancing = false
         } else {
             finishWorkout()
         }
     }
 
     private func skipRest() {
+        guard !isAdvancing else { return }
         enterExercisePhase()
     }
 
     private func finishWorkout() {
+        isAdvancing = false
         mainTicker?.invalidate(); mainTicker = nil
         WorkoutManager.shared.end()
         WKInterfaceDevice.current().play(.retry)

@@ -92,8 +92,17 @@ class WatchBridge: NSObject, WCSessionDelegate {
         }
     }
 
-    // Receives fallback payloads sent via updateApplicationContext when the phone
-    // was not reachable at the time the Watch sent the message.
+    // Receives payloads queued via transferUserInfo when the phone was not reachable.
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+        guard userInfo["event"] != nil else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.onWorkoutEvent?(userInfo)
+            NotificationCenter.default.post(name: .watchWorkoutEvent, object: userInfo)
+        }
+    }
+
+    // Receives fallback payloads sent via updateApplicationContext (legacy path,
+    // kept for compatibility with any older Watch app versions in the field).
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
         guard applicationContext["event"] != nil else { return }
         DispatchQueue.main.async { [weak self] in
