@@ -54,6 +54,8 @@ const ActivityLive = () => {
 
   // Pre-start setup phase — timer and recording don't begin until user taps Start
   const [started, setStarted] = useState(false);
+  const startedRef = useRef(false);
+  startedRef.current = started;
 
   // Core state
   const [elapsed, setElapsed] = useState(0);
@@ -72,6 +74,7 @@ const ActivityLive = () => {
   const [currentSpeed, setCurrentSpeed] = useState(0); // km/h
   const [elevation, setElevation] = useState<number | null>(null);
   const positionsRef = useRef<GpsPoint[]>([]);
+  const lastGpsPointRef = useRef<GpsPoint | null>(null);
   const gpsWatchRef = useRef<{ stop: () => void } | null>(null);
   const gpsFilterRef = useRef(new GpsFilter());
   const lastMoveTimeRef = useRef(Date.now());
@@ -159,9 +162,10 @@ const ActivityLive = () => {
 
         // Always update GPS status indicator so the pre-start screen shows "Ready"
         setGpsStatus("active");
+        lastGpsPointRef.current = result.point;
 
         // Only record positions and update stats after the user taps Start
-        if (!started) return;
+        if (!startedRef.current) return;
 
         const positions = positionsRef.current;
 
@@ -421,7 +425,7 @@ const ActivityLive = () => {
     <div className="h-[100dvh] relative overflow-hidden bg-background">
       {/* Full-screen map */}
       <div className="absolute inset-0">
-        <LiveActivityMap positions={positions} gpsStatus={gpsStatus} />
+        <LiveActivityMap positions={positions} gpsStatus={gpsStatus} seedPosition={lastGpsPointRef.current ?? undefined} />
       </div>
 
       {/* Floating header */}

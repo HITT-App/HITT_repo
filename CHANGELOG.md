@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-06-17] — Apple Watch integration fixes + GPS tracking fix
+
+- **Apple Watch workout completion is now reliable** — completion data is queued for guaranteed delivery even when the phone isn't reachable; previously a second watch workout finishing before the phone reconnected would silently overwrite the first
+- **Watch completions now arrive correctly when phone was offline** — the phone now processes queued watch payloads that were held back while it was unreachable
+- **Watch step-through UI is more robust** — a simultaneous timer expiry and button tap can no longer both advance the exercise, preventing accidental double-skips
+- **GPS activity tracking fix** — the "has the user tapped Start?" check in the GPS callback was reading a stale value due to a React closure bug; recording now starts and stops correctly when the user taps Start
+- **ChatSettings cleanup** — removed two placeholder UI sections with nonsense copy
+
 ## [2026-06-17] — Fix AI screen header positioning
 
 - **AISurface header fixed** — switched from `h-dvh` + safe-area calc to `fixed inset-0 flex flex-col` + plain `py-3`, matching every other sub-page

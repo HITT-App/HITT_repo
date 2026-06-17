@@ -14,9 +14,10 @@ interface LiveActivityMapProps {
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   fitBoundsOnMount?: boolean;
+  seedPosition?: GpsPoint;
 }
 
-const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount }: LiveActivityMapProps) => {
+const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount, seedPosition }: LiveActivityMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const polylineRef = useRef<L.Polyline | null>(null);
@@ -30,7 +31,7 @@ const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount }: LiveActivit
   // Initialize map — defer until first real position to avoid showing London
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const firstPos = positions.length > 0 ? positions[0] : null;
+    const firstPos = positions.length > 0 ? positions[0] : seedPosition ?? null;
     if (!firstPos && gpsStatus !== "active") return;
 
     const initialCenter: [number, number] = firstPos
@@ -59,7 +60,7 @@ const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount }: LiveActivit
       map.remove();
       mapRef.current = null;
     };
-  }, [gpsStatus, positions.length > 0]);
+  }, [gpsStatus, positions.length > 0, seedPosition]);
   // Update trail & position
   useEffect(() => {
     const map = mapRef.current;
