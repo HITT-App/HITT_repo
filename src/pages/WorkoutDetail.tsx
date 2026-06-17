@@ -10,12 +10,14 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { 
-  ArrowLeft, Play, Clock, Flame, Star, Share2, 
-  ChevronRight, Calendar, Bookmark, Dumbbell, Target, Repeat, Timer
+import {
+  ArrowLeft, Play, Clock, Flame, Star, Share2,
+  ChevronRight, Calendar, Bookmark, Dumbbell, Target, Repeat, Timer, Watch
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getYouTubeEmbedUrl } from '@/lib/video';
+import { Capacitor } from '@capacitor/core';
+import { sendStructuredWorkoutToWatch } from '@/plugins/WatchPlugin';
 
 type Workout = {
   id: string;
@@ -132,6 +134,23 @@ export default function WorkoutDetail() {
   };
 
   const startWorkout = () => navigate(`/workout-player/${id}`);
+
+  const sendToWatch = async () => {
+    if (!workout) return;
+    await sendStructuredWorkoutToWatch({
+      id: workout.id,
+      name: workout.title,
+      durationMinutes: workout.duration_minutes,
+      exercises: exercises.map(ex => ({
+        id: ex.id,
+        name: ex.title,
+        sets: ex.sets ?? undefined,
+        reps: ex.reps ?? undefined,
+        durationSeconds: ex.duration_seconds ?? undefined,
+      })),
+    });
+    toast({ title: 'Sent to Apple Watch', description: 'Open your watch to start the workout.' });
+  };
 
   const embedUrl = useMemo(() => {
     if (!workout?.video_url) return null;
@@ -264,13 +283,20 @@ export default function WorkoutDetail() {
           )}
 
           {/* Quick Actions */}
-          <div className="flex gap-3">
-            <Button onClick={startWorkout} className="flex-1 h-12 rounded-2xl gap-2">
-              <Play className="w-5 h-5" /> Start Workout
-            </Button>
-            <Button variant="outline" className="h-12 rounded-2xl gap-2" onClick={() => setShowSchedule(true)}>
-              <Calendar className="w-5 h-5" /> Schedule
-            </Button>
+          <div className="space-y-2">
+            <div className="flex gap-3">
+              <Button onClick={startWorkout} className="flex-1 h-12 rounded-2xl gap-2">
+                <Play className="w-5 h-5" /> Start Workout
+              </Button>
+              <Button variant="outline" className="h-12 rounded-2xl gap-2" onClick={() => setShowSchedule(true)}>
+                <Calendar className="w-5 h-5" /> Schedule
+              </Button>
+            </div>
+            {Capacitor.isNativePlatform() && exercises.length > 0 && (
+              <Button variant="outline" onClick={sendToWatch} className="w-full h-11 rounded-2xl gap-2">
+                <Watch className="w-4 h-4" /> Start on Apple Watch
+              </Button>
+            )}
           </div>
 
           {/* Exercise Breakdown Summary */}
