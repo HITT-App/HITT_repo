@@ -796,8 +796,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     <div className="fixed inset-0 z-[100] bg-background flex flex-col">
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 pb-3 border-b border-border shrink-0"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 44px) + 0.5rem)" }}
+        className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0"
       >
         <h2 className="text-base font-semibold text-foreground">Voice Mode</h2>
         <div className="flex items-center gap-1">

@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-17] — Fix AI screen header positioning
+
+- **AISurface header fixed** — switched from `h-dvh` + safe-area calc to `fixed inset-0 flex flex-col` + plain `py-3`, matching every other sub-page
+- **JarvisMode header fixed** — removed `calc(env(safe-area-inset-top, 44px) + 0.5rem)` inline style, plain `py-3` only
+
 ## [2026-06-17] — Fix: workout plan generator abort error
 
 - **ScheduleSetup abort error fixed** — plan generation fetch now has an explicit 110s AbortController timeout; abort/network errors are caught and show "This is taking longer than expected — try again" instead of the raw "signal has been aborted" text; same fix applied to the regenerate-day path

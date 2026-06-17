@@ -23,10 +23,9 @@ export function AISurface() {
   const prefillMessage = locationState?.prefillMessage;
 
   return (
-    <div className="flex flex-col h-dvh bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background">
       <header
-        className="flex items-center px-4 border-b border-border/40 bg-background shrink-0"
-        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)", paddingBottom: "12px" }}
+        className="flex items-center px-4 py-3 border-b border-border/40 bg-background shrink-0"
       >
         <button onClick={() => navigate(-1)} className="p-1 -ml-1 mr-2">
           <ArrowLeft className="w-5 h-5" />
