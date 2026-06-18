@@ -390,6 +390,18 @@ export default function WorkoutSchedule() {
                               <span className="text-[12px] text-muted-foreground font-mono">{workouts[0].scheduled_time}</span>
                             )}
                             {!isRest && (
+                              workouts[0].status === 'completed'
+                                ? <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                                : (
+                                  <button
+                                    onClick={() => startWorkout(workouts[0])}
+                                    style={{ width: 34, height: 34, borderRadius: 10, background: workoutColor(workouts[0]), display: 'grid', placeItems: 'center', flexShrink: 0 }}
+                                  >
+                                    <Play className="w-4 h-4 fill-white" style={{ color: '#fff' }} />
+                                  </button>
+                                )
+                            )}
+                            {!isRest && (
                               <button onClick={(e) => openActions(workouts[0], e)} className="p-1 text-muted-foreground/40">
                                 <MoreHorizontal className="w-4 h-4" />
                               </button>
