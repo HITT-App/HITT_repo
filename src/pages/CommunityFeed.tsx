@@ -644,14 +644,6 @@ const CommunityFeed = () => {
         </p>
       )}
 
-      {/* Floating create button */}
-      <button
-        onClick={() => navigate("/community/create")}
-        className="fixed bottom-28 right-5 z-30 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 flex items-center justify-center touch-manipulation active:scale-95 transition-transform"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
-
       {/* Delete confirmation dialog */}
       <DeletePostDialog
         open={!!pendingDeleteId}
