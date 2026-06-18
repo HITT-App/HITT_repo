@@ -111,6 +111,62 @@ const SleepDashboard = () => {
       {/* Content */}
       <div className="px-4 pt-4 pb-[320px] space-y-3">
 
+        {/* Inline log form */}
+        {showForm && (
+          <div className="bg-card border border-border/60 rounded-2xl p-4 space-y-3">
+            <p className="text-[13px] font-semibold text-foreground">Log last night's sleep</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1">
+                  <Moon className="w-3 h-3 text-indigo-500" /> Bedtime
+                </p>
+                <input
+                  type="time"
+                  value={bedtime}
+                  onChange={e => setBedtime(e.target.value)}
+                  className="w-full min-w-0 bg-muted/30 border border-border rounded-xl px-2 py-2.5 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1">
+                  <Sun className="w-3 h-3 text-yellow-500" /> Wake up
+                </p>
+                <input
+                  type="time"
+                  value={wakeTime}
+                  onChange={e => setWakeTime(e.target.value)}
+                  className="w-full min-w-0 bg-muted/30 border border-border rounded-xl px-2 py-2.5 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-2">How did you sleep?</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {QUALITY_OPTIONS.map(opt => (
+                  <button
+                    key={opt.label}
+                    onClick={() => setQuality(opt.score)}
+                    className={`py-2 rounded-xl text-[12.5px] font-medium border transition-colors touch-manipulation ${
+                      quality === opt.score
+                        ? "bg-primary text-white border-primary"
+                        : "bg-muted/30 text-muted-foreground border-border"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full py-3 rounded-xl bg-primary text-white text-[13px] font-bold flex items-center justify-center gap-2 disabled:opacity-50 touch-manipulation"
+            >
+              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : "Save sleep"}
+            </button>
+          </div>
+        )}
+
         {/* Score + week dots */}
         <div className="flex items-center gap-4 bg-card border border-border/60 rounded-2xl p-4">
           <div className="relative shrink-0" style={{ width: 76, height: 76 }}>
@@ -164,7 +220,7 @@ const SleepDashboard = () => {
           ) : !lastLog ? (
             <div className="flex items-center justify-between">
               <p className="text-[13px] text-muted-foreground">No sleep logged yet</p>
-              <button onClick={() => navigate("/log-sleep")} className="text-[12px] font-semibold text-primary touch-manipulation">Log now</button>
+              <button onClick={() => setShowForm(true)} className="text-[12px] font-semibold text-primary touch-manipulation">Log now</button>
             </div>
           ) : (
             <div className="flex items-center justify-between">
@@ -206,18 +262,20 @@ const SleepDashboard = () => {
 
     </div>
 
-    {/* CTA — fixed sibling, above FAB (bottom-32 + h-12 = 176px top) */}
-    <div
-      className="fixed left-0 right-0 z-40 px-4 py-3 border-t border-border/60 bg-background"
-      style={{ bottom: "calc(var(--safe-area-inset-bottom, 0px) + 192px)" }}
-    >
-      <button
-        onClick={() => navigate("/log-sleep")}
-        className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-[15px] touch-manipulation active:opacity-90 transition-opacity"
+    {/* CTA — fixed sibling, above FAB */}
+    {!showForm && (
+      <div
+        className="fixed left-0 right-0 z-40 px-4 py-3 border-t border-border/60 bg-background"
+        style={{ bottom: "calc(var(--safe-area-inset-bottom, 0px) + 192px)" }}
       >
-        Log Sleep
-      </button>
-    </div>
+        <button
+          onClick={() => setShowForm(true)}
+          className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-[15px] touch-manipulation active:opacity-90 transition-opacity"
+        >
+          Log Sleep
+        </button>
+      </div>
+    )}
     </>
   );
 };
