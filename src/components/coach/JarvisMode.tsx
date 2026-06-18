@@ -444,6 +444,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
   const handleGoalPromptSetNow = useCallback(() => {
     setPendingGoalPrompt(false);
+    // Clear the plan skip so the plan card shows after the user saves their new goal
+    if (currentUserIdRef.current) localStorage.removeItem(skipKey('plan', currentUserIdRef.current));
+    // Clear the session suppression so the plan card isn't blocked after goal setup
+    sessionStorage.removeItem('jarvis_onboarding_suppressed');
     navigate('/goal-setup', { state: { returnTo: '/ai' } });
   }, [navigate]);
 
@@ -523,6 +527,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         })) as any
       );
 
+      // Write both flags immediately after the insert so they're set even if the
+      // user closes before the navigate fires (narrows the race window).
+      localStorage.setItem(skipKey('plan', userId), 'true');
       localStorage.setItem('hiit-plan-onboarding-done', 'true');
       await ai.appendAssistantMessage('✅ Your schedule is set! Taking you there now…');
 
@@ -620,6 +627,14 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   }, [ai]);
 
   const handleClose = () => {
+    // If the user closes while a wizard card is visible, suppress it for the rest of
+    // this app session (sessionStorage) so it doesn't immediately re-trigger on reopen.
+    // This is intentionally sessionStorage not localStorage — "Maybe later" buttons use
+    // localStorage for persistent dismissal; this is just "not right now".
+    const uid = currentUserIdRef.current;
+    if (uid && (pendingGoalPrompt || pendingNoPlanPrompt || pendingDietaryPrefsPrompt)) {
+      sessionStorage.setItem('jarvis_onboarding_suppressed', 'true');
+    }
     ai.abort();
     stopListening();
     tts.cancel();
@@ -701,20 +716,24 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
       await new Promise(r => setTimeout(r, 400));
 
+      // User closed Jarvis while a wizard card was showing this session — skip all
+      // onboarding cards until the app is restarted (sessionStorage clears on restart).
+      const onboardingSuppressed = sessionStorage.getItem('jarvis_onboarding_suppressed') === 'true';
+
       // No goal → show goal setup card (unless dismissed this session)
-      if (!hasGoal && uid && localStorage.getItem(skipKey('goal', uid)) !== 'true') {
+      if (!hasGoal && uid && !onboardingSuppressed && localStorage.getItem(skipKey('goal', uid)) !== 'true') {
         setPendingGoalPrompt(true);
         return;
       }
 
       // Goal set but no plan → show plan setup card (unless dismissed)
-      if (!hasSchedule && uid && localStorage.getItem(skipKey('plan', uid)) !== 'true') {
+      if (!hasSchedule && uid && !onboardingSuppressed && localStorage.getItem(skipKey('plan', uid)) !== 'true') {
         setPendingNoPlanPrompt(true);
         return;
       }
 
       // No dietary prefs → show dietary prefs card (unless dismissed)
-      if (!hasDietaryPrefs && uid && localStorage.getItem(skipKey('diet', uid)) !== 'true') {
+      if (!hasDietaryPrefs && uid && !onboardingSuppressed && localStorage.getItem(skipKey('diet', uid)) !== 'true') {
         setPendingDietaryPrefsPrompt(true);
         return;
       }
