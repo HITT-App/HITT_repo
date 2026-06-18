@@ -320,6 +320,65 @@ async function runCodeAudit() {
   } catch {
     fail('CA-20', 'WorkoutDetail time picker', 'File not found');
   }
+
+  // ── Jarvis onboarding wizard: close-button suppression ───────────────────
+
+  try {
+    const src = readSrc('components/coach/JarvisMode.tsx');
+
+    // CA-21: handleClose writes sessionStorage suppression when a card is visible
+    if (src.includes("sessionStorage.setItem('jarvis_onboarding_suppressed', 'true')") &&
+        src.includes('pendingGoalPrompt || pendingNoPlanPrompt || pendingDietaryPrefsPrompt')) {
+      pass('CA-21', 'Jarvis handleClose sets sessionStorage suppression when wizard card is visible');
+    } else {
+      fail('CA-21', 'Jarvis handleClose sets sessionStorage suppression when wizard card is visible',
+        'sessionStorage suppression not found in handleClose');
+    }
+
+    // CA-22: doGreeting checks the suppression flag before showing any wizard card
+    if (src.includes("sessionStorage.getItem('jarvis_onboarding_suppressed')") &&
+        src.includes('onboardingSuppressed')) {
+      pass('CA-22', 'Jarvis doGreeting checks jarvis_onboarding_suppressed before showing wizard cards');
+    } else {
+      fail('CA-22', 'Jarvis doGreeting checks jarvis_onboarding_suppressed before showing wizard cards',
+        'onboardingSuppressed check not found in greeting effect');
+    }
+
+    // CA-23: handleGoalPromptSetNow clears plan skipKey so it shows after goal update
+    if (src.includes("localStorage.removeItem(skipKey('plan', currentUserIdRef.current))") &&
+        src.includes("sessionStorage.removeItem('jarvis_onboarding_suppressed')")) {
+      pass('CA-23', 'handleGoalPromptSetNow clears plan skipKey and session suppression before navigating');
+    } else {
+      fail('CA-23', 'handleGoalPromptSetNow clears plan skipKey and session suppression before navigating',
+        'clearance of plan skipKey or session suppression not found in handleGoalPromptSetNow');
+    }
+
+    // CA-24: createScheduleFromJarvis writes plan skipKey immediately after DB insert
+    // The key should appear before the appendAssistantMessage call
+    const insertIdx = src.indexOf("from('scheduled_workouts').insert(");
+    const skipKeyIdx = src.indexOf("localStorage.setItem(skipKey('plan', userId), 'true')");
+    const appendIdx  = src.indexOf("appendAssistantMessage('✅ Your schedule is set");
+    if (insertIdx !== -1 && skipKeyIdx !== -1 && appendIdx !== -1 &&
+        insertIdx < skipKeyIdx && skipKeyIdx < appendIdx) {
+      pass('CA-24', 'createScheduleFromJarvis writes plan skipKey immediately after DB insert (before navigate)');
+    } else {
+      fail('CA-24', 'createScheduleFromJarvis writes plan skipKey immediately after DB insert (before navigate)',
+        'skipKey write not found in correct position after insert');
+    }
+
+    // CA-25: skipKey helper uses per-user uid so multi-account devices work correctly
+    if (src.includes('jarvis_skip_${type}_${uid}')) {
+      pass('CA-25', 'skipKey localStorage keys are scoped per user (uid suffix)');
+    } else {
+      fail('CA-25', 'skipKey localStorage keys are scoped per user (uid suffix)',
+        'Per-user skipKey pattern not found');
+    }
+
+  } catch {
+    for (const id of ['CA-21','CA-22','CA-23','CA-24','CA-25']) {
+      fail(id, 'Jarvis onboarding suppression test', 'JarvisMode.tsx not found');
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
