@@ -4,7 +4,13 @@ import { HIITScoreBadge } from "./HIITScoreBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import hiitLogo from "@/assets/hiit-logo.jpg";
+import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
+const PRESET_COUNT = 12;
+
+const presetAvatar = (seed: string) => {
+  const idx = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % PRESET_COUNT;
+  return `/avatars/avatar-${String(idx + 1).padStart(2, '0')}.jpg`;
+};
 
 interface HIITScoreComponents {
   workouts: number;
@@ -30,6 +36,7 @@ interface HomeHeaderProps {
 
 export function HomeHeader({ userName = "Athlete", score, scoreComponents, avatarUrl }: HomeHeaderProps) {
   const navigate = useNavigate();
+  const { unreadCount } = useCommunityNotifications();
 
   const getTimeGreeting = (): string => {
     const hour = new Date().getHours();
@@ -51,10 +58,8 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
             data-tutorial="avatar"
           >
             <Avatar className="w-11 h-11 rounded-xl">
-              <AvatarImage src={avatarUrl || undefined} alt={userName} className="rounded-xl" />
-              <AvatarFallback className="rounded-xl">
-                <img src={hiitLogo} alt="HIIT Logo" className="w-full h-full object-cover" />
-              </AvatarFallback>
+              <AvatarImage src={avatarUrl || presetAvatar(userName)} alt={userName} className="rounded-xl object-cover" />
+              <AvatarFallback className="rounded-xl" />
             </Avatar>
           </button>
         </div>
@@ -66,8 +71,9 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
           className="relative rounded-full"
         >
           <Bell className="w-5 h-5 text-muted-foreground" />
-          {/* Notification dot */}
-          <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+          )}
         </Button>
       </div>
 
