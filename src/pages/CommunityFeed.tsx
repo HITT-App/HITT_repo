@@ -215,7 +215,7 @@ const CommunityFeed = () => {
           <div className="flex items-center gap-2.5">
             <Avatar
               className="w-9 h-9 ring-2 ring-primary/20 cursor-pointer touch-manipulation"
-              onClick={() => navigate("/community/profile")}
+              onClick={() => navigate("/profile")}
             >
               <AvatarImage src={myAvatarUrl} />
               <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
