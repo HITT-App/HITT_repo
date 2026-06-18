@@ -349,9 +349,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   // ─── Schedule helpers ─────────────────────────────────────────────────────
 
   const mapToScheduleDates = (
-    planItems: { workout_id: string }[],
+    planItems: { workout_title: string; exercises_snapshot: unknown[] }[],
     selectedDays: number[]
-  ): { workout_id: string; scheduled_date: string }[] => {
+  ): { workout_title: string; exercises_snapshot: unknown[]; scheduled_date: string }[] => {
     const sorted = [...selectedDays].sort((a, b) => a - b);
     const today = new Date();
     const todayDow = today.getDay();
@@ -367,7 +367,8 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     }
     upcomingDates.sort((a, b) => a.getTime() - b.getTime());
     return planItems.slice(0, upcomingDates.length).map((item, i) => ({
-      workout_id: item.workout_id,
+      workout_title: item.workout_title,
+      exercises_snapshot: item.exercises_snapshot,
       scheduled_date: upcomingDates[i].toISOString().split('T')[0],
     }));
   };
@@ -497,7 +498,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       }
 
       const data = await res.json();
-      const planItems: { day_index: number; workout_id: string }[] = data.items ?? [];
+      const planItems: { day_index: number; workout_title: string; exercises_snapshot: unknown[] }[] = data.items ?? [];
 
       const days = params.selectedDays?.length ? params.selectedDays : defaultDays(params.daysPerWeek);
       const rows = mapToScheduleDates(planItems, days);
@@ -507,7 +508,13 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       if (!rows.length) throw new Error('Plan generator returned no workouts');
 
       await supabase.from('scheduled_workouts').insert(
-        rows.map(r => ({ user_id: userId, workout_id: r.workout_id, scheduled_date: r.scheduled_date }))
+        rows.map(r => ({
+          user_id: userId,
+          workout_source: 'ai_generated',
+          workout_title: r.workout_title,
+          exercises_snapshot: r.exercises_snapshot,
+          scheduled_date: r.scheduled_date,
+        })) as any
       );
 
       localStorage.setItem('hiit-plan-onboarding-done', 'true');

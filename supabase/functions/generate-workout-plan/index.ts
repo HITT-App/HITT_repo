@@ -16,20 +16,21 @@ interface GenerateRequest {
   title?: string;
 }
 
-interface Workout {
-  id: string;
+interface ExerciseItem {
   title: string;
-  category: string;
-  difficulty: string;
-  duration_minutes: number;
-  body_areas: string[];
-  equipment: string[];
+  description: string | null;
+  sets: number | null;
+  reps: number | null;
+  duration_seconds: number | null;
+  body_area: string | null;
+  order_index: number;
 }
 
-interface PlanItem {
+interface AIPlanItem {
   day_index: number;
-  workout_id: string;
   sequence_in_day: number;
+  workout_title: string;
+  exercises: ExerciseItem[];
 }
 
 serve(async (req) => {
@@ -59,9 +60,6 @@ serve(async (req) => {
 
     const body = (await req.json().catch(() => ({}))) as GenerateRequest;
 
-    // Merge request overrides with the user's saved preferences so the
-    // request body is always optional — an "I just want a plan" button is
-    // a valid entry point from anywhere in the app.
     const { data: prefs } = await admin
       .from("workout_preferences")
       .select("workout_goal, fitness_level, days_per_week, session_duration, target_body_areas, available_equipment")
@@ -75,20 +73,11 @@ serve(async (req) => {
     const days = clamp(body.days ?? 7, 1, 28);
     const title = body.title ?? `${capitalise(goal)} Plan`;
 
-    const { data: workouts, error: workoutsError } = await admin
-      .from("workouts")
-      .select("id, title, category, difficulty, duration_minutes, body_areas, equipment")
-      .order("category")
-      .returns<Workout[]>();
-    if (workoutsError) throw workoutsError;
-    if (!workouts || workouts.length === 0) {
-      return json({ error: "Workout catalogue is empty — seed data is missing." }, 500);
-    }
-
     const systemPrompt = [
-      "You are a certified fitness coach building a personalised workout plan.",
-      "You MUST only reference workouts from the catalogue provided.",
-      "You MUST respect the user's fitness level — beginners cannot be given advanced workouts.",
+      "You are a certified fitness coach building a personalised HIIT workout plan.",
+      "Generate complete workout sessions with specific exercises — do NOT reference any external workout library.",
+      "Each exercise must have a title, description (1 short sentence on how to do it), and either sets+reps OR duration_seconds (not both).",
+      "Adapt difficulty to the user's fitness level: beginners get simpler movements, fewer sets, longer rest.",
       "You MUST return valid JSON matching the schema exactly. No prose, no markdown fences.",
     ].join(" ");
 
@@ -100,10 +89,8 @@ serve(async (req) => {
       days,
       targetBodyAreas: prefs?.target_body_areas ?? [],
       availableEquipment: prefs?.available_equipment ?? [],
-      workouts,
     });
 
-    // Pre-log before AI call so AbortError / network failures are always traceable.
     await admin.from("ai_generation_log").insert({
       user_id: user.id,
       generation_type: "workout_plan",
@@ -118,7 +105,7 @@ serve(async (req) => {
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 16000,
+      max_tokens: 32000,
     });
 
     const aiResponseText = await aiResponse.text();
@@ -148,7 +135,7 @@ serve(async (req) => {
       return json({ error: "AI returned malformed response — please try again." }, 502);
     }
 
-    const validation = validatePlan(parsed, workouts, { days, sessionsPerWeek });
+    const validation = validatePlan(parsed, { days, sessionsPerWeek });
     if (!validation.ok) {
       await logGeneration(admin, {
         userId: user.id,
@@ -161,7 +148,6 @@ serve(async (req) => {
       return json({ error: `Plan validation failed: ${validation.reason}` }, 502);
     }
 
-    // Log first so we can attach the plan row to it
     const { data: logRow } = await admin
       .from("ai_generation_log")
       .insert({
@@ -201,11 +187,22 @@ serve(async (req) => {
       return json({ error: "Could not save generated plan" }, 500);
     }
 
-    const workoutMap = new Map(workouts.map(w => [w.id, w.title]));
     const itemsToInsert = validation.items.map((item) => ({
       plan_id: planRow.id,
       user_id: user.id,
-      workout_id: item.workout_id,
+      workout_source: "ai_generated",
+      workout_title: item.workout_title,
+      exercises_snapshot: item.exercises.map((ex, idx) => ({
+        title: ex.title,
+        description: ex.description ?? null,
+        sets: ex.sets ?? null,
+        reps: ex.reps ?? null,
+        duration_seconds: ex.duration_seconds ?? null,
+        body_area: ex.body_area ?? null,
+        order_index: idx,
+        thumbnail_url: null,
+        video_url: null,
+      })),
       day_index: item.day_index,
       sequence_in_day: item.sequence_in_day,
       scheduled_date: new Date(today.getTime() + item.day_index * 86400000)
@@ -226,8 +223,12 @@ serve(async (req) => {
       start_date: startDate,
       end_date: endDate,
       items: itemsToInsert.map(item => ({
-        ...item,
-        workout_title: workoutMap.get(item.workout_id) ?? "Workout",
+        day_index: item.day_index,
+        sequence_in_day: item.sequence_in_day,
+        workout_source: item.workout_source,
+        workout_title: item.workout_title,
+        exercises_snapshot: item.exercises_snapshot,
+        scheduled_date: item.scheduled_date,
       })),
     });
   } catch (err) {
@@ -259,14 +260,8 @@ function buildUserPrompt(input: {
   days: number;
   targetBodyAreas: string[];
   availableEquipment: string[];
-  workouts: Workout[];
 }): string {
-  const catalogue = input.workouts
-    .map(
-      (w) =>
-        `- id=${w.id} | ${w.title} | category=${w.category} | difficulty=${w.difficulty} | duration=${w.duration_minutes}min | body_areas=[${(w.body_areas ?? []).join(",")}] | equipment=[${(w.equipment ?? []).join(",")}]`
-    )
-    .join("\n");
+  const totalSessions = input.sessionsPerWeek * Math.ceil(input.days / 7);
 
   return [
     `Build a ${input.days}-day workout plan for this user:`,
@@ -281,21 +276,47 @@ function buildUserPrompt(input: {
       ? `- Available equipment: ${input.availableEquipment.join(", ")}`
       : `- Equipment: bodyweight only`,
     "",
-    "Here is the full workout catalogue. You MUST only use workout IDs from this list:",
-    catalogue,
+    `Create ${totalSessions} workout sessions spread across ${input.days} days (day_index 0 = today). Omit rest days — just don't include them. Avoid back-to-back sessions targeting the same muscle group.`,
     "",
-    `Distribute ${input.sessionsPerWeek * Math.ceil(input.days / 7)} workouts across ${input.days} days (day_index 0 = today). Include rest days by simply omitting that day. Avoid back-to-back days targeting the same muscle group. Mix categories.`,
+    "For each session, create 5–8 exercises tailored to the user's goal and fitness level.",
+    "Use sets+reps for strength exercises (e.g. squats, push-ups) and duration_seconds for cardio/timed exercises (e.g. plank, mountain climbers). Never set both.",
     "",
-    'Return ONLY a JSON object matching this schema:',
-    '{ "items": [ { "day_index": <int 0 .. days-1>, "workout_id": "<uuid from catalogue>", "sequence_in_day": <int starting at 0> } ] }',
+    "Return ONLY a JSON object with this exact schema:",
+    JSON.stringify({
+      items: [
+        {
+          day_index: 0,
+          sequence_in_day: 0,
+          workout_title: "example title",
+          exercises: [
+            {
+              title: "exercise name",
+              description: "one sentence how-to",
+              sets: 3,
+              reps: 12,
+              duration_seconds: null,
+              body_area: "legs",
+              order_index: 0,
+            },
+            {
+              title: "plank",
+              description: "hold a straight body position on forearms",
+              sets: null,
+              reps: null,
+              duration_seconds: 30,
+              body_area: "core",
+              order_index: 1,
+            },
+          ],
+        },
+      ],
+    }),
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-function parseLLMJSON(text: string): { items?: PlanItem[] } | null {
-  // Most OpenAI-compatible endpoints honour response_format=json_object, but
-  // some still wrap it in a markdown fence. Strip fences defensively.
+function parseLLMJSON(text: string): { items?: AIPlanItem[] } | null {
   const cleaned = text
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
@@ -313,32 +334,41 @@ function parseLLMJSON(text: string): { items?: PlanItem[] } | null {
 }
 
 function validatePlan(
-  parsed: { items?: PlanItem[] } | null,
-  workouts: Workout[],
+  parsed: { items?: AIPlanItem[] } | null,
   constraints: { days: number; sessionsPerWeek: number }
-): { ok: true; items: PlanItem[] } | { ok: false; reason: string } {
+): { ok: true; items: AIPlanItem[] } | { ok: false; reason: string } {
   if (!parsed || !Array.isArray(parsed.items)) {
     return { ok: false, reason: "missing items array" };
   }
 
-  const workoutIds = new Set(workouts.map((w) => w.id));
-
-  const cleaned: PlanItem[] = [];
+  const cleaned: AIPlanItem[] = [];
   for (const raw of parsed.items) {
     if (!raw || typeof raw !== "object") {
       return { ok: false, reason: "item is not an object" };
     }
-    const { day_index, workout_id, sequence_in_day } = raw as PlanItem;
+    const { day_index, sequence_in_day, workout_title, exercises } = raw as AIPlanItem;
     if (typeof day_index !== "number" || day_index < 0 || day_index >= constraints.days) {
       return { ok: false, reason: `invalid day_index: ${day_index}` };
     }
-    if (typeof workout_id !== "string" || !workoutIds.has(workout_id)) {
-      return { ok: false, reason: `unknown workout_id: ${workout_id}` };
+    if (typeof workout_title !== "string" || !workout_title.trim()) {
+      return { ok: false, reason: `missing workout_title on day_index ${day_index}` };
+    }
+    if (!Array.isArray(exercises) || exercises.length === 0) {
+      return { ok: false, reason: `no exercises on day_index ${day_index}` };
     }
     cleaned.push({
       day_index: Math.floor(day_index),
-      workout_id,
       sequence_in_day: typeof sequence_in_day === "number" ? Math.floor(sequence_in_day) : 0,
+      workout_title: workout_title.trim(),
+      exercises: exercises.map((ex, idx) => ({
+        title: String(ex.title ?? "Exercise"),
+        description: ex.description ? String(ex.description) : null,
+        sets: typeof ex.sets === "number" ? ex.sets : null,
+        reps: typeof ex.reps === "number" ? ex.reps : null,
+        duration_seconds: typeof ex.duration_seconds === "number" ? ex.duration_seconds : null,
+        body_area: ex.body_area ? String(ex.body_area) : null,
+        order_index: idx,
+      })),
     });
   }
 

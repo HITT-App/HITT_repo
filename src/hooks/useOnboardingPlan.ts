@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import type { ExerciseSnapshot } from '@/integrations/supabase/types';
 
 export interface OnboardingAnswers {
   goal: string;
@@ -11,8 +12,9 @@ export interface OnboardingAnswers {
 }
 
 export interface ScheduledItem {
-  workout_id: string;
+  workout_source: 'ai_generated';
   workout_title: string;
+  exercises_snapshot: ExerciseSnapshot[];
   scheduled_date: string;
 }
 
@@ -22,23 +24,21 @@ export function useOnboardingPlan() {
   const [scheduledItems, setScheduledItems] = useState<ScheduledItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Map the AI plan's sequential items to the user's chosen days of week
   const mapToSelectedDays = (
-    planItems: { day_index: number; workout_id: string; workout_title?: string }[],
+    planItems: { day_index: number; workout_title: string; exercises_snapshot: ExerciseSnapshot[] }[],
     selectedDays: number[]
-  ): { workout_id: string; workout_title: string; date: Date }[] => {
+  ): { workout_title: string; exercises_snapshot: ExerciseSnapshot[]; date: Date }[] => {
     if (!planItems.length || !selectedDays.length) return [];
 
     const sorted = [...selectedDays].sort((a, b) => a - b);
     const today = new Date();
     const todayDow = today.getDay();
 
-    // Build upcoming dates for selected days (next 4 weeks)
     const upcomingDates: Date[] = [];
     for (let week = 0; week < 4; week++) {
       for (const dow of sorted) {
         const diff = ((dow - todayDow + 7) % 7) + week * 7;
-        if (diff === 0 && week === 0) continue; // skip today — start next occurrence
+        if (diff === 0 && week === 0) continue;
         const d = new Date(today);
         d.setDate(today.getDate() + (diff || 7));
         upcomingDates.push(d);
@@ -47,8 +47,8 @@ export function useOnboardingPlan() {
     upcomingDates.sort((a, b) => a.getTime() - b.getTime());
 
     return planItems.slice(0, upcomingDates.length).map((item, i) => ({
-      workout_id: item.workout_id,
-      workout_title: item.workout_title ?? 'Workout',
+      workout_title: item.workout_title,
+      exercises_snapshot: item.exercises_snapshot,
       date: upcomingDates[i],
     }));
   };
@@ -71,7 +71,7 @@ export function useOnboardingPlan() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             goal: answers.goal,
-            days: answers.daysPerWeek * 4,       // 4-week plan
+            days: answers.daysPerWeek * 4,
             sessions_per_week: answers.daysPerWeek,
             duration_minutes: answers.sessionMinutes,
             title: `${answers.goal} Plan`,
@@ -85,15 +85,15 @@ export function useOnboardingPlan() {
       }
 
       const data = await res.json();
-      // data.plan_items: [{ day_index, workout_id, workout_title? }]
-      const planItems: { day_index: number; workout_id: string; workout_title?: string }[] =
+      const planItems: { day_index: number; workout_title: string; exercises_snapshot: ExerciseSnapshot[] }[] =
         data.items ?? [];
 
       const mapped = mapToSelectedDays(planItems, answers.selectedDays);
       setScheduledItems(
         mapped.map(m => ({
-          workout_id: m.workout_id,
+          workout_source: 'ai_generated' as const,
           workout_title: m.workout_title,
+          exercises_snapshot: m.exercises_snapshot,
           scheduled_date: m.date.toISOString().split('T')[0],
         }))
       );
@@ -132,14 +132,16 @@ export function useOnboardingPlan() {
 
     const rows = scheduledItems.map(item => ({
       user_id: user.id,
-      workout_id: item.workout_id,
+      workout_source: 'ai_generated' as const,
+      workout_title: item.workout_title,
+      exercises_snapshot: item.exercises_snapshot,
       scheduled_date: item.scheduled_date,
       scheduled_time: null,
     }));
 
     const { error: insertError } = await supabase
       .from('scheduled_workouts')
-      .insert(rows);
+      .insert(rows as any);
 
     if (insertError) {
       setError(insertError.message);
