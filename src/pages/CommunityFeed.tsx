@@ -102,8 +102,12 @@ const CommunityFeed = () => {
     setHiddenPosts((prev) => [...prev, postId]);
   };
 
-  const myAvatarUrl = communityProfile?.avatar_url || profile?.avatar_url || "";
   const myDisplayName = communityProfile?.display_name || profile?.display_name || user?.email || "";
+  const presetAvatar = (seed: string) => {
+    const idx = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 12;
+    return `/avatars/avatar-${String(idx + 1).padStart(2, '0')}.jpg`;
+  };
+  const myAvatarUrl = communityProfile?.avatar_url || profile?.avatar_url || presetAvatar(myDisplayName);
 
   const tabs = [
     { key: "popular", label: "For You", icon: Sparkles },

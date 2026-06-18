@@ -135,55 +135,19 @@ function ExerciseThumb({ exercise, style }: { exercise: Exercise; style?: React.
   )
 }
 
-function HoldToFinish({ label, onFinish }: { label: string; onFinish: () => void }) {
-  const [progress, setProgress] = useState(0)
-  const rafRef = useRef<number | null>(null)
-  const startRef = useRef(0)
-  const doneRef = useRef(false)
-
-  const stop = () => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    rafRef.current = null
-    if (!doneRef.current) setProgress(0)
-  }
-  const tick = (now: number) => {
-    const p = Math.min(1, (now - startRef.current) / 850)
-    setProgress(p)
-    if (p >= 1) {
-      doneRef.current = true
-      onFinish()
-      setTimeout(() => { doneRef.current = false; setProgress(0) }, 160)
-      return
-    }
-    rafRef.current = requestAnimationFrame(tick)
-  }
-  const begin = (ev: React.PointerEvent<HTMLButtonElement>) => {
-    ev.currentTarget.setPointerCapture(ev.pointerId)
-    doneRef.current = false
-    startRef.current = performance.now()
-    rafRef.current = requestAnimationFrame(tick)
-  }
-
-  const filled = progress > 0.55
+function CompleteButton({ label, onComplete }: { label: string; onComplete: () => void }) {
   return (
     <button
-      onPointerDown={begin} onPointerUp={stop} onPointerCancel={stop}
+      onClick={onComplete}
       style={{
-        position: 'relative', width: '100%', height: 60, borderRadius: 14, overflow: 'hidden',
-        border: `2px solid ${WP.accent}`, cursor: 'pointer', userSelect: 'none', touchAction: 'none',
-        background: 'rgba(249,115,22,.15)', fontFamily: 'inherit',
+        width: '100%', height: 60, borderRadius: 14, border: 0,
+        background: WP.accent, color: '#1a0a00',
+        fontSize: 16, fontWeight: 800, fontFamily: 'inherit',
+        cursor: 'pointer', touchAction: 'manipulation',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
       }}
     >
-      <div style={{
-        position: 'absolute', top: 0, bottom: 0, left: 0, width: `${progress * 100}%`,
-        background: WP.accent, transition: progress === 0 ? 'width .18s ease' : 'none',
-      }} />
-      <span style={{
-        position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 8, fontSize: 15, fontWeight: 800, color: filled ? '#1a0a00' : WP.accent,
-      }}>
-        <Check size={17} strokeWidth={2.5} /> {label}
-      </span>
+      <Check size={18} strokeWidth={2.5} /> {label}
     </button>
   )
 }
@@ -437,12 +401,18 @@ function ActiveScreen({ exercise, idx, total, setNum, playing, timeLeft, cuesOpe
 }) {
   const mode = exMode(exercise)
   const cues = exCues(exercise)
-  const safeTop = 'calc(var(--safe-area-inset-top, 44px) + 10px)'
-  const nextEx = null as Exercise | null // passed via prop below
 
-  const holdLabel = mode === 'reps'
-    ? (setNum + 1 >= (exercise.sets || 1) ? 'Hold to finish exercise' : `Hold to finish set ${setNum + 1}`)
-    : 'Hold to finish'
+  const [setTimer, setSetTimer] = useState(0)
+  useEffect(() => { setSetTimer(0) }, [setNum, idx])
+  useEffect(() => {
+    if (!playing) return
+    const h = setInterval(() => setSetTimer(s => s + 1), 1000)
+    return () => clearInterval(h)
+  }, [playing, setNum, idx])
+
+  const completeLabel = mode === 'reps'
+    ? (setNum + 1 >= (exercise.sets || 1) ? 'Exercise complete' : `Set ${setNum + 1} done`)
+    : 'Done early'
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: WP.bg, color: WP.fg, display: 'flex', flexDirection: 'column' }}>
@@ -470,10 +440,12 @@ function ActiveScreen({ exercise, idx, total, setNum, playing, timeLeft, cuesOpe
                 <span style={{ fontSize: 56, fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{exercise.reps}</span>
                 <span style={{ fontSize: 17, fontWeight: 700, color: WP.dim }}>reps</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
                 <SetDots total={exercise.sets || 1} done={setNum} />
                 <span style={{ fontSize: 13, color: WP.dim, fontWeight: 600 }}>Set {Math.min(setNum + 1, exercise.sets || 1)} of {exercise.sets || 1}</span>
               </div>
+              <div style={{ fontSize: 32, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: WP.fg, marginTop: 14, letterSpacing: '-.01em' }}>{fmt(setTimer)}</div>
+              <div style={{ fontSize: 12, color: WP.dim, fontWeight: 600, marginTop: 2 }}>elapsed this set</div>
             </>
           ) : (
             <>
@@ -504,7 +476,7 @@ function ActiveScreen({ exercise, idx, total, setNum, playing, timeLeft, cuesOpe
 
       {/* controls */}
       <div style={{ padding: '10px 18px', paddingBottom: 'calc(var(--safe-area-inset-bottom, 16px) + 10px)', display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
-        <HoldToFinish label={holdLabel} onFinish={mode === 'reps' ? onCompleteSet : onHoldFinish} />
+        <CompleteButton label={completeLabel} onComplete={mode === 'reps' ? onCompleteSet : onHoldFinish} />
         <TransportControls playing={playing} onPrev={onPrev} onToggle={onToggle} onNext={onNext} />
       </div>
     </div>
@@ -673,8 +645,8 @@ export default function WorkoutPlayer() {
   useEffect(() => {
     if (view !== 'countdown') return
     if (countdown <= 0) {
-      setView('getready')
-      setIdx(0)
+      setView('active')
+      setPlaying(true)
       return
     }
     const h = setTimeout(() => setCountdown(c => c - 1), 850)
@@ -756,8 +728,7 @@ export default function WorkoutPlayer() {
   // ── transitions ───────────────────────────────────────────────────────────
   const startWorkout = () => {
     setIdx(0)
-    setCountdown(3)
-    setView('countdown')
+    setView('getready')
   }
 
   const goNext = () => {
@@ -924,7 +895,7 @@ export default function WorkoutPlayer() {
       {view === 'getready' && currentEx && (
         <GetReadyScreen
           exercise={currentEx} idx={idx} total={exercises.length}
-          onBegin={() => { setView('active'); setPlaying(true) }}
+          onBegin={() => { setCountdown(3); setView('countdown') }}
           onBack={() => setView('ready')} onList={openList}
         />
       )}

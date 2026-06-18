@@ -14,6 +14,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 
+const presetAvatar = (seed: string) => {
+  const idx = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 12;
+  return `/avatars/avatar-${String(idx + 1).padStart(2, '0')}.jpg`;
+};
+
 const CommunityProfile = () => {
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
@@ -120,10 +125,8 @@ const CommunityProfile = () => {
       {/* Avatar */}
       <div className="px-5 -mt-14 relative z-10">
         <Avatar className="w-28 h-28 border-4 border-background shadow-xl ring-2 ring-border/30">
-          <AvatarImage src={profile?.avatar_url || ""} />
-          <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
-            {getInitials(displayName)}
-          </AvatarFallback>
+          <AvatarImage src={profile?.avatar_url || presetAvatar(displayName)} className="object-cover" />
+          <AvatarFallback className="bg-muted" />
         </Avatar>
       </div>
 
