@@ -39,4 +39,4 @@ supabase_scripts/generated_seed.sql
 *.sw?
 .specfiles/
 .claude/
-avatars/
+/avatars/
