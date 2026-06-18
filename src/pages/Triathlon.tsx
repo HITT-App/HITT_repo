@@ -13,7 +13,7 @@ import LiveActivityMap from "@/components/activity/LiveActivityMap";
 import { GpsFilter } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
 import type { GpsPoint } from "@/lib/gps-filter";
-import { sendTriathlonToWatch, isWatchAvailable, startWorkoutMirroring } from "@/plugins/WatchPlugin";
+import { sendTriathlonToWatch, isWatchAvailable, startWorkoutMirroring, endWorkoutMirroring } from "@/plugins/WatchPlugin";
 
 // ── Design tokens ─────────────────────────────────────────────
 const C = {
@@ -300,6 +300,9 @@ const Triathlon = () => {
       setWatchSent(true);
       if (mirroring) {
         toast({ title: 'Starting on Apple Watch ⌚', description: 'Tap the prompt on your Watch to open the Race screen.' });
+        // End the iPhone-side session after 8s — only needed to surface the Watch prompt.
+        // clearMirrorWorkout on Watch only clears HIIT mirror state, not the triathlon plan.
+        setTimeout(() => endWorkoutMirroring(), 8000);
       } else {
         const reachable = await isWatchAvailable();
         if (reachable) {

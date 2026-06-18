@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-18] — AI Coach card glowing logo
+
+- **AI Coach home card logo updated** — replaced the flat JPEG logo with the animated glowing HIIT logo, matching the style of the nav bar centre button
+
 ## [2026-06-18] — Plan wizard conflict handling; sleep card staleness fix; alarm screen removed
 
 - **Plan wizard — replace or add alongside** — after reviewing your generated plan, tapping "Add to my schedule" now checks for existing sessions in that window and offers to replace them or add on top, matching the upload flow
