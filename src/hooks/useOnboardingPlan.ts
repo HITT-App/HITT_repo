@@ -104,8 +104,31 @@ export function useOnboardingPlan() {
     }
   }, [user]);
 
-  const confirmSchedule = useCallback(async () => {
+  const checkConflicts = useCallback(async (): Promise<number> => {
+    if (!user || !scheduledItems.length) return 0;
+    const dates = scheduledItems.map(i => i.scheduled_date).sort();
+    const { count } = await supabase
+      .from('scheduled_workouts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('scheduled_date', dates[0])
+      .lte('scheduled_date', dates[dates.length - 1]);
+    return count ?? 0;
+  }, [user, scheduledItems]);
+
+  const confirmSchedule = useCallback(async (strategy: 'replace' | 'add') => {
     if (!user || !scheduledItems.length) return false;
+
+    if (strategy === 'replace') {
+      const dates = scheduledItems.map(i => i.scheduled_date).sort();
+      const { error: delErr } = await supabase
+        .from('scheduled_workouts')
+        .delete()
+        .eq('user_id', user.id)
+        .gte('scheduled_date', dates[0])
+        .lte('scheduled_date', dates[dates.length - 1]);
+      if (delErr) { setError(delErr.message); return false; }
+    }
 
     const rows = scheduledItems.map(item => ({
       user_id: user.id,
@@ -123,10 +146,9 @@ export function useOnboardingPlan() {
       return false;
     }
 
-    // Mark onboarding complete so the prompt doesn't appear again
     localStorage.setItem('hiit-plan-onboarding-done', 'true');
     return true;
   }, [user, scheduledItems]);
 
-  return { isGenerating, scheduledItems, error, generatePlan, confirmSchedule };
+  return { isGenerating, scheduledItems, error, generatePlan, checkConflicts, confirmSchedule };
 }

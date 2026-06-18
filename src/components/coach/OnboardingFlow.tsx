@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { HEmoji } from "@/components/HEmoji";
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, X, Loader2, CheckCircle2, Dumbbell } from 'lucide-react';
+import { ArrowLeft, X, Loader2, CheckCircle2, Dumbbell, AlertTriangle, RefreshCw, Plus } from 'lucide-react';
 import { useOnboardingPlan, type OnboardingAnswers } from '@/hooks/useOnboardingPlan';
 import { useNavigate } from 'react-router-dom';
 
@@ -49,11 +49,13 @@ const TOTAL_STEPS = 5;
 
 export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) {
   const navigate = useNavigate();
-  const { isGenerating, scheduledItems, error, generatePlan, confirmSchedule } = useOnboardingPlan();
+  const { isGenerating, scheduledItems, error, generatePlan, checkConflicts, confirmSchedule } = useOnboardingPlan();
 
   const [step, setStep] = useState(0);
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState(false);
+  const [showConflict, setShowConflict] = useState(false);
+  const [conflictCount, setConflictCount] = useState(0);
 
   const [goal, setGoal] = useState('');
   const [experience, setExperience] = useState('');
@@ -86,9 +88,22 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
     }
   };
 
-  const handleConfirm = async () => {
+  const handleAddToSchedule = async () => {
     setConfirming(true);
-    const ok = await confirmSchedule();
+    const conflicts = await checkConflicts();
+    setConfirming(false);
+    if (conflicts > 0) {
+      setConflictCount(conflicts);
+      setShowConflict(true);
+    } else {
+      doSave('add');
+    }
+  };
+
+  const doSave = async (strategy: 'replace' | 'add') => {
+    setShowConflict(false);
+    setConfirming(true);
+    const ok = await confirmSchedule(strategy);
     setConfirming(false);
     if (ok) setDone(true);
   };
@@ -119,6 +134,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
   // ── Review / generating screen ───────────────────────────────────────────
   if (step === TOTAL_STEPS) {
     return (
+      <>
       <Overlay onClose={onClose}>
         <div className="flex flex-col flex-1 px-5 pb-6">
           <h2 className="text-lg font-bold mb-1">Your plan</h2>
@@ -158,9 +174,8 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
           )}
 
           {!isGenerating && scheduledItems.length > 0 && (
-            <Button className="w-full h-12 rounded-2xl" onClick={handleConfirm} disabled={confirming}>
-              {confirming ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Add to my schedule
+            <Button className="w-full h-12 rounded-2xl" onClick={handleAddToSchedule} disabled={confirming}>
+              {confirming ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Checking…</> : 'Add to my schedule'}
             </Button>
           )}
           {!isGenerating && (
@@ -170,6 +185,51 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
           )}
         </div>
       </Overlay>
+
+      {/* Conflict modal */}
+      {showConflict && (
+        <div className="fixed inset-0 z-[60] flex items-end">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowConflict(false)} />
+          <div className="relative w-full bg-background rounded-t-[24px] px-5 pt-5"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+            <div className="w-10 h-1 rounded-full bg-border mx-auto mb-5" />
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-[rgba(251,191,36,0.12)] border border-[rgba(251,191,36,0.3)] flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-[#fbbf24]" />
+              </div>
+              <div>
+                <p className="text-[15px] font-bold text-foreground">You already have a plan</p>
+                <p className="text-[13px] text-muted-foreground mt-0.5">
+                  There are {conflictCount} session{conflictCount !== 1 ? 's' : ''} already scheduled in this period. What would you like to do?
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2.5">
+              <button onClick={() => doSave('replace')}
+                className="w-full flex items-center gap-3 p-4 rounded-[16px] bg-destructive/8 border border-destructive/25 active:bg-destructive/15 transition-colors touch-manipulation">
+                <RefreshCw className="w-5 h-5 text-destructive flex-shrink-0" />
+                <div className="text-left">
+                  <p className="text-[14px] font-semibold text-foreground">Replace existing plan</p>
+                  <p className="text-[12px] text-muted-foreground">Remove the {conflictCount} existing sessions and use this new plan</p>
+                </div>
+              </button>
+              <button onClick={() => doSave('add')}
+                className="w-full flex items-center gap-3 p-4 rounded-[16px] bg-card border border-border active:bg-secondary transition-colors touch-manipulation">
+                <Plus className="w-5 h-5 text-primary flex-shrink-0" />
+                <div className="text-left">
+                  <p className="text-[14px] font-semibold text-foreground">Add alongside</p>
+                  <p className="text-[12px] text-muted-foreground">Keep existing sessions and add this plan on top</p>
+                </div>
+              </button>
+              <button onClick={() => setShowConflict(false)}
+                className="w-full py-3.5 rounded-[16px] border border-border text-[13px] font-semibold text-muted-foreground touch-manipulation">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </>
     );
   }
 
