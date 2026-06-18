@@ -648,7 +648,7 @@ const STRUCTURED_TOOLS = [
                   description: "Step-by-step preparation instructions.",
                 },
               },
-              required: ["meal_type", "name", "emoji", "description", "calories", "protein_g", "carbs_g", "fat_g", "ingredients", "instructions"],
+              required: ["meal_type", "name", "emoji", "description", "calories", "protein_g", "carbs_g", "fat_g"],
             },
           },
         },
@@ -1620,7 +1620,7 @@ serve(async (req) => {
             ...baseStructured.slice(0, lastUserIdx),
             { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
             { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool." },
-            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks for a meal plan, day of eating, what to eat today, or any similar request — you MUST call the recommend_meal_plan tool immediately. Do NOT describe meals in text. Do NOT ask for dietary preferences first — generate the plan now using whatever preferences are on file, or assume a balanced omnivore diet if none are set. Add a brief note if you made assumptions (e.g. 'I've assumed no dietary restrictions — let me know if you need adjustments'). Write only a brief 1-sentence intro alongside the tool call. Never say 'here's your plan' without calling the tool." },
+            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks for a meal plan, day of eating, what to eat today, or any similar request — call the recommend_meal_plan tool immediately. Output the tool call ONLY — no text before or after it. Do NOT ask for dietary preferences first. Generate the plan using whatever preferences are on file, or assume a balanced omnivore diet if none are set. Ingredients and instructions are optional — only include them if you can do so quickly." },
             baseStructured[lastUserIdx],
           ]
         : baseStructured;
