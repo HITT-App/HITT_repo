@@ -3,7 +3,7 @@ import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from 'react-router-dom';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, X, Loader2, StopCircle, Target, Send, Flag, Settings } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, StopCircle, Target, Send, Flag, Settings, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -184,6 +184,8 @@ type RecommendedRecipe = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  ingredients?: Array<{ amount: string; unit: string; name: string }>;
+  instructions?: string[];
 };
 
 export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillMessage }: JarvisModeProps) {
@@ -210,6 +212,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [todayKcalTotal, setTodayKcalTotal] = useState<number | undefined>(undefined);
   const [recommendedWorkout, setRecommendedWorkout] = useState<RecommendedWorkout | null>(null);
   const [recommendedRecipe, setRecommendedRecipe] = useState<RecommendedRecipe | null>(null);
+  const [recipeExpanded, setRecipeExpanded] = useState(false);
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   const [aiWorkout, setAIWorkout] = useState<(RecommendWorkoutPayload & { source: 'ai_generated' }) | null>(null);
   const [aiWorkoutPlan, setAIWorkoutPlan] = useState<RecommendWorkoutPlanPayload | null>(null);
@@ -394,15 +397,17 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     } catch (err) { console.error('[Jarvis] fetchRecommendedWorkout error:', err); return null; }
   };
 
-  const fetchRecommendedRecipe = async (id: string): Promise<RecommendedRecipe | null> => {
+  const fetchRecommendedRecipe = async (
+    payload: { id: string; ingredients?: Array<{ amount: string; unit: string; name: string }>; instructions?: string[] }
+  ): Promise<RecommendedRecipe | null> => {
     try {
       const { data, error } = await supabase
         .from('recipes')
         .select('id, name, emoji, category, meal_type, calories, protein_g, carbs_g, fat_g')
-        .eq('id', id)
+        .eq('id', payload.id)
         .maybeSingle();
-      if (error || !data) { console.warn('[Jarvis] Failed to fetch recommended recipe:', id, error); return null; }
-      return data as RecommendedRecipe;
+      if (error || !data) { console.warn('[Jarvis] Failed to fetch recommended recipe:', payload.id, error); return null; }
+      return { ...data, ingredients: payload.ingredients, instructions: payload.instructions } as RecommendedRecipe;
     } catch (err) { console.error('[Jarvis] fetchRecommendedRecipe error:', err); return null; }
   };
 
@@ -766,7 +771,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           setAIWorkoutPlan(action.payload);
           break;
         case 'recommend_recipe':
-          fetchRecommendedRecipe(action.payload.id).then(r => { if (r) setRecommendedRecipe(r); });
+          fetchRecommendedRecipe(action.payload).then(r => { if (r) setRecommendedRecipe(r); });
           break;
         case 'recommend_meal_plan':
           setMealPlan(action.payload);

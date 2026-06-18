@@ -597,14 +597,32 @@ const STRUCTURED_TOOLS = [
     type: "function",
     function: {
       name: "recommend_recipe",
-      description: "Recommend a specific recipe from the catalogue.",
+      description: "Recommend a specific recipe from the catalogue. Include realistic ingredients and preparation steps so the user can see what's involved.",
       parameters: {
         type: "object",
         properties: {
           id: { type: "string", description: "Exact UUID from the RECIPES CATALOGUE" },
           name: { type: "string" },
+          ingredients: {
+            type: "array",
+            description: "Realistic ingredients for this recipe.",
+            items: {
+              type: "object",
+              properties: {
+                amount: { type: "string" },
+                unit: { type: "string" },
+                name: { type: "string" },
+              },
+              required: ["amount", "unit", "name"],
+            },
+          },
+          instructions: {
+            type: "array",
+            items: { type: "string" },
+            description: "2–4 concise preparation steps.",
+          },
         },
-        required: ["id", "name"],
+        required: ["id", "name", "ingredients", "instructions"],
       },
     },
   },
@@ -648,7 +666,7 @@ const STRUCTURED_TOOLS = [
                   description: "Step-by-step preparation instructions.",
                 },
               },
-              required: ["meal_type", "name", "emoji", "description", "calories", "protein_g", "carbs_g", "fat_g"],
+              required: ["meal_type", "name", "emoji", "description", "calories", "protein_g", "carbs_g", "fat_g", "ingredients", "instructions"],
             },
           },
         },
@@ -850,7 +868,7 @@ async function mapToolCallToAction(
           console.warn("[ai-coach] Hallucinated recipe UUID:", args.id);
           return null;
         }
-        return { type: "recommend_recipe", payload: { id: args.id, name: args.name } };
+        return { type: "recommend_recipe", payload: { id: args.id, name: args.name, ingredients: args.ingredients, instructions: args.instructions } };
       }
       case "recommend_meal_plan": {
         if (!Array.isArray(args.meals) || args.meals.length === 0) {
@@ -1620,7 +1638,7 @@ serve(async (req) => {
             ...baseStructured.slice(0, lastUserIdx),
             { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
             { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool." },
-            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks for a meal plan, day of eating, what to eat today, or any similar request — call the recommend_meal_plan tool immediately. Output the tool call ONLY — no text before or after it. Do NOT ask for dietary preferences first. Generate the plan using whatever preferences are on file, or assume a balanced omnivore diet if none are set. Ingredients and instructions are optional — only include them if you can do so quickly." },
+            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks for a meal plan, day of eating, what to eat today, or any similar request — call the recommend_meal_plan tool immediately. Output the tool call ONLY — no text before or after it. Do NOT ask for dietary preferences first. Generate the plan using whatever preferences are on file, or assume a balanced omnivore diet if none are set. Always include realistic ingredients and 2–4 preparation steps for every meal." },
             baseStructured[lastUserIdx],
           ]
         : baseStructured;

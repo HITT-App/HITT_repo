@@ -537,7 +537,7 @@ export default function NutritionDashboard() {
                       {/* Jarvis-suggested meals for this category */}
                       {suggestions.length > 0 && (
                         <div className="px-5 pb-3 space-y-1 border-t border-border/30 pt-2">
-                          <p className="text-[10px] font-medium text-primary/70 uppercase tracking-wide mb-1.5">Suggested by Jarvis</p>
+                          <p className="text-[10px] font-medium text-primary/70 uppercase tracking-wide mb-1.5">Suggested by HIIT Coach</p>
                           {suggestions.map((s) => {
                             const alreadyLogged = suggestedLogged.has(s.name);
                             return (

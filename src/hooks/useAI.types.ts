@@ -86,6 +86,8 @@ export type SetGoalsPayload = {
 export type RecommendRecipePayload = {
   id: string;
   name: string;
+  ingredients?: Array<{ amount: string; unit: string; name: string }>;
+  instructions?: string[];
 };
 
 export type MealInPlan = {
