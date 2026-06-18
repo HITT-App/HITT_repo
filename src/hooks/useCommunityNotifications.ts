@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -24,6 +24,7 @@ export const useCommunityNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const { user } = useAuth();
+  const channelName = useRef(`community-notifs-${Math.random().toString(36).slice(2)}`).current;
 
   const fetchNotifications = useCallback(async () => {
     if (!user) {
@@ -89,7 +90,7 @@ export const useCommunityNotifications = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel('notifications_updates')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { 
