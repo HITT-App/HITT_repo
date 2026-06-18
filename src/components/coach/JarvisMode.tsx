@@ -773,6 +773,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           break;
         case 'recommend_workout_plan':
           setAIWorkoutPlan(action.payload);
+          if (localStorage.getItem('hiit-plan-onboarding-done')) {
+            setShowGoalWizardPrompt(true);
+          }
           break;
         case 'recommend_recipe':
           fetchRecommendedRecipe(action.payload).then(r => { if (r) setRecommendedRecipe(r); });
@@ -1025,6 +1028,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                 className="flex-1 bg-primary text-primary-foreground text-xs h-9"
                 onClick={() => {
                   setPendingSchedule(null);
+                  setAIWorkoutPlan(null);
                   setShowGoalWizardPrompt(false);
                   handleClose();
                   navigate('/schedule-setup', { state: { returnTo: '/ai' } });
@@ -1139,7 +1143,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         )}
 
         {/* AI workout plan card */}
-        {aiWorkoutPlan && (
+        {aiWorkoutPlan && !showGoalWizardPrompt && (
           <AIWorkoutPlanCard
             title={aiWorkoutPlan.title}
             goal={aiWorkoutPlan.goal}
