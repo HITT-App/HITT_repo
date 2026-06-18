@@ -138,7 +138,7 @@ export function SleepSection() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1">
                   <Moon className="w-3 h-3 text-indigo-500" /> Bedtime
                 </p>
@@ -146,10 +146,10 @@ export function SleepSection() {
                   type="time"
                   value={bedtime}
                   onChange={e => setBedtime(e.target.value)}
-                  className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full min-w-0 bg-muted/30 border border-border rounded-xl px-2 py-2.5 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1">
                   <Sun className="w-3 h-3 text-yellow-500" /> Wake up
                 </p>
@@ -157,7 +157,7 @@ export function SleepSection() {
                   type="time"
                   value={wakeTime}
                   onChange={e => setWakeTime(e.target.value)}
-                  className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full min-w-0 bg-muted/30 border border-border rounded-xl px-2 py-2.5 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
             </div>
