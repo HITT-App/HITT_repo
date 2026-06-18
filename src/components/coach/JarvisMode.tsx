@@ -527,7 +527,8 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       await ai.appendAssistantMessage('✅ Your schedule is set! Taking you there now…');
 
       setTimeout(() => {
-        handleClose();
+        ai.abort();
+        tts.cancel();
         navigate('/schedule');
       }, 1800);
     } catch (err) {
@@ -978,7 +979,8 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                 className="flex-1 bg-primary text-primary-foreground text-xs h-9"
                 onClick={() => {
                   setPendingBodyScan(false);
-                  handleClose();
+                  ai.abort();
+                  tts.cancel();
                   navigate('/body-scan');
                 }}
               >
@@ -1030,7 +1032,8 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                   setPendingSchedule(null);
                   setAIWorkoutPlan(null);
                   setShowGoalWizardPrompt(false);
-                  handleClose();
+                  ai.abort();
+                  tts.cancel();
                   navigate('/schedule-setup', { state: { returnTo: '/ai' } });
                 }}
               >
@@ -1188,7 +1191,8 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                 onClick={() => {
                   const id = recommendedWorkout.id;
                   setRecommendedWorkout(null);
-                  handleClose();
+                  ai.abort();
+                  tts.cancel();
                   navigate(`/workout/${id}`);
                 }}
               >
