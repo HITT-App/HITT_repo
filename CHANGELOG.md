@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-18] — Recipe cards for suggested meals
+
+- **Tap any suggested meal to see the recipe** — meal plan cards in Jarvis now expand to show the full ingredient list with amounts and step-by-step preparation instructions
+- **Single recipe recommendations also expandable** — when Jarvis recommends one recipe, tapping the card reveals ingredients and method so you can check what's involved before logging it
+- **AI always generates ingredients and steps** — both the meal plan tool and single recipe recommendations now always include realistic ingredients and 2–4 preparation steps
+
 ## [2026-06-18] — Revamped workout player for AI-generated sessions
 
 - **Full per-exercise player for AI workouts** — AI-generated sessions now use the same coached player as catalogue workouts: Ready screen, 3-2-1 countdown, Get Ready card with form cues, Active screen with reps/sets/timer, rest countdown between moves, playlist overview, and hold-to-finish on every exercise
