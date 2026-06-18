@@ -497,7 +497,7 @@ export default function WorkoutSchedule() {
                 </div>
                 {getWorkoutsForDate(selectedDay).length > 0
                   ? getWorkoutsForDate(selectedDay).map(w => (
-                      <div key={w.id} className="flex items-center gap-3 p-3 rounded-[16px] bg-card border border-border mb-2">
+                      <div key={w.id} className="flex items-center gap-3 pl-3 py-3 pr-16 rounded-[16px] bg-card border border-border mb-2">
                         <div style={{ width: 44, height: 44, borderRadius: 13, background: `${workoutColor(w)}1f`, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                           <Dumbbell style={{ color: workoutColor(w) }} className="w-5 h-5" />
                         </div>
