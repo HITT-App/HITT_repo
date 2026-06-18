@@ -121,6 +121,7 @@ export default function NutritionDashboard() {
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [suggestedMeals, setSuggestedMeals] = useState<MealInPlan[]>([]);
   const [suggestedLogged, setSuggestedLogged] = useState<Set<string>>(new Set());
+  const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null);
   const keyboardHeight = useKeyboardHeight();
   const { data: nutritionPrefs, save: savePrefs } = useNutritionPreferences();
 
@@ -540,25 +541,69 @@ export default function NutritionDashboard() {
                           <p className="text-[10px] font-medium text-primary/70 uppercase tracking-wide mb-1.5">Suggested by HIIT Coach</p>
                           {suggestions.map((s) => {
                             const alreadyLogged = suggestedLogged.has(s.name);
+                            const expanded = expandedSuggestion === s.name;
+                            const hasDetail = (s.ingredients && s.ingredients.length > 0) || (s.instructions && s.instructions.length > 0);
                             return (
-                              <div key={s.name} className="flex items-center justify-between py-1 text-xs">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <span className="truncate text-muted-foreground">{s.name}</span>
-                                  <span className="text-muted-foreground/60 shrink-0">{s.calories} kcal</span>
-                                </div>
+                              <div key={s.name} className="rounded-xl border border-border/40 overflow-hidden">
                                 <button
                                   type="button"
-                                  onClick={() => logSuggestedMeal(s)}
-                                  disabled={alreadyLogged}
-                                  className={cn(
-                                    "shrink-0 ml-2 text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors touch-manipulation",
-                                    alreadyLogged
-                                      ? "text-muted-foreground/40 border border-border/30"
-                                      : "text-primary border border-primary/40 active:bg-primary/10"
-                                  )}
+                                  className="w-full flex items-center justify-between py-2 px-2 text-xs text-left gap-2"
+                                  onClick={() => hasDetail && setExpandedSuggestion(expanded ? null : s.name)}
                                 >
-                                  {alreadyLogged ? "✓ Logged" : "Log"}
+                                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                    <span className="truncate text-muted-foreground">{s.name}</span>
+                                    <span className="text-muted-foreground/60 shrink-0">{s.calories} kcal</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {hasDetail && (
+                                      <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground/60 transition-transform', expanded && 'rotate-180')} />
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); logSuggestedMeal(s); }}
+                                      disabled={alreadyLogged}
+                                      className={cn(
+                                        "text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors touch-manipulation",
+                                        alreadyLogged
+                                          ? "text-muted-foreground/40 border border-border/30"
+                                          : "text-primary border border-primary/40 active:bg-primary/10"
+                                      )}
+                                    >
+                                      {alreadyLogged ? "✓ Logged" : "Log"}
+                                    </button>
+                                  </div>
                                 </button>
+
+                                {expanded && hasDetail && (
+                                  <div className="px-2 pb-2.5 space-y-2 border-t border-border/30 pt-2">
+                                    {s.ingredients && s.ingredients.length > 0 && (
+                                      <div>
+                                        <p className="text-[10px] font-semibold text-foreground mb-1">Ingredients</p>
+                                        <ul className="space-y-0.5">
+                                          {s.ingredients.map((ing, i) => (
+                                            <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5">
+                                              <span className="shrink-0 text-foreground/70">{ing.amount} {ing.unit}</span>
+                                              <span>{ing.name}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {s.instructions && s.instructions.length > 0 && (
+                                      <div>
+                                        <p className="text-[10px] font-semibold text-foreground mb-1">Method</p>
+                                        <ol className="space-y-0.5">
+                                          {s.instructions.map((step, i) => (
+                                            <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5">
+                                              <span className="shrink-0 font-medium text-foreground/60">{i + 1}.</span>
+                                              <span>{step}</span>
+                                            </li>
+                                          ))}
+                                        </ol>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}

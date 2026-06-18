@@ -5,6 +5,10 @@
 - **Every new user gets a HIIT animal avatar** — a random animal character (eagle in bow tie, black cat in t-shirt, bear in hoodie, and nine others) is assigned automatically on signup
 - **Pick your animal in your profile** — tap the camera button on the Profile page to choose from the full grid of 12 animals, or upload your own photo as before
 
+## [2026-06-18] — Expandable recipe cards on nutrition dashboard
+
+- **Suggested meals on the nutrition dashboard now show the full recipe** — tap any HIIT Coach suggestion in the diary view to expand it and see the ingredient list and preparation steps
+
 ## [2026-06-18] — Recipe cards for suggested meals
 
 - **Tap any suggested meal to see the recipe** — meal plan cards in Jarvis now expand to show the full ingredient list with amounts and step-by-step preparation instructions
