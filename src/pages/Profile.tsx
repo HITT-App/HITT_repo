@@ -702,6 +702,48 @@ export default function Profile() {
         onCropComplete={handleCropComplete}
         title={cropperType === 'avatar' ? 'Crop Profile Picture' : 'Crop Banner Image'}
       />
+
+      {/* Avatar Picker Sheet */}
+      <Drawer open={avatarPickerOpen} onOpenChange={setAvatarPickerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Choose your avatar</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-5 pb-8 space-y-4">
+            <div className="grid grid-cols-4 gap-3">
+              {PRESET_AVATARS.map((url) => {
+                const isCurrent = avatarPreview === url;
+                return (
+                  <button
+                    key={url}
+                    type="button"
+                    disabled={presetSaving}
+                    onClick={() => handlePresetSelect(url)}
+                    className={`relative rounded-2xl overflow-hidden aspect-square border-2 transition-all touch-manipulation active:scale-95 ${
+                      isCurrent ? 'border-primary shadow-[0_0_0_2px_hsl(var(--primary))]' : 'border-transparent'
+                    }`}
+                  >
+                    <img src={url} alt="Avatar option" className="w-full h-full object-cover" />
+                    {isCurrent && (
+                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                        <Check className="w-6 h-6 text-primary drop-shadow" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => { setAvatarPickerOpen(false); setTimeout(() => avatarInputRef.current?.click(), 100); }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-border/60 text-sm font-medium text-muted-foreground active:bg-muted transition-colors touch-manipulation"
+            >
+              <Upload className="w-4 h-4" />
+              Upload your own photo
+            </button>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
