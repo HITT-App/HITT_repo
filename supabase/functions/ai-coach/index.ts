@@ -423,7 +423,7 @@ Ask: "One more thing — do you want to do a body scan? Take 3 quick photos and 
 If YES to body scan → emit [BODY_SCAN_PROMPT] at the end of your response.
 If NO → "No worries — we're all set. Let's get you moving!"
 
-RE-ONBOARDING: If the user says their goals have changed, offer to build a fresh plan. Collect goal + days + session length again and emit a new [SCHEDULE_PLAN:{...}] marker.
+RE-ONBOARDING: If the user says their goals have changed, or asks to change/update/rebuild their workout schedule or plan, immediately propose a fresh plan using their existing preferences as defaults. In structured mode, call schedule_plan — do not ask lots of clarifying questions, just use their profile data and reasonable assumptions.
 
 ═══════════════════════════════════════════
 SAFETY RULES (CRITICAL)
@@ -511,7 +511,7 @@ const STRUCTURED_TOOLS = [
     type: "function",
     function: {
       name: "schedule_plan",
-      description: "Propose a workout schedule for the user to confirm. Use when the user has provided goal, days per week, and session length.",
+      description: "Propose a workout schedule for the user to confirm. Use when: (1) the user has provided goal, days per week, and session length, OR (2) the user asks to change, update, rebuild, or redo their workout schedule/plan/program — in that case use their existing preferences from the user profile as defaults and call the tool immediately without asking lots of questions.",
       parameters: {
         type: "object",
         properties: {
@@ -1647,10 +1647,19 @@ serve(async (req) => {
         (structuredMessages as any[]).filter(m => m.role === 'user').pop()?.content ?? ''
       ).toLowerCase();
       const isMealPlanRequest = /meal plan|what (should|can) i eat|day of eating|what to eat|plan (my )?(meals|eating|food|day)|full day (of )?eating|food plan/.test(lastUserContent);
+      const isScheduleChangeRequest = /change.*(my )?(workout|schedule|plan|program|routine)|update.*(my )?(schedule|plan|program|workout|routine)|new (plan|schedule|program|workout plan)|rebuild.*plan|redo.*schedule|reset.*plan|want a new.*plan|want to start a (new |fresh )?(plan|program|schedule)|switch.*plan/.test(lastUserContent);
+
+      const injectedMessages = isScheduleChangeRequest
+        ? [
+            ...(structuredMessages as any[]).slice(0, -1),
+            { role: "system", content: "CRITICAL — SCHEDULE CHANGE: The user wants to change or update their workout schedule. Look at their existing preferences in the user profile block (goal, fitness level, days per week, session length). Call the schedule_plan tool immediately with those values as defaults — do NOT ask a series of clarifying questions first. If a specific preference is missing, make a sensible assumption. One short sentence acknowledging you're rebuilding their plan, then call the tool." },
+            (structuredMessages as any[]).at(-1),
+          ]
+        : structuredMessages;
 
       const gatewayResponse = await aiChatCompletion({
         model: "gemini-2.5-flash",
-        messages: structuredMessages,
+        messages: injectedMessages,
         stream: true,
         tools: STRUCTURED_TOOLS,
         tool_choice: isMealPlanRequest
