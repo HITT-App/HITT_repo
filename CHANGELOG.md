@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-18] — Dietary preferences visible and editable on nutrition dashboard
+
+- **Dietary preferences card on nutrition dashboard** — shows your current diet style and allergens at a glance; tap Edit to update them without re-running the full onboarding wizard
+
 ## [2026-06-18] — Nutrition preferences recognised across all entry points
 
 - **Dietary prefs set via Jarvis now recognised everywhere** — if you set your food preferences through Jarvis (or any wizard), the app no longer re-prompts you to set up nutrition; any meaningful food preference counts as onboarding complete
