@@ -611,17 +611,6 @@ export default function Profile() {
             )}
           </div>
 
-          {/* Sign Out */}
-          <div className="pt-2">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/debug-ai')}
-              className="w-full text-muted-foreground/50 hover:text-muted-foreground text-xs"
-            >
-              Debug AI
-            </Button>
-          </div>
-
           <div className="pt-2">
             <Button
               variant="outline"
