@@ -87,8 +87,9 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
             config.activityType = Self.hkActivityType(for: type)
             config.locationType = .indoor
 
-            hkStore.requestAuthorization(toShare: [HKObjectType.workoutType()], read: []) { [weak self] granted, _ in
+            hkStore.requestAuthorization(toShare: [HKObjectType.workoutType()], read: []) { [weak self] granted, error in
                 guard granted, let self else {
+                    NSLog("[WatchPlugin] HealthKit auth denied or error: %@", error?.localizedDescription ?? "no error")
                     call.resolve(["mirroring": false]); return
                 }
                 do {
@@ -97,6 +98,7 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
                     session.startActivity(with: .now)
                     call.resolve(["mirroring": true])
                 } catch {
+                    NSLog("[WatchPlugin] HKWorkoutSession creation failed: %@", error.localizedDescription)
                     call.resolve(["mirroring": false])
                 }
             }

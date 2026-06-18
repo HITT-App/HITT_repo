@@ -317,6 +317,7 @@
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HIIT reads your heart rate, calories, and distance to display live workout stats on your watch.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HIIT saves your workouts, including triathlon legs, to Apple Health.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKBackgroundModes = "workout-processing";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.hiitfitness.app;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -365,6 +366,7 @@
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HIIT reads your heart rate, calories, and distance to display live workout stats on your watch.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HIIT saves your workouts, including triathlon legs, to Apple Health.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKBackgroundModes = "workout-processing";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.hiitfitness.app;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
