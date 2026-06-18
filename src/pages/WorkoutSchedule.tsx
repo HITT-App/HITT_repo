@@ -193,6 +193,12 @@ export default function WorkoutSchedule() {
     { length: firstDayOffset + totalDays },
     (_, i) => i < firstDayOffset ? null : addDays(monthStart, i - firstDayOffset)
   )
+  // Compress row height for 5- and 6-week months so the selected-day panel
+  // stays visible without scrolling.
+  const calendarWeeks = Math.ceil((firstDayOffset + totalDays) / 7)
+  const cellAspectRatio =
+    calendarWeeks >= 6 ? '1/0.78' :
+    calendarWeeks >= 5 ? '1/0.90' : '1/1.08'
 
   // Next-up workout (first upcoming, not completed)
   const today = startOfDay(new Date())
@@ -419,7 +425,7 @@ export default function WorkoutSchedule() {
 
       {/* MONTH VIEW */}
       {view === 'month' && (
-        <div className="px-4">
+        <div className="px-4 pb-32">
           {/* Month nav */}
           <div className="flex items-center justify-between mb-3.5">
             <button
@@ -455,7 +461,7 @@ export default function WorkoutSchedule() {
                   key={day.toISOString()}
                   onClick={() => setSelectedDay(prev => prev && isSameDay(prev, day) ? null : day)}
                   className="flex flex-col items-center"
-                  style={{ aspectRatio: '1/1.08', justifyContent: 'center', gap: 5 }}
+                  style={{ aspectRatio: cellAspectRatio, justifyContent: 'center', gap: 5 }}
                 >
                   <div style={{
                     width: 34, height: 34, borderRadius: 999, display: 'grid', placeItems: 'center',
