@@ -120,7 +120,9 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
         case "cycling":   return .cycling
         case "swimming":  return .swimming
         case "strength":  return .traditionalStrengthTraining
-        case "triathlon": return .triathlon
+        case "triathlon":
+            if #available(iOS 16.0, *) { return .swimBikeRun }
+            return .swimming
         default:          return .highIntensityIntervalTraining
         }
     }
