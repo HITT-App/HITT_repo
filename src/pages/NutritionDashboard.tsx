@@ -492,52 +492,6 @@ export default function NutritionDashboard() {
             ))}
           </div>
 
-          {/* Dietary Preferences Card */}
-          <Card className="border-0 bg-card">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-semibold text-foreground">Dietary preferences</h2>
-                <button
-                  onClick={openPrefsSheet}
-                  className="flex items-center gap-1 text-xs text-primary font-medium active:opacity-70 touch-manipulation"
-                >
-                  <Settings2 className="w-3.5 h-3.5" />
-                  Edit
-                </button>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1.5">Diet style</p>
-                  {(nutritionPrefs?.food_preferences?.length ?? 0) > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {nutritionPrefs!.food_preferences.map(pref => (
-                        <span key={pref} className="rounded-full px-3 py-1 text-xs font-medium bg-primary/10 text-primary">
-                          {pref}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">Not set — tap Edit to add preferences</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1.5">Allergens</p>
-                  {(nutritionPrefs?.allergies?.length ?? 0) > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {nutritionPrefs!.allergies.map(a => (
-                        <span key={a} className="rounded-full px-3 py-1 text-xs font-medium bg-destructive/10 text-destructive">
-                          {a}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">None</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Diary Section */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -636,6 +590,52 @@ export default function NutritionDashboard() {
               })}
             </div>
           </div>
+
+          {/* Dietary Preferences Card */}
+          <Card className="border-0 bg-card">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-semibold text-foreground">Dietary preferences</h2>
+                <button
+                  onClick={openPrefsSheet}
+                  className="flex items-center gap-1 text-xs text-primary font-medium active:opacity-70 touch-manipulation"
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Diet style</p>
+                  {(nutritionPrefs?.food_preferences?.length ?? 0) > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {nutritionPrefs!.food_preferences.map(pref => (
+                        <span key={pref} className="rounded-full px-3 py-1 text-xs font-medium bg-primary/10 text-primary">
+                          {pref}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">Not set — tap Edit to add preferences</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Allergens</p>
+                  {(nutritionPrefs?.allergies?.length ?? 0) > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {nutritionPrefs!.allergies.map(a => (
+                        <span key={a} className="rounded-full px-3 py-1 text-xs font-medium bg-destructive/10 text-destructive">
+                          {a}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">None</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
