@@ -1,10 +1,18 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Moon, Sun, Plus, Calendar, Sparkles } from "lucide-react";
+import { ArrowLeft, Moon, Sun, Plus, Calendar, Sparkles, X, Loader2 } from "lucide-react";
 import { useSleep } from "@/hooks/useSleep";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+
+const QUALITY_OPTIONS = [
+  { label: "Restful", score: 90 },
+  { label: "Good", score: 70 },
+  { label: "Interrupted", score: 45 },
+  { label: "Poor", score: 25 },
+] as const;
 
 const SleepDashboard = () => {
   const navigate = useNavigate();
@@ -12,7 +20,44 @@ const SleepDashboard = () => {
     preferences, preferencesLoading,
     logs, logsLoading,
     weeklyLogs, sleepScore, weeklyStats,
+    logSleep,
   } = useSleep();
+
+  const [showForm, setShowForm] = useState(false);
+  const [bedtime, setBedtime] = useState("22:30");
+  const [wakeTime, setWakeTime] = useState("07:00");
+  const [quality, setQuality] = useState<number>(70);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const today = new Date();
+      const yesterday = subDays(today, 1);
+      const sleepDate = format(today, "yyyy-MM-dd");
+      const bedtimeISO = `${format(yesterday, "yyyy-MM-dd")}T${bedtime}:00`;
+      const wakeISO = `${format(today, "yyyy-MM-dd")}T${wakeTime}:00`;
+
+      let bedMins = parseInt(bedtime.split(":")[0]) * 60 + parseInt(bedtime.split(":")[1]);
+      let wakeMins = parseInt(wakeTime.split(":")[0]) * 60 + parseInt(wakeTime.split(":")[1]);
+      if (wakeMins < bedMins) wakeMins += 24 * 60;
+      const totalMins = wakeMins - bedMins;
+
+      await logSleep.mutateAsync({
+        sleep_date: sleepDate,
+        bedtime: bedtimeISO,
+        wake_time: wakeISO,
+        sleep_quality: quality,
+        deep_sleep_minutes: Math.round(totalMins * 0.2),
+        rem_sleep_minutes: Math.round(totalMins * 0.25),
+        light_sleep_minutes: Math.round(totalMins * 0.5),
+        awake_minutes: Math.round(totalMins * 0.05),
+      });
+      setShowForm(false);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!preferencesLoading && !preferences?.onboarding_completed) {
     navigate("/sleep-onboarding");
@@ -56,8 +101,8 @@ const SleepDashboard = () => {
           <button onClick={() => navigate("/sleep-history")} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors touch-manipulation">
             <Calendar className="w-4 h-4 text-muted-foreground" />
           </button>
-          <button onClick={() => navigate("/log-sleep")} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors touch-manipulation">
-            <Plus className="w-4 h-4 text-muted-foreground" />
+          <button onClick={() => setShowForm(v => !v)} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors touch-manipulation">
+            {showForm ? <X className="w-4 h-4 text-muted-foreground" /> : <Plus className="w-4 h-4 text-muted-foreground" />}
           </button>
         </div>
       </header>
