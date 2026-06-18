@@ -38,22 +38,25 @@ export function useMealRecommendations() {
 
       // Client-side filter for allergen exclusion (safe at 8–20 row scale)
       // TODO: replace with a DB-side RPC if this table grows beyond 200 rows
-      if (prefs?.allergies && prefs.allergies.length > 0) {
-        const userAllergens = prefs.allergies.map(a => a.toLowerCase())
+      const userAllergens = (prefs?.allergies ?? []).map(a => a.toLowerCase()).filter(Boolean)
+      if (userAllergens.length > 0) {
         meals = meals.filter(m => {
           const mealAllergens = (m.allergens ?? []).map(a => a.toLowerCase())
           return !userAllergens.some(a => mealAllergens.includes(a))
         })
       }
 
-      // dietary_tags filter — only show meals that match at least one user diet pref
-      if (prefs?.food_preferences && prefs.food_preferences.length > 0) {
-        const userDiet = prefs.food_preferences.map(d => d.toLowerCase())
+      // dietary_tags filter — 'unrestricted' means no filter; only apply when
+      // the user has a meaningful dietary preference set
+      const meaningfulDiet = (prefs?.food_preferences ?? [])
+        .map(d => d.toLowerCase())
+        .filter(d => d && d !== 'unrestricted')
+      if (meaningfulDiet.length > 0) {
         meals = meals.filter(m => {
           const mealTags = (m.dietary_tags ?? []).map(t => t.toLowerCase())
-          // Meals with no dietary_tags are always included (no data = no restriction)
+          // Meals with no dietary_tags are always included (no restriction data = safe for all)
           if (mealTags.length === 0) return true
-          return userDiet.some(d => mealTags.includes(d))
+          return meaningfulDiet.some(d => mealTags.includes(d))
         })
       }
 
