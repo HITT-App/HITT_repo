@@ -297,7 +297,7 @@ const Triathlon = () => {
           { type: 'run',  targetKm: targetKm[2] },
         ],
       });
-      mirroring = await startWorkoutMirroring('swimming', raceName);
+      mirroring = await startWorkoutMirroring('triathlon', raceName);
     } catch { /* best-effort — continue to show feedback */ }
 
     setWatchSent(true);

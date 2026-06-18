@@ -5,7 +5,10 @@ import HealthKit
 // an HKWorkoutSession (iOS 26+ / watchOS 26+). Routes to the Ready screen.
 class WatchAppDelegate: NSObject, WKApplicationDelegate {
     func handle(_ workoutConfiguration: HKWorkoutConfiguration) {
-        if WatchSessionManager.shared.triathlonPlan != nil {
+        // Triathlon activity type always routes to the Race tab — plan arrives via
+        // WCSession shortly after and TriathlonView loads it via onReceive/onAppear.
+        if workoutConfiguration.activityType == .triathlon
+            || WatchSessionManager.shared.triathlonPlan != nil {
             WorkoutCoordinator.shared.navigateToRaceTab()
         } else {
             let name = Self.label(for: workoutConfiguration.activityType)

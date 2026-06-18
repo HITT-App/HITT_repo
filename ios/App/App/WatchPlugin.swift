@@ -116,11 +116,12 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private static func hkActivityType(for str: String) -> HKWorkoutActivityType {
         switch str {
-        case "running":  return .running
-        case "cycling":  return .cycling
-        case "swimming": return .swimming
-        case "strength": return .traditionalStrengthTraining
-        default:         return .highIntensityIntervalTraining
+        case "running":   return .running
+        case "cycling":   return .cycling
+        case "swimming":  return .swimming
+        case "strength":  return .traditionalStrengthTraining
+        case "triathlon": return .triathlon
+        default:          return .highIntensityIntervalTraining
         }
     }
 }
