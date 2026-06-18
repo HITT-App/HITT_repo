@@ -287,6 +287,7 @@ const Triathlon = () => {
 
   const sendToWatch = async () => {
     setWatchSending(true);
+    let mirroring = false;
     try {
       await sendTriathlonToWatch({
         name: raceName,
@@ -296,23 +297,23 @@ const Triathlon = () => {
           { type: 'run',  targetKm: targetKm[2] },
         ],
       });
-      const mirroring = await startWorkoutMirroring('swimming', raceName);
-      setWatchSent(true);
-      if (mirroring) {
-        toast({ title: 'Starting on Apple Watch ⌚', description: 'Tap the prompt on your Watch to open the Race screen.' });
-        // End the iPhone-side session after 8s — only needed to surface the Watch prompt.
-        // clearMirrorWorkout on Watch only clears HIIT mirror state, not the triathlon plan.
-        setTimeout(() => endWorkoutMirroring(), 8000);
-      } else {
-        const reachable = await isWatchAvailable();
-        if (reachable) {
-          toast({ title: 'Plan sent to Watch ⌚', description: 'Open the Race screen on your Watch to begin.' });
-        } else {
-          toast({ title: 'Plan queued for Watch ⌚', description: 'Open the HIIT app on your Watch — Race tab will load automatically.' });
-        }
-      }
-    } catch { /* best-effort */ }
+      mirroring = await startWorkoutMirroring('swimming', raceName);
+    } catch { /* best-effort — continue to show feedback */ }
+
+    setWatchSent(true);
     setWatchSending(false);
+
+    if (mirroring) {
+      toast({ title: 'Starting on Apple Watch ⌚', description: 'Tap the prompt on your Watch to open the Race screen.' });
+      setTimeout(() => endWorkoutMirroring(), 8000);
+    } else {
+      const reachable = await isWatchAvailable().catch(() => false);
+      if (reachable) {
+        toast({ title: 'Plan sent to Watch ⌚', description: 'Open the Race screen on your Watch to begin.' });
+      } else {
+        toast({ title: 'Plan queued for Watch ⌚', description: 'Open the HIIT app on your Watch — Race tab will load automatically.' });
+      }
+    }
   };
 
   const totals = legData.reduce(
