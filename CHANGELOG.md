@@ -5,6 +5,10 @@
 - **Every new user gets a HIIT animal avatar** — a random animal character (eagle in bow tie, black cat in t-shirt, bear in hoodie, and nine others) is assigned automatically on signup
 - **Pick your animal in your profile** — tap the camera button on the Profile page to choose from the full grid of 12 animals, or upload your own photo as before
 
+## [2026-06-18] — Jarvis prompts to update goals before building a new schedule
+
+- **Goal wizard prompt before new schedule** — when Jarvis proposes a workout schedule and you've previously completed setup, it first asks if you want to update your goals; tap "Update my goals" to re-run the full wizard, or "Keep current goals" to proceed with your saved preferences
+
 ## [2026-06-18] — Expandable recipe cards on nutrition dashboard
 
 - **Suggested meals on the nutrition dashboard now show the full recipe** — tap any HIIT Coach suggestion in the diary view to expand it and see the ingredient list and preparation steps

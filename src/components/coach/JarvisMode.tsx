@@ -219,6 +219,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [pendingNoPlanPrompt, setPendingNoPlanPrompt] = useState(false);
   const [mealPlan, setMealPlan] = useState<RecommendMealPlanPayload | null>(null);
   const [pendingDietaryPrefsPrompt, setPendingDietaryPrefsPrompt] = useState(false);
+  const [showGoalWizardPrompt, setShowGoalWizardPrompt] = useState(false);
 
   // Refs so handleSend can read setup state without stale closures
   const currentUserIdRef = useRef<string | null>(null);
@@ -753,6 +754,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       switch (action.type) {
         case 'schedule_plan':
           setPendingSchedule(action.payload);
+          if (localStorage.getItem('hiit-plan-onboarding-done')) {
+            setShowGoalWizardPrompt(true);
+          }
           break;
         case 'log_food':
           setPendingConfirmation({ type: 'food', payload: action.payload });
@@ -1008,8 +1012,40 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           />
         )}
 
+        {/* Goal wizard prompt — shown before schedule confirm when onboarding already done */}
+        {pendingSchedule && showGoalWizardPrompt && (
+          <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
+            <p className="text-sm font-semibold text-foreground">Update your goals first?</p>
+            <p className="text-xs text-muted-foreground">
+              Your preferences from the last time you set up a plan are still saved. You can update your goal, fitness level, and schedule, or keep things as they are.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-primary text-primary-foreground text-xs h-9"
+                onClick={() => {
+                  setPendingSchedule(null);
+                  setShowGoalWizardPrompt(false);
+                  handleClose();
+                  navigate('/schedule-setup', { state: { returnTo: '/ai' } });
+                }}
+              >
+                Update my goals
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-xs h-9"
+                onClick={() => setShowGoalWizardPrompt(false)}
+              >
+                Keep current goals
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Schedule confirmation card */}
-        {pendingSchedule && (
+        {pendingSchedule && !showGoalWizardPrompt && (
           <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-3">
             <p className="text-sm font-semibold text-foreground">Your plan is ready 🗓️</p>
             <p className="text-xs text-muted-foreground">
