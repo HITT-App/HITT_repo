@@ -1620,48 +1620,22 @@ serve(async (req) => {
             ...baseStructured.slice(0, lastUserIdx),
             { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
             { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool." },
-            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks for a meal plan, day of eating, what to eat today, or any similar request — you MUST call the recommend_meal_plan tool. Do NOT describe meals in your text response. Call the tool and generate all meals inline. Write only a brief 1-sentence intro alongside the tool call (e.g. 'Here's your plan for today!'). Never promise to show a meal plan and then not call the tool." },
+            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks for a meal plan, day of eating, what to eat today, or any similar request — you MUST call the recommend_meal_plan tool immediately. Do NOT describe meals in text. Do NOT ask for dietary preferences first — generate the plan now using whatever preferences are on file, or assume a balanced omnivore diet if none are set. Add a brief note if you made assumptions (e.g. 'I've assumed no dietary restrictions — let me know if you need adjustments'). Write only a brief 1-sentence intro alongside the tool call. Never say 'here's your plan' without calling the tool." },
             baseStructured[lastUserIdx],
           ]
         : baseStructured;
 
-      // Force the meal plan tool when the user is clearly asking for one —
-      // BUT only if dietary preferences are already on file. If not, let the
-      // AI ask for them conversationally so the plan can be personalised.
       const lastUserContent = String(
         (structuredMessages as any[]).filter(m => m.role === 'user').pop()?.content ?? ''
       ).toLowerCase();
       const isMealPlanRequest = /meal plan|what (should|can) i eat|day of eating|what to eat|plan (my )?(meals|eating|food|day)|full day (of )?eating|food plan/.test(lastUserContent);
 
-      const meaningfulFoodPrefs = (nutritionProfile?.food_preferences ?? []).filter(
-        (p: string) => p && p !== 'no_preference' && p !== 'omnivore'
-      );
-      const hasNutritionPrefs = !!(
-        meaningfulFoodPrefs.length > 0 ||
-        (nutritionProfile?.allergies?.length) ||
-        (nutritionProfile as any)?.allergens?.length
-      );
-
-      // If meal plan requested but no prefs on file, inject a system message
-      // telling the AI to collect them before generating a plan.
-      let finalMessages = structuredMessages;
-      if (isMealPlanRequest && !hasNutritionPrefs) {
-        const lastIdx = (structuredMessages as any[]).findLastIndex((m: any) => m.role === 'user');
-        if (lastIdx !== -1) {
-          finalMessages = [
-            ...(structuredMessages as any[]).slice(0, lastIdx),
-            { role: 'system', content: 'CRITICAL — DIETARY PREFERENCES MISSING: The user has no dietary preferences or allergens on file. Before generating any meal plan, you MUST ask the user the following in a single friendly message: (1) Do they have any food allergies or intolerances? (2) Do they follow any dietary style (e.g. vegetarian, vegan, pescatarian, gluten-free, keto)? Tell them you need this to personalise their plan. Do NOT call any tool yet. Wait for their response.' },
-            (structuredMessages as any[])[lastIdx],
-          ];
-        }
-      }
-
       const gatewayResponse = await aiChatCompletion({
         model: "gemini-2.5-flash",
-        messages: finalMessages,
+        messages: structuredMessages,
         stream: true,
         tools: STRUCTURED_TOOLS,
-        tool_choice: (isMealPlanRequest && hasNutritionPrefs)
+        tool_choice: isMealPlanRequest
           ? { type: "function", function: { name: "recommend_meal_plan" } }
           : "auto",
       });

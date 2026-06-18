@@ -133,9 +133,11 @@ final class WatchSessionManager: NSObject {
             NotificationCenter.default.post(name: .watchStructuredWorkoutReceived, object: decoded)
         }
 
-        // Mirror workout — iPhone started a workout, show Ready screen on Watch
+        // Mirror workout — iPhone started a workout, show Ready screen on Watch.
+        // Skip if a triathlon plan is pending — the Race tab takes priority.
         if let mirror = message["mirrorWorkout"] as? [String: Any],
-           let name = mirror["name"] as? String {
+           let name = mirror["name"] as? String,
+           triathlonPlan == nil {
             WorkoutCoordinator.shared.receiveMirroredWorkout(named: name)
         }
 
