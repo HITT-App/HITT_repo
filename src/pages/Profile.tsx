@@ -289,7 +289,7 @@ export default function Profile() {
             </AvatarFallback>
           </Avatar>
           <button
-            onClick={() => avatarInputRef.current?.click()}
+            onClick={() => setAvatarPickerOpen(true)}
             className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center border-2 border-background"
           >
             <Camera className="w-3.5 h-3.5 text-primary-foreground" />
