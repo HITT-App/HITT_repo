@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-18] — HIIT animal avatars
+
+- **Every new user gets a HIIT animal avatar** — a random animal character (eagle in bow tie, black cat in t-shirt, bear in hoodie, and nine others) is assigned automatically on signup
+- **Pick your animal in your profile** — tap the camera button on the Profile page to choose from the full grid of 12 animals, or upload your own photo as before
+
 ## [2026-06-18] — Recipe cards for suggested meals
 
 - **Tap any suggested meal to see the recipe** — meal plan cards in Jarvis now expand to show the full ingredient list with amounts and step-by-step preparation instructions
