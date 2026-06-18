@@ -5,8 +5,12 @@ import HealthKit
 // an HKWorkoutSession (iOS 26+ / watchOS 26+). Routes to the Ready screen.
 class WatchAppDelegate: NSObject, WKApplicationDelegate {
     func handle(_ workoutConfiguration: HKWorkoutConfiguration) {
-        let name = Self.label(for: workoutConfiguration.activityType)
-        WorkoutCoordinator.shared.receiveMirroredWorkout(named: name)
+        if WatchSessionManager.shared.triathlonPlan != nil {
+            WorkoutCoordinator.shared.navigateToRaceTab()
+        } else {
+            let name = Self.label(for: workoutConfiguration.activityType)
+            WorkoutCoordinator.shared.receiveMirroredWorkout(named: name)
+        }
     }
 
     private static func label(for type: HKWorkoutActivityType) -> String {

@@ -13,7 +13,7 @@ import LiveActivityMap from "@/components/activity/LiveActivityMap";
 import { GpsFilter } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
 import type { GpsPoint } from "@/lib/gps-filter";
-import { sendTriathlonToWatch } from "@/plugins/WatchPlugin";
+import { sendTriathlonToWatch, isWatchAvailable, startWorkoutMirroring } from "@/plugins/WatchPlugin";
 
 // ── Design tokens ─────────────────────────────────────────────
 const C = {
@@ -296,10 +296,20 @@ const Triathlon = () => {
           { type: 'run',  targetKm: targetKm[2] },
         ],
       });
+      const mirroring = await startWorkoutMirroring('swimming', raceName);
+      setWatchSent(true);
+      if (mirroring) {
+        toast({ title: 'Starting on Apple Watch ⌚', description: 'Tap the prompt on your Watch to open the Race screen.' });
+      } else {
+        const reachable = await isWatchAvailable();
+        if (reachable) {
+          toast({ title: 'Plan sent to Watch ⌚', description: 'Open the Race screen on your Watch to begin.' });
+        } else {
+          toast({ title: 'Plan queued for Watch ⌚', description: 'Open the HIIT app on your Watch — Race tab will load automatically.' });
+        }
+      }
     } catch { /* best-effort */ }
-    setWatchSent(true);
     setWatchSending(false);
-    toast({ title: 'Plan sent to Watch ⌚', description: 'Your Watch will open the Race screen automatically.' });
   };
 
   const totals = legData.reduce(
@@ -437,8 +447,8 @@ const Triathlon = () => {
               }}
             >
               {watchSent
-                ? <><Check size={16} color={C.good} strokeWidth={2.2} /> Sent to Apple Watch</>
-                : <><Watch size={16} color={C.dim} strokeWidth={2.2} /> {watchSending ? 'Sending…' : 'Send plan to Apple Watch'}</>}
+                ? <><Check size={16} color={C.good} strokeWidth={2.2} /> Starting on Apple Watch</>
+                : <><Watch size={16} color={C.dim} strokeWidth={2.2} /> {watchSending ? 'Starting…' : 'Start Race on Apple Watch'}</>}
             </button>
             <button
               onClick={() => setScreen('ready')}
