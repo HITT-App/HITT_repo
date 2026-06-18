@@ -113,8 +113,8 @@ function HoldToFinish({ label, onFinish }: { label: string; onFinish: () => void
     }
     rafRef.current = requestAnimationFrame(tick)
   }
-  const begin = (ev: React.TouchEvent | React.MouseEvent) => {
-    ev.preventDefault()
+  const begin = (ev: React.PointerEvent<HTMLButtonElement>) => {
+    ev.currentTarget.setPointerCapture(ev.pointerId)
     doneRef.current = false
     startRef.current = performance.now()
     rafRef.current = requestAnimationFrame(tick)
@@ -123,12 +123,11 @@ function HoldToFinish({ label, onFinish }: { label: string; onFinish: () => void
   const filled = progress > 0.55
   return (
     <button
-      onTouchStart={begin} onTouchEnd={stop} onTouchCancel={stop}
-      onMouseDown={begin} onMouseUp={stop} onMouseLeave={stop}
+      onPointerDown={begin} onPointerUp={stop} onPointerCancel={stop}
       style={{
-        position: 'relative', width: '100%', height: 52, borderRadius: 14, overflow: 'hidden',
-        border: `1px solid ${WP.accent}`, cursor: 'pointer', userSelect: 'none', touchAction: 'none',
-        background: 'rgba(249,115,22,.12)', fontFamily: 'inherit',
+        position: 'relative', width: '100%', height: 60, borderRadius: 14, overflow: 'hidden',
+        border: `2px solid ${WP.accent}`, cursor: 'pointer', userSelect: 'none', touchAction: 'none',
+        background: 'rgba(249,115,22,.15)', fontFamily: 'inherit',
       }}
     >
       <div style={{
