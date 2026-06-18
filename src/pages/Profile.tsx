@@ -33,6 +33,11 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/u
 const PRESET_AVATARS = Array.from({ length: 12 }, (_, i) =>
   `/avatars/avatar-${String(i + 1).padStart(2, '0')}.jpg`
 );
+
+const presetAvatar = (seed: string) => {
+  const idx = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 12;
+  return PRESET_AVATARS[idx];
+};
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -283,10 +288,8 @@ export default function Profile() {
       <div className="px-5 -mt-12 relative z-10">
         <div className="relative w-24 h-24">
           <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
-            <AvatarImage src={avatarPreview || undefined} alt="Profile" />
-            <AvatarFallback className="bg-secondary text-lg font-medium">
-              {getInitials()}
-            </AvatarFallback>
+            <AvatarImage src={avatarPreview || presetAvatar(displayName || user?.email || 'user')} alt="Profile" className="object-cover" />
+            <AvatarFallback className="bg-secondary" />
           </Avatar>
           <button
             onClick={() => setAvatarPickerOpen(true)}
