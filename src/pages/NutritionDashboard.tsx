@@ -32,7 +32,10 @@ import {
   Apple,
   Pencil,
   Trash2,
+  Settings2,
 } from "lucide-react";
+import { useNutritionPreferences } from "@/hooks/useNutritionPreferences";
+import { ALLERGEN_OPTIONS, DIETARY_OPTIONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { format, startOfDay, endOfDay, getDay, isToday } from "date-fns";
 import { getMealPlan, markMealPlanLogged } from "@/lib/mealPlanStorage";
@@ -112,9 +115,14 @@ export default function NutritionDashboard() {
   });
   const [editSaving, setEditSaving] = useState(false);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const [editDietPrefs, setEditDietPrefs] = useState<string[]>([]);
+  const [editAllergies, setEditAllergies] = useState<string[]>([]);
+  const [prefsSaving, setPrefsSaving] = useState(false);
   const [suggestedMeals, setSuggestedMeals] = useState<MealInPlan[]>([]);
   const [suggestedLogged, setSuggestedLogged] = useState<Set<string>>(new Set());
   const keyboardHeight = useKeyboardHeight();
+  const { data: nutritionPrefs, save: savePrefs } = useNutritionPreferences();
 
   const currentDayIndex = getDay(selectedDate);
 
@@ -254,6 +262,19 @@ export default function NutritionDashboard() {
     setEditSaving(false);
     setEditLog(null);
     fetchData();
+  };
+
+  const openPrefsSheet = () => {
+    setEditDietPrefs(nutritionPrefs?.food_preferences ?? []);
+    setEditAllergies(nutritionPrefs?.allergies ?? []);
+    setPrefsOpen(true);
+  };
+
+  const handleSavePrefs = async () => {
+    setPrefsSaving(true);
+    await savePrefs({ food_preferences: editDietPrefs, allergies: editAllergies });
+    setPrefsSaving(false);
+    setPrefsOpen(false);
   };
 
   const handleDelete = async () => {
@@ -470,6 +491,52 @@ export default function NutritionDashboard() {
               </button>
             ))}
           </div>
+
+          {/* Dietary Preferences Card */}
+          <Card className="border-0 bg-card">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-semibold text-foreground">Dietary preferences</h2>
+                <button
+                  onClick={openPrefsSheet}
+                  className="flex items-center gap-1 text-xs text-primary font-medium active:opacity-70 touch-manipulation"
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Diet style</p>
+                  {(nutritionPrefs?.food_preferences?.length ?? 0) > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {nutritionPrefs!.food_preferences.map(pref => (
+                        <span key={pref} className="rounded-full px-3 py-1 text-xs font-medium bg-primary/10 text-primary">
+                          {pref}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">Not set — tap Edit to add preferences</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Allergens</p>
+                  {(nutritionPrefs?.allergies?.length ?? 0) > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {nutritionPrefs!.allergies.map(a => (
+                        <span key={a} className="rounded-full px-3 py-1 text-xs font-medium bg-destructive/10 text-destructive">
+                          {a}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">None</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Diary Section */}
           <div>
@@ -690,6 +757,71 @@ export default function NutritionDashboard() {
             <Button variant="outline" className="flex-1" onClick={() => setEditLog(null)}>Cancel</Button>
             <Button className="flex-1" disabled={editSaving} onClick={handleSave}>
               {editSaving ? "Saving…" : "Save changes"}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Dietary Preferences Edit Drawer */}
+      <Drawer open={prefsOpen} onOpenChange={(open) => { if (!open) setPrefsOpen(false); }}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Edit dietary preferences</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-5 pb-4 space-y-5 overflow-y-auto max-h-[65vh]">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Diet style</p>
+              <div className="flex flex-wrap gap-2">
+                {DIETARY_OPTIONS.map(opt => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setEditDietPrefs(prev =>
+                      prev.includes(opt) ? prev.filter(p => p !== opt) : [...prev, opt]
+                    )}
+                    className={cn(
+                      "rounded-full px-4 py-2 text-sm font-medium transition-colors border touch-manipulation",
+                      editDietPrefs.includes(opt)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-secondary text-foreground border-border/40"
+                    )}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Allergens & intolerances</p>
+              <div className="flex flex-wrap gap-2">
+                {ALLERGEN_OPTIONS.map(opt => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setEditAllergies(prev =>
+                      prev.includes(opt) ? prev.filter(a => a !== opt) : [...prev, opt]
+                    )}
+                    className={cn(
+                      "rounded-full px-4 py-2 text-sm font-medium transition-colors border touch-manipulation",
+                      editAllergies.includes(opt)
+                        ? "bg-destructive/20 text-destructive border-destructive/40"
+                        : "bg-secondary text-foreground border-border/40"
+                    )}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Tap to select — leave blank if none</p>
+            </div>
+          </div>
+          <DrawerFooter
+            className="px-5 pt-2 flex-row gap-3"
+            style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : 32 }}
+          >
+            <Button variant="outline" className="flex-1" onClick={() => setPrefsOpen(false)}>Cancel</Button>
+            <Button className="flex-1" disabled={prefsSaving} onClick={handleSavePrefs}>
+              {prefsSaving ? "Saving…" : "Save"}
             </Button>
           </DrawerFooter>
         </DrawerContent>
