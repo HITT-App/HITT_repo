@@ -48,7 +48,7 @@ export function JarvisDietaryPrefsCard({ onSaved, onSkip }: JarvisDietaryPrefsCa
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      await supabase.from('nutrition_profiles').upsert(
+      const { error } = await supabase.from('nutrition_profiles').upsert(
         {
           user_id: user.id,
           food_preferences: [selectedStyle],
@@ -57,6 +57,7 @@ export function JarvisDietaryPrefsCard({ onSaved, onSkip }: JarvisDietaryPrefsCa
         } as any,
         { onConflict: 'user_id' },
       )
+      if (error) throw error
       onSaved()
     } finally {
       setSaving(false)

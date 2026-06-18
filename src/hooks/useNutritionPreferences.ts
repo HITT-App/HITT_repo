@@ -27,7 +27,16 @@ export function useNutritionPreferences() {
         .select('user_id, allergies, food_preferences, daily_calorie_target, calorie_method, weight_goal, activity_level, onboarding_completed, onboarding_skipped')
         .eq('user_id', user!.id)
         .maybeSingle()
-      return data as NutritionPreferences | null
+      if (!data) return null
+      // Any wizard that stores meaningful food_preferences counts as complete —
+      // avoids re-prompting users who set prefs via Jarvis or another path.
+      const meaningfulPrefs = (data.food_preferences ?? []).filter(
+        (p: string) => p && p !== 'unrestricted',
+      )
+      if (!data.onboarding_completed && meaningfulPrefs.length > 0) {
+        data.onboarding_completed = true
+      }
+      return data as NutritionPreferences
     },
   })
 

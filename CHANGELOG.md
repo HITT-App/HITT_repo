@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-18] — Nutrition preferences recognised across all entry points
+
+- **Dietary prefs set via Jarvis now recognised everywhere** — if you set your food preferences through Jarvis (or any wizard), the app no longer re-prompts you to set up nutrition; any meaningful food preference counts as onboarding complete
+- **Jarvis dietary card save error fixed** — a silent failure when saving preferences is now caught and surfaced correctly
+
 ## [2026-06-18] — AI Coach card glowing logo
 
 - **AI Coach home card logo updated** — replaced the flat JPEG logo with the animated glowing HIIT logo, matching the style of the nav bar centre button
