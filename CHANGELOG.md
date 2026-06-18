@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-18] — Revamped workout player for AI-generated sessions
+
+- **Full per-exercise player for AI workouts** — AI-generated sessions now use the same coached player as catalogue workouts: Ready screen, 3-2-1 countdown, Get Ready card with form cues, Active screen with reps/sets/timer, rest countdown between moves, playlist overview, and hold-to-finish on every exercise
+- **AI workout plans generated on the fly** — the schedule wizard (home screen and Jarvis) now generates bespoke exercise sessions with sets, reps, and form cues rather than picking from the pre-seeded catalogue
+- **Play button on week view workout cards** — the "Rest of your week" rail now shows a coloured Play button alongside the … menu, matching month view
+
 ## [2026-06-18] — Dietary preferences visible and editable on nutrition dashboard
 
 - **Dietary preferences card on nutrition dashboard** — shows your current diet style and allergens at a glance; tap Edit to update them without re-running the full onboarding wizard
