@@ -26,8 +26,13 @@ import {
 } from '@/components/ui/dialog';
 import {
   Camera, Loader2, User, Target, Shield, Mic, Sun, Moon,
-  Pencil, Check, X, Calendar, Lock, Globe, Trash2, Bell, ChevronRight,
+  Pencil, Check, X, Calendar, Lock, Globe, Trash2, Bell, ChevronRight, Upload,
 } from 'lucide-react';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+
+const PRESET_AVATARS = Array.from({ length: 12 }, (_, i) =>
+  `/avatars/avatar-${String(i + 1).padStart(2, '0')}.jpg`
+);
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -89,6 +94,18 @@ export default function Profile() {
   // Inline editing state
   const [editingField, setEditingField] = useState<'name' | 'username' | 'bio' | null>(null);
   const [tempValue, setTempValue] = useState('');
+
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [presetSaving, setPresetSaving] = useState(false);
+
+  const handlePresetSelect = async (url: string) => {
+    setPresetSaving(true);
+    setAvatarPreview(url);
+    await updateProfile({ avatar_url: url });
+    await createOrUpdateProfile({ avatar_url: url });
+    setPresetSaving(false);
+    setAvatarPickerOpen(false);
+  };
 
   // Cropper state
   const [cropperOpen, setCropperOpen] = useState(false);

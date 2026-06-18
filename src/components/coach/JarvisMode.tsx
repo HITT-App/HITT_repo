@@ -1187,8 +1187,12 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
         {/* Recipe recommendation card */}
         {recommendedRecipe && (
-          <div className="bg-accent/10 border border-accent/30 rounded-2xl px-4 py-3 space-y-3">
-            <div className="flex items-start gap-3">
+          <div className="bg-accent/10 border border-accent/30 rounded-2xl overflow-hidden">
+            <button
+              type="button"
+              className="w-full flex items-start gap-3 px-4 py-3 text-left"
+              onClick={() => setRecipeExpanded(e => !e)}
+            >
               <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
                 <span className="text-2xl">{recommendedRecipe.emoji ?? '🍽️'}</span>
               </div>
@@ -1198,19 +1202,45 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                   {recommendedRecipe.meal_type} · {recommendedRecipe.calories} cal · {recommendedRecipe.protein_g}g protein
                 </p>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="flex-1 bg-accent text-accent-foreground text-xs h-9"
-                onClick={() => {
-                  setRecommendedRecipe(null);
-                  handleClose();
-                  navigate('/browse-meals');
-                }}
-              >
-                View recipe
-              </Button>
+              {(recommendedRecipe.ingredients?.length || recommendedRecipe.instructions?.length) ? (
+                <ChevronDown
+                  className={cn('w-4 h-4 text-muted-foreground shrink-0 mt-1 transition-transform', recipeExpanded && 'rotate-180')}
+                />
+              ) : null}
+            </button>
+
+            {recipeExpanded && (recommendedRecipe.ingredients?.length || recommendedRecipe.instructions?.length) && (
+              <div className="px-4 pb-3 space-y-3 border-t border-border/30">
+                {recommendedRecipe.ingredients && recommendedRecipe.ingredients.length > 0 && (
+                  <div className="pt-3">
+                    <p className="text-xs font-semibold text-foreground mb-1.5">Ingredients</p>
+                    <ul className="space-y-0.5">
+                      {recommendedRecipe.ingredients.map((ing, i) => (
+                        <li key={i} className="text-xs text-muted-foreground flex gap-1.5">
+                          <span className="shrink-0">{ing.amount} {ing.unit}</span>
+                          <span>{ing.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {recommendedRecipe.instructions && recommendedRecipe.instructions.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-foreground mb-1.5">Method</p>
+                    <ol className="space-y-1">
+                      {recommendedRecipe.instructions.map((step, i) => (
+                        <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                          <span className="shrink-0 font-medium text-foreground/60">{i + 1}.</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2 px-4 pb-3">
               <Button
                 size="sm"
                 variant="outline"
@@ -1223,7 +1253,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                 size="sm"
                 variant="ghost"
                 className="text-xs h-9 text-muted-foreground"
-                onClick={() => setRecommendedRecipe(null)}
+                onClick={() => { setRecommendedRecipe(null); setRecipeExpanded(false); }}
               >
                 Skip
               </Button>
