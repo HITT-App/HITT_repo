@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Moon, Sun, Plus, ChevronRight, Calendar, Sparkles } from "lucide-react";
+import { ArrowLeft, Moon, Sun, Plus, Calendar, Sparkles } from "lucide-react";
 import { useSleep } from "@/hooks/useSleep";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ const SleepDashboard = () => {
   const navigate = useNavigate();
   const {
     preferences, preferencesLoading,
-    activeSchedule, logs, logsLoading,
+    logs, logsLoading,
     weeklyLogs, sleepScore, weeklyStats,
   } = useSleep();
 
@@ -140,41 +140,6 @@ const SleepDashboard = () => {
             </div>
           )}
         </div>
-
-        {/* Schedule */}
-        <button
-          onClick={() => navigate("/sleep-schedule")}
-          className="w-full bg-card border border-border/60 rounded-2xl p-4 text-left touch-manipulation active:bg-muted/30 transition-colors"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Sleep schedule</p>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </div>
-          {!activeSchedule ? (
-            <p className="text-[13px] text-muted-foreground">No schedule set — tap to add one</p>
-          ) : (
-            <div className="flex items-center gap-5">
-              <div className="flex items-center gap-1.5">
-                <Moon className="w-3.5 h-3.5 text-indigo-500" />
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Bedtime</p>
-                  <p className="text-[13px] font-semibold text-foreground">{activeSchedule.bedtime?.slice(0, 5)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Sun className="w-3.5 h-3.5 text-yellow-500" />
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Wake up</p>
-                  <p className="text-[13px] font-semibold text-foreground">{activeSchedule.wake_time?.slice(0, 5)}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">Goal</p>
-                <p className="text-[13px] font-semibold text-foreground">{preferences?.target_hours ?? 8}h {preferences?.target_minutes ?? 0}m</p>
-              </div>
-            </div>
-          )}
-        </button>
 
         {/* Quick links */}
         <div className="flex gap-2.5">

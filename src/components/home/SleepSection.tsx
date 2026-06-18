@@ -25,7 +25,11 @@ export function SleepSection() {
   const [quality, setQuality] = useState<number>(70);
   const [saving, setSaving] = useState(false);
 
-  const log = logs[0] ?? null;
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const yesterdayStr = format(subDays(new Date(), 1), "yyyy-MM-dd");
+  const recentLog = logs[0] ?? null;
+  // Only treat a log as "last night" if it was recorded today or yesterday
+  const log = (recentLog?.sleep_date === todayStr || recentLog?.sleep_date === yesterdayStr) ? recentLog : null;
   const hasData = !!log;
 
   const hours = log ? Math.floor((log.duration_minutes ?? 0) / 60) : 0;
