@@ -497,7 +497,7 @@ export default function WorkoutSchedule() {
                 </div>
                 {getWorkoutsForDate(selectedDay).length > 0
                   ? getWorkoutsForDate(selectedDay).map(w => (
-                      <div key={w.id} className="flex items-center gap-3 pl-3 py-3 pr-16 rounded-[16px] bg-card border border-border mb-2">
+                      <div key={w.id} className="flex items-center gap-3 pl-3 py-3 pr-3 rounded-[16px] bg-card border border-border mb-2">
                         <div style={{ width: 44, height: 44, borderRadius: 13, background: `${workoutColor(w)}1f`, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                           <Dumbbell style={{ color: workoutColor(w) }} className="w-5 h-5" />
                         </div>
@@ -507,8 +507,18 @@ export default function WorkoutSchedule() {
                             {w.scheduled_time ?? ''}{w.scheduled_time ? ' · ' : ''}{(w.estimated_duration_minutes ?? w.workout?.duration_minutes) ?? '—'} min
                           </p>
                         </div>
-                        {w.status === 'completed' && <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
-                        <button onClick={(e) => openActions(w, e)} className="p-1 text-muted-foreground/40">
+                        {w.status === 'completed'
+                          ? <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                          : (
+                            <button
+                              onClick={() => startWorkout(w)}
+                              style={{ width: 34, height: 34, borderRadius: 10, background: workoutColor(w), display: 'grid', placeItems: 'center', flexShrink: 0 }}
+                            >
+                              <Play className="w-4 h-4 fill-white" style={{ color: '#fff' }} />
+                            </button>
+                          )
+                        }
+                        <button onClick={(e) => openActions(w, e)} className="p-1 text-muted-foreground/40 flex-shrink-0">
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                       </div>
@@ -534,19 +544,6 @@ export default function WorkoutSchedule() {
               </p>
               {!showDayPicker ? (
                 <div className="space-y-2">
-                  <button
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-secondary/50 active:bg-secondary transition-colors text-left"
-                    onClick={() => {
-                      if (activeWorkout.workout_source === 'ai_generated') {
-                        navigate(`/gym-timer?scheduled_id=${activeWorkout.id}`)
-                      } else if (activeWorkout.workout_id) {
-                        navigate(`/workout-player/${activeWorkout.workout_id}`)
-                      }
-                    }}
-                  >
-                    <Play className="w-5 h-5 text-primary" />
-                    <span className="font-medium">Start now</span>
-                  </button>
                   <button
                     className="w-full flex items-center gap-4 p-4 rounded-2xl bg-secondary/50 active:bg-secondary transition-colors text-left"
                     onClick={() => setShowDayPicker(true)}
