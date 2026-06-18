@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-18] — Plan wizard conflict handling; sleep card staleness fix; alarm screen removed
+
+- **Plan wizard — replace or add alongside** — after reviewing your generated plan, tapping "Add to my schedule" now checks for existing sessions in that window and offers to replace them or add on top, matching the upload flow
+- **Home sleep card — staleness fix** — the card no longer shows a sleep log from days ago as "last night"; if no log exists for today or yesterday it shows the manual entry form instead
+- **Sleep screen — alarm scheduler removed** — the non-functional "No sleep schedule added yet" alarm setter has been removed from the sleep screen
+
 ## [2026-06-17] — Sleep wizard fix, XLSX multi-sheet fix, slider fix, Build my plan fix
 
 - **Sleep wizard no longer loops** — completing the wizard now returns to the home screen; previously it navigated to a route that sent you back to the start due to a stale cache check
