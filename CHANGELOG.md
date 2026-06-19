@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-06-19] — Sleep dashboard improvements and crash fix
+
+- **Tap any day to log or edit sleep** — the weekly dots in the Sleep dashboard are now tappable; tap a past day to add that night's sleep or update what you already logged (form pre-fills with your existing data)
+- **Last night card is tappable** — tap the "Last night" summary to jump straight into editing it
+- **Rotating sleep tips** — replaced the broken AI tips button with a card showing real sleep science tips; tap "Next tip" to cycle through 10 evidence-based tips on schedule, temperature, caffeine, screens, and more
+- **Fixed crash on home screen cold start** — preset animal avatar no longer crashes when user data is null on first load
+
 ## [2026-06-18] — HIIT animal avatars
 
 - **Every new user gets a HIIT animal avatar** — a random animal character (eagle in bow tie, black cat in t-shirt, bear in hoodie, and nine others) is assigned automatically on signup

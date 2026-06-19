@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Moon, Sun, Plus, Calendar, Sparkles, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Moon, Sun, Plus, Calendar, X, Loader2, ChevronRight } from "lucide-react";
 import { useSleep } from "@/hooks/useSleep";
 import { format, parseISO, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,49 @@ const QUALITY_OPTIONS = [
   { label: "Poor", score: 25 },
 ] as const;
 
+const SLEEP_TIPS = [
+  {
+    title: "Stick to a schedule",
+    body: "Going to bed and waking at the same time every day — even weekends — anchors your circadian rhythm. Consistency is the single biggest lever for sleep quality.",
+  },
+  {
+    title: "Cool your room",
+    body: "Your core temperature needs to drop 1–2°C to fall asleep. Aim for 16–18°C (60–65°F). A cooler room is one of the highest-impact, zero-cost improvements you can make.",
+  },
+  {
+    title: "Avoid screens before bed",
+    body: "Blue light from phones and TVs suppresses melatonin by up to 50%. Swap screens for a book or dim lighting in the 30–60 minutes before you want to sleep.",
+  },
+  {
+    title: "Limit caffeine after noon",
+    body: "Caffeine has a half-life of 5–7 hours. A coffee at 3pm still has half its caffeine in your system at 9pm — making it harder to fall and stay asleep.",
+  },
+  {
+    title: "Don't lie awake in bed",
+    body: "If you can't sleep after 20 minutes, get up and do something calm in dim light. Lying awake in bed trains your brain to associate bed with wakefulness.",
+  },
+  {
+    title: "Wind down deliberately",
+    body: "Your nervous system needs a transition from alert to relaxed. A consistent 20–30 minute wind-down routine — reading, stretching, journalling — signals your brain it's time to sleep.",
+  },
+  {
+    title: "Exercise boosts sleep",
+    body: "Regular exercise improves sleep quality and duration. Vigorous workouts within 2 hours of bedtime can delay sleep for some people — morning or afternoon sessions are ideal.",
+  },
+  {
+    title: "Watch your alcohol",
+    body: "Alcohol helps you fall asleep faster but fragments the second half of the night, reducing REM sleep — the kind most important for memory, mood, and recovery.",
+  },
+  {
+    title: "Morning light matters",
+    body: "Getting bright light in your eyes within 30 minutes of waking sets your circadian clock for the day. Even 10 minutes outside makes a measurable difference to that night's sleep.",
+  },
+  {
+    title: "Sleep debt is real",
+    body: "You can't fully recover a week of bad sleep with one long weekend lie-in. Consistent 7–9 hours each night protects your immune system, metabolism, and mental sharpness.",
+  },
+];
+
 const SleepDashboard = () => {
   const navigate = useNavigate();
   const {
@@ -24,19 +67,33 @@ const SleepDashboard = () => {
   } = useSleep();
 
   const [showForm, setShowForm] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [bedtime, setBedtime] = useState("22:30");
   const [wakeTime, setWakeTime] = useState("07:00");
   const [quality, setQuality] = useState<number>(70);
   const [saving, setSaving] = useState(false);
+  const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * SLEEP_TIPS.length));
+
+  const openFormForDate = (dateStr: string) => {
+    const existing = logs.find(l => l.sleep_date === dateStr);
+    if (existing) {
+      setBedtime(format(new Date(existing.bedtime), "HH:mm"));
+      setWakeTime(format(new Date(existing.wake_time), "HH:mm"));
+      setQuality(existing.sleep_quality ?? 70);
+    } else {
+      setBedtime("22:30");
+      setWakeTime("07:00");
+      setQuality(70);
+    }
+    setSelectedDate(dateStr);
+    setShowForm(true);
+  };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const today = new Date();
-      const yesterday = subDays(today, 1);
-      const sleepDate = format(today, "yyyy-MM-dd");
-      const bedtimeISO = `${format(yesterday, "yyyy-MM-dd")}T${bedtime}:00`;
-      const wakeISO = `${format(today, "yyyy-MM-dd")}T${wakeTime}:00`;
+      const bedtimeISO = `${format(subDays(parseISO(selectedDate), 1), "yyyy-MM-dd")}T${bedtime}:00`;
+      const wakeISO = `${selectedDate}T${wakeTime}:00`;
 
       let bedMins = parseInt(bedtime.split(":")[0]) * 60 + parseInt(bedtime.split(":")[1]);
       let wakeMins = parseInt(wakeTime.split(":")[0]) * 60 + parseInt(wakeTime.split(":")[1]);
@@ -44,7 +101,7 @@ const SleepDashboard = () => {
       const totalMins = wakeMins - bedMins;
 
       await logSleep.mutateAsync({
-        sleep_date: sleepDate,
+        sleep_date: selectedDate,
         bedtime: bedtimeISO,
         wake_time: wakeISO,
         sleep_quality: quality,
@@ -68,24 +125,36 @@ const SleepDashboard = () => {
     sleepScore >= 70 ? "#4ade80" :
     sleepScore >= 40 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))";
 
-  const getWeeklyConsistency = () => {
+  const getWeeklyData = () => {
     const today = new Date();
+    today.setHours(23, 59, 59, 999);
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay() + 1);
     return DAY_LABELS.map((_, i) => {
       const d = new Date(startOfWeek);
       d.setDate(startOfWeek.getDate() + i);
-      return weeklyLogs.some(l => l.sleep_date === d.toISOString().split("T")[0]);
+      const dateStr = format(d, "yyyy-MM-dd");
+      return {
+        dateStr,
+        logged: weeklyLogs.some(l => l.sleep_date === dateStr),
+        isFuture: d > today,
+      };
     });
   };
 
-  const consistency = getWeeklyConsistency();
+  const weeklyData = getWeeklyData();
   const lastLog = logs[0] ?? null;
 
   const fmtTime = (v: string | null | undefined) => {
     if (!v) return "--:--";
     try { return format(new Date(v), "HH:mm"); } catch { return "--:--"; }
   };
+
+  const formTitle = (() => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    if (selectedDate === today) return "Log last night's sleep";
+    return `Log sleep · ${format(parseISO(selectedDate), "EEE MMM d")}`;
+  })();
 
   return (
     <>
@@ -101,7 +170,13 @@ const SleepDashboard = () => {
           <button onClick={() => navigate("/sleep-history")} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors touch-manipulation">
             <Calendar className="w-4 h-4 text-muted-foreground" />
           </button>
-          <button onClick={() => setShowForm(v => !v)} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors touch-manipulation">
+          <button onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+            } else {
+              openFormForDate(format(new Date(), "yyyy-MM-dd"));
+            }
+          }} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors touch-manipulation">
             {showForm ? <X className="w-4 h-4 text-muted-foreground" /> : <Plus className="w-4 h-4 text-muted-foreground" />}
           </button>
         </div>
@@ -114,7 +189,7 @@ const SleepDashboard = () => {
         {/* Inline log form */}
         {showForm && (
           <div className="bg-card border border-border/60 rounded-2xl p-4 space-y-3">
-            <p className="text-[13px] font-semibold text-foreground">Log last night's sleep</p>
+            <p className="text-[13px] font-semibold text-foreground">{formTitle}</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1">
@@ -183,16 +258,25 @@ const SleepDashboard = () => {
 
           <div className="flex-1 min-w-0">
             <div className="flex gap-1 mb-2.5">
-              {DAY_LABELS.map((day, i) => (
-                <div key={i} className="flex flex-col items-center gap-0.5 flex-1">
-                  <span className="text-[9px] text-muted-foreground">{day}</span>
+              {weeklyData.map((day, i) => (
+                <button
+                  key={i}
+                  disabled={day.isFuture}
+                  onClick={() => !day.isFuture && openFormForDate(day.dateStr)}
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 flex-1 touch-manipulation",
+                    !day.isFuture && "active:opacity-60"
+                  )}
+                >
+                  <span className="text-[9px] text-muted-foreground">{DAY_LABELS[i]}</span>
                   <div className={cn(
-                    "w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold",
-                    consistency[i] ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                    "w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold transition-opacity",
+                    day.logged ? "bg-primary text-white" : "bg-muted text-muted-foreground",
+                    day.isFuture && "opacity-30"
                   )}>
-                    {consistency[i] ? "✓" : "·"}
+                    {day.logged ? "✓" : "·"}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
             <div className="flex gap-3">
@@ -213,14 +297,17 @@ const SleepDashboard = () => {
         </div>
 
         {/* Last night */}
-        <div className="bg-card border border-border/60 rounded-2xl p-4">
+        <button
+          className="w-full bg-card border border-border/60 rounded-2xl p-4 text-left touch-manipulation active:bg-muted/20 transition-colors"
+          onClick={() => openFormForDate(format(new Date(), "yyyy-MM-dd"))}
+        >
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Last night</p>
           {logsLoading ? (
             <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           ) : !lastLog ? (
             <div className="flex items-center justify-between">
               <p className="text-[13px] text-muted-foreground">No sleep logged yet</p>
-              <button onClick={() => setShowForm(true)} className="text-[12px] font-semibold text-primary touch-manipulation">Log now</button>
+              <span className="text-[12px] font-semibold text-primary">Log now</span>
             </div>
           ) : (
             <div className="flex items-center justify-between">
@@ -237,26 +324,27 @@ const SleepDashboard = () => {
                   {Math.floor((lastLog.duration_minutes ?? 0) / 60)}h {(lastLog.duration_minutes ?? 0) % 60}m
                 </span>
               </div>
-              <span className="text-[11px] text-muted-foreground">{format(parseISO(lastLog.sleep_date), "MMM d")}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground">{format(parseISO(lastLog.sleep_date), "MMM d")}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+              </div>
             </div>
           )}
+        </button>
+
+        {/* Sleep tip */}
+        <div className="bg-card border border-border/60 rounded-2xl p-4">
+          <p className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1.5">Sleep tip</p>
+          <p className="text-[13px] font-semibold text-foreground mb-1">{SLEEP_TIPS[tipIndex].title}</p>
+          <p className="text-[12px] text-muted-foreground leading-relaxed">{SLEEP_TIPS[tipIndex].body}</p>
+          <button
+            onClick={() => setTipIndex(i => (i + 1) % SLEEP_TIPS.length)}
+            className="mt-3 text-[11px] font-semibold text-primary flex items-center gap-0.5 touch-manipulation active:opacity-70"
+          >
+            Next tip <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {/* Quick links */}
-        <div className="flex gap-2.5">
-          <button onClick={() => navigate("/sleep-history")}
-            className="flex-1 bg-card border border-border/60 rounded-2xl p-3.5 text-left touch-manipulation active:bg-muted/30 transition-colors">
-            <Calendar className="w-4 h-4 text-primary mb-1.5" />
-            <p className="text-[12px] font-semibold text-foreground">History</p>
-            <p className="text-[10px] text-muted-foreground">All nights</p>
-          </button>
-          <button onClick={() => navigate("/sleep-recommendations")}
-            className="flex-1 bg-card border border-border/60 rounded-2xl p-3.5 text-left touch-manipulation active:bg-muted/30 transition-colors">
-            <Sparkles className="w-4 h-4 text-primary mb-1.5" />
-            <p className="text-[12px] font-semibold text-foreground">Tips</p>
-            <p className="text-[10px] text-muted-foreground">AI insights</p>
-          </button>
-        </div>
       </div>
       </div>
 
@@ -269,7 +357,7 @@ const SleepDashboard = () => {
         style={{ bottom: "calc(var(--safe-area-inset-bottom, 0px) + 192px)" }}
       >
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => openFormForDate(format(new Date(), "yyyy-MM-dd"))}
           className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-[15px] touch-manipulation active:opacity-90 transition-opacity"
         >
           Log Sleep
