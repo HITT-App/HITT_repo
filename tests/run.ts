@@ -22,6 +22,7 @@ const SUPABASE_URL   = 'https://pbrqdlkjoxvglcdlixbi.supabase.co';
 const ANON_KEY       = 'sb_publishable_iS3pm69vimlp67zzAm5ORA_pTi5IfCM';
 const FN_BASE        = `${SUPABASE_URL}/functions/v1`;
 const SRC            = '/Users/vanessa/hitt-app/src';
+const IOS            = '/Users/vanessa/hitt-app/ios/App';
 
 const TEST_EMAIL     = process.env.TEST_EMAIL    ?? '';
 const TEST_PASSWORD  = process.env.TEST_PASSWORD ?? '';
@@ -65,6 +66,10 @@ function section(title: string) {
 
 function readSrc(path: string): string {
   return readFileSync(`${SRC}/${path}`, 'utf-8');
+}
+
+function readIOS(path: string): string {
+  return readFileSync(`${IOS}/${path}`, 'utf-8');
 }
 
 async function callFn(name: string, body: object): Promise<{ status: number; json: any }> {
@@ -807,6 +812,290 @@ async function runDatabaseTests() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// SECTION 5 — APPLE WATCH ACTIVITY LAUNCH
+// ════════════════════════════════════════════════════════════════════════════
+
+async function runWatchAuditTests() {
+  section('APPLE WATCH ACTIVITY LAUNCH (source file checks)');
+
+  // ── WA-01: WatchPlugin registers all required Capacitor bridge methods ────
+
+  try {
+    const src = readIOS('App/WatchPlugin.swift');
+    const required = ['startMirroredWorkout', 'endMirroredWorkout', 'sendStructuredWorkout', 'sendWorkout', 'clearWorkout', 'isAvailable'];
+    const missing = required.filter(m => !src.includes(`"${m}"`));
+    if (missing.length === 0) {
+      pass('WA-01', 'WatchPlugin registers all required Capacitor bridge methods');
+    } else {
+      fail('WA-01', 'WatchPlugin registers all required Capacitor bridge methods', `Missing: ${missing.join(', ')}`);
+    }
+  } catch {
+    fail('WA-01', 'WatchPlugin bridge methods', 'WatchPlugin.swift not found');
+  }
+
+  // ── WA-02: hkActivityType maps 'triathlon' → .swimBikeRun with iOS 16+ guard
+
+  try {
+    const src = readIOS('App/WatchPlugin.swift');
+    const hasTriathlonCase = src.includes('case "triathlon"');
+    const hasSwimBikeRun   = src.includes('.swimBikeRun');
+    const hasIOSGuard      = src.includes('#available(iOS 16.0, *)');
+    if (hasTriathlonCase && hasSwimBikeRun && hasIOSGuard) {
+      pass('WA-02', 'hkActivityType maps "triathlon" → .swimBikeRun with #available(iOS 16.0, *) guard');
+    } else {
+      fail('WA-02', 'hkActivityType maps "triathlon" → .swimBikeRun with #available(iOS 16.0, *) guard',
+        `Missing: ${[!hasTriathlonCase && 'triathlon case', !hasSwimBikeRun && '.swimBikeRun', !hasIOSGuard && 'iOS 16 guard'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('WA-02', 'hkActivityType triathlon mapping', 'WatchPlugin.swift not found');
+  }
+
+  // ── WA-03: hkActivityType maps all standard activity types ───────────────
+
+  try {
+    const src = readIOS('App/WatchPlugin.swift');
+    const types: Array<[string, string]> = [
+      ['"running"',  '.running'],
+      ['"cycling"',  '.cycling'],
+      ['"swimming"', '.swimming'],
+      ['"strength"', '.traditionalStrengthTraining'],
+    ];
+    const missing = types.filter(([k, v]) => !src.includes(k) || !src.includes(v));
+    if (missing.length === 0) {
+      pass('WA-03', 'hkActivityType maps running/cycling/swimming/strength to correct HKWorkoutActivityType');
+    } else {
+      fail('WA-03', 'hkActivityType maps running/cycling/swimming/strength to correct HKWorkoutActivityType',
+        `Missing mappings: ${missing.map(([k]) => k).join(', ')}`);
+    }
+  } catch {
+    fail('WA-03', 'hkActivityType standard mappings', 'WatchPlugin.swift not found');
+  }
+
+  // ── WA-04: startMirroredWorkout uses iOS 26 guard for HKWorkoutSession ───
+
+  try {
+    const src = readIOS('App/WatchPlugin.swift');
+    const hasIOS26Guard  = src.includes('#available(iOS 26.0, *)');
+    const hasHKSession   = src.includes('HKWorkoutSession(');
+    const hasHKAuthReq   = src.includes('requestAuthorization');
+    if (hasIOS26Guard && hasHKSession && hasHKAuthReq) {
+      pass('WA-04', 'startMirroredWorkout guards HKWorkoutSession creation with #available(iOS 26.0, *)');
+    } else {
+      fail('WA-04', 'startMirroredWorkout guards HKWorkoutSession creation with #available(iOS 26.0, *)',
+        `Missing: ${[!hasIOS26Guard && 'iOS 26 guard', !hasHKSession && 'HKWorkoutSession(', !hasHKAuthReq && 'requestAuthorization'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('WA-04', 'HKWorkoutSession iOS 26 guard', 'WatchPlugin.swift not found');
+  }
+
+  // ── WA-05: startMirroredWorkout sends WCSession 'mirrorWorkout' message ──
+
+  try {
+    const src = readIOS('App/WatchPlugin.swift');
+    if (src.includes('"mirrorWorkout"') && src.includes('"activityType"') && src.includes('sendRawMessage')) {
+      pass('WA-05', 'startMirroredWorkout sends WCSession message with "mirrorWorkout" key');
+    } else {
+      fail('WA-05', 'startMirroredWorkout sends WCSession message with "mirrorWorkout" key',
+        '"mirrorWorkout" key or sendRawMessage not found');
+    }
+  } catch {
+    fail('WA-05', 'WCSession mirrorWorkout message', 'WatchPlugin.swift not found');
+  }
+
+  // ── WA-06: WatchAppDelegate routes .swimBikeRun to Race tab ──────────────
+
+  try {
+    const src = readIOS('HIITWatch Watch App/HIITWatchApp.swift');
+    const hasSwimBikeRun = src.includes('.swimBikeRun');
+    const hasRaceTab     = src.includes('navigateToRaceTab()');
+    if (hasSwimBikeRun && hasRaceTab) {
+      pass('WA-06', 'WatchAppDelegate routes .swimBikeRun workout configuration to Race tab');
+    } else {
+      fail('WA-06', 'WatchAppDelegate routes .swimBikeRun workout configuration to Race tab',
+        `Missing: ${[!hasSwimBikeRun && '.swimBikeRun', !hasRaceTab && 'navigateToRaceTab()'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('WA-06', 'WatchAppDelegate Race tab routing', 'HIITWatchApp.swift not found');
+  }
+
+  // ── WA-07: swimBikeRun check uses watchOS 9 availability guard ───────────
+
+  try {
+    const src = readIOS('HIITWatch Watch App/HIITWatchApp.swift');
+    if (src.includes('#available(watchOS 9.0, *)')) {
+      pass('WA-07', 'WatchAppDelegate uses #available(watchOS 9.0, *) guard for .swimBikeRun');
+    } else {
+      fail('WA-07', 'WatchAppDelegate uses #available(watchOS 9.0, *) guard for .swimBikeRun',
+        '#available(watchOS 9.0, *) not found');
+    }
+  } catch {
+    fail('WA-07', 'watchOS 9.0 availability guard', 'HIITWatchApp.swift not found');
+  }
+
+  // ── WA-08: WatchSessionManager guards mirrorWorkout with triathlonPlan == nil
+
+  try {
+    const src = readIOS('HIITWatch Watch App/Managers/WatchSessionManager.swift');
+    // The guard: only call receiveMirroredWorkout when triathlonPlan is nil
+    if (src.includes('triathlonPlan == nil') && src.includes('"mirrorWorkout"')) {
+      pass('WA-08', 'WatchSessionManager skips mirrorWorkout handler when triathlon plan is active');
+    } else {
+      fail('WA-08', 'WatchSessionManager skips mirrorWorkout handler when triathlon plan is active',
+        'triathlonPlan == nil guard not found alongside "mirrorWorkout" key');
+    }
+  } catch {
+    fail('WA-08', 'mirrorWorkout triathlon guard', 'WatchSessionManager.swift not found');
+  }
+
+  // ── WA-09: WatchSessionManager persists data to UserDefaults with correct keys
+
+  try {
+    const src = readIOS('HIITWatch Watch App/Managers/WatchSessionManager.swift');
+    const keys = ['"hiit.triathlonPlan"', '"hiit.todayWorkout"'];
+    const missing = keys.filter(k => !src.includes(k));
+    if (missing.length === 0) {
+      pass('WA-09', 'WatchSessionManager persists triathlon plan and workout to UserDefaults');
+    } else {
+      fail('WA-09', 'WatchSessionManager persists triathlon plan and workout to UserDefaults',
+        `Missing UserDefaults keys: ${missing.join(', ')}`);
+    }
+  } catch {
+    fail('WA-09', 'WatchSessionManager UserDefaults persistence', 'WatchSessionManager.swift not found');
+  }
+
+  // ── WA-10: WatchSessionManager handles all expected WCSession message keys ─
+
+  try {
+    const src = readIOS('HIITWatch Watch App/Managers/WatchSessionManager.swift');
+    const keys = ['"workout"', '"clearWorkout"', '"triathlon"', '"mirrorWorkout"', '"clearMirrorWorkout"', '"structuredWorkout"'];
+    const missing = keys.filter(k => !src.includes(k));
+    if (missing.length === 0) {
+      pass('WA-10', 'WatchSessionManager handles all WCSession message keys (workout/triathlon/mirror/structured)');
+    } else {
+      fail('WA-10', 'WatchSessionManager handles all WCSession message keys (workout/triathlon/mirror/structured)',
+        `Missing message keys: ${missing.join(', ')}`);
+    }
+  } catch {
+    fail('WA-10', 'WatchSessionManager message keys', 'WatchSessionManager.swift not found');
+  }
+
+  // ── WA-11: Xcode project sets WKBackgroundModes = workout-processing ──────
+
+  try {
+    const src = readIOS('App.xcodeproj/project.pbxproj');
+    if (src.includes('INFOPLIST_KEY_WKBackgroundModes') && src.includes('"workout-processing"')) {
+      pass('WA-11', 'Xcode project sets INFOPLIST_KEY_WKBackgroundModes = "workout-processing" for Watch target');
+    } else {
+      fail('WA-11', 'Xcode project sets INFOPLIST_KEY_WKBackgroundModes = "workout-processing" for Watch target',
+        'INFOPLIST_KEY_WKBackgroundModes or workout-processing not found in project.pbxproj');
+    }
+  } catch {
+    fail('WA-11', 'WKBackgroundModes project config', 'project.pbxproj not found');
+  }
+
+  // ── WA-12: Xcode project sets Watch companion bundle ID ──────────────────
+
+  try {
+    const src = readIOS('App.xcodeproj/project.pbxproj');
+    if (src.includes('INFOPLIST_KEY_WKCompanionAppBundleIdentifier') && src.includes('com.hiitfitness.app')) {
+      pass('WA-12', 'Xcode project sets WKCompanionAppBundleIdentifier = com.hiitfitness.app');
+    } else {
+      fail('WA-12', 'Xcode project sets WKCompanionAppBundleIdentifier = com.hiitfitness.app',
+        'Companion bundle ID config not found in project.pbxproj');
+    }
+  } catch {
+    fail('WA-12', 'WKCompanionAppBundleIdentifier project config', 'project.pbxproj not found');
+  }
+
+  // ── WA-13: Watch App entitlements include HealthKit ──────────────────────
+
+  try {
+    const src = readIOS('HIITWatch Watch App/HIITWatch Watch App.entitlements');
+    if (src.includes('com.apple.developer.healthkit') && src.includes('<true/>')) {
+      pass('WA-13', 'Watch App entitlements include com.apple.developer.healthkit = true');
+    } else {
+      fail('WA-13', 'Watch App entitlements include com.apple.developer.healthkit = true',
+        'HealthKit entitlement not found or not true');
+    }
+  } catch {
+    fail('WA-13', 'Watch HealthKit entitlement', 'Watch App.entitlements not found');
+  }
+
+  // ── WA-14: iPhone App entitlements include HealthKit ─────────────────────
+
+  try {
+    const src = readIOS('App/App.entitlements');
+    if (src.includes('com.apple.developer.healthkit') && src.includes('<true/>')) {
+      pass('WA-14', 'iPhone App entitlements include com.apple.developer.healthkit = true');
+    } else {
+      fail('WA-14', 'iPhone App entitlements include com.apple.developer.healthkit = true',
+        'HealthKit entitlement not found or not true');
+    }
+  } catch {
+    fail('WA-14', 'iPhone HealthKit entitlement', 'App.entitlements not found');
+  }
+
+  // ── WA-15: Triathlon.tsx launches Watch with 'triathlon' activity type ────
+
+  try {
+    const src = readSrc('pages/Triathlon.tsx');
+    if (src.includes("startWorkoutMirroring('triathlon'") || src.includes('startWorkoutMirroring("triathlon"')) {
+      pass('WA-15', "Triathlon.tsx calls startWorkoutMirroring with 'triathlon' activity type");
+    } else {
+      fail('WA-15', "Triathlon.tsx calls startWorkoutMirroring with 'triathlon' activity type",
+        "startWorkoutMirroring('triathlon', ...) not found — will send wrong HKWorkoutActivityType to Watch");
+    }
+  } catch {
+    fail('WA-15', 'Triathlon Watch launch activity type', 'Triathlon.tsx not found');
+  }
+
+  // ── WA-16: WorkoutPlayer.tsx launches Watch with 'hiit' activity type ────
+
+  try {
+    const src = readSrc('pages/WorkoutPlayer.tsx');
+    if (src.includes("startWorkoutMirroring('hiit'") || src.includes('startWorkoutMirroring("hiit"')) {
+      pass('WA-16', "WorkoutPlayer.tsx calls startWorkoutMirroring with 'hiit' activity type");
+    } else {
+      fail('WA-16', "WorkoutPlayer.tsx calls startWorkoutMirroring with 'hiit' activity type",
+        "startWorkoutMirroring('hiit', ...) not found");
+    }
+  } catch {
+    fail('WA-16', 'WorkoutPlayer Watch launch activity type', 'WorkoutPlayer.tsx not found');
+  }
+
+  // ── WA-17: watch-event-handler calls log-watch-workout on workoutCompleted ─
+
+  try {
+    const src = readSrc('lib/watch-event-handler.ts');
+    const hasEndpoint  = src.includes('log-watch-workout');
+    const hasEventCheck = src.includes('"workoutCompleted"') || src.includes("'workoutCompleted'");
+    if (hasEndpoint && hasEventCheck) {
+      pass('WA-17', 'watch-event-handler.ts calls log-watch-workout edge function on workoutCompleted event');
+    } else {
+      fail('WA-17', 'watch-event-handler.ts calls log-watch-workout edge function on workoutCompleted event',
+        `Missing: ${[!hasEndpoint && 'log-watch-workout endpoint', !hasEventCheck && 'workoutCompleted check'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('WA-17', 'watch-event-handler workoutCompleted handler', 'watch-event-handler.ts not found');
+  }
+
+  // ── WA-18: iPhone Info.plist does NOT contain workout-processing ──────────
+  // workout-processing is only valid for WKBackgroundModes (Watch), not UIBackgroundModes (iPhone)
+
+  try {
+    const src = readIOS('App/Info.plist');
+    if (!src.includes('workout-processing')) {
+      pass('WA-18', 'iPhone Info.plist does not contain invalid workout-processing UIBackgroundModes value');
+    } else {
+      fail('WA-18', 'iPhone Info.plist does not contain invalid workout-processing UIBackgroundModes value',
+        '"workout-processing" found in iPhone Info.plist — App Store will reject the build');
+    }
+  } catch {
+    fail('WA-18', 'iPhone Info.plist workout-processing guard', 'Info.plist not found');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // MAIN
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -828,6 +1117,7 @@ async function main() {
   await runAICoachTests();
   await runWorkoutPlanTests();
   await runDatabaseTests();
+  await runWatchAuditTests();
 
   // ── Summary ───────────────────────────────────────────────────────────────
 
