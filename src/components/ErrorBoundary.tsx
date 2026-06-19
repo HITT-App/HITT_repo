@@ -111,7 +111,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <p className="text-xs text-muted-foreground font-mono">
                 Error ID: {this.state.correlationId.slice(0, 8)}
               </p>
-              {import.meta.env.DEV && this.state.error && (
+              {this.state.error && (
                 <p className="text-xs text-destructive mt-2 font-mono break-all">
                   {this.state.error.message}
                 </p>

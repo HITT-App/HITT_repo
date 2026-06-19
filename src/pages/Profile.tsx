@@ -34,8 +34,9 @@ const PRESET_AVATARS = Array.from({ length: 12 }, (_, i) =>
   `/avatars/avatar-${String(i + 1).padStart(2, '0')}.jpg`
 );
 
-const presetAvatar = (seed: string) => {
-  const idx = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 12;
+const presetAvatar = (seed: string | null | undefined) => {
+  const s = seed || '';
+  const idx = s.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 12;
   return PRESET_AVATARS[idx];
 };
 import { useToast } from '@/hooks/use-toast';

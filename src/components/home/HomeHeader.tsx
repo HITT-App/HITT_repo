@@ -7,8 +7,9 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
 const PRESET_COUNT = 12;
 
-const presetAvatar = (seed: string) => {
-  const idx = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % PRESET_COUNT;
+const presetAvatar = (seed: string | null | undefined) => {
+  const s = seed || '';
+  const idx = s.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % PRESET_COUNT;
   return `/avatars/avatar-${String(idx + 1).padStart(2, '0')}.jpg`;
 };
 
