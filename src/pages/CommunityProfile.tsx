@@ -14,8 +14,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 
-const presetAvatar = (seed: string) => {
-  const idx = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 12;
+const presetAvatar = (seed: string | null | undefined) => {
+  const s = seed || '';
+  const idx = s.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 12;
   return `/avatars/avatar-${String(idx + 1).padStart(2, '0')}.jpg`;
 };
 

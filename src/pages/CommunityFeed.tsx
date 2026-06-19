@@ -103,8 +103,9 @@ const CommunityFeed = () => {
   };
 
   const myDisplayName = communityProfile?.display_name || profile?.display_name || user?.email || "";
-  const presetAvatar = (seed: string) => {
-    const idx = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 12;
+  const presetAvatar = (seed: string | null | undefined) => {
+    const s = seed || '';
+    const idx = s.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 12;
     return `/avatars/avatar-${String(idx + 1).padStart(2, '0')}.jpg`;
   };
   const myAvatarUrl = communityProfile?.avatar_url || profile?.avatar_url || presetAvatar(myDisplayName);
