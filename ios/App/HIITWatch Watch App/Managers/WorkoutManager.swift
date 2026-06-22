@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+import CoreLocation
 import WatchConnectivity
 
 final class WorkoutManager: NSObject {
@@ -17,18 +18,86 @@ final class WorkoutManager: NSObject {
     private let healthStore = HKHealthStore()
     private var workoutSession: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
+    private var routeBuilder: HKWorkoutRouteBuilder?
+    private var locationManager: CLLocationManager?
     private var timer: Timer?
     private var activeWorkout: WatchWorkout?
+    private var isOutdoor = false
 
     private override init() { super.init() }
 
     // MARK: - Public API
 
     func start(_ workout: WatchWorkout) {
+        start(workout, outdoor: false)
+    }
+
+    func start(_ workout: WatchWorkout, outdoor: Bool) {
         guard !isRunning, HKHealthStore.isHealthDataAvailable() else { return }
+
+        let activityType: HKWorkoutActivityType = outdoor
+            ? hkActivityType(for: workout.activityKind)
+            : .highIntensityIntervalTraining
+
         let config = HKWorkoutConfiguration()
-        config.activityType = .highIntensityIntervalTraining
-        config.locationType = .indoor
+        config.activityType = activityType
+        config.locationType = outdoor ? .outdoor : .indoor
+
+        if outdoor {
+            requestRouteAuthorization { [weak self] in
+                self?.beginSession(workout, config: config, outdoor: true)
+            }
+        } else {
+            beginSession(workout, config: config, outdoor: false)
+        }
+    }
+
+    func end() {
+        guard isRunning, let session = workoutSession, let b = builder else { return }
+        stopTimer()
+        let cal = activeCalories
+        let hr = currentHeartRate
+        let elapsed = elapsedSeconds
+        let w = activeWorkout
+        let rb = routeBuilder
+        let wasOutdoor = isOutdoor
+
+        if wasOutdoor {
+            locationManager?.stopUpdatingLocation()
+            locationManager?.delegate = nil
+            locationManager = nil
+        }
+
+        session.end()
+        b.endCollection(withEnd: Date()) { [weak self] _, _ in
+            b.finishWorkout { [weak self] hkWorkout, _ in
+                let finalize: () -> Void = {
+                    DispatchQueue.main.async {
+                        self?.isRunning = false
+                        self?.elapsedSeconds = 0
+                        self?.currentHeartRate = 0
+                        self?.activeCalories = 0
+                        self?.activeWorkout = nil
+                        self?.routeBuilder = nil
+                        self?.isOutdoor = false
+                        self?.onStateChange?(false, nil)
+                        if let workout = w {
+                            self?.notifyPhoneCompleted(workout, calories: cal, hr: hr, duration: elapsed)
+                        }
+                    }
+                }
+                if wasOutdoor, let rb = rb, let hkWorkout = hkWorkout {
+                    rb.finishRoute(with: hkWorkout, metadata: nil) { _, _ in finalize() }
+                } else {
+                    finalize()
+                }
+            }
+        }
+    }
+
+    // MARK: - Private
+
+    private func beginSession(_ workout: WatchWorkout, config: HKWorkoutConfiguration, outdoor: Bool) {
         do {
             let session = try HKWorkoutSession(healthStore: healthStore, configuration: config)
             let b = session.associatedWorkoutBuilder()
@@ -38,6 +107,22 @@ final class WorkoutManager: NSObject {
             workoutSession = session
             builder = b
             activeWorkout = workout
+            isOutdoor = outdoor
+
+            if outdoor {
+                routeBuilder = HKWorkoutRouteBuilder(healthStore: healthStore, device: nil)
+                let lm = CLLocationManager()
+                lm.delegate = self
+                lm.desiredAccuracy = kCLLocationAccuracyBest
+                lm.distanceFilter = kCLDistanceFilterNone
+                lm.activityType = .fitness
+                if lm.authorizationStatus == .notDetermined {
+                    lm.requestWhenInUseAuthorization()
+                }
+                lm.startUpdatingLocation()
+                locationManager = lm
+            }
+
             session.startActivity(with: Date())
             b.beginCollection(withStart: Date()) { _, _ in }
             startTimer()
@@ -51,30 +136,24 @@ final class WorkoutManager: NSObject {
         }
     }
 
-    func end() {
-        guard isRunning, let session = workoutSession, let b = builder else { return }
-        stopTimer()
-        let cal = activeCalories
-        let hr = currentHeartRate
-        let elapsed = elapsedSeconds
-        let w = activeWorkout
-        session.end()
-        b.endCollection(withEnd: Date()) { [weak self] _, _ in
-            b.finishWorkout { _, _ in
-                DispatchQueue.main.async { [weak self] in
-                    self?.isRunning = false
-                    self?.elapsedSeconds = 0
-                    self?.currentHeartRate = 0
-                    self?.activeCalories = 0
-                    self?.activeWorkout = nil
-                    self?.onStateChange?(false, nil)
-                    if let workout = w { self?.notifyPhoneCompleted(workout, calories: cal, hr: hr, duration: elapsed) }
-                }
-            }
+    private func requestRouteAuthorization(completion: @escaping () -> Void) {
+        let typesToShare: Set<HKSampleType> = [
+            HKSeriesType.workoutRoute(),
+            HKObjectType.workoutType(),
+        ]
+        healthStore.requestAuthorization(toShare: typesToShare, read: nil) { _, _ in
+            DispatchQueue.main.async { completion() }
         }
     }
 
-    // MARK: - Private
+    private func hkActivityType(for kind: String?) -> HKWorkoutActivityType {
+        switch kind?.lowercased() {
+        case "run", "running":   return .running
+        case "walk", "walking":  return .walking
+        case "ride", "cycling":  return .cycling
+        default:                 return .other
+        }
+    }
 
     private func startTimer() {
         elapsedSeconds = 0
@@ -160,5 +239,24 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
                 }
             }
         }
+    }
+}
+
+// MARK: - CLLocationManagerDelegate
+
+extension WorkoutManager: CLLocationManagerDelegate {
+    nonisolated func locationManager(_ manager: CLLocationManager,
+                                     didUpdateLocations locations: [CLLocation]) {
+        let filtered = locations.filter { $0.horizontalAccuracy > 0 && $0.horizontalAccuracy <= 20 }
+        guard !filtered.isEmpty else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let rb = self?.routeBuilder else { return }
+            rb.insertRouteData(filtered) { _, _ in }
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager,
+                                     didFailWithError error: Error) {
+        print("WorkoutManager: location error — \(error.localizedDescription)")
     }
 }

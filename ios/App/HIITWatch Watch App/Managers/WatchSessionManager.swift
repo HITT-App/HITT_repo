@@ -8,6 +8,7 @@ struct WatchWorkout: Identifiable, Codable {
     let name: String
     let durationMinutes: Int
     let exercises: [WatchExercise]
+    var activityKind: String? = nil
 }
 
 struct WatchExercise: Identifiable, Codable {
