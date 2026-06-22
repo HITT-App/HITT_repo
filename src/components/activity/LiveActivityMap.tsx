@@ -28,14 +28,20 @@ const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount, seedPosition 
   const handleZoomIn = () => mapRef.current?.zoomIn();
   const handleZoomOut = () => mapRef.current?.zoomOut();
 
-  // Initialize map — defer until first real position to avoid showing London
+  const hasAnchor = positions.length > 0 || seedPosition != null;
+
+  // Initialize map once we have an anchor — never re-create on subsequent fixes,
+  // because seedPosition gets a fresh object identity on every GPS update.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const firstPos = positions.length > 0 ? positions[0] : seedPosition ?? null;
-    if (!firstPos && gpsStatus !== "active") return;
+    if (!hasAnchor && gpsStatus !== "active") return;
 
-    const initialCenter: [number, number] = firstPos
-      ? [firstPos.lat, firstPos.lng]
+    const latest = positions.length > 0
+      ? positions[positions.length - 1]
+      : seedPosition ?? null;
+
+    const initialCenter: [number, number] = latest
+      ? [latest.lat, latest.lng]
       : [51.5074, -0.1278];
 
     const map = L.map(containerRef.current, {
@@ -59,8 +65,12 @@ const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount, seedPosition 
     return () => {
       map.remove();
       mapRef.current = null;
+      polylineRef.current = null;
+      dotRef.current = null;
+      pulseRef.current = null;
     };
-  }, [gpsStatus, positions.length > 0, seedPosition]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasAnchor, gpsStatus]);
   // Update trail & position
   useEffect(() => {
     const map = mapRef.current;
