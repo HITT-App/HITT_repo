@@ -1,9 +1,12 @@
 /**
  * GPS Provider abstraction
- * - Native: uses @capacitor/geolocation for better accuracy + background support
+ * - Native: uses @capacitor-community/background-geolocation for background-capable tracking
  * - Web: falls back to navigator.geolocation
  */
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import type { BackgroundGeolocationPlugin } from "@capacitor-community/background-geolocation";
+
+const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>("BackgroundGeolocation");
 
 export interface GpsPosition {
   lat: number;
@@ -26,40 +29,59 @@ interface GpsWatchHandle {
 
 // ── Native provider (Capacitor) ─────────────────────────────────────
 async function watchNative(opts: GpsWatchOptions): Promise<GpsWatchHandle> {
-  const { Geolocation } = await import("@capacitor/geolocation");
+  let stopped = false;
+  let watcherId: string | null = null;
 
-  // Request permissions first on native
-  const perm = await Geolocation.requestPermissions();
-  if (perm.location !== "granted" && perm.coarseLocation !== "granted") {
-    opts.onError("permission_denied");
-    return { stop: () => {} };
-  }
-
-  const watchId = await Geolocation.watchPosition(
+  const idPromise = BackgroundGeolocation.addWatcher(
     {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 1000,
+      backgroundMessage: "Recording your activity",
+      backgroundTitle: "HIIT Fitness",
+      requestPermissions: true,
+      stale: false,
+      distanceFilter: 0,
     },
-    (position, err) => {
-      if (err) {
-        opts.onError("unavailable");
+    (location, error) => {
+      if (error) {
+        if (error.code === "NOT_AUTHORIZED") {
+          opts.onError("permission_denied");
+        } else {
+          opts.onError("unavailable");
+        }
         return;
       }
-      if (position) {
+      if (location) {
         opts.onPosition({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          altitude: position.coords.altitude,
-          timestamp: position.timestamp,
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy,
+          altitude: location.altitude,
+          timestamp: location.time ?? Date.now(),
         });
       }
     },
   );
 
+  idPromise
+    .then((id) => {
+      if (stopped) {
+        BackgroundGeolocation.removeWatcher({ id }).catch(() => {});
+        return;
+      }
+      watcherId = id;
+    })
+    .catch(() => {
+      opts.onError("unavailable");
+    });
+
   return {
-    stop: () => Geolocation.clearWatch({ id: watchId }),
+    stop: () => {
+      stopped = true;
+      if (watcherId !== null) {
+        const id = watcherId;
+        watcherId = null;
+        BackgroundGeolocation.removeWatcher({ id }).catch(() => {});
+      }
+    },
   };
 }
 
@@ -116,17 +138,52 @@ export async function startGpsWatch(opts: GpsWatchOptions): Promise<GpsWatchHand
 export async function getCurrentPosition(): Promise<GpsPosition | null> {
   if (isNativePlatform()) {
     try {
-      const { Geolocation } = await import("@capacitor/geolocation");
-      const perm = await Geolocation.requestPermissions();
-      if (perm.location !== "granted" && perm.coarseLocation !== "granted") return null;
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 });
-      return {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-        accuracy: pos.coords.accuracy,
-        altitude: pos.coords.altitude,
-        timestamp: pos.timestamp,
-      };
+      return await new Promise<GpsPosition | null>((resolve) => {
+        let settled = false;
+        let watcherId: string | null = null;
+        const timer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          if (watcherId !== null) {
+            BackgroundGeolocation.removeWatcher({ id: watcherId }).catch(() => {});
+          }
+          resolve(null);
+        }, 8000);
+
+        BackgroundGeolocation.addWatcher(
+          { requestPermissions: true, stale: true, distanceFilter: 0 },
+          (location, error) => {
+            if (error || !location) return;
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            const id = watcherId;
+            resolve({
+              lat: location.latitude,
+              lng: location.longitude,
+              accuracy: location.accuracy,
+              altitude: location.altitude,
+              timestamp: location.time ?? Date.now(),
+            });
+            if (id !== null) {
+              BackgroundGeolocation.removeWatcher({ id }).catch(() => {});
+            }
+          },
+        )
+          .then((id) => {
+            if (settled) {
+              BackgroundGeolocation.removeWatcher({ id }).catch(() => {});
+              return;
+            }
+            watcherId = id;
+          })
+          .catch(() => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(null);
+          });
+      });
     } catch {
       return null;
     }
