@@ -211,14 +211,19 @@ export const useActivity = () => {
       intensity_level?: number;
       notes?: string;
     }) => {
-      const { error } = await supabase.from("activity_logs").insert({
-        user_id: user?.id,
-        ...data,
-        ended_at: new Date().toISOString(),
-        score_impact: calculateScoreImpact(data),
-      });
+      const { data: inserted, error } = await supabase
+        .from("activity_logs")
+        .insert({
+          user_id: user?.id,
+          ...data,
+          ended_at: new Date().toISOString(),
+          score_impact: calculateScoreImpact(data),
+        })
+        .select("id")
+        .maybeSingle();
 
       if (error) throw error;
+      return inserted;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activity-logs"] });

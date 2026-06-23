@@ -34,6 +34,7 @@ import { Preferences } from "@capacitor/preferences";
 
 import { GpsFilter, haversineDistance, type GpsPoint } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
+import { ensureHealthWriteAuth, saveActivityToHealth } from "@/lib/health-write";
 
 // --- Crash-recovery persistence ---
 const PERSIST_KEY = "hitt.activeWorkout";
@@ -152,6 +153,8 @@ const ActivityLive = () => {
   const autoPausedRef = useRef(false);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+  // Tracks whether we've already retried HealthKit auth this session so we don't loop.
+  const healthAuthRetriedRef = useRef(false);
   
 
   // --- Derived stats ---
@@ -374,7 +377,7 @@ const ActivityLive = () => {
     wakeLockRef.current?.release();
 
     try {
-      await logActivity.mutateAsync({
+      const inserted = await logActivity.mutateAsync({
         activity_type: activityType,
         duration_seconds: elapsed,
         distance_km: Number(distanceKm.toFixed(2)),
@@ -383,6 +386,53 @@ const ActivityLive = () => {
       });
       // Successful save to backend — discard recovery snapshot.
       await clearPersistedWorkout();
+
+      // Fire-and-forget: write to Apple Health so the activity appears in Fitness with its route.
+      const startedAt = sessionStartedAtRef.current || (Date.now() - elapsed * 1000);
+      const endedAt = Date.now();
+      const healthMetadata: Record<string, string | number | boolean> = {};
+      const supabaseId = (inserted as { id?: string } | null)?.id;
+      if (supabaseId) healthMetadata.HITT_ACTIVITY_ID = supabaseId;
+      const healthParams = {
+        activityType,
+        startedAt,
+        endedAt,
+        distanceMeters: totalDistance,
+        calories,
+        positions: positionsRef.current.map((p) => ({
+          lat: p.lat,
+          lng: p.lng,
+          ts: p.ts,
+          alt: p.alt ?? null,
+        })),
+        metadata: healthMetadata,
+      };
+      void (async () => {
+        try {
+          const result = await saveActivityToHealth(healthParams);
+          if (result.ok) return;
+          if (
+            !healthAuthRetriedRef.current &&
+            (result.reason === "permission_denied" || result.reason === "denied")
+          ) {
+            healthAuthRetriedRef.current = true;
+            const auth = await ensureHealthWriteAuth();
+            if (auth.ok) {
+              const retry = await saveActivityToHealth(healthParams);
+              if (!retry.ok) {
+                console.error("[health-write] retry failed:", retry.reason);
+              }
+            } else {
+              console.error("[health-write] auth failed:", auth.reason);
+            }
+          } else if (result.reason !== "not_native") {
+            console.error("[health-write] save failed:", result.reason);
+          }
+        } catch (err) {
+          console.error("[health-write] unexpected error:", err);
+        }
+      })();
+
       const pts = await recordWorkout();
       setPointsEarned(pts);
       Analytics.workoutCompleted({

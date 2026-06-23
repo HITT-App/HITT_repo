@@ -20,6 +20,7 @@
 		BB000001000000000000AA02 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000AA01 /* WatchBridge.swift */; };
 		BB000001000000000000AA04 /* WatchPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000AA03 /* WatchPlugin.swift */; };
 		BB000001000000000000AA06 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB000001000000000000AA05 /* WatchConnectivity.framework */; };
+		BB000001000000000000BB02 /* HealthWritePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000BB01 /* HealthWritePlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,6 +63,7 @@
 		BB000001000000000000AA01 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		BB000001000000000000AA03 /* WatchPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlugin.swift; sourceTree = "<group>"; };
 		BB000001000000000000AA05 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		BB000001000000000000BB01 /* HealthWritePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthWritePlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -124,6 +126,7 @@
 				A1B2C3D4E5F6A1B2C3D4E5F9 /* ViewController.swift */,
 				BB000001000000000000AA01 /* WatchBridge.swift */,
 				BB000001000000000000AA03 /* WatchPlugin.swift */,
+				BB000001000000000000BB01 /* HealthWritePlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -261,6 +264,7 @@
 				A1B2C3D4E5F6A1B2C3D4E5F8 /* ViewController.swift in Sources */,
 				BB000001000000000000AA02 /* WatchBridge.swift in Sources */,
 				BB000001000000000000AA04 /* WatchPlugin.swift in Sources */,
+				BB000001000000000000BB02 /* HealthWritePlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
