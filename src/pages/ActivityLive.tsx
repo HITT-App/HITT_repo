@@ -35,6 +35,7 @@ import { Preferences } from "@capacitor/preferences";
 import { GpsFilter, haversineDistance, type GpsPoint } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
 import { ensureHealthWriteAuth, saveActivityToHealth } from "@/lib/health-write";
+import { LiveActivity, type LiveActivityHandle, type WorkoutContentState } from "@/lib/live-activity";
 
 // --- Crash-recovery persistence ---
 const PERSIST_KEY = "hitt.activeWorkout";
@@ -155,7 +156,11 @@ const ActivityLive = () => {
   settingsRef.current = settings;
   // Tracks whether we've already retried HealthKit auth this session so we don't loop.
   const healthAuthRetriedRef = useRef(false);
-  
+
+  // --- Live Activity (Lock Screen / Dynamic Island) ---
+  const liveActivityRef = useRef<LiveActivityHandle | null>(null);
+  const lastLAPushRef = useRef(0);
+  const lastLAPausedRef = useRef(false);
 
   // --- Derived stats ---
   const distanceKm = totalDistance / 1000;
@@ -171,6 +176,15 @@ const ActivityLive = () => {
       return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
     }
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // Pace string for Live Activity — "M:SS /km" derived from current km/h.
+  const formatLAPace = (speedKmh: number): string => {
+    if (!isFinite(speedKmh) || speedKmh < 0.3) return "--:-- /km";
+    const secPerKm = 3600 / speedKmh;
+    const m = Math.floor(secPerKm / 60);
+    const s = Math.floor(secPerKm % 60);
+    return `${m}:${s.toString().padStart(2, "0")} /km`;
   };
 
 
@@ -227,6 +241,38 @@ const ActivityLive = () => {
     if (!started) return;
     persistNow({ force: true });
   }, [started, isPaused, persistNow]);
+
+  // --- Live Activity throttled updates ---
+  // Push at most once every 5 seconds while running, but always push immediately when
+  // the pause state flips so the lock screen reflects pause/resume without lag.
+  useEffect(() => {
+    if (!started) return;
+    const handle = liveActivityRef.current;
+    if (!handle) return;
+    const now = Date.now();
+    const pausedChanged = lastLAPausedRef.current !== isPaused;
+    if (!pausedChanged && now - lastLAPushRef.current < 5000) return;
+    lastLAPushRef.current = now;
+    lastLAPausedRef.current = isPaused;
+    const state: WorkoutContentState = {
+      elapsedSeconds: elapsed,
+      distanceMeters: totalDistance,
+      paceString: formatLAPace(currentSpeed),
+      isPaused,
+    };
+    void LiveActivity.update(handle.activityId, state);
+  }, [started, elapsed, totalDistance, isPaused, currentSpeed]);
+
+  // End the Live Activity if the page unmounts while still running (back nav, etc.).
+  useEffect(() => {
+    return () => {
+      const handle = liveActivityRef.current;
+      if (handle) {
+        liveActivityRef.current = null;
+        void LiveActivity.end(handle.activityId);
+      }
+    };
+  }, []);
 
   // --- Timer — only runs after user taps Start ---
   useEffect(() => {
@@ -376,6 +422,18 @@ const ActivityLive = () => {
     gpsWatchRef.current?.stop();
     wakeLockRef.current?.release();
 
+    // End the Live Activity — fire-and-forget, must never block completion.
+    const liveHandle = liveActivityRef.current;
+    if (liveHandle) {
+      liveActivityRef.current = null;
+      void LiveActivity.end(liveHandle.activityId, {
+        elapsedSeconds: elapsed,
+        distanceMeters: totalDistance,
+        paceString: formatLAPace(currentSpeed),
+        isPaused: false,
+      });
+    }
+
     try {
       const inserted = await logActivity.mutateAsync({
         activity_type: activityType,
@@ -483,10 +541,11 @@ const ActivityLive = () => {
   // --- Recovery dialog handlers ---
   const handleRecoveryResume = useCallback(() => {
     if (!recoveryCandidate) return;
-    positionsRef.current = recoveryCandidate.positions.slice();
-    setPositions(recoveryCandidate.positions.slice());
-    setTotalDistance(recoveryCandidate.totalDistance);
-    sessionStartedAtRef.current = recoveryCandidate.startedAt;
+    const resumed = recoveryCandidate;
+    positionsRef.current = resumed.positions.slice();
+    setPositions(resumed.positions.slice());
+    setTotalDistance(resumed.totalDistance);
+    sessionStartedAtRef.current = resumed.startedAt;
     // Re-seed elapsed from wall-clock so the timer reflects real time spent.
     const elapsedSecs = Math.max(0, Math.floor((Date.now() - recoveryCandidate.startedAt) / 1000));
     setElapsed(elapsedSecs);
@@ -497,7 +556,23 @@ const ActivityLive = () => {
     setRecoveryCandidate(null);
     persistReadyRef.current = true;
     toast.success("Resumed unfinished workout");
-  }, [recoveryCandidate]);
+    void (async () => {
+      const handle = await LiveActivity.start(
+        {
+          workoutType: activityType,
+          workoutTitle: activityType.charAt(0).toUpperCase() + activityType.slice(1),
+          startedAt: resumed.startedAt,
+        },
+        {
+          elapsedSeconds: Math.max(0, Math.floor((Date.now() - resumed.startedAt) / 1000)),
+          distanceMeters: resumed.totalDistance,
+          paceString: "--:-- /km",
+          isPaused: resumed.isPaused,
+        },
+      );
+      if (handle) liveActivityRef.current = handle;
+    })();
+  }, [recoveryCandidate, activityType]);
 
   const handleRecoveryDiscard = useCallback(() => {
     clearPersistedWorkout();
@@ -620,11 +695,29 @@ const ActivityLive = () => {
         <div style={{ padding: '0 16px 32px' }}>
           <button
             onClick={() => {
-              lastMoveTimeRef.current = Date.now();
-              sessionStartedAtRef.current = Date.now();
+              const now = Date.now();
+              lastMoveTimeRef.current = now;
+              sessionStartedAtRef.current = now;
               setStarted(true);
               gpsFilterRef.current.reset();
               positionsRef.current = [];
+              // Fire-and-forget: Live Activity on Lock Screen / Dynamic Island.
+              void (async () => {
+                const handle = await LiveActivity.start(
+                  {
+                    workoutType: activityType,
+                    workoutTitle: activityType.charAt(0).toUpperCase() + activityType.slice(1),
+                    startedAt: now,
+                  },
+                  {
+                    elapsedSeconds: 0,
+                    distanceMeters: 0,
+                    paceString: "--:-- /km",
+                    isPaused: false,
+                  },
+                );
+                if (handle) liveActivityRef.current = handle;
+              })();
             }}
             style={{ width: '100%', height: 60, borderRadius: 18, background: RC.primary, border: 'none', color: '#0a0a0a', fontSize: 18, fontWeight: 800, cursor: 'pointer', boxShadow: '0 6px 20px rgba(249,115,22,0.32)', WebkitTapHighlightColor: 'transparent' }}
           >
