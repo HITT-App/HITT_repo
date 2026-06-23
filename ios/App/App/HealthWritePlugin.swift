@@ -287,8 +287,9 @@ public class HealthWritePlugin: CAPPlugin, CAPBridgedPlugin {
             let altitude = (altAny as? Double) ?? (altAny as? NSNumber)?.doubleValue ?? 0
             let accAny = p["accuracy"]
             let accuracyValue = (accAny as? Double) ?? (accAny as? NSNumber)?.doubleValue ?? 10
-            // Defensive accuracy filter — drop wildly inaccurate or invalid points
-            if accuracyValue <= 0 || accuracyValue > 50 { continue }
+            // Upstream Kalman filter already gates 60m initial / 30m active; this catches only
+            // catastrophically bad fixes if JS ever forwards real accuracy through.
+            if accuracyValue <= 0 || accuracyValue > 200 { continue }
 
             let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
             let date = Date(timeIntervalSince1970: tsMs / 1000.0)

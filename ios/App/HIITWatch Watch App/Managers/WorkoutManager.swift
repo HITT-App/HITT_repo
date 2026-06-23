@@ -28,6 +28,37 @@ final class WorkoutManager: NSObject {
 
     // MARK: - Public API
 
+    /// Request read access for live workout metrics + write access for finished workouts.
+    /// Must be called once at app launch so HKStatisticsQuery / HKLiveWorkoutBuilder
+    /// actually return data instead of silently delivering zeros.
+    func requestInitialAuthorization() {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+
+        var readTypes: Set<HKObjectType> = [
+            HKObjectType.workoutType(),
+            HKObjectType.activitySummaryType(),
+        ]
+        let readQuantityIds: [HKQuantityTypeIdentifier] = [
+            .heartRate,
+            .activeEnergyBurned,
+            .distanceWalkingRunning,
+            .distanceCycling,
+            .stepCount,
+        ]
+        for id in readQuantityIds {
+            if let t = HKQuantityType.quantityType(forIdentifier: id) {
+                readTypes.insert(t)
+            }
+        }
+
+        let shareTypes: Set<HKSampleType> = [
+            HKObjectType.workoutType(),
+            HKSeriesType.workoutRoute(),
+        ]
+
+        healthStore.requestAuthorization(toShare: shareTypes, read: readTypes) { _, _ in }
+    }
+
     func start(_ workout: WatchWorkout) {
         start(workout, outdoor: false)
     }
@@ -116,11 +147,16 @@ final class WorkoutManager: NSObject {
                 lm.desiredAccuracy = kCLLocationAccuracyBest
                 lm.distanceFilter = kCLDistanceFilterNone
                 lm.activityType = .fitness
-                if lm.authorizationStatus == .notDetermined {
-                    lm.requestWhenInUseAuthorization()
-                }
-                lm.startUpdatingLocation()
                 locationManager = lm
+                switch lm.authorizationStatus {
+                case .authorizedWhenInUse, .authorizedAlways:
+                    lm.startUpdatingLocation()
+                case .notDetermined:
+                    lm.requestWhenInUseAuthorization()
+                    // startUpdatingLocation kicks off from locationManagerDidChangeAuthorization
+                default:
+                    break
+                }
             }
 
             session.startActivity(with: Date())
@@ -258,5 +294,14 @@ extension WorkoutManager: CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager,
                                      didFailWithError error: Error) {
         print("WorkoutManager: location error — \(error.localizedDescription)")
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        guard status == .authorizedWhenInUse || status == .authorizedAlways else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, self.isRunning, self.isOutdoor else { return }
+            manager.startUpdatingLocation()
+        }
     }
 }

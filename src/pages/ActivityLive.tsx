@@ -552,9 +552,9 @@ const ActivityLive = () => {
     setIsPaused(recoveryCandidate.isPaused);
     lastMoveTimeRef.current = Date.now();
     gpsFilterRef.current.reset();
+    persistReadyRef.current = true;
     setStarted(true);
     setRecoveryCandidate(null);
-    persistReadyRef.current = true;
     toast.success("Resumed unfinished workout");
     void (async () => {
       const handle = await LiveActivity.start(
