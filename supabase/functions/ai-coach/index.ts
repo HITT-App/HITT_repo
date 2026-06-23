@@ -912,6 +912,7 @@ function buildStructuredStream(
   authHeader: string,
   supabaseUrl: string,
   clientContext: { customMemory?: string; customResponseStyle?: string },
+  retryMealPlan?: () => Promise<Response>,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -920,8 +921,8 @@ function buildStructuredStream(
     async start(controller) {
       const reader = gatewayBody.getReader();
       let buffer = "";
-      // Map of tool call index → accumulated data
       const toolCalls = new Map<number, { id: string; name: string; arguments: string }>();
+      let finishReason: string | null = null;
 
       const emit = (chunk: object) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
@@ -948,6 +949,7 @@ function buildStructuredStream(
               const parsed = JSON.parse(data);
               const choice = parsed.choices?.[0];
               if (!choice) continue;
+              if (choice.finish_reason) finishReason = choice.finish_reason;
 
               const delta = choice.delta;
               if (!delta) continue;
@@ -977,11 +979,48 @@ function buildStructuredStream(
         }
 
         // Emit validated tool calls as action chunks after text has fully streamed.
-        // mapToolCallToAction is async because ai_generated sources make internal fetches.
+        let mealPlanActionEmitted = false;
         for (const [, tc] of toolCalls) {
           const action = await mapToolCallToAction(tc, validWorkoutIds, validRecipeIds, authHeader, supabaseUrl, clientContext);
           if (action) {
             emit({ type: "action", action });
+            if (tc.name === "recommend_meal_plan") mealPlanActionEmitted = true;
+          }
+        }
+
+        // Meal plan retry: when this WAS a meal plan request (retryMealPlan provided)
+        // but no meal plan action was produced — typical causes are truncated args
+        // (finishReason "length"), malformed JSON, or the model skipping the tool entirely.
+        // One non-streaming retry with forced tool_choice usually clears it.
+        if (retryMealPlan && !mealPlanActionEmitted) {
+          console.warn("[ai-coach] meal plan not produced (finish:", finishReason, ") — retrying non-stream");
+          try {
+            const retryResp = await retryMealPlan();
+            if (retryResp.ok) {
+              const json = await retryResp.json();
+              const tc = json.choices?.[0]?.message?.tool_calls?.[0];
+              if (tc?.function?.name === "recommend_meal_plan") {
+                const action = await mapToolCallToAction(
+                  { name: tc.function.name, arguments: tc.function.arguments ?? "" },
+                  validWorkoutIds, validRecipeIds, authHeader, supabaseUrl, clientContext,
+                );
+                if (action) {
+                  emit({ type: "action", action });
+                  mealPlanActionEmitted = true;
+                }
+              }
+            } else {
+              console.error("[ai-coach] meal plan retry HTTP error:", retryResp.status);
+            }
+          } catch (err) {
+            console.error("[ai-coach] meal plan retry failed:", err);
+          }
+
+          if (!mealPlanActionEmitted) {
+            emit({
+              type: "text",
+              delta: "\n\nI couldn't quite get that meal plan to format right — could you ask once more?",
+            });
           }
         }
 
@@ -1665,7 +1704,20 @@ serve(async (req) => {
         tool_choice: isMealPlanRequest
           ? { type: "function", function: { name: "recommend_meal_plan" } }
           : "auto",
+        max_tokens: 8192,
       });
+
+      const retryMealPlan = isMealPlanRequest
+        ? () =>
+            aiChatCompletion({
+              model: "gemini-2.5-flash",
+              messages: injectedMessages,
+              stream: false,
+              tools: STRUCTURED_TOOLS,
+              tool_choice: { type: "function", function: { name: "recommend_meal_plan" } },
+              max_tokens: 8192,
+            })
+        : undefined;
 
       if (!gatewayResponse.ok) {
         if (gatewayResponse.status === 429) {
@@ -1695,6 +1747,7 @@ serve(async (req) => {
         authHeader,
         supabaseUrl,
         { customMemory, customResponseStyle: customResponse },
+        retryMealPlan,
       );
       return new Response(structuredStream, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
