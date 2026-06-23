@@ -18,6 +18,7 @@ const WeeklyReport = () => {
     const now = new Date();
     const start = new Date(now);
     start.setDate(now.getDate() - now.getDay());
+    // audit:ignore CA-44 — global UTC anchor so weekly report cache rolls over uniformly
     return `hiit_weekly_report_${start.toISOString().split("T")[0]}`;
   })();
 

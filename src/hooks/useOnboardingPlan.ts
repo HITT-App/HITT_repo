@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { ExerciseSnapshot } from '@/integrations/supabase/types';
+import { format } from 'date-fns';
 
 export interface OnboardingAnswers {
   goal: string;
@@ -94,7 +95,7 @@ export function useOnboardingPlan() {
           workout_source: 'ai_generated' as const,
           workout_title: m.workout_title,
           exercises_snapshot: m.exercises_snapshot,
-          scheduled_date: m.date.toISOString().split('T')[0],
+          scheduled_date: format(m.date, 'yyyy-MM-dd'),
         }))
       );
     } catch (err: any) {

@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import type { ExerciseSnapshot } from '@/hooks/useAI.types'
+import { format } from 'date-fns'
 
 type Props = {
   title: string
@@ -20,7 +21,9 @@ type Props = {
 function tomorrow(): string {
   const d = new Date()
   d.setDate(d.getDate() + 1)
-  return d.toISOString().split('T')[0]
+  // Local-day string — feeds an HTML date picker and a scheduled_date write,
+  // both of which the user expects to be "their" tomorrow, not UTC's.
+  return format(d, 'yyyy-MM-dd')
 }
 
 export function AIWorkoutCard({

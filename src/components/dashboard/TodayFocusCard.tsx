@@ -9,6 +9,7 @@ import { useUserLevel } from "@/hooks/useUserLevel";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface TodayFocusCardProps {
   userName: string;
@@ -31,7 +32,7 @@ export function TodayFocusCard({ userName }: TodayFocusCardProps) {
     if (!user) return;
 
     const fetchTodayStats = async () => {
-      const today = new Date().toISOString().split("T")[0];
+      const today = format(new Date(), "yyyy-MM-dd");
       
       // Get today's workout progress
       const { data: workoutData } = await supabase
@@ -61,7 +62,7 @@ export function TodayFocusCard({ userName }: TodayFocusCardProps) {
   useEffect(() => {
     const lastWorkoutDate = streak?.last_workout_date;
     const currentStreak = streak?.current_streak || 0;
-    const today = new Date().toISOString().split("T")[0];
+    const today = format(new Date(), "yyyy-MM-dd");
     const hour = new Date().getHours();
 
     if (lastWorkoutDate === today) {

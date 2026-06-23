@@ -104,9 +104,10 @@ export function FriendActivityFeed() {
 
     fetchFriendActivities();
 
-    // Subscribe to realtime updates
+    // Subscribe to realtime updates — per-instance channel name avoids
+    // duplicate-subscription crashes when the component mounts elsewhere.
     const channel = supabase
-      .channel("friend-workouts")
+      .channel(`friend-workouts-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {

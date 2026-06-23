@@ -329,7 +329,7 @@ export default function CommunityChatroom() {
     fetchMessages();
 
     const channel = supabase
-      .channel("chatroom")
+      .channel(`chatroom-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chatroom_messages" }, (payload) => {
         const newMsg = payload.new as ChatMessage;
         setMessages((prev) => [...prev, newMsg]);

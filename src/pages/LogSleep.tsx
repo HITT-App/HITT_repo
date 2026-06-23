@@ -18,7 +18,7 @@ const LogSleep = () => {
   const today = new Date();
   const yesterday = subDays(today, 1);
   
-  const [sleepDate, setSleepDate] = useState(yesterday.toISOString().split("T")[0]);
+  const [sleepDate, setSleepDate] = useState(format(yesterday, "yyyy-MM-dd"));
   const [bedtimeHour, setBedtimeHour] = useState(22);
   const [bedtimeMinute, setBedtimeMinute] = useState(30);
   const [wakeHour, setWakeHour] = useState(6);
@@ -109,7 +109,7 @@ const LogSleep = () => {
             value={sleepDate}
             onChange={(e) => setSleepDate(e.target.value)}
             className="w-full p-3 rounded-xl border border-border bg-background"
-            max={today.toISOString().split("T")[0]}
+            max={format(today, "yyyy-MM-dd")}
           />
         </Card>
 

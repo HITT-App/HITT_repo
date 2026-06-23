@@ -164,7 +164,9 @@ const BodyScan = () => {
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [cameraReady, setCameraReady] = useState(false)
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user")
-  const [stream, setStream] = useState<MediaStream | null>(null)
+  // streamRef (not useState) — attaching srcObject inside startStream removes
+  // the render-gap that caused intermittent black-screen on iOS WKWebView.
+  const streamRef = useRef<MediaStream | null>(null)
   const [measurements, setMeasurements] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
@@ -205,13 +207,15 @@ const BodyScan = () => {
     loadProgress()
   }, [user])
 
-  // Wire stream to video element whenever the stream changes
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+  }, [])
+
+  // Stop camera on unmount so we don't leave the hardware running.
   useEffect(() => {
-    if (stream && videoRef.current) {
-      videoRef.current.srcObject = stream
-      videoRef.current.play().catch(() => {})
-    }
-  }, [stream])
+    return stopCamera
+  }, [stopCamera])
 
   const resizeToDataUrl = (srcCanvas: HTMLCanvasElement, maxPx = 900): string => {
     const { width, height } = srcCanvas
@@ -226,12 +230,9 @@ const BodyScan = () => {
   const closeCamera = useCallback(() => {
     setCountdown(null)
     shouldCaptureRef.current = false
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop())
-      setStream(null)
-    }
+    stopCamera()
     setIsCameraOpen(false)
-  }, [stream])
+  }, [stopCamera])
 
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return
@@ -288,10 +289,10 @@ const BodyScan = () => {
       video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 1920 } },
     })
     setCameraReady(false)
-    setStream(mediaStream)
+    streamRef.current = mediaStream
     if (videoRef.current) {
       videoRef.current.srcObject = mediaStream
-      videoRef.current.play().catch(() => {})
+      await videoRef.current.play().catch(() => {})
     }
     return mediaStream
   }, [])
@@ -313,7 +314,7 @@ const BodyScan = () => {
   }, [isCameraOpen, capturedImages, analysis, isAnalyzing, openCamera])
 
   const flipCamera = useCallback(async () => {
-    if (stream) stream.getTracks().forEach(t => t.stop())
+    stopCamera()
     const newMode = facingMode === "user" ? "environment" : "user"
     setFacingMode(newMode)
     try {
@@ -321,7 +322,7 @@ const BodyScan = () => {
     } catch {
       toast.error("Could not switch camera.")
     }
-  }, [facingMode, stream, startStream])
+  }, [facingMode, stopCamera, startStream])
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -456,7 +457,7 @@ const BodyScan = () => {
         if (scanError) throw scanError
         recordActiveDay(supabase, user.id).catch(() => {})
 
-        const scanDate = new Date().toISOString().split("T")[0]
+        const scanDate = format(new Date(), "yyyy-MM-dd")
         const bf = analysis.estimatedBodyFat != null ? `${analysis.estimatedBodyFat}% body fat` : null
         const md = analysis.muscleDevelopment
         const mdSummary = md ? `upper=${md.upper_body}, core=${md.core}, lower=${md.lower_body}` : null

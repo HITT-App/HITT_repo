@@ -69,7 +69,7 @@ export default function WorkoutSchedule() {
   useEffect(() => {
     if (!user) return
     const channel = supabase
-      .channel('schedule_realtime')
+      .channel(`schedule-realtime-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -151,7 +151,7 @@ export default function WorkoutSchedule() {
     if (!activeWorkout) return
     setIsMoving(true)
     try {
-      const dateStr = newDate.toISOString().split('T')[0]
+      const dateStr = format(newDate, 'yyyy-MM-dd')
       const { error } = await supabase
         .from('scheduled_workouts')
         .update({ scheduled_date: dateStr })

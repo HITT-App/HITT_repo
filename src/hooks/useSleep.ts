@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { recordActiveDay } from "@/lib/activeDay";
-import { startOfWeek, endOfWeek, subDays, differenceInMinutes, parseISO } from "date-fns";
+import { startOfWeek, endOfWeek, subDays, differenceInMinutes, parseISO, format } from "date-fns";
 
 export const useSleep = () => {
   const { user } = useAuth();
@@ -67,8 +67,8 @@ export const useSleep = () => {
         .from("sleep_logs")
         .select("*")
         .eq("user_id", user?.id)
-        .gte("sleep_date", weekStart.toISOString().split("T")[0])
-        .lte("sleep_date", weekEnd.toISOString().split("T")[0]);
+        .gte("sleep_date", format(weekStart, "yyyy-MM-dd"))
+        .lte("sleep_date", format(weekEnd, "yyyy-MM-dd"));
 
       if (error) throw error;
       return data;

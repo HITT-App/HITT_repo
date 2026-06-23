@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { X, ChevronLeft, Sparkles } from "lucide-react";
+import { format } from "date-fns";
 
 const moods = [
   { emoji: "😴", label: "Tired", value: "tired", color: "from-blue-400/20 to-blue-500/10", ring: "ring-blue-400/50" },
@@ -41,7 +42,7 @@ export function DailyCheckIn({ onComplete }: DailyCheckInProps) {
     if (skippedThisSession) return;
 
     const checkTodaysCheckin = async () => {
-      const today = new Date().toISOString().split("T")[0];
+      const today = format(new Date(), "yyyy-MM-dd");
       const { data } = await supabase
         .from("daily_checkins")
         .select("id")
@@ -71,7 +72,7 @@ export function DailyCheckIn({ onComplete }: DailyCheckInProps) {
 
     if (!user || !selectedMood) return;
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = format(new Date(), "yyyy-MM-dd");
     await supabase.from("daily_checkins").upsert({
       user_id: user.id,
       mood: selectedMood,

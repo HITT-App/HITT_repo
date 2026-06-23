@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-06-23] — Camera fixes, timezone fixes, and regression-detector audits
+
+- **Camera no longer black-screens on first scan** — the meal scanner and body scanner now reliably show the camera viewport on first launch; previously some users saw a black screen because of an iOS WKWebView race
+- **Daily check-in, streaks, and meal plans record on the right day** — fixed a class of bug where the app used UTC instead of your local date, causing anyone east of UTC (Europe, Asia, Australia) to see entries appear on the wrong day after ~22:00 local time
+- **Sleep, body scans, and scheduled workouts now show on your local day** — same timezone fix applied to sleep logs, body-scan history, AI-generated workout schedules, and weekly sleep range queries
+- **Realtime updates no longer crash the home screen** — fixed the same class of bug as the Build 233 crash: friend activity, community posts, conversations, nutrition dashboard, chatroom and workout schedule now use unique realtime channel names so duplicate subscribers don't collide
+- **Watch workout sync handles server errors gracefully** — previously a server 500 silently succeeded; now retries on the next workout completion as intended
+- **23 new internal regression detectors added** — runtime audits that guard against the bug classes above plus several others (orphan timers, missing iOS audio settings, malformed AI response crashes, etc.) so future regressions surface in CI
+
 ## [2026-06-23] — Watch app overhaul, Strava-style activity tracking, and audio click fix
 
 - **Apple Watch app actually works now** — fixed a fundamental issue where button taps weren't updating the screen; the workout tab and pickers are now fully interactive

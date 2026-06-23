@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, RefreshCw, X, Zap, Flame, Feather, CalendarCheck, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 const DAYS_PER_WEEK = [
   { id: 2, label: '2 days', desc: 'Light — good for beginners' },
@@ -191,7 +192,7 @@ export default function ScheduleSetup() {
             timeline: params.timeline,
             eventDate: params.eventDate,
             bodyScanSummary: params.bodyScanSummary,
-            startDate: new Date().toISOString().split('T')[0],
+            startDate: format(new Date(), 'yyyy-MM-dd'),
           }),
         }
       );
@@ -281,7 +282,7 @@ export default function ScheduleSetup() {
       const userId = sessionData?.session?.user?.id;
       if (!userId) return;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = format(new Date(), 'yyyy-MM-dd');
       const lastDate = planPreview[planPreview.length - 1]?.scheduled_date ?? today;
 
       // 1. Insert plan header

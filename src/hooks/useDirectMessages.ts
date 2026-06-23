@@ -121,7 +121,7 @@ export const useConversations = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel('conversations_updates')
+      .channel(`conversations-updates-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'community_conversations' },

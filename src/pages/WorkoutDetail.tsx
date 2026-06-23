@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { format } from 'date-fns';
 import {
   ArrowLeft, Play, Clock, Flame, Star, Share2,
   ChevronRight, Calendar, Bookmark, Dumbbell, Target, Repeat, Timer, Watch
@@ -121,7 +122,7 @@ export default function WorkoutDetail() {
       const scheduledDate = new Date(selectedDate);
       const { error } = await supabase.from('scheduled_workouts').insert({
         user_id: user.id, workout_id: workout.id,
-        scheduled_date: scheduledDate.toISOString().split('T')[0],
+        scheduled_date: format(scheduledDate, 'yyyy-MM-dd'),
         scheduled_time: `${selectedTime.hour.toString().padStart(2, '0')}:${selectedTime.minute.toString().padStart(2, '0')}:00`,
         status: 'scheduled',
       });

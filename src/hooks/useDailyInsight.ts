@@ -15,6 +15,7 @@ export function useDailyInsight() {
   useEffect(() => {
     if (!user) { setLoading(false); return; }
 
+    // audit:ignore CA-44 — UTC anchor: daily insight cache key, must match the server's UTC date for cross-session reuse
     const todayUTC = new Date().toISOString().split("T")[0];
 
     const run = async () => {

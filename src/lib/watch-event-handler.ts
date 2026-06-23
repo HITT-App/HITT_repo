@@ -16,7 +16,7 @@ export function initWatchEventHandler() {
 
     const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
-    await fetch(`${SUPABASE_URL}/functions/v1/log-watch-workout`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/log-watch-workout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -30,8 +30,11 @@ export function initWatchEventHandler() {
         averageHeartRate: event.averageHeartRate ?? 0,
         endedAt: new Date().toISOString(),
       }),
-    }).catch(() => {
-      // Network failure — the deduplication index means a retry on next open is safe
-    });
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      // Network failure or 5xx — the deduplication index means a retry
+      // on the next workout completion (or app open) is safe.
+      return;
+    }
   });
 }

@@ -1,10 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { format } from 'date-fns'
 
 export async function recordActiveDay(
   sb: SupabaseClient,
   userId: string
 ): Promise<number> {
-  const today = new Date().toISOString().split('T')[0]
+  // Local calendar day — a streak should advance on the user's day, not UTC's.
+  const today = format(new Date(), 'yyyy-MM-dd')
 
   const { data: existing } = await sb
     .from('user_streaks')

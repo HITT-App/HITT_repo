@@ -22,7 +22,7 @@ export const CoachingCard = () => {
         `)
         .eq("user_id", user?.id)
         .eq("status", "scheduled")
-        .gte("scheduled_date", new Date().toISOString().split("T")[0])
+        .gte("scheduled_date", format(new Date(), "yyyy-MM-dd"))
         .order("scheduled_date", { ascending: true })
         .limit(1)
         .maybeSingle();

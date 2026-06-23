@@ -4,6 +4,7 @@ import { Health } from "@capgo/capacitor-health";
 import type { HealthDataType, HealthSample } from "@capgo/capacitor-health";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
 
 
 const SYNC_WINDOW_HOURS = 48;
@@ -157,7 +158,7 @@ export function useHealthSync() {
         const durationMin = (end.getTime() - start.getTime()) / 60000;
         // Bucket by the calendar date the sleep ended on — aligns with how
         // users think about "last night".
-        const dateKey = end.toISOString().split("T")[0];
+        const dateKey = format(end, "yyyy-MM-dd");
         const current = byDate.get(dateKey);
         if (current) {
           if (start < current.bedtime) current.bedtime = start;

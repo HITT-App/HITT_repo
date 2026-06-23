@@ -76,7 +76,7 @@ const Sleeping = () => {
     // Log the sleep
     try {
       await logSleep.mutateAsync({
-        sleep_date: sleepStartTime.toISOString().split("T")[0],
+        sleep_date: format(sleepStartTime, "yyyy-MM-dd"),
         bedtime: sleepStartTime.toISOString(),
         wake_time: wakeTime.toISOString(),
         sleep_quality: 70, // Default quality

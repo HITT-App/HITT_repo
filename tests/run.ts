@@ -13,7 +13,7 @@
  * Code-audit tests always run (no credentials needed).
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // ── Config ───────────────────────────────────────────────────────────────────
@@ -382,6 +382,348 @@ async function runCodeAudit() {
   } catch {
     for (const id of ['CA-21','CA-22','CA-23','CA-24','CA-25']) {
       fail(id, 'Jarvis onboarding suppression test', 'JarvisMode.tsx not found');
+    }
+  }
+
+  // ── Camera pages: intermittent black-screen prevention ───────────────────
+  //
+  // A meal-scanner field report described a black camera viewport on first
+  // launch. The root cause on iOS WKWebView is reliably one of:
+  //   1. Missing explicit video.play() after srcObject — autoPlay alone is
+  //      unreliable once the getUserMedia gesture window closes
+  //   2. Missing playsInline attribute — iOS opens fullscreen otherwise
+  //   3. Stream stored in useState (introduces a render gap between the
+  //      stream arriving and the <video> element mounting)
+  //   4. Stopping tracks without nulling out the stream reference, leaving
+  //      a dead stream that can re-attach on retry
+  //   5. No unmount cleanup, leaking the camera into the background
+  //
+  // BarcodeScanner is the reference implementation. MealScanner historically
+  // had bugs 1, 3, 4 — these checks guard against regressions.
+
+  const cameraPages: Array<[string, string, string]> = [
+    ['pages/BarcodeScanner.tsx', 'CA-26', 'BarcodeScanner'],
+    ['pages/MealScanner.tsx',    'CA-31', 'MealScanner'],
+    ['pages/BodyScan.tsx',       'CA-36', 'BodyScan'],
+  ];
+
+  for (const [file, baseId, name] of cameraPages) {
+    const id = (n: number) => `CA-${parseInt(baseId.slice(3)) + n}`;
+    try {
+      const src = readSrc(file);
+
+      // (a) Explicit video.play() somewhere in the file
+      const hasPlay = /videoRef\.current\.play\(\)|video\.play\(\)/.test(src);
+      if (hasPlay) {
+        pass(id(0), `${name} calls video.play() explicitly (not relying on autoPlay alone)`);
+      } else {
+        fail(id(0), `${name} calls video.play() explicitly (not relying on autoPlay alone)`,
+          'No video.play() call found — autoPlay can silently fail on iOS WKWebView (black screen)');
+      }
+
+      // (b) playsInline on the <video> element
+      const hasPlaysInline = /<video[^>]*playsInline/.test(src);
+      if (hasPlaysInline) {
+        pass(id(1), `${name} <video> has playsInline (prevents fullscreen on iOS)`);
+      } else {
+        fail(id(1), `${name} <video> has playsInline (prevents fullscreen on iOS)`,
+          'playsInline attribute missing from <video>');
+      }
+
+      // (c) Stream held in a ref, not useState — closes the render gap that
+      //     causes srcObject to be attached to a not-yet-mounted <video>
+      const hasStreamRef = /streamRef\s*=\s*useRef/.test(src);
+      const hasStreamState = /useState[^(]*\(\s*null\s*\)[^;]*;\s*\/\/\s*MediaStream/.test(src)
+        || /const\s+\[\s*stream\s*,/.test(src);
+      if (hasStreamRef && !hasStreamState) {
+        pass(id(2), `${name} keeps stream in a ref (avoids render-gap race)`);
+      } else {
+        fail(id(2), `${name} keeps stream in a ref (avoids render-gap race)`,
+          hasStreamState
+            ? 'stream is in useState — render gap can leave <video> with null srcObject (black screen)'
+            : 'No streamRef found');
+      }
+
+      // (d) Tracks stopped AND stream nulled in the same helper.
+      // Accepts any forEach body that calls .stop(), as long as streamRef is
+      // nulled within the next ~120 chars (same helper, same statement block).
+      const stopCameraRe = /streamRef\.current\??\.getTracks\(\)\.forEach\([^;]+\.stop\(\)\s*\)[\s\S]{0,120}?streamRef\.current\s*=\s*null/;
+      if (stopCameraRe.test(src)) {
+        pass(id(3), `${name} nulls streamRef after stopping tracks (no dead-stream reattach)`);
+      } else {
+        fail(id(3), `${name} nulls streamRef after stopping tracks (no dead-stream reattach)`,
+          'Could not find a stop+null helper — risk of re-attaching a dead stream on retry');
+      }
+
+      // (e) Unmount cleanup stops the camera
+      const hasUnmountCleanup = /useEffect\(\s*\(\s*\)\s*=>\s*\{[\s\S]*?return\s+stopCamera/.test(src)
+        || /useEffect\(\s*\(\s*\)\s*=>\s*\{[\s\S]*?return\s*\(\s*\)\s*=>\s*\{[\s\S]*?stop(?:Camera|\(\))/.test(src);
+      if (hasUnmountCleanup) {
+        pass(id(4), `${name} stops camera on unmount (no orphan stream)`);
+      } else {
+        fail(id(4), `${name} stops camera on unmount (no orphan stream)`,
+          'No unmount cleanup that stops the camera — leaves camera active in background');
+      }
+    } catch {
+      for (let n = 0; n < 5; n++) {
+        fail(id(n), `${name} camera audit`, 'File not found');
+      }
+    }
+  }
+
+  // ── Runtime hazard audits ────────────────────────────────────────────────
+  // These guard against classes of bug we've actually shipped or that are
+  // common iOS WKWebView / Capacitor footguns. Each runs across all source
+  // files and reports the first few violations in the failure note.
+
+  const listFiles = (root: string, exts: string[]): string[] => {
+    const out: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const full = `${dir}/${e.name}`;
+        if (e.isDirectory()) walk(full);
+        else if (exts.some(x => e.name.endsWith(x))) out.push(full);
+      }
+    };
+    walk(root);
+    return out;
+  };
+
+  const srcFiles = listFiles(SRC, ['.ts', '.tsx']);
+  const trim = (p: string) => p.replace(SRC + '/', '');
+  const summarise = (xs: string[], n = 3) =>
+    xs.slice(0, n).join('; ') + (xs.length > n ? `; …+${xs.length - n} more` : '');
+
+  // CA-41: Supabase realtime postgres_changes channels with literal names are
+  //        collision-prone. Two components subscribing to the same literal will
+  //        crash (Build 233 home-screen crash was 'notifications_updates').
+  //        Broadcast and presence channels are excluded — they MUST share names
+  //        across clients (that's how they work).
+  //        Pass = every postgres_changes channel uses a per-instance name.
+  {
+    const violations: string[] = [];
+    const literalChannelRe = /\.channel\(\s*['"]([^'"$]+?)['"]\s*[,)]/g;
+    for (const path of srcFiles) {
+      const src = readFileSync(path, 'utf8');
+      let m;
+      literalChannelRe.lastIndex = 0;
+      while ((m = literalChannelRe.exec(src))) {
+        // Look ~400 chars after the .channel() call for what kind of
+        // subscription it sets up. Broadcast/presence are intentionally
+        // shared-name; postgres_changes needs uniqueness.
+        const after = src.slice(m.index, m.index + 400);
+        const isBroadcastOrPresence = /\.on\(\s*['"](?:broadcast|presence)['"]/.test(after)
+          || /presence:\s*\{/.test(after)
+          || /type:\s*['"]broadcast['"]/.test(after);  // send-side broadcast
+        if (isBroadcastOrPresence) continue;
+        const line = src.slice(0, m.index).split('\n').length;
+        violations.push(`${trim(path)}:${line} "${m[1]}"`);
+      }
+    }
+    if (violations.length === 0) {
+      pass('CA-41', 'Supabase postgres_changes channels use per-instance (interpolated) names');
+    } else {
+      fail('CA-41',
+        'Supabase postgres_changes channels use per-instance (interpolated) names',
+        `${violations.length} literal channel name(s) — duplicate subscribers will crash: ${summarise(violations)}`);
+    }
+  }
+
+  // CA-42: setInterval inside a useEffect must be cleared in cleanup, otherwise
+  //        the interval keeps firing after the component unmounts and updates
+  //        stale state. Heuristic: any file using setInterval must also use
+  //        clearInterval (true 99% of the time; false positives flagged for review).
+  {
+    const violations: string[] = [];
+    for (const path of srcFiles) {
+      const src = readFileSync(path, 'utf8');
+      if (!/setInterval\s*\(/.test(src)) continue;
+      if (!/clearInterval\s*\(/.test(src)) {
+        violations.push(trim(path));
+      }
+    }
+    if (violations.length === 0) {
+      pass('CA-42', 'Every file using setInterval also calls clearInterval (no orphan timers)');
+    } else {
+      fail('CA-42',
+        'Every file using setInterval also calls clearInterval (no orphan timers)',
+        `setInterval without clearInterval: ${summarise(violations)}`);
+    }
+  }
+
+  // CA-43: Capacitor PushNotifications / LocalNotifications listeners returned
+  //        from addListener must be .remove()'d in cleanup, otherwise multiple
+  //        handlers stack and notifications fire multiple actions per tap.
+  {
+    const violations: string[] = [];
+    for (const path of srcFiles) {
+      const src = readFileSync(path, 'utf8');
+      const addCount = (src.match(/(?:PushNotifications|LocalNotifications)\.addListener\s*\(/g) || []).length;
+      if (addCount === 0) continue;
+      if (!/\.remove\(\)/.test(src)) {
+        violations.push(`${trim(path)} (${addCount} addListener call(s), no .remove())`);
+      }
+    }
+    if (violations.length === 0) {
+      pass('CA-43', 'Push/Local notification listeners are removed on cleanup');
+    } else {
+      fail('CA-43',
+        'Push/Local notification listeners are removed on cleanup',
+        `${violations.length} file(s) leak listeners: ${summarise(violations)}`);
+    }
+  }
+
+  // CA-44: .toISOString().split('T')[0] converts the date to UTC silently.
+  //        For users east of UTC at 23:00, the recorded date is tomorrow.
+  //        Use format(date, 'yyyy-MM-dd') from date-fns for local-day strings.
+  //        Opt-out: prefix the call site with `// audit:ignore CA-44 — <reason>`
+  //        on the same line or the line above (only for genuine UTC anchors).
+  {
+    const violations: string[] = [];
+    const utcDateRe = /\.toISOString\(\)\.(?:split\(['"]T['"]\)\[0\]|substring\(\s*0\s*,\s*10\s*\)|slice\(\s*0\s*,\s*10\s*\))/g;
+    for (const path of srcFiles) {
+      const src = readFileSync(path, 'utf8');
+      const lines = src.split('\n');
+      let m;
+      utcDateRe.lastIndex = 0;
+      while ((m = utcDateRe.exec(src))) {
+        const lineNum = src.slice(0, m.index).split('\n').length;
+        const sameLine = lines[lineNum - 1] ?? '';
+        const lineAbove = lines[lineNum - 2] ?? '';
+        if (/audit:ignore\s+CA-44/.test(sameLine) || /audit:ignore\s+CA-44/.test(lineAbove)) {
+          continue;
+        }
+        violations.push(`${trim(path)}:${lineNum}`);
+      }
+    }
+    if (violations.length === 0) {
+      pass('CA-44', 'No implicit UTC date conversions (use date-fns format() for yyyy-MM-dd)');
+    } else {
+      fail('CA-44',
+        'No implicit UTC date conversions (use date-fns format() for yyyy-MM-dd)',
+        `${violations.length} call site(s) — non-UTC users see wrong day after ~22:00 local: ${summarise(violations, 4)}`);
+    }
+  }
+
+  // CA-45: Every JSON.parse should be inside a try/catch — a single malformed
+  //        response from an AI stream or localStorage write can crash the page.
+  //        Heuristic: look at the 6 lines around each JSON.parse for a 'try' or
+  //        'catch' keyword. False positives are possible but rare.
+  {
+    const violations: string[] = [];
+    for (const path of srcFiles) {
+      const src = readFileSync(path, 'utf8');
+      const lines = src.split('\n');
+      lines.forEach((line, i) => {
+        if (!/JSON\.parse\s*\(/.test(line)) return;
+        const window = lines.slice(Math.max(0, i - 6), i + 1).join('\n');
+        if (!/\btry\b/.test(window)) {
+          violations.push(`${trim(path)}:${i + 1}`);
+        }
+      });
+    }
+    if (violations.length === 0) {
+      pass('CA-45', 'All JSON.parse calls are inside try/catch');
+    } else {
+      fail('CA-45',
+        'All JSON.parse calls are inside try/catch',
+        `${violations.length} unguarded JSON.parse call(s): ${summarise(violations, 4)}`);
+    }
+  }
+
+  // CA-46: Edge function fetch calls must check res.ok before parsing — when
+  //        the function returns 402 (quota exceeded) or 500, the JSON body is
+  //        an error object, not the expected shape. Parsing it as success data
+  //        produces silent wrong behaviour (e.g. empty meal scan results).
+  {
+    const violations: string[] = [];
+    for (const path of srcFiles) {
+      const src = readFileSync(path, 'utf8');
+      // Match `fetch(...functions/v1/...)` even when the call spans many lines
+      // (long JSON bodies, signal/headers config, etc.).
+      const fnFetchRe = /fetch\s*\([\s\S]{0,2000}?functions\/v1\//g;
+      let m;
+      while ((m = fnFetchRe.exec(src))) {
+        // Look at the next ~1800 chars for an .ok check. A multiline POST with
+        // a long JSON body can easily push res.ok 20+ lines below fetch(.
+        const after = src.slice(m.index, m.index + 1800);
+        if (!/\.\s*ok\b/.test(after) && !/response\.ok|res\.ok/.test(after)) {
+          const line = src.slice(0, m.index).split('\n').length;
+          violations.push(`${trim(path)}:${line}`);
+        }
+      }
+    }
+    if (violations.length === 0) {
+      pass('CA-46', 'Edge function fetch calls check res.ok before parsing');
+    } else {
+      fail('CA-46',
+        'Edge function fetch calls check res.ok before parsing',
+        `${violations.length} unchecked edge function call(s): ${summarise(violations)}`);
+    }
+  }
+
+  // CA-47: Dynamic imports of native-only Capacitor plugins must be guarded by
+  //        Capacitor.isNativePlatform() (or equivalent), otherwise the plugin
+  //        fails to resolve in the web bundle / Lovable preview.
+  {
+    const violations: string[] = [];
+    const dynImportRe = /await\s+import\s*\(\s*['"](@capacitor[\/-][^'"]+|@capgo\/[^'"]+)['"]\s*\)/g;
+    const NATIVE_GUARD = /isNativePlatform\(\)|getPlatform\(\)\s*!==\s*['"]web['"]|Capacitor\.isPluginAvailable|\bisNative\b/;
+    for (const path of srcFiles) {
+      const src = readFileSync(path, 'utf8');
+      let m;
+      dynImportRe.lastIndex = 0;
+      while ((m = dynImportRe.exec(src))) {
+        // Look back ~1200 chars from the import — that window catches the
+        // enclosing useEffect/function/IIFE plus any guards directly above it
+        // (e.g. `if (!Capacitor.isNativePlatform()) return;` two lines up).
+        const lookback = src.slice(Math.max(0, m.index - 1200), m.index);
+        // Plus the file-top imports/declarations zone.
+        const fileTop = src.slice(0, 2000);
+        if (!NATIVE_GUARD.test(lookback) && !NATIVE_GUARD.test(fileTop)) {
+          const line = src.slice(0, m.index).split('\n').length;
+          violations.push(`${trim(path)}:${line} ${m[1]}`);
+        }
+      }
+    }
+    if (violations.length === 0) {
+      pass('CA-47', 'Native-only Capacitor plugin imports are guarded by isNativePlatform()');
+    } else {
+      fail('CA-47',
+        'Native-only Capacitor plugin imports are guarded by isNativePlatform()',
+        `${violations.length} unguarded import(s): ${summarise(violations)}`);
+    }
+  }
+
+  // CA-48: SwiftUI Views are value-type structs — storing one in @State and
+  //        calling methods on it detaches the captured `self` from the rendered
+  //        view (this was the Watch app's "screens not interactive" bug).
+  //        Audit: flag `@State ... = SomeView()` initializations in any Watch
+  //        Swift file.
+  {
+    const watchRoot = `${IOS}/HIITWatch Watch App`;
+    let swiftFiles: string[] = [];
+    try { swiftFiles = listFiles(watchRoot, ['.swift']); } catch {}
+    const violations: string[] = [];
+    const stateViewRe = /@State\s+(?:private\s+)?var\s+\w+\s*=\s*\w+View\s*\(\s*\)/g;
+    for (const path of swiftFiles) {
+      const src = readFileSync(path, 'utf8');
+      let m;
+      stateViewRe.lastIndex = 0;
+      while ((m = stateViewRe.exec(src))) {
+        const line = src.slice(0, m.index).split('\n').length;
+        violations.push(`${path.replace(IOS + '/', '')}:${line}`);
+      }
+    }
+    if (swiftFiles.length === 0) {
+      // Watch app not present — skip rather than fail
+      skip('CA-48', 'SwiftUI Views not stored in @State (Watch wrapper anti-pattern)', 'Watch source tree not found');
+    } else if (violations.length === 0) {
+      pass('CA-48', 'SwiftUI Views are not stored in @State (Watch wrapper anti-pattern)');
+    } else {
+      fail('CA-48',
+        'SwiftUI Views are not stored in @State (Watch wrapper anti-pattern)',
+        `${violations.length} occurrence(s): ${summarise(violations)}`);
     }
   }
 }

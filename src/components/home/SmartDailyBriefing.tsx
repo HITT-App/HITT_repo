@@ -12,6 +12,7 @@ export function SmartDailyBriefing() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
+  // audit:ignore CA-44 — global UTC anchor so the daily briefing rolls over at the same moment for every user (not staggered by timezone)
   const cacheKey = `hiit_daily_briefing_${new Date().toISOString().split("T")[0]}`;
 
   const fetchBriefing = async (force = false) => {

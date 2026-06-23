@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { format } from 'date-fns';
 
 export type ActivityLevel = 'none' | 'light' | 'moderate' | 'active' | 'very_active';
 
@@ -143,7 +144,7 @@ export function useHealthProfile() {
         .from('sleep_logs')
         .select('duration_minutes, deep_sleep_minutes, rem_sleep_minutes')
         .eq('user_id', user.id)
-        .gte('sleep_date', d(14).toISOString().split('T')[0]);
+        .gte('sleep_date', format(d(14), 'yyyy-MM-dd'));
 
       if (sleepLogs && sleepLogs.length > 0) {
         const avgMins = sleepLogs.reduce((s, r) => s + r.duration_minutes, 0) / sleepLogs.length;

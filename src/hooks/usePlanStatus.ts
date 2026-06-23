@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { format } from 'date-fns'
 
 export type PlanState = 'loading' | 'none' | 'active'
 
@@ -11,7 +12,7 @@ export function usePlanStatus() {
   useEffect(() => {
     if (!user) { setPlanState('none'); return }
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = format(new Date(), 'yyyy-MM-dd')
     supabase
       .from('scheduled_workouts')
       .select('id', { count: 'exact', head: true })

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 
 export function StreakUrgencyBanner() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export function StreakUrgencyBanner() {
     // Check if it's after 6 PM and user hasn't worked out today
     const now = new Date();
     const hour = now.getHours();
-    const today = now.toISOString().split("T")[0];
+    const today = format(now, "yyyy-MM-dd");
     
     const lastWorkoutDate = streak?.last_workout_date;
     const hasWorkedOutToday = lastWorkoutDate === today;

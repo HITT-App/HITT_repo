@@ -7,6 +7,7 @@ import { useSleep } from "@/hooks/useSleep";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 const HealthMetrics = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ const HealthMetrics = () => {
   const { data: todayMood } = useQuery({
     queryKey: ["today-mood", user?.id],
     queryFn: async () => {
-      const today = new Date().toISOString().split("T")[0];
+      const today = format(new Date(), "yyyy-MM-dd");
       const { data } = await supabase
         .from("daily_checkins")
         .select("mood")

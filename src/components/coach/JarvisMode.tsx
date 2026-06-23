@@ -18,6 +18,7 @@ import { MultiChoiceCard } from './MultiChoiceCard';
 import { JarvisMealPlanCard } from './JarvisMealPlanCard';
 import { JarvisDietaryPrefsCard } from './JarvisDietaryPrefsCard';
 import { saveMealPlan } from '@/lib/mealPlanStorage';
+import { format } from 'date-fns';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload, RecommendMealPlanPayload } from '@/hooks/useAI.types';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
@@ -373,7 +374,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     return planItems.slice(0, upcomingDates.length).map((item, i) => ({
       workout_title: item.workout_title,
       exercises_snapshot: item.exercises_snapshot,
-      scheduled_date: upcomingDates[i].toISOString().split('T')[0],
+      scheduled_date: format(upcomingDates[i], 'yyyy-MM-dd'),
     }));
   };
 
@@ -554,7 +555,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const scheduledDate = tomorrow.toISOString().split('T')[0];
+      const scheduledDate = format(tomorrow, 'yyyy-MM-dd');
 
       const { error } = await supabase.from('scheduled_workouts').insert({
         user_id: userId,
@@ -685,7 +686,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         uid = session?.session?.user?.id;
         if (uid) {
           currentUserIdRef.current = uid;
-          const today = new Date().toISOString().split('T')[0];
+          const today = format(new Date(), 'yyyy-MM-dd');
           const [
             { data: prefs },
             { count: futureCount },

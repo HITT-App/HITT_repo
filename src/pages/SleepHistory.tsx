@@ -142,7 +142,7 @@ const SleepHistory = () => {
               <>
                 {/* Today's logs */}
                 {(() => {
-                  const today = new Date().toISOString().split("T")[0];
+                  const today = format(new Date(), "yyyy-MM-dd");
                   const todayLogs = logs.filter((log) => log.sleep_date === today);
                   
                   if (todayLogs.length > 0) {

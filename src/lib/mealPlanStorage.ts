@@ -1,4 +1,5 @@
 import type { MealInPlan } from '@/hooks/useAI.types'
+import { format } from 'date-fns'
 
 interface StoredMealPlan {
   date: string
@@ -11,7 +12,8 @@ function key(userId: string) {
 }
 
 export function saveMealPlan(userId: string, meals: MealInPlan[]) {
-  const today = new Date().toISOString().split('T')[0]
+  // Local day — a meal plan is for the user's calendar day, not UTC's.
+  const today = format(new Date(), 'yyyy-MM-dd')
   const stored: StoredMealPlan = { date: today, meals, loggedNames: [] }
   localStorage.setItem(key(userId), JSON.stringify(stored))
 }

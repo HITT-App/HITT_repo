@@ -189,9 +189,10 @@ export const useCommunityPosts = () => {
   useEffect(() => {
     fetchPosts();
 
-    // Realtime: targeted local-state updates instead of full re-fetches
+    // Realtime: targeted local-state updates instead of full re-fetches.
+    // Per-instance channel name avoids collisions when the hook mounts twice.
     const channel = supabase
-      .channel('community_posts_changes')
+      .channel(`community-posts-changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'community_posts' },

@@ -51,9 +51,11 @@ export default function MealScanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // streamRef (not useState) — attaching srcObject inside startCamera removes
+  // the render-gap that caused intermittent black-screen on iOS WKWebView.
+  const streamRef = useRef<MediaStream | null>(null);
 
   const [scanState, setScanState] = useState<ScanState>('requirements');
-  const [stream, setStream] = useState<MediaStream | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -66,28 +68,43 @@ export default function MealScanner() {
     { label: 'Well Lit Room', value: 'True', ok: true },
   ];
 
-  useEffect(() => {
-    return () => {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-    };
-  }, [stream]);
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current = null;
+  };
 
-  // Wire the stream to the video element after it's been rendered into the DOM.
-  // The <video> is conditionally rendered (only when scanState === 'scanning'), so
-  // setting srcObject in startCamera() is always too early — videoRef.current is null.
   useEffect(() => {
-    if (stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-    }
-  }, [stream, scanState]);
+    return stopCamera;
+  }, []);
+
+  // Re-attach the stream when the video element mounts (it's conditionally
+  // rendered only while scanState === 'scanning'). Without this, navigating
+  // between states could leave the element with a torn-down srcObject.
+  useEffect(() => {
+    if (scanState !== 'scanning') return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+    video.srcObject = stream;
+    video.play().catch(() => {
+      toast({
+        variant: 'destructive',
+        title: 'Camera Error',
+        description: 'Camera could not start. Try again or upload from gallery.',
+      });
+      setScanState('requirements');
+    });
+  }, [scanState, toast]);
 
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: 1280, height: 720 }
       });
-      setStream(mediaStream);
+      streamRef.current = mediaStream;
       setScanState('scanning');
+      // The effect above attaches srcObject + calls play() once the
+      // <video> element mounts as part of the 'scanning' render.
     } catch {
       toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access camera' });
     }
@@ -118,7 +135,7 @@ export default function MealScanner() {
     canvas.getContext('2d')?.drawImage(video, 0, 0);
     const imageData = canvas.toDataURL('image/jpeg', 0.8);
     setCapturedImage(imageData);
-    if (stream) stream.getTracks().forEach(track => track.stop());
+    stopCamera();
     analyzeImage(imageData);
   };
 

@@ -68,6 +68,7 @@ export function useHiitScore() {
       // Recompute if we've never scored this user, or the latest score is from
       // before today (UTC) — keeps the trend chart at daily granularity for
       // users who open the app daily, without relying on pg_cron.
+      // audit:ignore CA-44 — UTC anchor: compared to computed_at (stored UTC), must stay UTC
       const todayUTC = new Date().toISOString().split("T")[0];
       const latestDate = latest?.computed_at.split("T")[0];
       const stale = !latest || latestDate !== todayUTC;

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, ArrowRight, Check, Flame, Dumbbell, Wind, Zap, Trophy, Calendar, ScanFace, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const GOAL_OPTIONS = [
   { id: 'fat loss',    label: 'Fat loss',    desc: 'Burn fat and get leaner',           icon: Flame   },
@@ -237,7 +238,7 @@ export default function GoalSetup() {
                 type="date"
                 value={targetDate}
                 onChange={e => setTargetDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
+                min={format(new Date(), 'yyyy-MM-dd')}
                 className="w-full h-12 px-4 rounded-2xl border border-border bg-card text-foreground text-sm"
               />
             </div>
@@ -269,7 +270,7 @@ export default function GoalSetup() {
                   type="date"
                   value={eventDate}
                   onChange={e => setEventDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={format(new Date(), 'yyyy-MM-dd')}
                   className="w-full h-12 px-4 rounded-2xl border border-border bg-card text-foreground text-sm"
                 />
               </div>
