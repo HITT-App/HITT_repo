@@ -30,6 +30,7 @@ const HIDDEN_NAV_ROUTES = [
   "/schedule-setup",
   "/sleep-onboarding",
   "/log-meal",
+  "/hydration",
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
