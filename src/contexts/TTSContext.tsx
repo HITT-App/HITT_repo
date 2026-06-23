@@ -73,8 +73,11 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     if (!effectivelyEnabled && isSpeaking) cancel()
   }, [effectivelyEnabled, isSpeaking, cancel])
 
-  // iOS WKWebView audio context unlock — runs on mount within the app shell render
+  // iOS WKWebView audio context unlock — only needed when voice is actually enabled.
+  // Without this guard the silent blob activates the iOS audio session on every cold
+  // start, producing audible hardware clicks even though no audio is playing.
   useEffect(() => {
+    if (!VOICE_FEATURE_ENABLED) return
     const el = audioRef.current
     if (!el) return
     el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA'

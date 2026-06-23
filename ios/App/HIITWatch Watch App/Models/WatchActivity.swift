@@ -8,6 +8,17 @@ struct WatchActivity: Identifiable {
     let icon: String          // SF Symbol name
     let color: Color
     let met: Double
+
+    // Activity IDs that should engage the watch's onboard GPS + route recording.
+    // HKLiveWorkoutBuilder also auto-collects distanceWalkingRunning / distanceCycling
+    // when the workout configuration is outdoor with the right activity type.
+    private static let outdoorIds: Set<String> = [
+        "run", "trail", "walk", "powerwalk", "hike",
+        "cycling", "mtb",
+        "kayak", "paddle", "surf",
+    ]
+
+    var isOutdoor: Bool { Self.outdoorIds.contains(id) }
 }
 
 let WATCH_ACTIVITIES: [WatchActivity] = [

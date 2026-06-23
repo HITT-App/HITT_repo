@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import WatchKit
 
 // Design-spec colours
 private let hiitOrange = Color(red: 1,    green: 0.541, blue: 0.149)
@@ -17,7 +18,7 @@ private enum WorkoutPhase {
 }
 
 private enum WorkoutOverlay {
-    case none, endConfirm, switchPicker, switchConfirm, completion
+    case none, endConfirm, switchPicker, switchConfirm, completion, startPicker
 }
 
 // MARK: - HR Zone helpers
@@ -70,6 +71,7 @@ struct ActiveWorkoutView: View {
                 case .switchPicker:  switchPickerView
                 case .switchConfirm: switchConfirmScreen
                 case .completion:    completionScreen
+                case .startPicker:   startPickerView
                 case .none:
                     switch phase {
                     case .idle:      idleScreen
@@ -88,6 +90,8 @@ struct ActiveWorkoutView: View {
                 phase = .ready
             }
         }
+        .onAppear { setup() }
+        .onDisappear { teardown() }
     }
 
     // MARK: - End confirm screen
@@ -142,6 +146,19 @@ struct ActiveWorkoutView: View {
             onSelect: { activity in
                 switchTarget = activity
                 overlay = .switchConfirm
+            },
+            onCancel: { overlay = .none }
+        )
+    }
+
+    // MARK: - Start activity picker (from idle / standalone use)
+
+    private var startPickerView: some View {
+        ActivityPickerView(
+            onSelect: { activity in
+                setActivity(name: activity.name)
+                overlay = .none
+                phase = .ready
             },
             onCancel: { overlay = .none }
         )
@@ -237,8 +254,18 @@ struct ActiveWorkoutView: View {
                 Image(systemName: "bolt.fill").font(.system(size: 24)).foregroundColor(hiitOrange)
             }
             Text("Ready to Work").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
-            Text("Start from\nthe iPhone app").font(.system(size: 11)).foregroundColor(dimText)
+            Text("Pick a sport to start")
+                .font(.system(size: 11)).foregroundColor(dimText)
                 .multilineTextAlignment(.center)
+            Button(action: { overlay = .startPicker }) {
+                Text("PICK SPORT")
+                    .font(.system(size: 13, weight: .black)).tracking(1)
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity).padding(.vertical, 9)
+                    .background(hiitOrange).cornerRadius(20)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 14).padding(.top, 6)
             Spacer()
         }
     }
@@ -293,12 +320,26 @@ struct ActiveWorkoutView: View {
     // MARK: - Active (3 pages)
 
     private var activeScreen: some View {
-        TabView(selection: $page) {
-            metricsPage.tag(0)
-            hrZonePage.tag(1)
-            controlsPage.tag(2)
+        // Vertical paging on watchOS 10+ lets the crown drive metrics / HR / controls
+        // so the inner TabView doesn't fight the outer ContentView's horizontal swipe.
+        // On older watchOS we keep the original horizontal page style.
+        Group {
+            if #available(watchOS 10.0, *) {
+                TabView(selection: $page) {
+                    metricsPage.tag(0)
+                    hrZonePage.tag(1)
+                    controlsPage.tag(2)
+                }
+                .tabViewStyle(.verticalPage)
+            } else {
+                TabView(selection: $page) {
+                    metricsPage.tag(0)
+                    hrZonePage.tag(1)
+                    controlsPage.tag(2)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+            }
         }
-        .tabViewStyle(.page(indexDisplayMode: .never))
         .overlay(
             PageDots(count: pageCount, current: page).padding(.bottom, 2),
             alignment: .bottom
@@ -371,13 +412,13 @@ struct ActiveWorkoutView: View {
     private var controlsPage: some View {
         VStack(spacing: 0) {
             TopLabel("CONTROLS", color: dimText)
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ControlButton(icon: "pause.fill", label: "Pause",  color: hiitYellow) { togglePause() }
                 ControlButton(icon: "stop.fill",  label: "End",    color: hiitRed)    { overlay = .endConfirm }
-                ControlButton(icon: "lock.fill",  label: "Lock",   color: .white)     { }
                 ControlButton(icon: "arrow.triangle.2.circlepath", label: "Switch", color: hiitOrange) { overlay = .switchPicker }
-                ControlButton(icon: "flag.fill",  label: "Lap",    color: Color(hex:"#A78BFA")) { }
-                ControlButton(icon: "music.note", label: "Music",  color: Color(hex:"#60A5FA")) { }
+                ControlButton(icon: "drop.fill",  label: "Lock",   color: .white)     {
+                    WKInterfaceDevice.current().enableWaterLock()
+                }
             }
             .padding(.horizontal, 10).padding(.top, 4)
         }
@@ -437,10 +478,17 @@ struct ActiveWorkoutView: View {
     }
 
     private func beginWorkout() {
-        let w = WatchWorkout(id: UUID().uuidString, name: workoutName.isEmpty ? "Workout" : workoutName,
-                             durationMinutes: 60, exercises: [])
+        let activity = WATCH_ACTIVITIES.first {
+            workoutName.lowercased().contains($0.id) || workoutName.lowercased() == $0.name.lowercased()
+        }
+        let outdoor = activity?.isOutdoor ?? false
+        var w = WatchWorkout(id: UUID().uuidString,
+                             name: workoutName.isEmpty ? "Workout" : workoutName,
+                             durationMinutes: 60,
+                             exercises: [])
+        w.activityKind = activity?.id
         coordinator.clearPending()
-        WorkoutManager.shared.start(w)
+        WorkoutManager.shared.start(w, outdoor: outdoor)
         phase = .active
         page = 0
         startTicker()
@@ -481,9 +529,11 @@ struct ActiveWorkoutView: View {
     private func startTicker() {
         ticker?.invalidate()
         elapsedSeconds = WorkoutManager.shared.elapsedSeconds
+        distanceKm = WorkoutManager.shared.currentDistanceKm
+        // Distance is now fed by HKLiveWorkoutBuilder via onDistanceUpdate
+        // (set up in setup()); the ticker only advances the clock display.
         ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             self.elapsedSeconds += 1
-            self.distanceKm += 0.002  // simulated until GPS bridge is wired
         }
     }
 
@@ -514,7 +564,7 @@ struct ActiveWorkoutView: View {
 
     // MARK: - Lifecycle
 
-    func setup() {
+    private func setup() {
         if WorkoutManager.shared.isRunning { phase = .active; startTicker() }
         else if let name = coordinator.pendingWorkoutName { setActivity(name: name); phase = .ready }
 
@@ -530,12 +580,14 @@ struct ActiveWorkoutView: View {
             if bpm > self.maxHR { self.maxHR = bpm }
         }
         WorkoutManager.shared.onCaloriesUpdate = { self.calories = $0 }
+        WorkoutManager.shared.onDistanceUpdate = { self.distanceKm = $0 }
     }
 
-    func teardown() {
+    private func teardown() {
         WorkoutManager.shared.onStateChange = nil
         WorkoutManager.shared.onHeartRateUpdate = nil
         WorkoutManager.shared.onCaloriesUpdate = nil
+        WorkoutManager.shared.onDistanceUpdate = nil
         ticker?.invalidate(); ticker = nil
     }
 }
@@ -579,17 +631,8 @@ private func timeFormatted(_ s: Int) -> String {
     return String(format: "%02d:%02d", m, sec)
 }
 
-// MARK: - Wrapper (preserves existing lifecycle pattern)
+// MARK: - Tab entry point (lifecycle now lives on ActiveWorkoutView itself)
 
 struct ActiveWorkoutTab: View {
-    var body: some View { ActiveWorkoutViewWrapper() }
-}
-
-private struct ActiveWorkoutViewWrapper: View {
-    @State private var inner = ActiveWorkoutView()
-    var body: some View {
-        inner
-            .onAppear  { inner.setup() }
-            .onDisappear { inner.teardown() }
-    }
+    var body: some View { ActiveWorkoutView() }
 }

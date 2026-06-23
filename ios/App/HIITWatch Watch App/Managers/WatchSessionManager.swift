@@ -59,6 +59,7 @@ final class WatchSessionManager: NSObject {
     private static let planKey              = "hiit.triathlonPlan"
     private static let workoutKey           = "hiit.todayWorkout"
     private static let structuredWorkoutKey = "hiit.structuredWorkout"
+    private static let dayTypeKey           = "hiit.todayDayType"
 
     private override init() {
         super.init()
@@ -77,12 +78,25 @@ final class WatchSessionManager: NSObject {
            let saved = try? JSONDecoder().decode(TriathlonPlan.self, from: data) {
             triathlonPlan = saved
         }
+        // Restore locally-set day type (e.g. user marked today as rest on watch)
+        if let raw = UserDefaults.standard.string(forKey: Self.dayTypeKey),
+           let dt = WatchDayType(rawValue: raw) {
+            todayDayType = dt
+        }
     }
 
     func activate() {
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
         WCSession.default.activate()
+    }
+
+    /// Locally override today's day type (e.g. "Mark as rest" from the watch).
+    /// Persists so it survives restarts; iPhone-pushed updates still win on next message.
+    func setLocalDayType(_ type: WatchDayType) {
+        todayDayType = type
+        UserDefaults.standard.set(type.rawValue, forKey: Self.dayTypeKey)
+        NotificationCenter.default.post(name: .watchDayTypeChanged, object: type)
     }
 
     private func applyMessage(_ message: [String: Any]) {

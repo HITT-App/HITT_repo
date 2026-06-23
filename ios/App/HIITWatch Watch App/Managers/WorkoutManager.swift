@@ -10,10 +10,12 @@ final class WorkoutManager: NSObject {
     private(set) var elapsedSeconds = 0
     private(set) var currentHeartRate = 0
     private(set) var activeCalories = 0
+    private(set) var currentDistanceKm = 0.0
 
     var onStateChange: ((_ isRunning: Bool, _ workoutName: String?) -> Void)?
     var onHeartRateUpdate: ((Int) -> Void)?
     var onCaloriesUpdate: ((Int) -> Void)?
+    var onDistanceUpdate: ((Double) -> Void)?  // kilometres, GPS-derived via HKLiveWorkoutBuilder
 
     private let healthStore = HKHealthStore()
     private var workoutSession: HKWorkoutSession?
@@ -108,6 +110,7 @@ final class WorkoutManager: NSObject {
                         self?.elapsedSeconds = 0
                         self?.currentHeartRate = 0
                         self?.activeCalories = 0
+                        self?.currentDistanceKm = 0
                         self?.activeWorkout = nil
                         self?.routeBuilder = nil
                         self?.isOutdoor = false
@@ -271,6 +274,11 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
                     let v = Int(stats?.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0)
                     self.activeCalories = v
                     self.onCaloriesUpdate?(v)
+                case HKQuantityTypeIdentifier.distanceWalkingRunning.rawValue,
+                     HKQuantityTypeIdentifier.distanceCycling.rawValue:
+                    let km = stats?.sumQuantity()?.doubleValue(for: HKUnit.meterUnit(with: .kilo)) ?? 0
+                    self.currentDistanceKm = km
+                    self.onDistanceUpdate?(km)
                 default: break
                 }
             }

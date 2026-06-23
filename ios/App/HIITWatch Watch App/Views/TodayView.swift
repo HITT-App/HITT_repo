@@ -44,7 +44,13 @@ struct TodayView: View {
             } else if dayType == .rest {
                 DeliberateRestScreen { showPicker = true }
             } else {
-                NothingScheduledScreen { showPicker = true }
+                NothingScheduledScreen(
+                    onPickSport: { showPicker = true },
+                    onMarkRest: {
+                        WatchSessionManager.shared.setLocalDayType(.rest)
+                        dayType = .rest
+                    }
+                )
             }
         }
         .onAppear {
@@ -64,6 +70,7 @@ struct TodayView: View {
 
 private struct NothingScheduledScreen: View {
     let onPickSport: () -> Void
+    let onMarkRest: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -96,7 +103,7 @@ private struct NothingScheduledScreen: View {
                 }
                 .buttonStyle(.plain)
 
-                Button(action: {}) {
+                Button(action: onMarkRest) {
                     HStack(spacing: 10) {
                         Image(systemName: "moon.fill").font(.system(size: 14)).foregroundColor(hiitPurple)
                         Text("Mark as rest").font(.system(size: 13)).foregroundColor(.white)

@@ -1,5 +1,16 @@
 # HITT App Changelog
 
+## [2026-06-23] — Watch app overhaul and audio click fix
+
+- **Apple Watch app actually works now** — fixed a fundamental issue where button taps weren't updating the screen; the workout tab and pickers are now fully interactive
+- **Heart rate, calories and distance show real numbers** — the Watch now asks for HealthKit read permission on launch, so Stats and live workout screens stop showing `—` everywhere
+- **Start a workout from the Watch alone** — new "Pick Sport" button on the workout tab; no need to grab your phone first
+- **Mark today as rest from the Watch** — the rest-day button on the Today tab is now wired up
+- **Water Lock during workouts** — Lock control now uses the system water-lock for pool/rain use
+- **Outdoor activities engage real GPS** — runs, walks, cycles, hikes, paddles and other outdoor sports now record a route to Apple Health and show live distance from the watch's own GPS instead of a simulated value
+- **Smoother in-workout navigation** — on watchOS 10+, the metrics / heart-rate / controls pages now scroll with the digital crown, so the swipe gesture works correctly to leave the workout
+- **Fixed clicking sounds on first install** — the iOS audio system no longer activates unnecessarily when voice features are turned off, eliminating the repetitive clicks new users heard at first sign-in
+
 ## [2026-06-19] — Sleep dashboard improvements and crash fix
 
 - **Tap any day to log or edit sleep** — the weekly dots in the Sleep dashboard are now tappable; tap a past day to add that night's sleep or update what you already logged (form pre-fills with your existing data)

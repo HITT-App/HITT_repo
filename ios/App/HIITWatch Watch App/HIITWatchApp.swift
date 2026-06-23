@@ -40,6 +40,9 @@ struct HIITWatchApp: App {
 
     init() {
         WatchSessionManager.shared.activate()
+        // Request read+write HealthKit auth up front so heart rate, calories,
+        // and distance actually appear in Stats / Active Workout screens.
+        WorkoutManager.shared.requestInitialAuthorization()
         // If a triathlon plan was queued while the app was closed, go straight to Race tab
         if WatchSessionManager.shared.triathlonPlan != nil {
             WorkoutCoordinator.shared.navigateToRaceTab()

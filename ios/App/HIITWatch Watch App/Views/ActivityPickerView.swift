@@ -36,19 +36,16 @@ struct ActivityPickerView: View {
                                 Color.clear.frame(height: geo.size.height * 0.25)
 
                                 ForEach(Array(activities.enumerated()), id: \.element.id) { i, activity in
-                                    ActivityRow(
+                                    PickerRowButton(
                                         activity: activity,
-                                        isFocused: i == selectedIdx,
-                                        offset: abs(i - selectedIdx)
+                                        index: i,
+                                        selectedIdx: selectedIdx,
+                                        onTap: {
+                                            if i == selectedIdx { onSelect(activity) }
+                                            else { selectedIdx = i }
+                                        }
                                     )
                                     .id(i)
-                                    .onTapGesture {
-                                        if i == selectedIdx {
-                                            onSelect(activity)
-                                        } else {
-                                            selectedIdx = i
-                                        }
-                                    }
                                 }
 
                                 // Padding items bottom
@@ -101,6 +98,24 @@ struct ActivityPickerView: View {
             crownFocused = true
             crownValue = 0
         }
+    }
+}
+
+private struct PickerRowButton: View {
+    let activity: WatchActivity
+    let index: Int
+    let selectedIdx: Int
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            ActivityRow(
+                activity: activity,
+                isFocused: index == selectedIdx,
+                offset: abs(index - selectedIdx)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 

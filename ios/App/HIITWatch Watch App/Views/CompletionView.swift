@@ -203,24 +203,14 @@ private struct PRScreen: View {
 
                 Spacer(minLength: 6)
 
-                VStack(spacing: 8) {
-                    Button(action: onDone) {
-                        Text("Save PR")
-                            .font(.system(size: 14, weight: .black))
-                            .foregroundColor(Color(red: 0.04, green: 0.1, blue: 0.07))
-                            .frame(maxWidth: .infinity).padding(.vertical, 10)
-                            .background(hiitGreen).cornerRadius(20)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: {}) {
-                        Text("Details")
-                            .font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
-                            .frame(maxWidth: .infinity).padding(.vertical, 9)
-                            .background(Color.white.opacity(0.08)).cornerRadius(18)
-                    }
-                    .buttonStyle(.plain)
+                Button(action: onDone) {
+                    Text("Save PR")
+                        .font(.system(size: 14, weight: .black))
+                        .foregroundColor(Color(red: 0.04, green: 0.1, blue: 0.07))
+                        .frame(maxWidth: .infinity).padding(.vertical, 10)
+                        .background(hiitGreen).cornerRadius(20)
                 }
+                .buttonStyle(.plain)
                 .padding(.horizontal, 14).padding(.bottom, 12)
             }
         }
