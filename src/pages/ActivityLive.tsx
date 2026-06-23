@@ -10,6 +10,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { useActivity } from "@/hooks/useActivity";
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
@@ -20,9 +30,48 @@ import { CompletionSummary } from "@/components/workout/CompletionSummary";
 import { Analytics } from "@/lib/analytics";
 import { getSportConfig } from "@/lib/sports";
 import { App as CapApp } from "@capacitor/app";
+import { Preferences } from "@capacitor/preferences";
 
 import { GpsFilter, haversineDistance, type GpsPoint } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
+
+// --- Crash-recovery persistence ---
+const PERSIST_KEY = "hitt.activeWorkout";
+const PERSIST_THROTTLE_MS = 2000;
+const PERSIST_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+type PersistedWorkout = {
+  version: 1;
+  startedAt: number;
+  activityType: string;
+  positions: GpsPoint[];
+  totalDistance: number;
+  isPaused: boolean;
+  lastFixAt: number;
+};
+
+async function loadPersistedWorkout(): Promise<PersistedWorkout | null> {
+  try {
+    const { value } = await Preferences.get({ key: PERSIST_KEY });
+    if (!value) return null;
+    const parsed = JSON.parse(value) as PersistedWorkout;
+    if (parsed?.version !== 1 || typeof parsed.startedAt !== "number") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function clearPersistedWorkout(): Promise<void> {
+  try {
+    await Preferences.remove({ key: PERSIST_KEY });
+  } catch { /* silent */ }
+}
+
+function writePersistedWorkout(data: PersistedWorkout): void {
+  // Fire-and-forget — never block the caller (GPS callback).
+  Preferences.set({ key: PERSIST_KEY, value: JSON.stringify(data) }).catch(() => {});
+}
 
 const RC = { bg: '#0a0a0a', card: '#141414', line: '#262626', fg: '#fafafa', dim: '#9a9a9a', primary: '#f97316' };
 
@@ -56,6 +105,15 @@ const ActivityLive = () => {
   const [started, setStarted] = useState(false);
   const startedRef = useRef(false);
   startedRef.current = started;
+
+  // Crash-recovery: tracks the live session's epoch start so persistence has a stable key.
+  const sessionStartedAtRef = useRef<number>(0);
+  const lastPersistAtRef = useRef<number>(0);
+  // Gate writes until recovery check completes, so we don't overwrite a recoverable workout.
+  const persistReadyRef = useRef(false);
+
+  // Recovery dialog state — populated synchronously on mount before any other init runs.
+  const [recoveryCandidate, setRecoveryCandidate] = useState<PersistedWorkout | null>(null);
 
   // Core state
   const [elapsed, setElapsed] = useState(0);
@@ -112,6 +170,60 @@ const ActivityLive = () => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+
+  // --- Crash-recovery: check persisted workout on mount ---
+  // Runs once, before any GPS / timer side effects do meaningful work, because writes
+  // are gated behind `persistReadyRef`.
+  useEffect(() => {
+    let cancelled = false;
+    loadPersistedWorkout().then((persisted) => {
+      if (cancelled) return;
+      if (!persisted) {
+        persistReadyRef.current = true;
+        return;
+      }
+      const age = Date.now() - persisted.startedAt;
+      if (age >= PERSIST_MAX_AGE_MS) {
+        clearPersistedWorkout();
+        persistReadyRef.current = true;
+        return;
+      }
+      // Show dialog — writes stay gated until user picks Resume or Discard.
+      setRecoveryCandidate(persisted);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // --- Persistence helper ---
+  // Stash latest values in a ref so the GPS callback (long-lived closure) can read fresh state
+  // without us having to re-subscribe the GPS watcher every render.
+  const persistInputsRef = useRef({ activityType, totalDistance, isPaused });
+  persistInputsRef.current = { activityType, totalDistance, isPaused };
+
+  const persistNow = useCallback((opts?: { force?: boolean }) => {
+    if (!persistReadyRef.current) return;
+    if (!startedRef.current) return;
+    const now = Date.now();
+    if (!opts?.force && now - lastPersistAtRef.current < PERSIST_THROTTLE_MS) return;
+    lastPersistAtRef.current = now;
+    const { activityType: at, totalDistance: td, isPaused: ip } = persistInputsRef.current;
+    const payload: PersistedWorkout = {
+      version: 1,
+      startedAt: sessionStartedAtRef.current || now,
+      activityType: at,
+      positions: positionsRef.current,
+      totalDistance: td,
+      isPaused: ip,
+      lastFixAt: now,
+    };
+    writePersistedWorkout(payload);
+  }, []);
+
+  // Force-write on pause / resume / started transitions — state changes that matter.
+  useEffect(() => {
+    if (!started) return;
+    persistNow({ force: true });
+  }, [started, isPaused, persistNow]);
 
   // --- Timer — only runs after user taps Start ---
   useEffect(() => {
@@ -186,6 +298,9 @@ const ActivityLive = () => {
         if (result.point.alt !== null && result.point.alt !== undefined) {
           setElevation(Math.round(result.point.alt));
         }
+
+        // Throttled, fire-and-forget persist for crash recovery.
+        persistNow();
       },
       onError: (code) => {
         if (cancelled) return;
@@ -266,6 +381,8 @@ const ActivityLive = () => {
         calories_burned: calories,
         intensity_level: 3,
       });
+      // Successful save to backend — discard recovery snapshot.
+      await clearPersistedWorkout();
       const pts = await recordWorkout();
       setPointsEarned(pts);
       Analytics.workoutCompleted({
@@ -312,6 +429,52 @@ const ActivityLive = () => {
       </div>
     );
   };
+
+  // --- Recovery dialog handlers ---
+  const handleRecoveryResume = useCallback(() => {
+    if (!recoveryCandidate) return;
+    positionsRef.current = recoveryCandidate.positions.slice();
+    setPositions(recoveryCandidate.positions.slice());
+    setTotalDistance(recoveryCandidate.totalDistance);
+    sessionStartedAtRef.current = recoveryCandidate.startedAt;
+    // Re-seed elapsed from wall-clock so the timer reflects real time spent.
+    const elapsedSecs = Math.max(0, Math.floor((Date.now() - recoveryCandidate.startedAt) / 1000));
+    setElapsed(elapsedSecs);
+    setIsPaused(recoveryCandidate.isPaused);
+    lastMoveTimeRef.current = Date.now();
+    gpsFilterRef.current.reset();
+    setStarted(true);
+    setRecoveryCandidate(null);
+    persistReadyRef.current = true;
+    toast.success("Resumed unfinished workout");
+  }, [recoveryCandidate]);
+
+  const handleRecoveryDiscard = useCallback(() => {
+    clearPersistedWorkout();
+    setRecoveryCandidate(null);
+    persistReadyRef.current = true;
+  }, []);
+
+  const recoveryDialog = recoveryCandidate ? (
+    <AlertDialog open={true}>
+      <AlertDialogContent className="max-w-sm rounded-3xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Unfinished workout</AlertDialogTitle>
+          <AlertDialogDescription>
+            We found an unfinished workout. Resume it or discard?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+          <AlertDialogAction className="w-full" onClick={handleRecoveryResume}>
+            Resume
+          </AlertDialogAction>
+          <AlertDialogCancel className="w-full mt-0" onClick={handleRecoveryDiscard}>
+            Discard
+          </AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  ) : null;
 
   // ========== COMPLETED SCREEN ==========
   if (showCompleted) {
@@ -408,6 +571,7 @@ const ActivityLive = () => {
           <button
             onClick={() => {
               lastMoveTimeRef.current = Date.now();
+              sessionStartedAtRef.current = Date.now();
               setStarted(true);
               gpsFilterRef.current.reset();
               positionsRef.current = [];
@@ -417,6 +581,7 @@ const ActivityLive = () => {
             Ready?
           </button>
         </div>
+        {recoveryDialog}
       </div>
     );
   }
@@ -618,6 +783,7 @@ const ActivityLive = () => {
           <Button className="w-full" onClick={() => setShowSettings(false)}>Save Settings</Button>
         </SheetContent>
       </Sheet>
+      {recoveryDialog}
     </div>
   );
 };
