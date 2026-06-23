@@ -110,5 +110,8 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19"
+  },
+  "patchedDependencies": {
+    "@capacitor-community/background-geolocation@1.2.26": "patches/@capacitor-community%2Fbackground-geolocation@1.2.26.patch"
   }
 }

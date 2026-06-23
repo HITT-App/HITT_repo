@@ -1,0 +1,13 @@
+diff --git a/Package.swift b/Package.swift
+index d235202c6f4d176a56b35b45c3f51dbd67db2c0c..789ad4ddb084a157419e6d79ecd6095a340ed17e 100644
+--- a/Package.swift
++++ b/Package.swift
+@@ -13,7 +13,7 @@ let package = Package(
+     dependencies: [
+         .package(
+             url: "https://github.com/ionic-team/capacitor-swift-pm.git",
+-            from: "7.0.0"
++            from: "8.0.0"
+         )
+     ],
+     targets: [

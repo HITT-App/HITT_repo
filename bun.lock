@@ -102,6 +102,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@capacitor-community/background-geolocation@1.2.26": "patches/@capacitor-community%2Fbackground-geolocation@1.2.26.patch",
+  },
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
 
