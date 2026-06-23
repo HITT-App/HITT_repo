@@ -1,6 +1,6 @@
 # HITT App Changelog
 
-## [2026-06-23] — Watch app overhaul and audio click fix
+## [2026-06-23] — Watch app overhaul, Strava-style activity tracking, and audio click fix
 
 - **Apple Watch app actually works now** — fixed a fundamental issue where button taps weren't updating the screen; the workout tab and pickers are now fully interactive
 - **Heart rate, calories and distance show real numbers** — the Watch now asks for HealthKit read permission on launch, so Stats and live workout screens stop showing `—` everywhere
@@ -8,6 +8,10 @@
 - **Mark today as rest from the Watch** — the rest-day button on the Today tab is now wired up
 - **Water Lock during workouts** — Lock control now uses the system water-lock for pool/rain use
 - **Outdoor activities engage real GPS** — runs, walks, cycles, hikes, paddles and other outdoor sports now record a route to Apple Health and show live distance from the watch's own GPS instead of a simulated value
+- **Phone keeps recording with the screen off** — GPS-tracked activities on the phone now survive screen lock and app backgrounding; the route keeps building while you stash your phone in a pocket
+- **Crash recovery for in-progress workouts** — if the app is killed mid-activity (low memory, force-quit), you'll be offered to resume the unfinished workout next time you open the activity screen
+- **Activities save to Apple Health with map routes** — every GPS-tracked phone activity now appears in the Fitness app with its polyline drawn on the map and counts towards your Activity rings
+- **Live activity map no longer flickers** — fixed a bug where the map rebuilt itself on every GPS fix, snapping back to the start instead of following you
 - **Smoother in-workout navigation** — on watchOS 10+, the metrics / heart-rate / controls pages now scroll with the digital crown, so the swipe gesture works correctly to leave the workout
 - **Fixed clicking sounds on first install** — the iOS audio system no longer activates unnecessarily when voice features are turned off, eliminating the repetitive clicks new users heard at first sign-in
 
