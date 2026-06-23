@@ -14,6 +14,8 @@
 - **Live activity map no longer flickers** — fixed a bug where the map rebuilt itself on every GPS fix, snapping back to the start instead of following you
 - **Smoother in-workout navigation** — on watchOS 10+, the metrics / heart-rate / controls pages now scroll with the digital crown, so the swipe gesture works correctly to leave the workout
 - **Fixed clicking sounds on first install** — the iOS audio system no longer activates unnecessarily when voice features are turned off, eliminating the repetitive clicks new users heard at first sign-in
+- **Custom hydration amount works** — fixed a bug where typing a custom water amount and tapping Log it did nothing; the input is now properly above the keyboard
+- **Meal plans reliably appear** — when Jarvis is asked for a meal plan, the card now reliably renders even when the AI response is long or malformed; on the rare case it still fails, Jarvis now asks you to retry instead of silently hanging
 
 ## [2026-06-19] — Sleep dashboard improvements and crash fix
 
