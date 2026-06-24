@@ -1,5 +1,6 @@
 App/build
 App/CapApp-SPM/build
+App/CapApp-SPM/Package.resolved
 App/Pods
 App/output
 App/App/public
