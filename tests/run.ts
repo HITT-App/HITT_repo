@@ -403,6 +403,153 @@ async function runCodeAudit() {
     fail('CA-53', 'ActivityLive onDone replace navigation', 'ActivityLive.tsx not found');
   }
 
+  // ── Meal plan reliability ────────────────────────────────────────────────
+  // Field report: users have to ask 2–3 times before Jarvis returns a meal plan.
+  // Most likely cause: `isMealPlanRequest` regex is too narrow, so common
+  // phrasings ("what should I eat", "suggest a meal", "any meal ideas") fall
+  // through to general-chat path where the LLM has discretion on tool calls
+  // and intermittently replies with text only.
+
+  // Extract the isMealPlanRequest regex from JarvisMode.tsx and test it
+  // directly against a panel of phrasings.
+  try {
+    const src = readSrc('components/coach/JarvisMode.tsx');
+    const fnMatch = src.match(/function isMealPlanRequest\([^)]*\): boolean \{\s*return ([^;]+);/);
+    if (!fnMatch) {
+      for (const id of ['MP-01','MP-02','MP-07']) {
+        fail(id, 'Meal plan regex test', 'Could not locate isMealPlanRequest in JarvisMode.tsx');
+      }
+    } else {
+      // The function body is `return <regex>.test(text)` — extract the regex literal
+      const regexMatch = fnMatch[1].match(/\/(.+)\/([gimsuy]*)\.test/);
+      if (!regexMatch) {
+        for (const id of ['MP-01','MP-02','MP-07']) {
+          fail(id, 'Meal plan regex test', 'Could not parse regex from isMealPlanRequest body');
+        }
+      } else {
+        const re = new RegExp(regexMatch[1], regexMatch[2]);
+        const isMealPlanRequest = (t: string) => re.test(t);
+
+        // MP-01: regression guard — these phrasings MUST keep matching
+        const mustMatch = [
+          'meal plan',
+          'plan my meals',
+          'plan my day',
+          'give me a meal plan',
+          'what should i eat today',
+          'full day of eating',
+        ];
+        const failedMustMatch = mustMatch.filter(p => !isMealPlanRequest(p));
+        if (failedMustMatch.length === 0) {
+          pass('MP-01', `isMealPlanRequest matches all ${mustMatch.length} canonical meal-plan phrasings (regression guard)`);
+        } else {
+          fail('MP-01', `isMealPlanRequest matches all ${mustMatch.length} canonical meal-plan phrasings (regression guard)`,
+            `Regression: these phrasings stopped matching → ${failedMustMatch.join(', ')}`);
+        }
+
+        // MP-02: no false positives on unrelated text
+        const mustNotMatch = [
+          'show me my workouts',
+          'log my breakfast as an apple',
+          'how many calories did I eat',
+          'start a run',
+        ];
+        const falsePositives = mustNotMatch.filter(p => isMealPlanRequest(p));
+        if (falsePositives.length === 0) {
+          pass('MP-02', 'isMealPlanRequest has no false positives on workout / log / run phrasings');
+        } else {
+          fail('MP-02', 'isMealPlanRequest has no false positives on workout / log / run phrasings',
+            `Unwanted matches: ${falsePositives.join(', ')}`);
+        }
+
+        // MP-07: known field-report gap — common user phrasings that currently
+        // miss the regex and fall through to general chat (where the LLM may
+        // or may not call recommend_meal_plan). When this test fails, it lists
+        // the exact phrasings that need to be folded into the regex.
+        const commonUserPhrasings = [
+          'what should I eat',          // missing 'today' / 'for'
+          'suggest a meal',              // regex requires "suggest a meals" (plural)
+          'any meal ideas',              // not in pattern
+          'what can I eat',              // 'should' only
+          'give me meals',               // requires "give me a [type] plan"
+          'recommend a meal',            // not in pattern
+          'help me plan dinner',         // not in pattern
+        ];
+        const slipping = commonUserPhrasings.filter(p => !isMealPlanRequest(p));
+        if (slipping.length === 0) {
+          pass('MP-07', 'isMealPlanRequest catches common conversational meal-plan phrasings');
+        } else {
+          fail('MP-07', 'isMealPlanRequest catches common conversational meal-plan phrasings',
+            `${slipping.length}/${commonUserPhrasings.length} slip through (fall back to LLM discretion, causing "ask 2-3 times" bug): ${slipping.map(p => `"${p}"`).join(', ')}`);
+        }
+      }
+    }
+  } catch {
+    for (const id of ['MP-01','MP-02','MP-07']) {
+      fail(id, 'Meal plan regex test', 'JarvisMode.tsx not found');
+    }
+  }
+
+  // MP-03: JarvisMode dispatcher handles recommend_meal_plan action
+  try {
+    const src = readSrc('components/coach/JarvisMode.tsx');
+    if (src.includes("case 'recommend_meal_plan':") && src.includes('setMealPlan(action.payload)')) {
+      pass('MP-03', 'JarvisMode dispatcher handles recommend_meal_plan action');
+    } else {
+      fail('MP-03', 'JarvisMode dispatcher handles recommend_meal_plan action',
+        "case 'recommend_meal_plan' or setMealPlan not found in pendingActions dispatcher");
+    }
+  } catch {
+    fail('MP-03', 'JarvisMode dispatcher meal plan handler', 'JarvisMode.tsx not found');
+  }
+
+  // MP-04: dietary-prefs gate requeues the original message via pendingMsgAfterSetupRef
+  try {
+    const src = readSrc('components/coach/JarvisMode.tsx');
+    const hasRequeueRef    = src.includes('pendingMsgAfterSetupRef.current = text');
+    const hasReplay        = src.includes('pendingMsgAfterSetupRef.current = null') && src.includes('ai.send(pending)');
+    if (hasRequeueRef && hasReplay) {
+      pass('MP-04', 'Dietary-prefs gate requeues original meal-plan message and resends after save');
+    } else {
+      fail('MP-04', 'Dietary-prefs gate requeues original meal-plan message and resends after save',
+        `Missing: ${[!hasRequeueRef && 'requeue assignment', !hasReplay && 'replay (ai.send(pending))'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('MP-04', 'Dietary-prefs requeue logic', 'JarvisMode.tsx not found');
+  }
+
+  // MP-05: ai-coach edge function registers recommend_meal_plan tool
+  try {
+    const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
+    if (src.includes('name: "recommend_meal_plan"') &&
+        src.includes('case "recommend_meal_plan"')) {
+      pass('MP-05', 'ai-coach edge function registers recommend_meal_plan tool and handles its dispatch');
+    } else {
+      fail('MP-05', 'ai-coach edge function registers recommend_meal_plan tool and handles its dispatch',
+        'Tool definition or dispatcher case not found');
+    }
+  } catch {
+    fail('MP-05', 'ai-coach recommend_meal_plan tool', 'ai-coach/index.ts not found');
+  }
+
+  // MP-06: ai-coach has retry path with forced tool_choice for meal plan
+  // The retry is what saves users from "no response" on the first ask — if it's
+  // removed or broken, users see the "ask once more" fallback every time.
+  try {
+    const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
+    const hasRetryFn       = src.includes('retryMealPlan');
+    const hasForcedChoice  = src.includes('tool_choice: { type: "function", function: { name: "recommend_meal_plan" } }');
+    const hasFallbackText  = src.includes("I couldn't quite get that meal plan to format right");
+    if (hasRetryFn && hasForcedChoice && hasFallbackText) {
+      pass('MP-06', 'ai-coach has retry path with forced tool_choice + user-facing fallback for meal plan');
+    } else {
+      fail('MP-06', 'ai-coach has retry path with forced tool_choice + user-facing fallback for meal plan',
+        `Missing: ${[!hasRetryFn && 'retryMealPlan', !hasForcedChoice && 'forced tool_choice', !hasFallbackText && 'fallback text'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('MP-06', 'ai-coach meal plan retry path', 'ai-coach/index.ts not found');
+  }
+
   // ── Camera pages: intermittent black-screen prevention ───────────────────
   //
   // A meal-scanner field report described a black camera viewport on first
