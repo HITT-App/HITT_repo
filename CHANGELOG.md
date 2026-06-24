@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-25] — Hotfix: outdoor activity tracker crashed on launch
+
+- **Starting a Run, Walk, or Cycle no longer crashes the app** — the new "Finish [activity]" button at the bottom of the live tracker referenced an icon that wasn't imported, causing an immediate crash when the tracker opened. The icon is now properly imported and the tracker loads as expected
+
 ## [2026-06-25] — Watch mirroring + HealthKit permissions
 
 - **Watch auto-launches to the Race tab when you send a triathlon** — fixed the underlying iOS mirroring API call so starting a triathlon on the iPhone now prompts the Watch to open the HIIT app and go straight to the Race screen. Requires iOS 17 or later
