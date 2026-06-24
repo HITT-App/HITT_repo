@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		26815C1F2FA8975C00338984 /* HIITWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 26815C152FA8975B00338984 /* HIITWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2685239B2FEBD48100E3A525 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2685239A2FEBD48100E3A525 /* WidgetKit.framework */; };
+		2685239D2FEBD48100E3A525 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2685239C2FEBD48100E3A525 /* SwiftUI.framework */; };
+		268523AC2FEBD48200E3A525 /* HIITLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 268523982FEBD48100E3A525 /* HIITLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -31,6 +34,13 @@
 			remoteGlobalIDString = 26815C142FA8975B00338984;
 			remoteInfo = "HIITWatch Watch App";
 		};
+		268523AA2FEBD48200E3A525 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268523972FEBD48100E3A525;
+			remoteInfo = HIITLiveActivityExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -45,10 +55,24 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		268523AD2FEBD48200E3A525 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				268523AC2FEBD48200E3A525 /* HIITLiveActivityExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		26815C152FA8975B00338984 /* HIITWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "HIITWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		268523982FEBD48100E3A525 /* HIITLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HIITLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		2685239A2FEBD48100E3A525 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		2685239C2FEBD48100E3A525 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -66,8 +90,19 @@
 		BB000001000000000000BB01 /* HealthWritePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthWritePlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		268523B42FEBEE1300E3A525 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 268523972FEBD48100E3A525 /* HIITLiveActivityExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		26815C162FA8975B00338984 /* HIITWatch Watch App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "HIITWatch Watch App"; sourceTree = "<group>"; };
+		2685239E2FEBD48100E3A525 /* HIITLiveActivity */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (268523B42FEBEE1300E3A525 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = HIITLiveActivity; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +110,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268523952FEBD48100E3A525 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2685239D2FEBD48100E3A525 /* SwiftUI.framework in Frameworks */,
+				2685239B2FEBD48100E3A525 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -98,12 +142,23 @@
 			name = "Recovered References";
 			sourceTree = "<group>";
 		};
+		268523992FEBD48100E3A525 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				2685239A2FEBD48100E3A525 /* WidgetKit.framework */,
+				2685239C2FEBD48100E3A525 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				26815C162FA8975B00338984 /* HIITWatch Watch App */,
+				2685239E2FEBD48100E3A525 /* HIITLiveActivity */,
+				268523992FEBD48100E3A525 /* Frameworks */,
 				504EC3051FED79650016851F /* Products */,
 				26815C102FA7CF2C00338984 /* Recovered References */,
 			);
@@ -114,6 +169,7 @@
 			children = (
 				504EC3041FED79650016851F /* App.app */,
 				26815C152FA8975B00338984 /* HIITWatch Watch App.app */,
+				268523982FEBD48100E3A525 /* HIITLiveActivityExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -162,6 +218,28 @@
 			productReference = 26815C152FA8975B00338984 /* HIITWatch Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		268523972FEBD48100E3A525 /* HIITLiveActivityExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268523B52FEBEE1300E3A525 /* Build configuration list for PBXNativeTarget "HIITLiveActivityExtension" */;
+			buildPhases = (
+				268523942FEBD48100E3A525 /* Sources */,
+				268523952FEBD48100E3A525 /* Frameworks */,
+				268523962FEBD48100E3A525 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2685239E2FEBD48100E3A525 /* HIITLiveActivity */,
+			);
+			name = HIITLiveActivityExtension;
+			packageProductDependencies = (
+			);
+			productName = HIITLiveActivityExtension;
+			productReference = 268523982FEBD48100E3A525 /* HIITLiveActivityExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		504EC3031FED79650016851F /* App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
@@ -170,11 +248,13 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				26815C202FA8975C00338984 /* Embed Watch Content */,
+				268523AD2FEBD48200E3A525 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				26815C1E2FA8975C00338984 /* PBXTargetDependency */,
+				268523AB2FEBD48200E3A525 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -194,6 +274,9 @@
 				LastUpgradeCheck = 0920;
 				TargetAttributes = {
 					26815C142FA8975B00338984 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					268523972FEBD48100E3A525 = {
 						CreatedOnToolsVersion = 26.4.1;
 					};
 					504EC3031FED79650016851F = {
@@ -221,12 +304,20 @@
 			targets = (
 				504EC3031FED79650016851F /* App */,
 				26815C142FA8975B00338984 /* HIITWatch Watch App */,
+				268523972FEBD48100E3A525 /* HIITLiveActivityExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		26815C132FA8975B00338984 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268523962FEBD48100E3A525 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -256,6 +347,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		268523942FEBD48100E3A525 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -275,6 +373,11 @@
 			isa = PBXTargetDependency;
 			target = 26815C142FA8975B00338984 /* HIITWatch Watch App */;
 			targetProxy = 26815C1D2FA8975C00338984 /* PBXContainerItemProxy */;
+		};
+		268523AB2FEBD48200E3A525 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268523972FEBD48100E3A525 /* HIITLiveActivityExtension */;
+			targetProxy = 268523AA2FEBD48200E3A525 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -311,7 +414,7 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CODE_SIGN_ENTITLEMENTS = "HIITWatch Watch App/HIITWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 245;
+				CURRENT_PROJECT_VERSION = 243;
 				DEVELOPMENT_TEAM = 9VH3JDWRMF;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -361,7 +464,7 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CODE_SIGN_ENTITLEMENTS = "HIITWatch Watch App/HIITWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 245;
+				CURRENT_PROJECT_VERSION = 243;
 				DEVELOPMENT_TEAM = 9VH3JDWRMF;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -393,6 +496,90 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				WATCHOS_DEPLOYMENT_TARGET = 8.0;
+			};
+			name = Release;
+		};
+		268523AE2FEBD48200E3A525 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9VH3JDWRMF;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HIITLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HIITLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hiitfitness.app.HIITLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		268523AF2FEBD48200E3A525 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9VH3JDWRMF;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HIITLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HIITLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hiitfitness.app.HIITLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -512,7 +699,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 245;
+				CURRENT_PROJECT_VERSION = 243;
 				DEVELOPMENT_TEAM = 9VH3JDWRMF;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -536,7 +723,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 245;
+				CURRENT_PROJECT_VERSION = 243;
 				DEVELOPMENT_TEAM = 9VH3JDWRMF;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -561,6 +748,15 @@
 			buildConfigurations = (
 				26815C212FA8975C00338984 /* Debug */,
 				26815C222FA8975C00338984 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268523B52FEBEE1300E3A525 /* Build configuration list for PBXNativeTarget "HIITLiveActivityExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268523AE2FEBD48200E3A525 /* Debug */,
+				268523AF2FEBD48200E3A525 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
