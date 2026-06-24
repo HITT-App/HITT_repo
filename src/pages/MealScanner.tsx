@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { recordActiveDay } from '@/lib/activeDay';
 import { ArrowLeft, Camera, Scan, Flame, Droplets, Wheat, Check, X, RefreshCw, Image, Plus, Minus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 type ScanState = 'requirements' | 'scanning' | 'processing' | 'result' | 'error';
 
@@ -272,8 +273,11 @@ export default function MealScanner() {
   const totals = getSelectedTotals();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="flex items-center gap-3 px-4 py-4 border-b border-border">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+      <header
+        className="flex items-center gap-3 px-4 pb-3 border-b border-border bg-background shrink-0"
+        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}
+      >
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -284,7 +288,10 @@ export default function MealScanner() {
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileSelected} className="hidden" />
 
-      <div className="flex-1 flex flex-col p-4">
+      <div className={cn(
+        "flex-1 flex flex-col min-h-0",
+        scanState === 'scanning' ? "" : "overflow-y-auto p-4",
+      )}>
         {/* Initial / camera-denied fallback */}
         {scanState === 'requirements' && (
           <div className="flex-1 flex flex-col items-center justify-center">
@@ -317,20 +324,23 @@ export default function MealScanner() {
           </div>
         )}
 
-        {/* Scanning State */}
+        {/* Scanning State — full-bleed, no inner padding */}
         {scanState === 'scanning' && (
-          <div className="flex-1 flex flex-col relative">
-            <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover rounded-2xl" />
+          <div className="flex-1 relative bg-black">
+            <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover" />
             <canvas ref={canvasRef} className="hidden" />
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-64 h-64 border-2 border-primary rounded-2xl relative">
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-2xl" />
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-2xl" />
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-2xl" />
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-2xl" />
+                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-2xl" />
+                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-2xl" />
+                <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-2xl" />
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-2xl" />
               </div>
             </div>
-            <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-6">
+            <div
+              className="absolute left-0 right-0 flex items-center justify-center gap-6"
+              style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
+            >
               <button
                 onClick={handleGalleryUpload}
                 className="w-12 h-12 rounded-full bg-foreground/40 backdrop-blur-md flex items-center justify-center active:opacity-70"
@@ -343,7 +353,10 @@ export default function MealScanner() {
               </Button>
               <div className="w-12 h-12" />
             </div>
-            <div className="absolute bottom-24 left-0 right-0 text-center">
+            <div
+              className="absolute left-0 right-0 text-center"
+              style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 100px)" }}
+            >
               <p className="text-sm bg-foreground/80 text-background px-4 py-2 rounded-full inline-flex items-center gap-2">
                 <Scan className="w-4 h-4" /> Tap to capture your meal
               </p>
@@ -494,8 +507,11 @@ export default function MealScanner() {
               </Card>
             )}
 
-            {/* Actions */}
-            <div className="space-y-3 mt-auto pb-2">
+            {/* Actions — pinned to the bottom of the viewport, above the home indicator */}
+            <div
+              className="sticky bottom-0 -mx-4 px-4 pt-3 bg-background/95 backdrop-blur-sm border-t border-border/40 space-y-3 mt-auto"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+            >
               <Button onClick={handleAddFood} disabled={isSaving} className="w-full h-12 rounded-2xl gap-2">
                 {isSaving ? 'Saving...' : `Log ${analysisResult.items.filter(i => i.selected).length} Item(s)`}
               </Button>
