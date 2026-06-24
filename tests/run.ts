@@ -550,6 +550,72 @@ async function runCodeAudit() {
     fail('MP-06', 'ai-coach meal plan retry path', 'ai-coach/index.ts not found');
   }
 
+  // ── Server-side regex divergence (the actual "silent failure" cause) ─────
+  //
+  // The edge function has its OWN regex separate from the frontend one. When
+  // server regex misses, the server uses tool_choice:"auto", does NOT set up
+  // the retry path, and does NOT emit fallback text. If the LLM then produces
+  // an empty completion for that turn, the user sees SILENCE — exactly the
+  // "thinks and returns nothing" symptom.
+
+  try {
+    const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
+    const serverRegexLine = src.split('\n').find(l => l.includes('isMealPlanRequest = /'));
+    const serverMatch = serverRegexLine?.match(/\/(.+)\/([gimsuy]*)\.test/);
+    if (!serverMatch) {
+      for (const id of ['MP-08','MP-09']) {
+        fail(id, 'Server-side meal plan regex', 'Could not extract isMealPlanRequest regex from ai-coach/index.ts');
+      }
+    } else {
+      const serverRe = new RegExp(serverMatch[1], serverMatch[2] || 'i');
+      const serverDetect = (t: string) => serverRe.test(t.toLowerCase());
+
+      // MP-08: server regex must cover the same canonical phrasings the
+      // frontend recognises. If it diverges, the frontend dietary-prefs gate
+      // and the server retry path stop agreeing, which creates silent-failure
+      // windows.
+      const canonical = [
+        'meal plan',
+        'plan my meals',
+        'plan my day',
+        'give me a meal plan',
+        'what should i eat today',
+        'full day of eating',
+      ];
+      const serverMisses = canonical.filter(p => !serverDetect(p));
+      if (serverMisses.length === 0) {
+        pass('MP-08', `Server isMealPlanRequest matches all ${canonical.length} canonical phrasings the frontend recognises`);
+      } else {
+        fail('MP-08', `Server isMealPlanRequest matches all ${canonical.length} canonical phrasings the frontend recognises`,
+          `Server misses (frontend matches but server does not — divergence causes silent failures): ${serverMisses.join(', ')}`);
+      }
+
+      // MP-09: server regex catches common conversational phrasings — when it
+      // doesn't, NO retry / NO fallback is wired up, and an empty LLM completion
+      // surfaces as silence. This is the actual "asks 2-3 times, gets nothing" bug.
+      const conversational = [
+        'what should I eat',
+        'suggest a meal',
+        'any meal ideas',
+        'what can I eat',
+        'give me meals',
+        'recommend a meal',
+        'help me plan dinner',
+      ];
+      const slipping = conversational.filter(p => !serverDetect(p));
+      if (slipping.length === 0) {
+        pass('MP-09', 'Server isMealPlanRequest catches common conversational meal-plan phrasings');
+      } else {
+        fail('MP-09', 'Server isMealPlanRequest catches common conversational meal-plan phrasings',
+          `${slipping.length}/${conversational.length} slip through and bypass retry+fallback (silent-failure bug): ${slipping.map(p => `"${p}"`).join(', ')}`);
+      }
+    }
+  } catch {
+    for (const id of ['MP-08','MP-09']) {
+      fail(id, 'Server-side meal plan regex', 'ai-coach/index.ts not found');
+    }
+  }
+
   // ── Camera pages: intermittent black-screen prevention ───────────────────
   //
   // A meal-scanner field report described a black camera viewport on first
