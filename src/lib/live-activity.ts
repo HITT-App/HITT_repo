@@ -9,6 +9,7 @@
 // extension (`ios/App/HIITLiveActivity/`) which reads from the same map.
 
 import { Capacitor } from "@capacitor/core"
+import { LiveActivity as LiveActivityPlugin } from "capacitor-live-activity"
 
 export type WorkoutAttributes = {
   workoutType: string
@@ -47,21 +48,14 @@ type PluginShape = {
   }) => Promise<void>
 }
 
-let cachedPlugin: PluginShape | null | undefined = undefined
-
-async function getPlugin(): Promise<PluginShape | null> {
-  if (cachedPlugin !== undefined) return cachedPlugin
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "ios") {
-    cachedPlugin = null
-    return null
-  }
-  try {
-    const mod = await import("capacitor-live-activity")
-    cachedPlugin = (mod.LiveActivity as unknown as PluginShape) ?? null
-  } catch {
-    cachedPlugin = null
-  }
-  return cachedPlugin
+// IMPORTANT: getPlugin must be synchronous. The Capacitor plugin proxy treats
+// every property access (including `.then`) as a native method call, so returning
+// the proxy through an async function causes JS's Promise resolution to invoke
+// `proxy.then` to "thenify" the value — Capacitor then attempts a non-existent
+// native `then` method and throws "LiveActivity.then() is not implemented on ios".
+function getPlugin(): PluginShape | null {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "ios") return null
+  return (LiveActivityPlugin as unknown as PluginShape) ?? null
 }
 
 function attrsToRecord(a: WorkoutAttributes): Record<string, string> {
@@ -88,7 +82,7 @@ function newLogicalId(): string {
 
 export const LiveActivity = {
   async isSupported(): Promise<boolean> {
-    const plugin = await getPlugin()
+    const plugin = getPlugin()
     if (!plugin) return false
     try {
       const { value } = await plugin.isAvailable()
@@ -102,7 +96,7 @@ export const LiveActivity = {
     attrs: WorkoutAttributes,
     initial: WorkoutContentState,
   ): Promise<LiveActivityHandle | null> {
-    const plugin = await getPlugin()
+    const plugin = getPlugin()
     if (!plugin) return null
     try {
       const { value } = await plugin.isAvailable()
@@ -126,7 +120,7 @@ export const LiveActivity = {
 
   async update(activityId: string, state: WorkoutContentState): Promise<void> {
     if (!activityId) return
-    const plugin = await getPlugin()
+    const plugin = getPlugin()
     if (!plugin) return
     try {
       await plugin.updateActivity({
@@ -141,7 +135,7 @@ export const LiveActivity = {
 
   async end(activityId: string, finalState?: WorkoutContentState): Promise<void> {
     if (!activityId) return
-    const plugin = await getPlugin()
+    const plugin = getPlugin()
     if (!plugin) return
     const content = finalState
       ? stateToRecord(finalState)
