@@ -404,93 +404,40 @@ async function runCodeAudit() {
   }
 
   // ── Meal plan reliability ────────────────────────────────────────────────
-  // Field report: users have to ask 2–3 times before Jarvis returns a meal plan.
-  // Most likely cause: `isMealPlanRequest` regex is too narrow, so common
-  // phrasings ("what should I eat", "suggest a meal", "any meal ideas") fall
-  // through to general-chat path where the LLM has discretion on tool calls
-  // and intermittently replies with text only.
+  // The "asks 2-3 times then gets nothing" bug was caused by pattern-matching
+  // gates (regex on both frontend and server) that diverged from real user
+  // phrasings, bypassing retry+fallback whenever they missed. Architecture is
+  // now: trust the LLM for intent detection, generic retry on truncation, and
+  // a universal empty-completion guard so silence is structurally impossible.
 
-  // Extract the isMealPlanRequest regex from JarvisMode.tsx and test it
-  // directly against a panel of phrasings.
+  // MP-01: no meal-plan regex on the frontend (regression guard — don't bring
+  // it back; let the LLM interpret instead).
   try {
     const src = readSrc('components/coach/JarvisMode.tsx');
-    const fnMatch = src.match(/function isMealPlanRequest\([^)]*\): boolean \{\s*return ([^;]+);/);
-    if (!fnMatch) {
-      for (const id of ['MP-01','MP-02','MP-07']) {
-        fail(id, 'Meal plan regex test', 'Could not locate isMealPlanRequest in JarvisMode.tsx');
-      }
+    if (!src.includes('function isMealPlanRequest') && !src.includes('isMealPlanRequest(')) {
+      pass('MP-01', 'No meal-plan regex gate in JarvisMode.tsx (LLM handles intent detection)');
     } else {
-      // The function body is `return <regex>.test(text)` — extract the regex literal
-      const regexMatch = fnMatch[1].match(/\/(.+)\/([gimsuy]*)\.test/);
-      if (!regexMatch) {
-        for (const id of ['MP-01','MP-02','MP-07']) {
-          fail(id, 'Meal plan regex test', 'Could not parse regex from isMealPlanRequest body');
-        }
-      } else {
-        const re = new RegExp(regexMatch[1], regexMatch[2]);
-        const isMealPlanRequest = (t: string) => re.test(t);
-
-        // MP-01: regression guard — these phrasings MUST keep matching
-        const mustMatch = [
-          'meal plan',
-          'plan my meals',
-          'plan my day',
-          'give me a meal plan',
-          'what should i eat today',
-          'full day of eating',
-        ];
-        const failedMustMatch = mustMatch.filter(p => !isMealPlanRequest(p));
-        if (failedMustMatch.length === 0) {
-          pass('MP-01', `isMealPlanRequest matches all ${mustMatch.length} canonical meal-plan phrasings (regression guard)`);
-        } else {
-          fail('MP-01', `isMealPlanRequest matches all ${mustMatch.length} canonical meal-plan phrasings (regression guard)`,
-            `Regression: these phrasings stopped matching → ${failedMustMatch.join(', ')}`);
-        }
-
-        // MP-02: no false positives on unrelated text
-        const mustNotMatch = [
-          'show me my workouts',
-          'log my breakfast as an apple',
-          'how many calories did I eat',
-          'start a run',
-        ];
-        const falsePositives = mustNotMatch.filter(p => isMealPlanRequest(p));
-        if (falsePositives.length === 0) {
-          pass('MP-02', 'isMealPlanRequest has no false positives on workout / log / run phrasings');
-        } else {
-          fail('MP-02', 'isMealPlanRequest has no false positives on workout / log / run phrasings',
-            `Unwanted matches: ${falsePositives.join(', ')}`);
-        }
-
-        // MP-07: known field-report gap — common user phrasings that currently
-        // miss the regex and fall through to general chat (where the LLM may
-        // or may not call recommend_meal_plan). When this test fails, it lists
-        // the exact phrasings that need to be folded into the regex.
-        const commonUserPhrasings = [
-          'what should I eat',          // missing 'today' / 'for'
-          'suggest a meal',              // regex requires "suggest a meals" (plural)
-          'any meal ideas',              // not in pattern
-          'what can I eat',              // 'should' only
-          'give me meals',               // requires "give me a [type] plan"
-          'recommend a meal',            // not in pattern
-          'help me plan dinner',         // not in pattern
-        ];
-        const slipping = commonUserPhrasings.filter(p => !isMealPlanRequest(p));
-        if (slipping.length === 0) {
-          pass('MP-07', 'isMealPlanRequest catches common conversational meal-plan phrasings');
-        } else {
-          fail('MP-07', 'isMealPlanRequest catches common conversational meal-plan phrasings',
-            `${slipping.length}/${commonUserPhrasings.length} slip through (fall back to LLM discretion, causing "ask 2-3 times" bug): ${slipping.map(p => `"${p}"`).join(', ')}`);
-        }
-      }
+      fail('MP-01', 'No meal-plan regex gate in JarvisMode.tsx (LLM handles intent detection)',
+        'isMealPlanRequest function still present — re-introduces the silent-failure surface');
     }
   } catch {
-    for (const id of ['MP-01','MP-02','MP-07']) {
-      fail(id, 'Meal plan regex test', 'JarvisMode.tsx not found');
-    }
+    fail('MP-01', 'No meal-plan regex gate in JarvisMode.tsx', 'JarvisMode.tsx not found');
   }
 
-  // MP-03: JarvisMode dispatcher handles recommend_meal_plan action
+  // MP-02: no meal-plan regex on the server (regression guard).
+  try {
+    const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
+    if (!src.includes('isMealPlanRequest')) {
+      pass('MP-02', 'No meal-plan regex gate in ai-coach/index.ts (tool_choice always "auto")');
+    } else {
+      fail('MP-02', 'No meal-plan regex gate in ai-coach/index.ts (tool_choice always "auto")',
+        'isMealPlanRequest still present — re-introduces server-side silent-failure surface');
+    }
+  } catch {
+    fail('MP-02', 'No meal-plan regex gate server-side', 'ai-coach/index.ts not found');
+  }
+
+  // MP-03: JarvisMode dispatcher still handles recommend_meal_plan action.
   try {
     const src = readSrc('components/coach/JarvisMode.tsx');
     if (src.includes("case 'recommend_meal_plan':") && src.includes('setMealPlan(action.payload)')) {
@@ -503,19 +450,22 @@ async function runCodeAudit() {
     fail('MP-03', 'JarvisMode dispatcher meal plan handler', 'JarvisMode.tsx not found');
   }
 
-  // MP-04: dietary-prefs gate requeues the original message via pendingMsgAfterSetupRef
+  // MP-04: dietary-prefs offer is REACTIVE — shown after the meal plan action
+  // arrives if no prefs are on file, not as a gate that blocks the request.
   try {
     const src = readSrc('components/coach/JarvisMode.tsx');
-    const hasRequeueRef    = src.includes('pendingMsgAfterSetupRef.current = text');
-    const hasReplay        = src.includes('pendingMsgAfterSetupRef.current = null') && src.includes('ai.send(pending)');
-    if (hasRequeueRef && hasReplay) {
-      pass('MP-04', 'Dietary-prefs gate requeues original meal-plan message and resends after save');
+    // Inside the recommend_meal_plan case, we should set the prefs prompt
+    const mealPlanCaseIdx = src.indexOf("case 'recommend_meal_plan':");
+    const nextCaseIdx     = src.indexOf("case '", mealPlanCaseIdx + 30);
+    const block           = src.slice(mealPlanCaseIdx, nextCaseIdx);
+    if (block.includes('setPendingDietaryPrefsPrompt(true)') && block.includes('hasDietaryPrefsRef.current')) {
+      pass('MP-04', 'Dietary-prefs prompt fires reactively after recommend_meal_plan action');
     } else {
-      fail('MP-04', 'Dietary-prefs gate requeues original meal-plan message and resends after save',
-        `Missing: ${[!hasRequeueRef && 'requeue assignment', !hasReplay && 'replay (ai.send(pending))'].filter(Boolean).join(', ')}`);
+      fail('MP-04', 'Dietary-prefs prompt fires reactively after recommend_meal_plan action',
+        'setPendingDietaryPrefsPrompt or hasDietaryPrefsRef.current not found inside meal-plan case');
     }
   } catch {
-    fail('MP-04', 'Dietary-prefs requeue logic', 'JarvisMode.tsx not found');
+    fail('MP-04', 'Reactive dietary-prefs offer', 'JarvisMode.tsx not found');
   }
 
   // MP-05: ai-coach edge function registers recommend_meal_plan tool
@@ -532,88 +482,40 @@ async function runCodeAudit() {
     fail('MP-05', 'ai-coach recommend_meal_plan tool', 'ai-coach/index.ts not found');
   }
 
-  // MP-06: ai-coach has retry path with forced tool_choice for meal plan
-  // The retry is what saves users from "no response" on the first ask — if it's
-  // removed or broken, users see the "ask once more" fallback every time.
+  // MP-06: generic retry path exists — fires when no action emitted AND the
+  // LLM was trying (finish_reason "length" or partial tool calls). Not tied
+  // to any specific intent.
   try {
     const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
-    const hasRetryFn       = src.includes('retryMealPlan');
-    const hasForcedChoice  = src.includes('tool_choice: { type: "function", function: { name: "recommend_meal_plan" } }');
-    const hasFallbackText  = src.includes("I couldn't quite get that meal plan to format right");
-    if (hasRetryFn && hasForcedChoice && hasFallbackText) {
-      pass('MP-06', 'ai-coach has retry path with forced tool_choice + user-facing fallback for meal plan');
+    const hasRetryFn      = src.includes('retryStructured');
+    const hasTriggerLogic = src.includes('finishReason === "length"') || src.includes("finishReason === 'length'");
+    if (hasRetryFn && hasTriggerLogic) {
+      pass('MP-06', 'ai-coach has generic retry on truncation / partial tool calls');
     } else {
-      fail('MP-06', 'ai-coach has retry path with forced tool_choice + user-facing fallback for meal plan',
-        `Missing: ${[!hasRetryFn && 'retryMealPlan', !hasForcedChoice && 'forced tool_choice', !hasFallbackText && 'fallback text'].filter(Boolean).join(', ')}`);
+      fail('MP-06', 'ai-coach has generic retry on truncation / partial tool calls',
+        `Missing: ${[!hasRetryFn && 'retryStructured', !hasTriggerLogic && 'finishReason "length" trigger'].filter(Boolean).join(', ')}`);
     }
   } catch {
-    fail('MP-06', 'ai-coach meal plan retry path', 'ai-coach/index.ts not found');
+    fail('MP-06', 'ai-coach generic retry path', 'ai-coach/index.ts not found');
   }
 
-  // ── Server-side regex divergence (the actual "silent failure" cause) ─────
-  //
-  // The edge function has its OWN regex separate from the frontend one. When
-  // server regex misses, the server uses tool_choice:"auto", does NOT set up
-  // the retry path, and does NOT emit fallback text. If the LLM then produces
-  // an empty completion for that turn, the user sees SILENCE — exactly the
-  // "thinks and returns nothing" symptom.
-
+  // MP-07: universal empty-completion guard — if the stream produces no text
+  // AND no actions, server emits a generic "could you say it a different way?"
+  // message so the user never sees silence. This makes the original bug
+  // structurally impossible regardless of phrasing.
   try {
     const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
-    const serverRegexLine = src.split('\n').find(l => l.includes('isMealPlanRequest = /'));
-    const serverMatch = serverRegexLine?.match(/\/(.+)\/([gimsuy]*)\.test/);
-    if (!serverMatch) {
-      for (const id of ['MP-08','MP-09']) {
-        fail(id, 'Server-side meal plan regex', 'Could not extract isMealPlanRequest regex from ai-coach/index.ts');
-      }
+    const hasTextFlag    = src.includes('textEmitted');
+    const hasGuardLogic  = src.includes('!textEmitted && !actionEmitted');
+    const hasFallback    = src.includes("Sorry, I didn't quite catch that");
+    if (hasTextFlag && hasGuardLogic && hasFallback) {
+      pass('MP-07', 'ai-coach has universal empty-completion guard (no silent failures)');
     } else {
-      const serverRe = new RegExp(serverMatch[1], serverMatch[2] || 'i');
-      const serverDetect = (t: string) => serverRe.test(t.toLowerCase());
-
-      // MP-08: server regex must cover the same canonical phrasings the
-      // frontend recognises. If it diverges, the frontend dietary-prefs gate
-      // and the server retry path stop agreeing, which creates silent-failure
-      // windows.
-      const canonical = [
-        'meal plan',
-        'plan my meals',
-        'plan my day',
-        'give me a meal plan',
-        'what should i eat today',
-        'full day of eating',
-      ];
-      const serverMisses = canonical.filter(p => !serverDetect(p));
-      if (serverMisses.length === 0) {
-        pass('MP-08', `Server isMealPlanRequest matches all ${canonical.length} canonical phrasings the frontend recognises`);
-      } else {
-        fail('MP-08', `Server isMealPlanRequest matches all ${canonical.length} canonical phrasings the frontend recognises`,
-          `Server misses (frontend matches but server does not — divergence causes silent failures): ${serverMisses.join(', ')}`);
-      }
-
-      // MP-09: server regex catches common conversational phrasings — when it
-      // doesn't, NO retry / NO fallback is wired up, and an empty LLM completion
-      // surfaces as silence. This is the actual "asks 2-3 times, gets nothing" bug.
-      const conversational = [
-        'what should I eat',
-        'suggest a meal',
-        'any meal ideas',
-        'what can I eat',
-        'give me meals',
-        'recommend a meal',
-        'help me plan dinner',
-      ];
-      const slipping = conversational.filter(p => !serverDetect(p));
-      if (slipping.length === 0) {
-        pass('MP-09', 'Server isMealPlanRequest catches common conversational meal-plan phrasings');
-      } else {
-        fail('MP-09', 'Server isMealPlanRequest catches common conversational meal-plan phrasings',
-          `${slipping.length}/${conversational.length} slip through and bypass retry+fallback (silent-failure bug): ${slipping.map(p => `"${p}"`).join(', ')}`);
-      }
+      fail('MP-07', 'ai-coach has universal empty-completion guard (no silent failures)',
+        `Missing: ${[!hasTextFlag && 'textEmitted tracking', !hasGuardLogic && '!textEmitted && !actionEmitted guard', !hasFallback && 'fallback text'].filter(Boolean).join(', ')}`);
     }
   } catch {
-    for (const id of ['MP-08','MP-09']) {
-      fail(id, 'Server-side meal plan regex', 'ai-coach/index.ts not found');
-    }
+    fail('MP-07', 'ai-coach empty-completion guard', 'ai-coach/index.ts not found');
   }
 
   // ── Camera pages: intermittent black-screen prevention ───────────────────

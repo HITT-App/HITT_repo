@@ -102,10 +102,6 @@ async function queryUserGoal(): Promise<string> {
   return "You haven't set a goal yet. Want me to help you set one?";
 }
 
-function isMealPlanRequest(text: string): boolean {
-  return /\b(meal plan|plan (my )?(meals|day|eating|food)|what should i eat (today|for)|suggest (me |a )?(meals|a meal plan|what to eat)|give me a (meal|food|eating) plan|today'?s? (meals|eating|food) plan|full day (of )?eating|day of (meals|eating|food))\b/i.test(text);
-}
-
 function isWorkoutSetupRequest(text: string): boolean {
   return /\b(workout plan|training plan|build (me )?a (plan|schedule)|create (me )?a (plan|schedule)|plan my (week|workouts|training)|give me a (workout |training )?schedule|set up (my )?schedule)\b/i.test(text);
 }
@@ -227,8 +223,6 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const hasGoalRef = useRef(false);
   const hasScheduleRef = useRef(false);
   const hasDietaryPrefsRef = useRef(false);
-  // Holds a message typed before a setup card was shown — sent automatically after setup completes
-  const pendingMsgAfterSetupRef = useRef<string | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -253,11 +247,6 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     } else if (isFoodRecallQuestion(text)) {
       const answer = await queryTodayDiary();
       await ai.directAnswer(text, answer);
-    } else if (isMealPlanRequest(text) && !hasDietaryPrefsRef.current) {
-      // Needs dietary prefs — clear skip flag and re-show card, hold the message
-      if (uid) localStorage.removeItem(skipKey('diet', uid));
-      pendingMsgAfterSetupRef.current = text;
-      setPendingDietaryPrefsPrompt(true);
     } else if (isWorkoutSetupRequest(text) && (!hasGoalRef.current || !hasScheduleRef.current)) {
       // Needs goal or plan — clear skip flag and re-show the relevant card
       if (!hasGoalRef.current) {
@@ -268,6 +257,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         setPendingNoPlanPrompt(true);
       }
     } else {
+      // Everything else — trust the LLM to interpret. The system prompt tells
+      // it when to call recommend_meal_plan / log_food / set_goals / etc.
+      // Dietary prefs are now a reactive suggestion after the meal plan card
+      // arrives (not a gate that blocks the request).
       ai.send(text);
     }
   }, [ai]);
@@ -806,6 +799,13 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           supabase.auth.getUser().then(({ data: { user } }) => {
             if (user) saveMealPlan(user.id, action.payload.meals);
           });
+          // Reactive dietary-prefs offer: if the meal plan came back but no
+          // prefs are on file, surface the prefs card below — user can save
+          // them for next time without losing this plan.
+          if (!hasDietaryPrefsRef.current && currentUserIdRef.current
+              && localStorage.getItem(skipKey('diet', currentUserIdRef.current)) !== 'true') {
+            setPendingDietaryPrefsPrompt(true);
+          }
           break;
         case 'body_scan_prompt':
           setPendingBodyScan(true);
@@ -919,22 +919,16 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           />
         )}
 
-        {/* Dietary prefs card — shown when no meaningful dietary preferences are on file */}
+        {/* Dietary prefs card — shown reactively after a meal plan if no prefs are on file */}
         {pendingDietaryPrefsPrompt && (
           <JarvisDietaryPrefsCard
             onSaved={async () => {
               setPendingDietaryPrefsPrompt(false);
               hasDietaryPrefsRef.current = true;
               if (currentUserIdRef.current) localStorage.removeItem(skipKey('diet', currentUserIdRef.current));
-              const pending = pendingMsgAfterSetupRef.current;
-              pendingMsgAfterSetupRef.current = null;
-              if (pending) {
-                ai.send(pending);
-              } else {
-                await ai.appendAssistantMessage(
-                  "Saved — I've got your dietary requirements. Ask me for a meal plan whenever you're ready.",
-                );
-              }
+              await ai.appendAssistantMessage(
+                "Got it — I'll use these for your next meal plan.",
+              );
             }}
             onSkip={() => {
               if (currentUserIdRef.current) localStorage.setItem(skipKey('diet', currentUserIdRef.current), 'true');

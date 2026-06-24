@@ -912,7 +912,7 @@ function buildStructuredStream(
   authHeader: string,
   supabaseUrl: string,
   clientContext: { customMemory?: string; customResponseStyle?: string },
-  retryMealPlan?: () => Promise<Response>,
+  retryStructured?: () => Promise<Response>,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -923,6 +923,7 @@ function buildStructuredStream(
       let buffer = "";
       const toolCalls = new Map<number, { id: string; name: string; arguments: string }>();
       let finishReason: string | null = null;
+      let textEmitted = false;
 
       const emit = (chunk: object) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
@@ -956,6 +957,7 @@ function buildStructuredStream(
 
               // Text content — emit immediately as it streams
               if (delta.content) {
+                if (delta.content.trim()) textEmitted = true;
                 emit({ type: "text", delta: delta.content });
               }
 
@@ -979,49 +981,53 @@ function buildStructuredStream(
         }
 
         // Emit validated tool calls as action chunks after text has fully streamed.
-        let mealPlanActionEmitted = false;
+        let actionEmitted = false;
         for (const [, tc] of toolCalls) {
           const action = await mapToolCallToAction(tc, validWorkoutIds, validRecipeIds, authHeader, supabaseUrl, clientContext);
           if (action) {
             emit({ type: "action", action });
-            if (tc.name === "recommend_meal_plan") mealPlanActionEmitted = true;
+            actionEmitted = true;
           }
         }
 
-        // Meal plan retry: when this WAS a meal plan request (retryMealPlan provided)
-        // but no meal plan action was produced — typical causes are truncated args
-        // (finishReason "length"), malformed JSON, or the model skipping the tool entirely.
-        // One non-streaming retry with forced tool_choice usually clears it.
-        if (retryMealPlan && !mealPlanActionEmitted) {
-          console.warn("[ai-coach] meal plan not produced (finish:", finishReason, ") — retrying non-stream");
+        // Generic truncation retry: if the LLM was clearly trying to emit a tool
+        // call but ran out of tokens (finish_reason "length") and no action came
+        // through, one non-streaming retry usually recovers it. Not tied to any
+        // specific intent — works for whatever tool the LLM was trying to call.
+        if (retryStructured && !actionEmitted && (finishReason === "length" || toolCalls.size > 0)) {
+          console.warn("[ai-coach] no action emitted (finish:", finishReason, ") — retrying non-stream");
           try {
-            const retryResp = await retryMealPlan();
+            const retryResp = await retryStructured();
             if (retryResp.ok) {
               const json = await retryResp.json();
-              const tc = json.choices?.[0]?.message?.tool_calls?.[0];
-              if (tc?.function?.name === "recommend_meal_plan") {
+              for (const tc of json.choices?.[0]?.message?.tool_calls ?? []) {
+                if (!tc?.function?.name) continue;
                 const action = await mapToolCallToAction(
                   { name: tc.function.name, arguments: tc.function.arguments ?? "" },
                   validWorkoutIds, validRecipeIds, authHeader, supabaseUrl, clientContext,
                 );
                 if (action) {
                   emit({ type: "action", action });
-                  mealPlanActionEmitted = true;
+                  actionEmitted = true;
                 }
               }
             } else {
-              console.error("[ai-coach] meal plan retry HTTP error:", retryResp.status);
+              console.error("[ai-coach] retry HTTP error:", retryResp.status);
             }
           } catch (err) {
-            console.error("[ai-coach] meal plan retry failed:", err);
+            console.error("[ai-coach] retry failed:", err);
           }
+        }
 
-          if (!mealPlanActionEmitted) {
-            emit({
-              type: "text",
-              delta: "\n\nI couldn't quite get that meal plan to format right — could you ask once more?",
-            });
-          }
+        // Universal empty-completion guard: if the stream produced no text AND
+        // no actions, the user would see silence. Always emit a fallback so
+        // there's no "thinks then returns nothing" symptom.
+        if (!textEmitted && !actionEmitted) {
+          console.warn("[ai-coach] empty completion — emitting fallback");
+          emit({
+            type: "text",
+            delta: "Sorry, I didn't quite catch that — could you say it a different way?",
+          });
         }
 
         emit({ type: "done" });
@@ -1685,7 +1691,6 @@ serve(async (req) => {
       const lastUserContent = String(
         (structuredMessages as any[]).filter(m => m.role === 'user').pop()?.content ?? ''
       ).toLowerCase();
-      const isMealPlanRequest = /meal plan|what (should|can) i eat|day of eating|what to eat|plan (my )?(meals|eating|food|day)|full day (of )?eating|food plan/.test(lastUserContent);
       const isScheduleChangeRequest = /change.*(my )?(workout|schedule|plan|program|routine)|update.*(my )?(schedule|plan|program|workout|routine)|new (plan|schedule|program|workout plan)|rebuild.*plan|redo.*schedule|reset.*plan|want a new.*plan|want to start a (new |fresh )?(plan|program|schedule)|switch.*plan/.test(lastUserContent);
 
       const injectedMessages = isScheduleChangeRequest
@@ -1701,23 +1706,21 @@ serve(async (req) => {
         messages: injectedMessages,
         stream: true,
         tools: STRUCTURED_TOOLS,
-        tool_choice: isMealPlanRequest
-          ? { type: "function", function: { name: "recommend_meal_plan" } }
-          : "auto",
+        tool_choice: "auto",
         max_tokens: 8192,
       });
 
-      const retryMealPlan = isMealPlanRequest
-        ? () =>
-            aiChatCompletion({
-              model: "gemini-2.5-flash",
-              messages: injectedMessages,
-              stream: false,
-              tools: STRUCTURED_TOOLS,
-              tool_choice: { type: "function", function: { name: "recommend_meal_plan" } },
-              max_tokens: 8192,
-            })
-        : undefined;
+      // Always provide a generic retry — buildStructuredStream decides when to
+      // use it (truncation, malformed tool args). No pattern matching needed.
+      const retryStructured = () =>
+        aiChatCompletion({
+          model: "gemini-2.5-flash",
+          messages: injectedMessages,
+          stream: false,
+          tools: STRUCTURED_TOOLS,
+          tool_choice: "auto",
+          max_tokens: 8192,
+        });
 
       if (!gatewayResponse.ok) {
         if (gatewayResponse.status === 429) {
@@ -1747,7 +1750,7 @@ serve(async (req) => {
         authHeader,
         supabaseUrl,
         { customMemory, customResponseStyle: customResponse },
-        retryMealPlan,
+        retryStructured,
       );
       return new Response(structuredStream, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
