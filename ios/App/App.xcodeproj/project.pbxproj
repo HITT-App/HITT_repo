@@ -280,10 +280,14 @@
 					};
 					268523972FEBD48100E3A525 = {
 						CreatedOnToolsVersion = 26.4.1;
+						DevelopmentTeam = 9VH3JDWRMF;
+						ProvisioningStyle = Manual;
 					};
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
+						DevelopmentTeam = 9VH3JDWRMF;
 						LastSwiftMigration = 1100;
+						ProvisioningStyle = Manual;
 					};
 				};
 			};
