@@ -1336,29 +1336,46 @@ async function runAICoachTests() {
     return out;
   }
 
-  try {
-    const result = await streamStructured([
-      { role: 'user', content: 'Give me meals for 2500 calories with 250g of protein' },
-    ]);
-    const plan = result.actions.find(a => a.type === 'recommend_meal_plan');
-    if (!plan) {
-      fail('AI-09', 'Meal plan with explicit macro targets returns a plan',
-        `No recommend_meal_plan action emitted. Text was: ${result.text.substring(0, 200) || '(empty)'}`);
-    } else {
-      const meals = plan.payload?.meals ?? [];
-      const totalCal = meals.reduce((s: number, m: any) => s + (m.calories ?? 0), 0);
-      const totalP = meals.reduce((s: number, m: any) => s + (m.protein_g ?? 0), 0);
-      const calOk = Math.abs(totalCal - 2500) <= 250;       // ±10%
-      const proteinOk = Math.abs(totalP - 250) <= 50;       // ±20% — LLM rounds aggressively
-      if (calOk && proteinOk) {
-        pass('AI-09', `Meal plan honoured macro targets (${totalCal} kcal · ${totalP}g protein vs 2500/250 requested)`);
+  // Run the same macro-target prompt 5 times. LLM nondeterminism means a
+  // single-shot test passes ~80% of the time but the user sees intermittent
+  // failures. Require all 5 to return a plan (the retry+empty-completion
+  // guard architecture should make this reliable).
+  const ITERATIONS = 5;
+  const runs: Array<{ ok: boolean; totalCal: number; totalP: number; note: string }> = [];
+  for (let i = 0; i < ITERATIONS; i++) {
+    try {
+      const result = await streamStructured([
+        { role: 'user', content: 'Give me meals for 2500 calories with 250g of protein' },
+      ]);
+      const plan = result.actions.find(a => a.type === 'recommend_meal_plan');
+      if (!plan) {
+        runs.push({ ok: false, totalCal: 0, totalP: 0, note: `no action emitted; text: "${result.text.substring(0, 80) || '(empty)'}"` });
       } else {
-        fail('AI-09', 'Meal plan honoured macro targets within ±10% calories / ±20% protein',
-          `Got ${totalCal} kcal (target 2500 ±250) · ${totalP}g protein (target 250 ±50). Meals: ${meals.length}`);
+        const meals = plan.payload?.meals ?? [];
+        const totalCal = meals.reduce((s: number, m: any) => s + (m.calories ?? 0), 0);
+        const totalP = meals.reduce((s: number, m: any) => s + (m.protein_g ?? 0), 0);
+        const calOk = Math.abs(totalCal - 2500) <= 250;
+        const proteinOk = Math.abs(totalP - 250) <= 50;
+        runs.push({
+          ok: calOk && proteinOk,
+          totalCal, totalP,
+          note: calOk && proteinOk ? 'ok' : `${totalCal} kcal / ${totalP}g protein — outside tolerance`,
+        });
       }
+    } catch (e: any) {
+      runs.push({ ok: false, totalCal: 0, totalP: 0, note: `threw: ${e.message}` });
     }
-  } catch (e: any) {
-    fail('AI-09', 'Meal plan with explicit macro targets — structured stream', e.message);
+  }
+
+  const okRuns = runs.filter(r => r.ok);
+  if (okRuns.length === ITERATIONS) {
+    const avgCal = Math.round(runs.reduce((s, r) => s + r.totalCal, 0) / ITERATIONS);
+    const avgP = Math.round(runs.reduce((s, r) => s + r.totalP, 0) / ITERATIONS);
+    pass('AI-09', `Meal plan reliable across ${ITERATIONS}/${ITERATIONS} runs (avg ${avgCal} kcal / ${avgP}g protein vs 2500/250)`);
+  } else {
+    const fails = runs.map((r, i) => r.ok ? null : `#${i + 1}: ${r.note}`).filter(Boolean).join(' | ');
+    fail('AI-09', `Meal plan reliable across ${ITERATIONS}/${ITERATIONS} runs of identical macro-target prompt`,
+      `${okRuns.length}/${ITERATIONS} succeeded. Failures: ${fails}`);
   }
 
   // ── AI-10: Empty-completion guard fires when LLM produces nothing ─────────

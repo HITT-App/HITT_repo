@@ -17,7 +17,7 @@ import { GoalConfirmCard } from './GoalConfirmCard';
 import { MultiChoiceCard } from './MultiChoiceCard';
 import { JarvisMealPlanCard } from './JarvisMealPlanCard';
 import { JarvisDietaryPrefsCard } from './JarvisDietaryPrefsCard';
-import { saveMealPlan } from '@/lib/mealPlanStorage';
+import { saveMealPlan, getMealPlan } from '@/lib/mealPlanStorage';
 import { format } from 'date-fns';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload, RecommendMealPlanPayload } from '@/hooks/useAI.types';
 
@@ -654,6 +654,22 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         });
     });
   }, [pendingConfirmation?.type]);
+
+  // Restore any meal plan saved earlier today so the card reappears across
+  // remounts / app reopens. Saved by the recommend_meal_plan dispatcher; lives
+  // in localStorage scoped to user+date.
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled || !user) return;
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const stored = getMealPlan(user.id, today);
+      if (stored?.meals?.length) {
+        setMealPlan({ meals: stored.meals });
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Fire the greeting once, after the hook has finished loading history
   useEffect(() => {

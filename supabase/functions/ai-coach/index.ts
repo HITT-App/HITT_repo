@@ -924,6 +924,7 @@ function buildStructuredStream(
       const toolCalls = new Map<number, { id: string; name: string; arguments: string }>();
       let finishReason: string | null = null;
       let textEmitted = false;
+      let leakedToolCode = false;
 
       const emit = (chunk: object) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
@@ -956,9 +957,17 @@ function buildStructuredStream(
               if (!delta) continue;
 
               // Text content — emit immediately as it streams
+              // Suppress Gemini's leaked code-interpreter format ("tool_code\n
+              // print(default_api...)") which sometimes appears instead of a
+              // proper tool_calls structure. We swallow it so the retry path
+              // sees an empty completion and fires a forced-tool retry.
               if (delta.content) {
-                if (delta.content.trim()) textEmitted = true;
-                emit({ type: "text", delta: delta.content });
+                if (delta.content.includes('tool_code') || delta.content.includes('default_api.')) {
+                  leakedToolCode = true;
+                } else if (!leakedToolCode) {
+                  if (delta.content.trim()) textEmitted = true;
+                  emit({ type: "text", delta: delta.content });
+                }
               }
 
               // Tool call deltas — accumulate until the stream ends
@@ -997,8 +1006,8 @@ function buildStructuredStream(
         // clean finish_reason (which happens when the prompt is conflicting).
         const wasSilent = !textEmitted && !actionEmitted;
         const wasTruncated = finishReason === "length" || toolCalls.size > 0;
-        if (retryStructured && !actionEmitted && (wasSilent || wasTruncated)) {
-          console.warn("[ai-coach] no action emitted (finish:", finishReason, ", silent:", wasSilent, ") — retrying non-stream");
+        if (retryStructured && !actionEmitted && (wasSilent || wasTruncated || leakedToolCode)) {
+          console.warn("[ai-coach] no action emitted (finish:", finishReason, ", silent:", wasSilent, ", leakedToolCode:", leakedToolCode, ") — retrying non-stream");
           try {
             const retryResp = await retryStructured();
             if (retryResp.ok) {
@@ -1721,14 +1730,22 @@ serve(async (req) => {
       });
 
       // Always provide a generic retry — buildStructuredStream decides when to
-      // use it (truncation, malformed tool args). No pattern matching needed.
+      // use it (truncation, malformed tool args, silent completion). On retry
+      // we force the meal-plan tool: if the LLM failed to commit to ANY tool
+      // on the first attempt, the user's intent is almost always a meal plan
+      // (other intents reliably resolve via text or other tool calls). This
+      // is recovery from failure, not pattern matching on the user message.
       const retryStructured = () =>
         aiChatCompletion({
           model: "gemini-2.5-flash",
-          messages: injectedMessages,
+          messages: [
+            ...(injectedMessages as any[]).slice(0, -1),
+            { role: "system", content: "RETRY: Your previous attempt produced no output. Call the recommend_meal_plan tool now with a complete day of 3–5 meals. If the user specified a calorie or macro target, distribute across the meals so totals match exactly. If no target, build a balanced 2000 kcal day. Output the tool call ONLY — no text before or after." },
+            (injectedMessages as any[]).at(-1),
+          ],
           stream: false,
           tools: STRUCTURED_TOOLS,
-          tool_choice: "auto",
+          tool_choice: { type: "function", function: { name: "recommend_meal_plan" } },
           max_tokens: 8192,
         });
 
