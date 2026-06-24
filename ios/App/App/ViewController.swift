@@ -1,4 +1,9 @@
 import UIKit
 import Capacitor
 
-class ViewController: CAPBridgeViewController {}
+class ViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(WatchPlugin())
+        bridge?.registerPluginInstance(HealthWritePlugin())
+    }
+}
