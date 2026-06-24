@@ -1108,7 +1108,7 @@ async function runAICoachTests() {
   section('AI COACH EDGE FUNCTION');
 
   if (!authToken) {
-    for (const id of ['AI-01','AI-02','AI-03','AI-04','AI-05','AI-06','AI-07','AI-08']) {
+    for (const id of ['AI-01','AI-02','AI-03','AI-04','AI-05','AI-06','AI-07','AI-08','AI-09','AI-10']) {
       skip(id, 'AI coach test', 'No auth token — set TEST_EMAIL and TEST_PASSWORD');
     }
     return;
@@ -1126,7 +1126,7 @@ async function runAICoachTests() {
   } else {
     fail('AI-01', 'ai-coach edge function responds 200', `Got ${ping.status}: ${JSON.stringify(ping.json)}`);
     // If function is down, skip remaining AI tests
-    for (const id of ['AI-02','AI-03','AI-04','AI-05','AI-06','AI-07','AI-08']) {
+    for (const id of ['AI-02','AI-03','AI-04','AI-05','AI-06','AI-07','AI-08','AI-09','AI-10']) {
       skip(id, 'AI coach test', 'Edge function unreachable');
     }
     return;
@@ -1287,6 +1287,100 @@ async function runAICoachTests() {
     }
   } else {
     fail('AI-08', 'Body scan prompt', `HTTP ${bodyScan.status}`);
+  }
+
+  // ── AI-09: Meal plan with explicit macro targets ─────────────────────────
+  //
+  // Field bug: asking for meals with specific macros ("2500 calories, 250g
+  // protein") used to return silence. Hit the structured-mode endpoint, parse
+  // the SSE stream, and assert a recommend_meal_plan action comes back with
+  // totals reasonably close to the request.
+
+  type StreamResult = {
+    actions: Array<{ type: string; payload?: any }>;
+    text: string;
+  };
+
+  async function streamStructured(messages: Array<{ role: string; content: string }>): Promise<StreamResult> {
+    const res = await fetch(`${FN_BASE}/ai-coach`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': ANON_KEY,
+        'Authorization': `Bearer ${authToken}`,
+        'X-Response-Format': 'structured-v1',
+      },
+      body: JSON.stringify({ messages, healthProfile: '' }),
+    });
+    const out: StreamResult = { actions: [], text: '' };
+    if (!res.ok || !res.body) return out;
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buf.indexOf('\n\n')) !== -1) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 2);
+        if (!line.startsWith('data:')) continue;
+        try {
+          const chunk = JSON.parse(line.slice(5).trim());
+          if (chunk.type === 'text' && typeof chunk.delta === 'string') out.text += chunk.delta;
+          else if (chunk.type === 'action' && chunk.action) out.actions.push(chunk.action);
+        } catch {/* skip malformed */}
+      }
+    }
+    return out;
+  }
+
+  try {
+    const result = await streamStructured([
+      { role: 'user', content: 'Give me meals for 2500 calories with 250g of protein' },
+    ]);
+    const plan = result.actions.find(a => a.type === 'recommend_meal_plan');
+    if (!plan) {
+      fail('AI-09', 'Meal plan with explicit macro targets returns a plan',
+        `No recommend_meal_plan action emitted. Text was: ${result.text.substring(0, 200) || '(empty)'}`);
+    } else {
+      const meals = plan.payload?.meals ?? [];
+      const totalCal = meals.reduce((s: number, m: any) => s + (m.calories ?? 0), 0);
+      const totalP = meals.reduce((s: number, m: any) => s + (m.protein_g ?? 0), 0);
+      const calOk = Math.abs(totalCal - 2500) <= 250;       // ±10%
+      const proteinOk = Math.abs(totalP - 250) <= 50;       // ±20% — LLM rounds aggressively
+      if (calOk && proteinOk) {
+        pass('AI-09', `Meal plan honoured macro targets (${totalCal} kcal · ${totalP}g protein vs 2500/250 requested)`);
+      } else {
+        fail('AI-09', 'Meal plan honoured macro targets within ±10% calories / ±20% protein',
+          `Got ${totalCal} kcal (target 2500 ±250) · ${totalP}g protein (target 250 ±50). Meals: ${meals.length}`);
+      }
+    }
+  } catch (e: any) {
+    fail('AI-09', 'Meal plan with explicit macro targets — structured stream', e.message);
+  }
+
+  // ── AI-10: Empty-completion guard fires when LLM produces nothing ─────────
+  //
+  // The system prompt now says NEVER emit empty text. To verify the guard
+  // still catches the residual case, we send a deliberately confusing
+  // off-topic prompt and assert SOMETHING (text or action) comes back —
+  // never total silence.
+
+  try {
+    const result = await streamStructured([
+      { role: 'user', content: 'asdfqwerty xyz' },
+    ]);
+    const hadAnything = result.text.trim().length > 0 || result.actions.length > 0;
+    if (hadAnything) {
+      pass('AI-10', 'Structured endpoint never returns silent stream (empty-completion guard works)');
+    } else {
+      fail('AI-10', 'Structured endpoint never returns silent stream (empty-completion guard works)',
+        'Got zero text AND zero actions — empty-completion guard did not fire');
+    }
+  } catch (e: any) {
+    fail('AI-10', 'Empty-completion guard live test', e.message);
   }
 }
 
