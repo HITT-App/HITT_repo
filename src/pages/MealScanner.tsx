@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { recordActiveDay } from '@/lib/activeDay';
-import { ArrowLeft, Camera, Scan, Flame, Droplets, Wheat, Check, X, RefreshCw, Image, Plus, Minus, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Camera, Scan, Flame, Droplets, Wheat, Check, X, RefreshCw, Image, Plus, Minus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ScanState = 'requirements' | 'scanning' | 'processing' | 'result' | 'error';
@@ -61,12 +61,7 @@ export default function MealScanner() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [mealCategory, setMealCategory] = useState('snack');
   const [isSaving, setIsSaving] = useState(false);
-
-  const requirements = [
-    { label: 'Camera Quality', value: '720p', ok: true },
-    { label: 'Internet Speed', value: '10mbps', ok: true },
-    { label: 'Well Lit Room', value: 'True', ok: true },
-  ];
+  const [cameraDenied, setCameraDenied] = useState(false);
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -75,6 +70,14 @@ export default function MealScanner() {
 
   useEffect(() => {
     return stopCamera;
+  }, []);
+
+  // Auto-start the camera on mount so the user goes straight to scanning.
+  // If permission is denied, scanState stays at 'requirements' and the
+  // denied fallback UI is shown instead.
+  useEffect(() => {
+    startCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Re-attach the stream when the video element mounts (it's conditionally
@@ -92,12 +95,14 @@ export default function MealScanner() {
         title: 'Camera Error',
         description: 'Camera could not start. Try again or upload from gallery.',
       });
+      setCameraDenied(true);
       setScanState('requirements');
     });
   }, [scanState, toast]);
 
   const startCamera = async () => {
     try {
+      setCameraDenied(false);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: 1280, height: 720 }
       });
@@ -106,7 +111,8 @@ export default function MealScanner() {
       // The effect above attaches srcObject + calls play() once the
       // <video> element mounts as part of the 'scanning' render.
     } catch {
-      toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access camera' });
+      setCameraDenied(true);
+      toast({ variant: 'destructive', title: 'Camera unavailable', description: 'Allow camera access in Settings, or upload from your gallery.' });
     }
   };
 
@@ -260,7 +266,7 @@ export default function MealScanner() {
   const handleRetry = () => {
     setCapturedImage(null);
     setAnalysisResult(null);
-    setScanState('requirements');
+    startCamera();
   };
 
   const totals = getSelectedTotals();
@@ -279,40 +285,35 @@ export default function MealScanner() {
       <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileSelected} className="hidden" />
 
       <div className="flex-1 flex flex-col p-4">
-        {/* Requirements State */}
+        {/* Initial / camera-denied fallback */}
         {scanState === 'requirements' && (
-          <div className="flex-1 flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 mt-8">
-              <Scan className="w-8 h-8 text-primary" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">Scan Meal with AI</h2>
-            <p className="text-muted-foreground text-center mb-8">AI detects multiple food items automatically</p>
-
-            <div className="w-full space-y-4 mb-auto">
-              {requirements.map((req, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl">
-                  <span className="text-sm">{req.label}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{req.value}</span>
-                    <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                  </div>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            {cameraDenied ? (
+              <>
+                <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
+                  <Camera className="w-8 h-8 text-destructive" />
                 </div>
-              ))}
-            </div>
-
-            <div className="w-full space-y-3 mt-6">
-              <Button onClick={startCamera} className="w-full h-12 rounded-2xl gap-2">
-                <Camera className="w-4 h-4" /> Take a Photo
-              </Button>
-              <Button onClick={handleGalleryUpload} variant="outline" className="w-full h-12 rounded-2xl gap-2">
-                <Image className="w-4 h-4" /> Upload from Gallery
-              </Button>
-              <Button variant="link" className="w-full text-primary" onClick={() => navigate('/log-meal')}>
-                Log food manually
-              </Button>
-            </div>
+                <h2 className="text-xl font-bold mb-2">Camera unavailable</h2>
+                <p className="text-sm text-muted-foreground text-center mb-8 max-w-xs">
+                  Allow camera access in Settings, or upload a photo from your gallery instead.
+                </p>
+                <div className="w-full space-y-3">
+                  <Button onClick={startCamera} className="w-full h-12 rounded-2xl gap-2">
+                    <Camera className="w-4 h-4" /> Try Camera Again
+                  </Button>
+                  <Button onClick={handleGalleryUpload} variant="outline" className="w-full h-12 rounded-2xl gap-2">
+                    <Image className="w-4 h-4" /> Upload from Gallery
+                  </Button>
+                  <Button variant="link" className="w-full text-primary" onClick={() => navigate('/log-meal')}>
+                    Log food manually
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Scan className="w-6 h-6 text-primary animate-pulse" />
+              </div>
+            )}
           </div>
         )}
 
@@ -329,10 +330,18 @@ export default function MealScanner() {
                 <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-2xl" />
               </div>
             </div>
-            <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+            <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-6">
+              <button
+                onClick={handleGalleryUpload}
+                className="w-12 h-12 rounded-full bg-foreground/40 backdrop-blur-md flex items-center justify-center active:opacity-70"
+                aria-label="Upload from gallery"
+              >
+                <Image className="w-5 h-5 text-white" />
+              </button>
               <Button size="lg" className="rounded-full w-16 h-16 bg-primary" onClick={captureAndAnalyze}>
                 <Camera className="w-6 h-6" />
               </Button>
+              <div className="w-12 h-12" />
             </div>
             <div className="absolute bottom-24 left-0 right-0 text-center">
               <p className="text-sm bg-foreground/80 text-background px-4 py-2 rounded-full inline-flex items-center gap-2">
