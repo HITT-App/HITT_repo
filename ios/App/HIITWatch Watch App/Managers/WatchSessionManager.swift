@@ -99,16 +99,33 @@ final class WatchSessionManager: NSObject {
         NotificationCenter.default.post(name: .watchDayTypeChanged, object: type)
     }
 
+    // Decode helper that logs both success and failure with the JSON error,
+    // so a silent decode bug surfaces in Console.app instead of vanishing.
+    // Filter Console with subsystem `[HIIT.WCSession]` to see the full chain.
+    private func decode<T: Decodable>(_ type: T.Type, from raw: [String: Any], key: String) -> T? {
+        do {
+            let data = try JSONSerialization.data(withJSONObject: raw)
+            let decoded = try JSONDecoder().decode(T.self, from: data)
+            NSLog("[HIIT.WCSession] decoded key=\(key) as \(T.self) ✓")
+            return decoded
+        } catch {
+            NSLog("[HIIT.WCSession] decode FAILED key=\(key) as \(T.self) — \(error)")
+            return nil
+        }
+    }
+
     private func applyMessage(_ message: [String: Any]) {
+        NSLog("[HIIT.WCSession] applyMessage keys=\(Array(message.keys))")
+
         // Standard workout — persist so it survives Watch app restarts
         if let workoutData = message["workout"] as? [String: Any],
-           let data = try? JSONSerialization.data(withJSONObject: workoutData),
-           let decoded = try? JSONDecoder().decode(WatchWorkout.self, from: data) {
+           let decoded = decode(WatchWorkout.self, from: workoutData, key: "workout") {
             todayWorkout = decoded
             if let encoded = try? JSONEncoder().encode(decoded) {
                 UserDefaults.standard.set(encoded, forKey: Self.workoutKey)
             }
             NotificationCenter.default.post(name: .watchWorkoutReceived, object: decoded)
+            NSLog("[HIIT.WCSession] posted .watchWorkoutReceived name=\(decoded.name)")
         }
 
         // Clear workout
@@ -116,18 +133,19 @@ final class WatchSessionManager: NSObject {
             todayWorkout = nil
             UserDefaults.standard.removeObject(forKey: Self.workoutKey)
             NotificationCenter.default.post(name: .watchWorkoutReceived, object: nil)
+            NSLog("[HIIT.WCSession] posted .watchWorkoutReceived (cleared)")
         }
 
         // Triathlon plan — also auto-navigate to the Race tab
         if let planData = message["triathlon"] as? [String: Any],
-           let data = try? JSONSerialization.data(withJSONObject: planData),
-           let decoded = try? JSONDecoder().decode(TriathlonPlan.self, from: data) {
+           let decoded = decode(TriathlonPlan.self, from: planData, key: "triathlon") {
             triathlonPlan = decoded
             // Persist so the plan survives Watch app restarts
             if let encoded = try? JSONEncoder().encode(decoded) {
                 UserDefaults.standard.set(encoded, forKey: Self.planKey)
             }
             NotificationCenter.default.post(name: .watchTriathlonReceived, object: decoded)
+            NSLog("[HIIT.WCSession] posted .watchTriathlonReceived name=\(decoded.name) legs=\(decoded.legs.count)")
             WorkoutCoordinator.shared.navigateToRaceTab()
         }
 
@@ -135,17 +153,18 @@ final class WatchSessionManager: NSObject {
         if let t = message["dayType"] as? String, let dt = WatchDayType(rawValue: t) {
             todayDayType = dt
             NotificationCenter.default.post(name: .watchDayTypeChanged, object: dt)
+            NSLog("[HIIT.WCSession] posted .watchDayTypeChanged value=\(t)")
         }
 
         // Structured workout — full exercise sequence from the phone
         if let swData = message["structuredWorkout"] as? [String: Any],
-           let data = try? JSONSerialization.data(withJSONObject: swData),
-           let decoded = try? JSONDecoder().decode(WatchWorkout.self, from: data) {
+           let decoded = decode(WatchWorkout.self, from: swData, key: "structuredWorkout") {
             if let encoded = try? JSONEncoder().encode(decoded) {
                 UserDefaults.standard.set(encoded, forKey: Self.structuredWorkoutKey)
             }
             WorkoutCoordinator.shared.receiveStructuredWorkout(decoded)
             NotificationCenter.default.post(name: .watchStructuredWorkoutReceived, object: decoded)
+            NSLog("[HIIT.WCSession] posted .watchStructuredWorkoutReceived name=\(decoded.name) exercises=\(decoded.exercises.count)")
         }
 
         // Mirror workout — iPhone started a workout, show Ready screen on Watch.
@@ -154,11 +173,13 @@ final class WatchSessionManager: NSObject {
            let name = mirror["name"] as? String,
            triathlonPlan == nil {
             WorkoutCoordinator.shared.receiveMirroredWorkout(named: name)
+            NSLog("[HIIT.WCSession] mirrorWorkout received name=\(name)")
         }
 
         // Clear mirror
         if let clear = message["clearMirrorWorkout"] as? Bool, clear {
             WorkoutCoordinator.shared.clearPending()
+            NSLog("[HIIT.WCSession] clearMirrorWorkout received")
         }
     }
 }
@@ -168,28 +189,34 @@ final class WatchSessionManager: NSObject {
 extension WatchSessionManager: WCSessionDelegate {
     nonisolated func session(_ session: WCSession,
                              activationDidCompleteWith state: WCSessionActivationState,
-                             error: Error?) {}
+                             error: Error?) {
+        NSLog("[HIIT.WCSession] activated state=\(state.rawValue) error=\(error?.localizedDescription ?? "none") reachable=\(session.isReachable)")
+    }
 
     nonisolated func session(_ session: WCSession,
                              didReceiveMessage message: [String: Any]) {
+        NSLog("[HIIT.WCSession] ← sendMessage (no reply) keys=\(Array(message.keys))")
         DispatchQueue.main.async { [weak self] in self?.applyMessage(message) }
     }
 
     nonisolated func session(_ session: WCSession,
                              didReceiveMessage message: [String: Any],
                              replyHandler: @escaping ([String: Any]) -> Void) {
+        NSLog("[HIIT.WCSession] ← sendMessage (with reply) keys=\(Array(message.keys))")
         DispatchQueue.main.async { [weak self] in self?.applyMessage(message) }
         replyHandler([:])
     }
 
     nonisolated func session(_ session: WCSession,
                              didReceiveApplicationContext ctx: [String: Any]) {
+        NSLog("[HIIT.WCSession] ← updateApplicationContext keys=\(Array(ctx.keys))")
         DispatchQueue.main.async { [weak self] in self?.applyMessage(ctx) }
     }
 
     // Handles transferUserInfo deliveries (queued, never overwritten — used for triathlon plans)
     nonisolated func session(_ session: WCSession,
                              didReceiveUserInfo userInfo: [String: Any]) {
+        NSLog("[HIIT.WCSession] ← transferUserInfo keys=\(Array(userInfo.keys))")
         DispatchQueue.main.async { [weak self] in self?.applyMessage(userInfo) }
     }
 }

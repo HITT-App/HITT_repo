@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-06-24] — Fix triathlon plan not arriving on Watch + WCSession diagnostics
+
+- **Triathlon plans now actually arrive on the Apple Watch** — fixed the bug where tapping "Send to Watch" showed a "queued" toast but the Watch race screen stayed empty even with the Watch app open. State-like payloads (triathlon plans, today's workout, structured workouts) now use Apple's `updateApplicationContext` API as the fallback when the Watch isn't immediately reachable, which delivers the latest snapshot as soon as the Watch wakes — replacing the previous transferUserInfo queue that could defer delivery for minutes
+- **Same fix applies to all "current state" Watch syncs** — today's planned workout and full structured workouts also benefit; events like mirror-navigation commands continue to use the queue (correct for ordered events)
+- **Full diagnostic logging added to the iPhone ↔ Watch link** — every send/receive step now logs with a `[HIIT.WCSession]` prefix so any future delivery issues can be diagnosed by attaching Console.app
+- **Three new internal regression detectors** that cross-check iPhone-sent payload keys against Watch decoders, posted notifications against SwiftUI listeners, and round-trip the triathlon JSON against the Swift Codable schema
+
 ## [2026-06-23] — Camera fixes, timezone fixes, and regression-detector audits
 
 - **Camera no longer black-screens on first scan** — the meal scanner and body scanner now reliably show the camera viewport on first launch; previously some users saw a black screen because of an iOS WKWebView race

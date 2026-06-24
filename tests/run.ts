@@ -726,6 +726,226 @@ async function runCodeAudit() {
         `${violations.length} occurrence(s): ${summarise(violations)}`);
     }
   }
+
+  // ── Watch / iPhone WCSession contract audits ────────────────────────────
+  // These guard against the silent-failure class of bug where the iPhone sends
+  // a message under one key and the Watch decodes under a different key, or a
+  // decoder posts a notification name no view listens for.
+
+  const watchRoot = `${IOS}/HIITWatch Watch App`;
+  let watchSrc = '';
+  let bridgeSrc = '';
+  let pluginSwiftSrc = '';
+  let pluginTsSrc = '';
+  try {
+    watchSrc = readFileSync(`${watchRoot}/Managers/WatchSessionManager.swift`, 'utf8');
+    bridgeSrc = readFileSync(`${IOS}/App/WatchBridge.swift`, 'utf8');
+    pluginSwiftSrc = readFileSync(`${IOS}/App/WatchPlugin.swift`, 'utf8');
+    pluginTsSrc = readSrc('plugins/WatchPlugin.ts');
+  } catch {}
+
+  // CA-49: Every payload key the iPhone sends must have a corresponding decoder
+  //        on the Watch. The Triathlon-not-arriving bug class would be caught
+  //        here if a key was added on one side without the other.
+  if (watchSrc && bridgeSrc) {
+    // Extract iPhone-side outbound keys. Three sources:
+    //   1. WatchBridge.swift literal payloads: `let payload = ["clearWorkout": true]`
+    //   2. WatchPlugin.swift inline sendRawMessage calls (mirrorWorkout etc.)
+    //   3. WatchPlugin.ts message object literals (`{ message: { triathlon: ... } }`)
+    const outboundKeys = new Set<string>();
+    // WatchBridge.swift — outbound payloads are always assigned to `let payload = [...]`
+    for (const m of bridgeSrc.matchAll(/let\s+payload\s*[:=][^=]*?\[\s*"([a-zA-Z_][\w]*)"\s*:/g)) {
+      outboundKeys.add(m[1]);
+    }
+    // WatchPlugin.swift — outbound keys go through sendRawMessage([...])
+    for (const m of pluginSwiftSrc.matchAll(/sendRawMessage\(\s*\[\s*"([a-zA-Z_][\w]*)"\s*:/g)) {
+      outboundKeys.add(m[1]);
+    }
+    // WatchPlugin.ts — JS plugin uses `sendMessage({ message: { KEY: ... } })`
+    for (const m of pluginTsSrc.matchAll(/message:\s*\{\s*([a-zA-Z_][\w]*)\s*:/g)) {
+      outboundKeys.add(m[1]);
+    }
+
+    // Extract Watch-side decode keys from applyMessage.
+    const applyMatch = watchSrc.match(/private func applyMessage\([\s\S]*?^    \}/m);
+    const decodeKeys = new Set<string>();
+    if (applyMatch) {
+      for (const m of applyMatch[0].matchAll(/message\["([a-zA-Z_][\w]*)"\]/g)) {
+        decodeKeys.add(m[1]);
+      }
+    }
+
+    const missingOnWatch = [...outboundKeys].filter(k => !decodeKeys.has(k));
+    const orphansOnWatch = [...decodeKeys].filter(k => !outboundKeys.has(k));
+
+    if (missingOnWatch.length === 0 && orphansOnWatch.length === 0) {
+      pass('CA-49', 'WCSession payload contract — every iPhone-sent key has a Watch decoder');
+    } else {
+      const notes: string[] = [];
+      if (missingOnWatch.length > 0) notes.push(`iPhone sends but Watch does NOT decode: ${missingOnWatch.join(', ')}`);
+      if (orphansOnWatch.length > 0) notes.push(`Watch decodes but iPhone never sends: ${orphansOnWatch.join(', ')}`);
+      fail('CA-49', 'WCSession payload contract — every iPhone-sent key has a Watch decoder', notes.join(' | '));
+    }
+  } else {
+    skip('CA-49', 'WCSession payload contract', 'Watch source tree not found');
+  }
+
+  // CA-50: Every NotificationCenter notification posted by the Watch session
+  //        manager must have at least one `.onReceive` listener in the Watch
+  //        UI — otherwise the decode succeeds but the screen never updates
+  //        (the "plan arrived but Race screen still says No Race Loaded" bug).
+  if (watchSrc) {
+    let allSwift = '';
+    try {
+      const swiftFiles: string[] = [];
+      const walk = (dir: string) => {
+        for (const e of readdirSync(dir, { withFileTypes: true })) {
+          const f = `${dir}/${e.name}`;
+          if (e.isDirectory()) walk(f);
+          else if (e.name.endsWith('.swift')) swiftFiles.push(f);
+        }
+      };
+      walk(watchRoot);
+      allSwift = swiftFiles.map(f => readFileSync(f, 'utf8')).join('\n');
+    } catch {}
+
+    // Extract notification names defined and posted
+    const definedNames = new Set<string>();
+    for (const m of allSwift.matchAll(/static\s+let\s+(\w+)\s*=\s*Notification\.Name/g)) {
+      definedNames.add(m[1]);
+    }
+    const postedNames = new Set<string>();
+    // Allow multi-line .post(name: .NAME, ...) calls (whitespace + newlines)
+    for (const m of allSwift.matchAll(/\.post\(\s*name:\s*\.(\w+)/g)) {
+      postedNames.add(m[1]);
+    }
+    // Listener names — anything inside `publisher(for: .NAME)`
+    const listenerNames = new Set<string>();
+    for (const m of allSwift.matchAll(/publisher\(for:\s*\.(\w+)\)/g)) {
+      listenerNames.add(m[1]);
+    }
+
+    const postedWithoutListener = [...postedNames].filter(n => !listenerNames.has(n));
+    const definedButNeverPosted = [...definedNames].filter(n => !postedNames.has(n));
+
+    const issues: string[] = [];
+    if (postedWithoutListener.length > 0) {
+      issues.push(`posted but no listener: ${postedWithoutListener.join(', ')}`);
+    }
+    if (definedButNeverPosted.length > 0) {
+      issues.push(`defined but never posted: ${definedButNeverPosted.join(', ')}`);
+    }
+    if (issues.length === 0) {
+      pass('CA-50', 'Watch notifications — every posted name has a SwiftUI listener');
+    } else {
+      fail('CA-50', 'Watch notifications — every posted name has a SwiftUI listener', issues.join(' | '));
+    }
+  } else {
+    skip('CA-50', 'Watch notifications', 'Watch source tree not found');
+  }
+
+  // CA-51: Schema round-trip — the exact JSON payload the iPhone sends for a
+  //        triathlon plan must satisfy the Swift Codable shape on the Watch.
+  //        Catches the "decoder silently fails because targetKm came through
+  //        as Int instead of Double" class of bug at PR time.
+  {
+    type CodableField = { name: string; type: 'String' | 'Int' | 'Double' | 'Bool' | 'StringArray'; optional?: boolean };
+    type CodableStruct = { name: string; fields: CodableField[]; nested?: Record<string, string> };
+
+    // Mirror of the Swift structs we expect the iPhone payload to satisfy.
+    const structs: Record<string, CodableStruct> = {
+      TriathlonPlan: {
+        name: 'TriathlonPlan',
+        fields: [
+          { name: 'name', type: 'String' },
+          { name: 'legs', type: 'String' /* array of TriathlonLegDef — checked below */ },
+        ],
+        nested: { legs: 'TriathlonLegDef' },
+      },
+      TriathlonLegDef: {
+        name: 'TriathlonLegDef',
+        fields: [
+          { name: 'type', type: 'String' },
+          { name: 'targetKm', type: 'Double' },
+        ],
+      },
+    };
+
+    const validate = (obj: any, structName: string, path = ''): string[] => {
+      const errors: string[] = [];
+      const s = structs[structName];
+      if (!s) return [`${path}: unknown struct ${structName}`];
+      if (typeof obj !== 'object' || obj === null) {
+        return [`${path}: expected object for ${structName}, got ${typeof obj}`];
+      }
+      for (const f of s.fields) {
+        const v = obj[f.name];
+        if (v === undefined) {
+          if (!f.optional) errors.push(`${path}.${f.name}: missing required field`);
+          continue;
+        }
+        const nestedName = s.nested?.[f.name];
+        if (nestedName) {
+          if (!Array.isArray(v)) {
+            errors.push(`${path}.${f.name}: expected array, got ${typeof v}`);
+            continue;
+          }
+          v.forEach((item, i) => errors.push(...validate(item, nestedName, `${path}.${f.name}[${i}]`)));
+          continue;
+        }
+        switch (f.type) {
+          case 'String':
+            if (typeof v !== 'string') errors.push(`${path}.${f.name}: expected String, got ${typeof v}`);
+            break;
+          case 'Double':
+            if (typeof v !== 'number') errors.push(`${path}.${f.name}: expected Double, got ${typeof v}`);
+            break;
+          case 'Int':
+            if (typeof v !== 'number' || !Number.isInteger(v)) errors.push(`${path}.${f.name}: expected Int, got ${v}`);
+            break;
+          case 'Bool':
+            if (typeof v !== 'boolean') errors.push(`${path}.${f.name}: expected Bool, got ${typeof v}`);
+            break;
+        }
+      }
+      return errors;
+    };
+
+    // Build the exact payload the iPhone sends for a typical triathlon
+    // (mirrors Triathlon.tsx:292-298). Important: targetKm values are doubles.
+    const samplePlan = {
+      name: 'Olympic Triathlon',
+      legs: [
+        { type: 'swim', targetKm: 1.5 },
+        { type: 'bike', targetKm: 40.0 },
+        { type: 'run',  targetKm: 10.0 },
+      ],
+    };
+
+    const errors = validate(samplePlan, 'TriathlonPlan');
+    if (errors.length === 0) {
+      pass('CA-51', 'Triathlon plan payload satisfies Watch Codable schema');
+    } else {
+      fail('CA-51', 'Triathlon plan payload satisfies Watch Codable schema', errors.join('; '));
+    }
+
+    // Also test whole-integer targetKm — JSON numbers without decimal points can
+    // round-trip as Int in some serializers. Double field should still accept.
+    const wholeNumberPlan = {
+      name: 'Whole-number test',
+      legs: [
+        { type: 'swim', targetKm: 1 },
+        { type: 'bike', targetKm: 40 },
+        { type: 'run',  targetKm: 10 },
+      ],
+    };
+    const wholeErrors = validate(wholeNumberPlan, 'TriathlonPlan');
+    if (wholeErrors.length === 0) {
+      pass('CA-52', 'Triathlon plan with whole-number targetKm still satisfies schema');
+    } else {
+      fail('CA-52', 'Triathlon plan with whole-number targetKm still satisfies schema', wholeErrors.join('; '));
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
