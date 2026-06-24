@@ -61,6 +61,30 @@ final class WorkoutManager: NSObject {
         healthStore.requestAuthorization(toShare: shareTypes, read: readTypes) { _, _ in }
     }
 
+    /// Receive iPhone-initiated workout sessions and route the Watch UI.
+    /// This is the belt-and-braces backup to WKApplicationDelegate.handle — that
+    /// API only fires on a cold launch, whereas this handler fires whenever the
+    /// app is running too, so we catch the case where the user already has the
+    /// HIIT Watch app open and the iPhone starts a session.
+    @available(watchOS 10.0, *)
+    func enableWorkoutMirroring() {
+        healthStore.workoutSessionMirroringStartHandler = { mirroredSession in
+            let activityType = mirroredSession.workoutConfiguration.activityType
+            NSLog("[HIIT.WorkoutMirror] iPhone started session type=\(activityType.rawValue)")
+            DispatchQueue.main.async {
+                let isTriathlon: Bool
+                if #available(watchOS 9.0, *) {
+                    isTriathlon = activityType == .swimBikeRun
+                } else {
+                    isTriathlon = false
+                }
+                if isTriathlon || WatchSessionManager.shared.triathlonPlan != nil {
+                    WorkoutCoordinator.shared.navigateToRaceTab()
+                }
+            }
+        }
+    }
+
     func start(_ workout: WatchWorkout) {
         start(workout, outdoor: false)
     }
