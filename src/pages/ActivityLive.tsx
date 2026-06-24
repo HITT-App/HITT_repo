@@ -1,15 +1,9 @@
 import { useState, useEffect, useRef, useCallback, createRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Settings, Flame, Footprints, Signal, SignalZero, Loader2, Lock, Unlock, Gauge, Mountain } from "lucide-react";
+import { ArrowLeft, Pause, Play, Flame, Footprints, Signal, SignalZero, Loader2, Lock, Unlock, Gauge, Mountain } from "lucide-react";
 import LiveActivityMap from "@/components/activity/LiveActivityMap";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +14,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Switch } from "@/components/ui/switch";
 import { useActivity } from "@/hooks/useActivity";
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
 import { toast } from "sonner";
@@ -122,7 +115,6 @@ const ActivityLive = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [isHolding, setIsHolding] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
-  const [showSettings, setShowSettings] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
@@ -737,7 +729,7 @@ const ActivityLive = () => {
         <LiveActivityMap positions={positions} gpsStatus={gpsStatus} seedPosition={lastGpsPointRef.current ?? undefined} />
       </div>
 
-      {/* Floating header */}
+      {/* Floating header — GPS pill (or Auto-paused) sits on the right */}
       <header className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pb-4 z-[1002]" style={{ paddingTop: "calc(var(--safe-area-inset-top, 44px) + 0.5rem)" }}>
         <Button variant="ghost" size="icon" className="bg-card/70 backdrop-blur-md rounded-full border border-border/20" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
@@ -745,27 +737,21 @@ const ActivityLive = () => {
         <span className="text-xs font-semibold uppercase tracking-wider text-foreground bg-card/70 backdrop-blur-md px-4 py-1.5 rounded-full border border-border/20">
           {activityType}
         </span>
-        <Button variant="ghost" size="icon" className="bg-card/70 backdrop-blur-md rounded-full border border-border/20" onClick={() => setShowSettings(true)}>
-          <Settings className="w-5 h-5" />
-        </Button>
+        {autoPausedRef.current ? (
+          <button
+            onClick={() => {
+              autoPausedRef.current = false;
+              setIsPaused(false);
+              if (settings.autoVibrate) navigator.vibrate?.(100);
+            }}
+            className="bg-accent/90 text-accent-foreground px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg animate-pulse"
+          >
+            Auto-paused
+          </button>
+        ) : (
+          <GpsIndicator />
+        )}
       </header>
-
-      {/* GPS indicator - floating on map */}
-      <div className="absolute top-16 left-4 z-[1001]"><GpsIndicator /></div>
-
-      {/* Auto-pause banner */}
-      {autoPausedRef.current && (
-        <button
-          onClick={() => {
-            autoPausedRef.current = false;
-            setIsPaused(false);
-            if (settings.autoVibrate) navigator.vibrate?.(100);
-          }}
-          className="absolute top-16 left-1/2 -translate-x-1/2 z-[1001] bg-accent/90 text-accent-foreground px-5 py-2 rounded-full text-sm font-semibold shadow-lg animate-bounce"
-        >
-          Auto-paused · Tap to resume
-        </button>
-      )}
 
       {/* Compact bottom card */}
       <div className={cn(
@@ -903,29 +889,6 @@ const ActivityLive = () => {
         </div>
       </div>
 
-      {/* Settings Sheet */}
-      <Sheet open={showSettings} onOpenChange={setShowSettings}>
-        <SheetContent side="bottom">
-          <SheetHeader><SheetTitle>Activity Controls</SheetTitle></SheetHeader>
-          <div className="py-4 space-y-4">
-            {([
-              { key: "gpsTracking", label: "GPS Tracking" },
-              { key: "showMetrics", label: "Show Metrics" },
-              { key: "autoPause", label: "Auto Pause" },
-              { key: "autoVibrate", label: "Vibration Feedback" },
-            ] as const).map(({ key, label }) => (
-              <div key={key} className="flex items-center justify-between">
-                <span>{label}</span>
-                <Switch
-                  checked={settings[key]}
-                  onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, [key]: checked }))}
-                />
-              </div>
-            ))}
-          </div>
-          <Button className="w-full" onClick={() => setShowSettings(false)}>Save Settings</Button>
-        </SheetContent>
-      </Sheet>
       {recoveryDialog}
     </div>
   );
