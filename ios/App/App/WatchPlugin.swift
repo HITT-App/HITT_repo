@@ -154,22 +154,23 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
                 NSLog("[WatchPlugin] mirror auth denied: %@", error?.localizedDescription ?? "no error")
                 call.resolve(["mirroring": false]); return
             }
-            guard #available(iOS 17.0, *) else {
-                call.resolve(["mirroring": false]); return
-            }
-            do {
-                let session = try HKWorkoutSession(healthStore: self.hkStore, configuration: config)
-                self.mirrorSession = session
-                // startActivity triggers the iPhone → Watch mirror invitation.
-                // The Watch app's WKApplicationDelegate.handle(_:) fires and
-                // routes to the Race tab when activityType == .swimBikeRun.
-                session.startActivity(with: .now)
-                NSLog("[WatchPlugin] mirror session started type=%d outdoor=%@",
-                      activityType.rawValue,
-                      config.locationType == .outdoor ? "yes" : "no")
-                call.resolve(["mirroring": true])
-            } catch {
-                NSLog("[WatchPlugin] HKWorkoutSession creation failed: %@", error.localizedDescription)
+            if #available(iOS 17.0, *) {
+                do {
+                    let session = try HKWorkoutSession(healthStore: self.hkStore, configuration: config)
+                    self.mirrorSession = session
+                    // startActivity triggers the iPhone → Watch mirror invitation.
+                    // The Watch app's WKApplicationDelegate.handle(_:) fires and
+                    // routes to the Race tab when activityType == .swimBikeRun.
+                    session.startActivity(with: .now)
+                    NSLog("[WatchPlugin] mirror session started type=%d outdoor=%@",
+                          activityType.rawValue,
+                          config.locationType == .outdoor ? "yes" : "no")
+                    call.resolve(["mirroring": true])
+                } catch {
+                    NSLog("[WatchPlugin] HKWorkoutSession creation failed: %@", error.localizedDescription)
+                    call.resolve(["mirroring": false])
+                }
+            } else {
                 call.resolve(["mirroring": false])
             }
         }
