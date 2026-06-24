@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, createRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Flame, Footprints, Signal, SignalZero, Loader2, Lock, Unlock, Gauge, Mountain } from "lucide-react";
+import { ArrowLeft, Pause, Play, Flame, Footprints, Signal, SignalZero, Loader2, Lock, Unlock, Gauge, Mountain, Flag } from "lucide-react";
 import LiveActivityMap from "@/components/activity/LiveActivityMap";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
