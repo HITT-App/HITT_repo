@@ -154,6 +154,9 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
                 NSLog("[WatchPlugin] mirror auth denied: %@", error?.localizedDescription ?? "no error")
                 call.resolve(["mirroring": false]); return
             }
+            guard #available(iOS 17.0, *) else {
+                call.resolve(["mirroring": false]); return
+            }
             do {
                 let session = try HKWorkoutSession(healthStore: self.hkStore, configuration: config)
                 self.mirrorSession = session
