@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-25] — Watch mirroring + HealthKit permissions
+
+- **Watch auto-launches to the Race tab when you send a triathlon** — fixed the underlying iOS mirroring API call so starting a triathlon on the iPhone now prompts the Watch to open the HIIT app and go straight to the Race screen. Requires iOS 17 or later
+- **HealthKit permissions all requested on first launch** — previously the app asked piecemeal as each feature was used, leading to silent failures when permission for a sub-type hadn't been granted. Now Workouts, Workout Routes, Heart Rate, Calories, and Distance (walking/running/cycling/swimming) are all requested up front
+
 ## [2026-06-24] — Lock Screen Live Activity, hydration keyboard fix, activity back-button fix
 
 - **Workouts now show on your lock screen** — start a GPS activity, lock your phone, and you'll see a live card with elapsed time, distance and pace. Long-press the card on iPhone 14 Pro+ to expand it in the Dynamic Island. Requires iOS 16.2 or later
