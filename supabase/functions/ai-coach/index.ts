@@ -990,17 +990,21 @@ function buildStructuredStream(
           }
         }
 
-        // Generic truncation retry: if the LLM was clearly trying to emit a tool
-        // call but ran out of tokens (finish_reason "length") and no action came
-        // through, one non-streaming retry usually recovers it. Not tied to any
-        // specific intent — works for whatever tool the LLM was trying to call.
-        if (retryStructured && !actionEmitted && (finishReason === "length" || toolCalls.size > 0)) {
-          console.warn("[ai-coach] no action emitted (finish:", finishReason, ") — retrying non-stream");
+        // Generic retry: fires whenever the user would otherwise see silence
+        // — no text AND no action emitted, OR clear truncation/partial tool
+        // call signals. One non-streaming retry typically recovers it. This
+        // also catches the case where Gemini emits an empty completion with a
+        // clean finish_reason (which happens when the prompt is conflicting).
+        const wasSilent = !textEmitted && !actionEmitted;
+        const wasTruncated = finishReason === "length" || toolCalls.size > 0;
+        if (retryStructured && !actionEmitted && (wasSilent || wasTruncated)) {
+          console.warn("[ai-coach] no action emitted (finish:", finishReason, ", silent:", wasSilent, ") — retrying non-stream");
           try {
             const retryResp = await retryStructured();
             if (retryResp.ok) {
               const json = await retryResp.json();
-              for (const tc of json.choices?.[0]?.message?.tool_calls ?? []) {
+              const msg = json.choices?.[0]?.message;
+              for (const tc of msg?.tool_calls ?? []) {
                 if (!tc?.function?.name) continue;
                 const action = await mapToolCallToAction(
                   { name: tc.function.name, arguments: tc.function.arguments ?? "" },
@@ -1010,6 +1014,12 @@ function buildStructuredStream(
                   emit({ type: "action", action });
                   actionEmitted = true;
                 }
+              }
+              // If the retry produced text instead of (or alongside) a tool
+              // call, surface it — better than the generic fallback.
+              if (typeof msg?.content === "string" && msg.content.trim()) {
+                emit({ type: "text", delta: msg.content });
+                textEmitted = true;
               }
             } else {
               console.error("[ai-coach] retry HTTP error:", retryResp.status);
@@ -1683,7 +1693,7 @@ serve(async (req) => {
             ...baseStructured.slice(0, lastUserIdx),
             { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
             { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool." },
-            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks for a meal plan, day of eating, what to eat today, or any similar request — call the recommend_meal_plan tool immediately. Output the tool call ONLY — no text before or after it. Do NOT ask for dietary preferences first. Generate the plan using whatever preferences are on file, or assume a balanced omnivore diet if none are set. Always include realistic ingredients and 2–4 preparation steps for every meal." },
+            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks for a meal plan, day of eating, what to eat today, meal ideas, or any similar request — call the recommend_meal_plan tool immediately. Output the tool call ONLY — no text before or after it. Do NOT ask for dietary preferences first. Do NOT ask any clarifying questions — pick reasonable values yourself. If the user specifies a calorie target (e.g. \"2500 calories\") or macro targets (e.g. \"250g of protein\", \"low carb\", \"high fat\"), the meals you generate MUST sum to those exact numbers — distribute across 3–5 meals so the totals match. If the user says nothing about targets, use whatever preferences are on file, or assume a balanced 2000 kcal omnivore day if none are set. Always include realistic ingredients and 2–4 preparation steps for every meal. NEVER respond with empty text — if you cannot satisfy the request precisely, generate the closest reasonable plan and explain any adjustment in a single short sentence after the tool call." },
             baseStructured[lastUserIdx],
           ]
         : baseStructured;

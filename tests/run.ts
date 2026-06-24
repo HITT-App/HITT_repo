@@ -518,6 +518,25 @@ async function runCodeAudit() {
     fail('MP-07', 'ai-coach empty-completion guard', 'ai-coach/index.ts not found');
   }
 
+  // MP-08: meal plan system prompt explicitly handles user-specified calorie
+  // and macro targets (e.g. "2500 calories", "250g of protein"). Without this,
+  // Gemini emits empty completions when the user message conflicts with the
+  // "use preferences on file" instruction.
+  try {
+    const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
+    const hasCalorieTarget = src.includes('calorie target');
+    const hasMacroTargets  = src.includes('macro target');
+    const hasMustSum       = src.includes('MUST sum to those exact numbers') || src.includes('must sum to those exact numbers');
+    if (hasCalorieTarget && hasMacroTargets && hasMustSum) {
+      pass('MP-08', 'Meal plan system prompt honours user-specified calorie / macro targets');
+    } else {
+      fail('MP-08', 'Meal plan system prompt honours user-specified calorie / macro targets',
+        `Missing: ${[!hasCalorieTarget && 'calorie target wording', !hasMacroTargets && 'macro target wording', !hasMustSum && '"MUST sum to those exact numbers" directive'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('MP-08', 'Meal plan macro target prompt', 'ai-coach/index.ts not found');
+  }
+
   // ── Camera pages: intermittent black-screen prevention ───────────────────
   //
   // A meal-scanner field report described a black camera viewport on first
