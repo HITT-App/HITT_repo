@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom"
 import {
   ArrowLeft, Pause, Play, Plus, Minus, Settings, ChevronDown, ChevronUp, Flame,
-  SkipBack, SkipForward, Info, ChevronRight, Check, List, Dumbbell, Clock, ArrowRight, Repeat2, Watch,
+  SkipBack, SkipForward, Info, ChevronRight, Check, List, Dumbbell, Clock, ArrowRight, Repeat2, Watch, Flag,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -604,8 +604,6 @@ const GymTimer = () => {
   // ─── Mode C state ────────────────────────────────────────────────────────
   const [elapsed, setElapsed] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
-  const [isHolding, setIsHolding] = useState(false)
-  const [holdProgress, setHoldProgress] = useState(0)
   const [showCompleted, setShowCompleted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [counter, setCounter] = useState(0)
@@ -614,7 +612,6 @@ const GymTimer = () => {
 
   const startTimeRef = useRef(Date.now())
   const pausedAtRef = useRef(0)
-  const holdTimerRef = useRef<ReturnType<typeof setInterval>>()
 
   const calories = isAIMode
     ? Math.round(((aiContent?.estimated_calories ?? 200) / ((aiContent?.estimated_duration_minutes ?? 30) * 60)) * totalElapsed)
@@ -795,26 +792,6 @@ const GymTimer = () => {
       toast.error("Failed to save activity")
     }
   }, [isAIMode, aiContent, user, totalElapsed, elapsed, scheduledId, activityType, counter, counterLabel, logActivity, settings.autoVibrate, recordWorkout, sport.met])
-
-  const handleHoldStart = useCallback(() => {
-    setIsHolding(true)
-    setHoldProgress(0)
-    let progress = 0
-    holdTimerRef.current = setInterval(() => {
-      progress += 2
-      setHoldProgress(progress)
-      if (progress >= 100) {
-        clearInterval(holdTimerRef.current!)
-        finishActivity()
-      }
-    }, 30)
-  }, [finishActivity])
-
-  const handleHoldEnd = useCallback(() => {
-    setIsHolding(false)
-    setHoldProgress(0)
-    if (holdTimerRef.current) clearInterval(holdTimerRef.current)
-  }, [])
 
   // ─── Loading state (Mode A: scheduled row not yet loaded) ────────────────
   if (isAIMode && scheduledId && !aiContent) {
@@ -1019,13 +996,9 @@ const GymTimer = () => {
         </div>
       </div>
 
-      {/* Bottom controls */}
-      <div className={cn(
-        "pb-10 pt-6 px-6 transition-colors duration-500 rounded-t-[28px] border-t border-border/20 z-10",
-        isHolding ? "bg-destructive/95" : "bg-card/95",
-        "backdrop-blur-xl"
-      )}>
-        <div className="flex items-center justify-center gap-6">
+      {/* Bottom controls — pause then full-width Finish (Triathlon-style tap) */}
+      <div className="pb-10 pt-6 px-6 bg-card/95 backdrop-blur-xl rounded-t-[28px] border-t border-border/20 z-10">
+        <div className="flex items-center justify-center pb-4">
           <Button
             variant="outline"
             size="icon"
@@ -1034,34 +1007,20 @@ const GymTimer = () => {
           >
             {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
           </Button>
-
-          <div className="relative">
-            <button
-              className={cn(
-                "w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all touch-manipulation select-none",
-                isHolding ? "bg-destructive scale-110" : "bg-destructive/80"
-              )}
-              onMouseDown={handleHoldStart}
-              onMouseUp={handleHoldEnd}
-              onMouseLeave={handleHoldEnd}
-              onTouchStart={handleHoldStart}
-              onTouchEnd={handleHoldEnd}
-              onTouchCancel={handleHoldEnd}
-            >
-              <span className="text-destructive-foreground text-[10px] font-semibold leading-tight text-center">
-                Hold to<br />Finish
-              </span>
-            </button>
-            {!isHolding && (
-              <div className="absolute inset-[-5px] rounded-full border-2 border-destructive/30 animate-ping pointer-events-none" style={{ animationDuration: "2.5s" }} />
-            )}
-            {isHolding && (
-              <svg className="absolute inset-[-3px] w-[70px] h-[70px] -rotate-90 pointer-events-none" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="46" fill="none" stroke="hsl(var(--destructive-foreground))" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${holdProgress * 2.89} 289`} className="transition-all" />
-              </svg>
-            )}
-          </div>
         </div>
+
+        <button
+          onClick={finishActivity}
+          className={cn(
+            "w-full h-14 rounded-2xl bg-primary text-primary-foreground font-semibold text-[15px]",
+            "flex items-center justify-center gap-2 touch-manipulation",
+            "active:scale-[0.99] transition-transform",
+            "shadow-lg shadow-primary/30"
+          )}
+        >
+          <Flag className="w-[18px] h-[18px]" strokeWidth={2.4} />
+          Finish session
+        </button>
       </div>
 
       {/* Settings Sheet */}

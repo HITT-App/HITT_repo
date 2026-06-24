@@ -113,8 +113,6 @@ const ActivityLive = () => {
   // Core state
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [isHolding, setIsHolding] = useState(false);
-  const [holdProgress, setHoldProgress] = useState(0);
   const [showCompleted, setShowCompleted] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
@@ -140,8 +138,6 @@ const ActivityLive = () => {
   });
 
   // Refs
-  const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const holdStartRef = useRef(0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const autoPausedRef = useRef(false);
   const settingsRef = useRef(settings);
@@ -387,27 +383,6 @@ const ActivityLive = () => {
       return !p;
     });
   }, [isLocked]);
-
-  // --- Hold to finish ---
-  const handleHoldStart = () => {
-    if (isLocked) return;
-    setIsHolding(true);
-    holdStartRef.current = Date.now();
-    holdTimerRef.current = setInterval(() => {
-      const prog = Math.min(((Date.now() - holdStartRef.current) / 2000) * 100, 100);
-      setHoldProgress(prog);
-      if (prog >= 100) {
-        clearInterval(holdTimerRef.current!);
-        handleFinish();
-      }
-    }, 50);
-  };
-
-  const handleHoldEnd = () => {
-    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
-    setIsHolding(false);
-    setHoldProgress(0);
-  };
 
   const handleFinish = async () => {
     if (settings.autoVibrate) navigator.vibrate?.([100, 100, 200]);
@@ -754,11 +729,7 @@ const ActivityLive = () => {
       </header>
 
       {/* Compact bottom card */}
-      <div className={cn(
-        "absolute bottom-0 left-0 right-0 z-[1002] transition-colors duration-500",
-        isHolding ? "bg-destructive/95" : "bg-card/95",
-        "backdrop-blur-xl rounded-t-[28px] border-t border-border/20"
-      )}>
+      <div className="absolute bottom-0 left-0 right-0 z-[1002] bg-card/95 backdrop-blur-xl rounded-t-[28px] border-t border-border/20">
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
@@ -826,8 +797,8 @@ const ActivityLive = () => {
           )}
         </div>
 
-        {/* Controls row */}
-        <div className="flex items-center justify-center gap-5 px-5 pb-8">
+        {/* Controls row — lock + pause */}
+        <div className="flex items-center justify-center gap-5 px-5 pt-1 pb-3">
           {/* Lock toggle */}
           <Button
             variant="ghost"
@@ -856,36 +827,24 @@ const ActivityLive = () => {
           >
             {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
           </Button>
+        </div>
 
-          {/* Hold to Finish */}
-          <div className="relative">
-            <button
-              className={cn(
-                "w-[64px] h-[64px] rounded-full flex items-center justify-center transition-all touch-manipulation select-none",
-                isLocked && "opacity-40 pointer-events-none",
-                isHolding ? "bg-destructive scale-110" : "bg-destructive/80"
-              )}
-              style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
-              onMouseDown={handleHoldStart}
-              onMouseUp={handleHoldEnd}
-              onMouseLeave={handleHoldEnd}
-              onTouchStart={handleHoldStart}
-              onTouchEnd={handleHoldEnd}
-              onTouchCancel={handleHoldEnd}
-            >
-              <span className="text-destructive-foreground text-[10px] font-semibold leading-tight text-center select-none pointer-events-none">
-                Hold to<br />Finish
-              </span>
-            </button>
-            {!isHolding && !isLocked && (
-              <div className="absolute inset-[-5px] rounded-full border-2 border-destructive/30 animate-ping pointer-events-none" style={{ animationDuration: "2.5s" }} />
+        {/* Finish — Triathlon-style tap button, full-width primary action */}
+        <div className="px-5 pb-8">
+          <button
+            onClick={handleFinish}
+            disabled={isLocked}
+            className={cn(
+              "w-full h-14 rounded-2xl bg-primary text-primary-foreground font-semibold text-[15px]",
+              "flex items-center justify-center gap-2 touch-manipulation",
+              "active:scale-[0.99] transition-transform",
+              "shadow-lg shadow-primary/30",
+              isLocked && "opacity-40 pointer-events-none"
             )}
-            {isHolding && (
-              <svg className="absolute inset-[-3px] w-[70px] h-[70px] -rotate-90 pointer-events-none" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="46" fill="none" stroke="hsl(var(--destructive-foreground))" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${holdProgress * 2.89} 289`} className="transition-all" />
-              </svg>
-            )}
-          </div>
+          >
+            <Flag className="w-[18px] h-[18px]" strokeWidth={2.4} />
+            Finish {activityType.charAt(0).toUpperCase() + activityType.slice(1)}
+          </button>
         </div>
       </div>
 
