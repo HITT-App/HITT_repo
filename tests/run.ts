@@ -385,6 +385,24 @@ async function runCodeAudit() {
     }
   }
 
+  // ── ActivityLive: completion screen replaces live route in history ───────
+  // Reported bug: after a run, the share/completion screen is rendered inline
+  // on /activity-live. Without { replace: true } on the onDone navigate, the OS
+  // back button pops back into the still-mounted live session.
+
+  try {
+    const src = readSrc('pages/ActivityLive.tsx');
+    if (src.includes('navigate("/activity", { replace: true })') ||
+        src.includes("navigate('/activity', { replace: true })")) {
+      pass('CA-53', 'ActivityLive onDone navigates with { replace: true } so back button skips live session');
+    } else {
+      fail('CA-53', 'ActivityLive onDone navigates with { replace: true } so back button skips live session',
+        'navigate("/activity", { replace: true }) not found — back button will fall back into the live run');
+    }
+  } catch {
+    fail('CA-53', 'ActivityLive onDone replace navigation', 'ActivityLive.tsx not found');
+  }
+
   // ── Camera pages: intermittent black-screen prevention ───────────────────
   //
   // A meal-scanner field report described a black camera viewport on first

@@ -633,7 +633,7 @@ const ActivityLive = () => {
             <LiveActivityMap positions={positions} gpsStatus="active" fitBoundsOnMount />
           ) : undefined
         }
-        onDone={() => navigate("/activity")}
+        onDone={() => navigate("/activity", { replace: true })}
         postData={{
           duration: Math.floor(elapsed / 60),
           calories,
