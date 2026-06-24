@@ -40,3 +40,6 @@ supabase_scripts/generated_seed.sql
 .specfiles/
 .claude/
 /avatars/
+
+# Provisioning profiles — installed via double-click, do not commit
+*.mobileprovision
