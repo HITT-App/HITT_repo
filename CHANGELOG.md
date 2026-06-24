@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-24] — Triathlon Send-to-Watch diagnostic + Live Activity scaffolding
+
+- **Triathlon "Send to Watch" now surfaces real errors** — instead of always saying "queued" even when the plugin failed silently, the toast now shows the actual error code and whether Capacitor sees the Watch plugin at all. This is a diagnostic build to pin down why plans aren't arriving on the Watch
+- **Live Activity widget files added** — initial scaffolding for the upcoming Live Activity feature, plus the App Group entitlement that lets the main app and the widget share data
+
 ## [2026-06-24] — Fix triathlon plan not arriving on Watch + WCSession diagnostics
 
 - **Triathlon plans now actually arrive on the Apple Watch** — fixed the bug where tapping "Send to Watch" showed a "queued" toast but the Watch race screen stayed empty even with the Watch app open. State-like payloads (triathlon plans, today's workout, structured workouts) now use Apple's `updateApplicationContext` API as the fallback when the Watch isn't immediately reachable, which delivers the latest snapshot as soon as the Watch wakes — replacing the previous transferUserInfo queue that could defer delivery for minutes
