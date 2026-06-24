@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Target, Flame, Check } from "lucide-react";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { toast } from "sonner";
 import { format, isToday } from "date-fns";
 
@@ -63,6 +64,7 @@ const Hydration = () => {
   const { logMetric, useMetricHistory, useTodayTotal } = useHealthMetrics();
   const { data: history = [] } = useMetricHistory("hydration", 200);
   const { data: todayIntake = 0 } = useTodayTotal("hydration");
+  const keyboardHeight = useKeyboardHeight();
   const [showCustom, setShowCustom] = useState(false);
   const [customMl, setCustomMl] = useState("");
 
@@ -369,6 +371,7 @@ const Hydration = () => {
         <div
           className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end"
           onClick={(e) => e.target === e.currentTarget && setShowCustom(false)}
+          style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : undefined }}
         >
           <div className="w-full bg-card rounded-t-3xl border-t border-border/60 p-6 pb-10">
             <div className="w-10 h-1 rounded-full bg-border/60 mx-auto mb-5" />
@@ -376,9 +379,11 @@ const Hydration = () => {
             <div className="flex items-center bg-secondary border border-border/40 rounded-[14px] px-4 mb-4 h-14">
               <input
                 type="number"
+                inputMode="numeric"
                 placeholder="Enter ml"
                 value={customMl}
                 onChange={e => setCustomMl(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCustomLog(); } }}
                 className="flex-1 bg-transparent text-foreground text-base font-semibold outline-none placeholder:text-muted-foreground"
                 autoFocus
               />
