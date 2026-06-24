@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-24] — Lock Screen Live Activity, hydration keyboard fix, activity back-button fix
+
+- **Workouts now show on your lock screen** — start a GPS activity, lock your phone, and you'll see a live card with elapsed time, distance and pace. Long-press the card on iPhone 14 Pro+ to expand it in the Dynamic Island. Requires iOS 16.2 or later
+- **Hydration custom amount works again** — the "Custom amount" input now floats above the iOS keyboard and submits when you press Enter
+- **Finishing a GPS activity no longer dumps you back into it** — the back button after completing a run now takes you out of the activity flow entirely
+
 ## [2026-06-24] — Triathlon Send-to-Watch diagnostic + Live Activity scaffolding
 
 - **Triathlon "Send to Watch" now surfaces real errors** — instead of always saying "queued" even when the plugin failed silently, the toast now shows the actual error code and whether Capacitor sees the Watch plugin at all. This is a diagnostic build to pin down why plans aren't arriving on the Watch
