@@ -19,6 +19,7 @@ export type Action =
   | { type: 'recommend_workout_plan'; payload: RecommendWorkoutPlanPayload }
   | { type: 'recommend_recipe'; payload: RecommendRecipePayload }
   | { type: 'recommend_meal_plan'; payload: RecommendMealPlanPayload }
+  | { type: 'open_meal_plan_wizard'; payload: Record<string, never> }
   | { type: 'body_scan_prompt' };
 
 export type SchedulePlanPayload = {

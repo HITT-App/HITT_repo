@@ -709,6 +709,17 @@ const STRUCTURED_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "open_meal_plan_wizard",
+      description: "Open the meal plan wizard. Call this when the user asks about meals, food, what to eat, or planning their nutrition, BUT has not specified explicit calorie or macro numbers in their message. The wizard collects scope (one meal vs day), calorie target, macro targets, and protein source preference through buttons — much more reliable than asking the user to type all those details. If the user DID type explicit numbers (like '2500 calories' or '250g protein'), do NOT call this tool — the regex fast-path will handle those before you ever see them.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
 ];
 
 // ─── Spoonacular fast-path helpers ──────────────────────────────────────
@@ -1196,6 +1207,9 @@ async function mapToolCallToAction(
           return null;
         }
         return { type: "recommend_meal_plan", payload: { meals: args.meals } };
+      }
+      case "open_meal_plan_wizard": {
+        return { type: "open_meal_plan_wizard", payload: {} };
       }
       case "body_scan_prompt":
         return { type: "body_scan_prompt" };
@@ -2022,7 +2036,7 @@ serve(async (req) => {
             ...baseStructured.slice(0, lastUserIdx),
             { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
             { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool." },
-            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks for a meal plan, day of eating, what to eat today, meal ideas, or any similar request — call the recommend_meal_plan tool immediately. Output the tool call ONLY — no text before or after it. Do NOT ask for dietary preferences first. Do NOT ask any clarifying questions — pick reasonable values yourself. If the user specifies a calorie target (e.g. \"2500 calories\") or macro targets (e.g. \"250g of protein\", \"low carb\", \"high fat\"), the meals you generate MUST sum to those exact numbers — distribute across 3–5 meals so the totals match. If the user says nothing about targets, use whatever preferences are on file, or assume a balanced 2000 kcal omnivore day if none are set. Always include realistic ingredients and 2–4 preparation steps for every meal. NEVER respond with empty text — if you cannot satisfy the request precisely, generate the closest reasonable plan and explain any adjustment in a single short sentence after the tool call." },
+            { role: "system", content: "CRITICAL — MEAL PLAN: When the user asks about meals, food, what to eat, or planning their nutrition WITHOUT specifying explicit numbers, call the open_meal_plan_wizard tool — it collects scope, calories, macros, and protein source through buttons (much more reliable than asking the user to type all that). Examples: 'what should I eat', 'plan my meals', 'suggest meals', 'food ideas', 'meal plan please' → ALL call open_meal_plan_wizard. Output the tool call ONLY — no text. Do NOT ask the user anything yourself; the wizard handles every question. NEVER call recommend_meal_plan yourself; that tool's only generated server-side from real recipe data." },
             baseStructured[lastUserIdx],
           ]
         : baseStructured;

@@ -16,6 +16,7 @@ import { FoodConfirmCard } from './FoodConfirmCard';
 import { GoalConfirmCard } from './GoalConfirmCard';
 import { MultiChoiceCard } from './MultiChoiceCard';
 import { JarvisMealPlanCard } from './JarvisMealPlanCard';
+import { JarvisMealPlanWizard } from './JarvisMealPlanWizard';
 import { JarvisDietaryPrefsCard } from './JarvisDietaryPrefsCard';
 import { saveMealPlan, getMealPlan } from '@/lib/mealPlanStorage';
 import { format } from 'date-fns';
@@ -215,6 +216,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
   const [aiWorkoutPlan, setAIWorkoutPlan] = useState<RecommendWorkoutPlanPayload | null>(null);
   const [pendingNoPlanPrompt, setPendingNoPlanPrompt] = useState(false);
   const [mealPlan, setMealPlan] = useState<RecommendMealPlanPayload | null>(null);
+  const [showMealPlanWizard, setShowMealPlanWizard] = useState(false);
   const [pendingDietaryPrefsPrompt, setPendingDietaryPrefsPrompt] = useState(false);
   const [showGoalWizardPrompt, setShowGoalWizardPrompt] = useState(false);
 
@@ -826,6 +828,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         case 'body_scan_prompt':
           setPendingBodyScan(true);
           break;
+        case 'open_meal_plan_wizard':
+          setShowMealPlanWizard(true);
+          break;
       }
     }
     dispatchedCountRef.current = ai.pendingActions.length;
@@ -1246,6 +1251,17 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Meal plan wizard — shown when LLM detects vague meal intent */}
+        {showMealPlanWizard && (
+          <JarvisMealPlanWizard
+            onSubmit={(prompt) => {
+              setShowMealPlanWizard(false);
+              ai.send(prompt);
+            }}
+            onCancel={() => setShowMealPlanWizard(false)}
+          />
         )}
 
         {/* Meal plan card */}

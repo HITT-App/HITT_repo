@@ -633,6 +633,41 @@ async function runCodeAudit() {
     fail('MP-11', 'meal_plan_defaults migration', 'Migration file not found');
   }
 
+  // MP-13: open_meal_plan_wizard tool registered + dispatched server-side
+  try {
+    const fn = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
+    const hasToolDef     = fn.includes('name: "open_meal_plan_wizard"');
+    const hasDispatchCase = fn.includes('case "open_meal_plan_wizard"');
+    const hasPromptHint  = fn.includes('open_meal_plan_wizard tool');
+    if (hasToolDef && hasDispatchCase && hasPromptHint) {
+      pass('MP-13', 'open_meal_plan_wizard tool registered, dispatched, and referenced in system prompt');
+    } else {
+      fail('MP-13', 'open_meal_plan_wizard tool registered, dispatched, and referenced in system prompt',
+        `Missing: ${[!hasToolDef && 'tool def', !hasDispatchCase && 'dispatch case', !hasPromptHint && 'prompt hint'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('MP-13', 'open_meal_plan_wizard server wiring', 'ai-coach/index.ts not found');
+  }
+
+  // MP-14: frontend mounts JarvisMealPlanWizard on open_meal_plan_wizard action
+  try {
+    const jm = readSrc('components/coach/JarvisMode.tsx');
+    const wizardSrc = readSrc('components/coach/JarvisMealPlanWizard.tsx');
+    const hasImport     = jm.includes("from './JarvisMealPlanWizard'");
+    const hasState      = jm.includes('showMealPlanWizard');
+    const hasDispatch   = jm.includes("case 'open_meal_plan_wizard':") && jm.includes('setShowMealPlanWizard(true)');
+    const hasRender     = jm.includes('<JarvisMealPlanWizard');
+    const hasSubmitFlow = wizardSrc.includes('onSubmit') && wizardSrc.includes('Find my meals');
+    if (hasImport && hasState && hasDispatch && hasRender && hasSubmitFlow) {
+      pass('MP-14', 'JarvisMode wires JarvisMealPlanWizard via open_meal_plan_wizard action');
+    } else {
+      fail('MP-14', 'JarvisMode wires JarvisMealPlanWizard via open_meal_plan_wizard action',
+        `Missing: ${[!hasImport && 'import', !hasState && 'state', !hasDispatch && 'dispatch', !hasRender && 'render', !hasSubmitFlow && 'submit flow'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('MP-14', 'JarvisMealPlanWizard wiring', 'Component file not found');
+  }
+
   // MP-12: Spoonacular cache table + 24h read-through cache wired up.
   // Reduces API point consumption and absorbs rate-limit bursts.
   try {
