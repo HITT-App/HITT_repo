@@ -2,6 +2,13 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
+import {
+  searchRecipes,
+  recipeToMealInPlan,
+  dietPrefsToSpoonacular,
+  spoonacularConfigured,
+  type SearchFilters,
+} from "../_shared/spoonacular.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -701,6 +708,131 @@ const STRUCTURED_TOOLS = [
     },
   },
 ];
+
+// ─── Spoonacular fast-path helpers ──────────────────────────────────────
+//
+// When the user types explicit numeric meal targets, parse them deterministically
+// and pull real recipes from Spoonacular. This bypasses the LLM tool-calling
+// reliability failure mode entirely for the most common request shape.
+
+interface ExplicitMealTargets {
+  scope: 'meal' | 'day';
+  calories: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+}
+
+export function extractExplicitMealTargets(text: string): ExplicitMealTargets | null {
+  // Must be a meal-plan-shaped request — explicit "meal" / "meals" / "eat" / "diet" mention
+  const isMealRequest = /\b(meal|meals|eat|eating|food|breakfast|lunch|dinner|snack|diet|plan my day|day of eating|days? at |daily)\b/i.test(text);
+  if (!isMealRequest) return null;
+
+  // Calorie match: "2500 cal", "2500 calories", "2500kcal", "2.5k cal"
+  const calMatch = text.match(/(\d{2,5}|\d\.\d)\s*k?\s*(cal|calories|kcal)\b/i);
+  let calories: number | null = null;
+  if (calMatch) {
+    let v = parseFloat(calMatch[1]);
+    if (/k/i.test(calMatch[0]) && v < 100) v *= 1000;
+    calories = Math.round(v);
+  }
+
+  // Macro matches: "200g protein", "200 g of protein", "200g of carbs"
+  const macroMatch = (macro: string) => {
+    const re = new RegExp(`(\\d{1,3})\\s*g(?:rams?)?\\s*(?:of\\s+)?${macro}`, 'i');
+    const m = text.match(re);
+    return m ? parseInt(m[1], 10) : null;
+  };
+  const protein_g = macroMatch('protein');
+  const carbs_g   = macroMatch('carbs|carbohydrates?');
+  const fat_g     = macroMatch('fat');
+
+  // Need at least one numeric target to be confident it's an explicit request
+  if (!calories && !protein_g && !carbs_g && !fat_g) return null;
+
+  // Scope: "one meal" / "single meal" → meal, otherwise day
+  const isSingleMeal = /\b(one meal|single meal|just one|just a meal|one suggestion)\b/i.test(text);
+  return {
+    scope: isSingleMeal ? 'meal' : 'day',
+    calories,
+    protein_g,
+    carbs_g,
+    fat_g,
+  };
+}
+
+async function fetchSpoonacularMealPlan(
+  targets: ExplicitMealTargets,
+  supabase: any,
+  userId: string,
+): Promise<any[] | null> {
+  // Pull diet prefs + allergies to apply automatically
+  let dietPrefs: string[] = [];
+  let allergies: string[] = [];
+  try {
+    const { data } = await supabase
+      .from('nutrition_profiles')
+      .select('food_preferences, allergies')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (data) {
+      dietPrefs = data.food_preferences ?? [];
+      allergies = data.allergies ?? [];
+    }
+  } catch (err) {
+    console.warn('[ai-coach] could not load nutrition profile:', (err as Error).message);
+  }
+
+  const meals_count = targets.scope === 'meal' ? 1 : 3;
+  // Spoonacular filters operate per-recipe, so divide day-totals across slots
+  const perMealCal      = targets.calories  ? Math.round(targets.calories  / meals_count) : null;
+  const perMealProtein  = targets.protein_g ? Math.round(targets.protein_g / meals_count) : null;
+  const perMealCarbs    = targets.carbs_g   ? Math.round(targets.carbs_g   / meals_count) : null;
+  const perMealFat      = targets.fat_g     ? Math.round(targets.fat_g     / meals_count) : null;
+
+  const baseFilters: SearchFilters = {
+    minCalories: perMealCal ? perMealCal - 75  : undefined,
+    maxCalories: perMealCal ? perMealCal + 75  : undefined,
+    minProtein:  perMealProtein ? perMealProtein - 10 : undefined,
+    maxProtein:  perMealProtein ? perMealProtein + 10 : undefined,
+    minCarbs:    perMealCarbs ? perMealCarbs - 15 : undefined,
+    maxCarbs:    perMealCarbs ? perMealCarbs + 15 : undefined,
+    minFat:      perMealFat ? perMealFat - 5 : undefined,
+    maxFat:      perMealFat ? perMealFat + 5 : undefined,
+    diet:        dietPrefsToSpoonacular(dietPrefs) ?? undefined,
+    intolerances: allergies.length ? allergies.join(',') : undefined,
+    sort:        'random',
+    offset:      Math.floor(Math.random() * 20),
+    number:      1,
+  };
+
+  const slots: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> =
+    meals_count === 1 ? ['lunch'] : ['breakfast', 'lunch', 'dinner'];
+
+  const typeFor: Record<string, string> = {
+    breakfast: 'breakfast',
+    lunch:     'main course',
+    dinner:    'main course',
+    snack:     'snack',
+  };
+
+  const results = await Promise.all(
+    slots.map(slot => searchRecipes({ ...baseFilters, type: typeFor[slot] })),
+  );
+
+  const meals: any[] = [];
+  results.forEach((res, i) => {
+    if (res && res.length > 0) {
+      meals.push(recipeToMealInPlan(res[0], slots[i]));
+    }
+  });
+
+  return meals.length > 0 ? meals : null;
+}
+
+function sseSingleAction(action: object): string {
+  return `data: ${JSON.stringify({ type: 'action', action })}\n\ndata: ${JSON.stringify({ type: 'done' })}\n\n`;
+}
 
 async function mapToolCallToAction(
   tc: { name: string; arguments: string },
@@ -1710,6 +1842,32 @@ serve(async (req) => {
       const lastUserContent = String(
         (structuredMessages as any[]).filter(m => m.role === 'user').pop()?.content ?? ''
       ).toLowerCase();
+
+      // ─── Spoonacular fast-path ─────────────────────────────────────────
+      // When the user types explicit macro/calorie targets ("2500 cal 250g
+      // protein"), skip the LLM entirely and fetch real recipes from
+      // Spoonacular. This eliminates the Gemini tool-call reliability
+      // failure mode for the most common explicit case.
+      const explicitMealRequest = extractExplicitMealTargets(lastUserContent);
+      if (explicitMealRequest && spoonacularConfigured()) {
+        const meals = await fetchSpoonacularMealPlan(
+          explicitMealRequest,
+          supabase,
+          userId,
+        );
+        if (meals && meals.length > 0) {
+          const sseBody = sseSingleAction({
+            type: "recommend_meal_plan",
+            payload: { meals },
+          });
+          return new Response(sseBody, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        }
+        // If Spoonacular returned nothing usable, fall through to the LLM path
+        console.warn("[ai-coach] Spoonacular fast-path produced no results, falling back to LLM");
+      }
+
       const isScheduleChangeRequest = /change.*(my )?(workout|schedule|plan|program|routine)|update.*(my )?(schedule|plan|program|workout|routine)|new (plan|schedule|program|workout plan)|rebuild.*plan|redo.*schedule|reset.*plan|want a new.*plan|want to start a (new |fresh )?(plan|program|schedule)|switch.*plan/.test(lastUserContent);
 
       const injectedMessages = isScheduleChangeRequest

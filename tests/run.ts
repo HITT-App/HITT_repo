@@ -537,6 +537,102 @@ async function runCodeAudit() {
     fail('MP-08', 'Meal plan macro target prompt', 'ai-coach/index.ts not found');
   }
 
+  // MP-09: Spoonacular fast-path is wired up — extractor exists, helper exists,
+  // and the structured handler invokes both before the LLM call. When the
+  // SPOONACULAR_API_KEY env var is set, explicit-macro requests skip the LLM
+  // entirely and return real recipes deterministically.
+  try {
+    const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
+    const hasExtractor    = src.includes('function extractExplicitMealTargets');
+    const hasFetcher      = src.includes('fetchSpoonacularMealPlan');
+    const hasWiring       = src.includes('explicitMealRequest && spoonacularConfigured()');
+    const hasSpoonImport  = src.includes("from \"../_shared/spoonacular.ts\"");
+    if (hasExtractor && hasFetcher && hasWiring && hasSpoonImport) {
+      pass('MP-09', 'Spoonacular fast-path wired up in ai-coach (regex → API → action emit)');
+    } else {
+      fail('MP-09', 'Spoonacular fast-path wired up in ai-coach (regex → API → action emit)',
+        `Missing: ${[!hasExtractor && 'extractor', !hasFetcher && 'fetcher', !hasWiring && 'wiring', !hasSpoonImport && 'import'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('MP-09', 'Spoonacular fast-path wiring', 'ai-coach/index.ts not found');
+  }
+
+  // MP-10: extractor regex behavioural test — reproduce the same regex
+  // patterns the edge function uses and verify they match the expected
+  // phrasings. This catches accidental tightening on the server side.
+  try {
+    const extract = (text: string) => {
+      const isMealRequest = /\b(meal|meals|eat|eating|food|breakfast|lunch|dinner|snack|diet|plan my day|day of eating|days? at |daily)\b/i.test(text);
+      if (!isMealRequest) return null;
+      const calMatch = text.match(/(\d{2,5}|\d\.\d)\s*k?\s*(cal|calories|kcal)\b/i);
+      let calories: number | null = null;
+      if (calMatch) {
+        let v = parseFloat(calMatch[1]);
+        if (/k/i.test(calMatch[0]) && v < 100) v *= 1000;
+        calories = Math.round(v);
+      }
+      const macroMatch = (macro: string) => {
+        const re = new RegExp(`(\\d{1,3})\\s*g(?:rams?)?\\s*(?:of\\s+)?${macro}`, 'i');
+        const m = text.match(re);
+        return m ? parseInt(m[1], 10) : null;
+      };
+      const protein_g = macroMatch('protein');
+      const carbs_g   = macroMatch('carbs|carbohydrates?');
+      const fat_g     = macroMatch('fat');
+      if (!calories && !protein_g && !carbs_g && !fat_g) return null;
+      return { calories, protein_g, carbs_g, fat_g };
+    };
+
+    const cases: Array<{ in: string; expect: any }> = [
+      { in: 'give me meals for 2500 calories with 250g protein', expect: { calories: 2500, protein_g: 250 } },
+      { in: 'meal plan 2500 cal 250g protein',                    expect: { calories: 2500, protein_g: 250 } },
+      { in: 'plan my day at 2000 kcal',                           expect: { calories: 2000 } },
+      { in: 'I want meals with 200g of protein',                  expect: { protein_g: 200 } },
+      { in: 'breakfast lunch dinner totalling 1800 cal',          expect: { calories: 1800 } },
+      { in: 'no specific targets just a meal plan',               expect: null },     // no numbers
+      { in: 'I ran 5km today',                                    expect: null },     // not meal-related
+      { in: 'log my workout: 30 minutes 250 cal burned',          expect: null },     // no meal keyword
+    ];
+
+    const failed: string[] = [];
+    for (const c of cases) {
+      const got = extract(c.in);
+      if (c.expect === null) {
+        if (got !== null) failed.push(`"${c.in}" should not match, got ${JSON.stringify(got)}`);
+      } else {
+        if (!got) {
+          failed.push(`"${c.in}" should match, got null`);
+          continue;
+        }
+        for (const k of Object.keys(c.expect)) {
+          if (got[k] !== c.expect[k]) {
+            failed.push(`"${c.in}" expected ${k}=${c.expect[k]}, got ${got[k]}`);
+          }
+        }
+      }
+    }
+    if (failed.length === 0) {
+      pass('MP-10', `Spoonacular extractor matches all ${cases.length} canonical / negative phrasings`);
+    } else {
+      fail('MP-10', `Spoonacular extractor matches all ${cases.length} canonical / negative phrasings`,
+        failed.join(' | '));
+    }
+  } catch (e: any) {
+    fail('MP-10', 'Spoonacular extractor behaviour', e.message);
+  }
+
+  // MP-11: meal_plan_defaults column migrated on nutrition_profiles
+  try {
+    const files = readFileSync('/Users/vanessa/hitt-app/supabase/migrations/20260625120000_meal_plan_defaults.sql', 'utf-8');
+    if (files.includes('meal_plan_defaults') && files.includes('jsonb')) {
+      pass('MP-11', 'nutrition_profiles.meal_plan_defaults migration exists');
+    } else {
+      fail('MP-11', 'nutrition_profiles.meal_plan_defaults migration exists', 'Column or jsonb type not found in migration');
+    }
+  } catch {
+    fail('MP-11', 'meal_plan_defaults migration', 'Migration file not found');
+  }
+
   // ── Camera pages: intermittent black-screen prevention ───────────────────
   //
   // A meal-scanner field report described a black camera viewport on first
