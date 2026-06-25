@@ -46,6 +46,7 @@ type PluginShape = {
     dismissalPolicy?: "default" | "immediate" | "after"
     dismissalDate?: number
   }) => Promise<void>
+  listActivities: () => Promise<Array<{ id: string; activityId: string; state: string }>>
 }
 
 // IMPORTANT: getPlugin must be synchronous. The Capacitor plugin proxy treats
@@ -104,6 +105,26 @@ export const LiveActivity = {
     } catch {
       return null
     }
+    // Defensive sweep — clear any orphan activity from a previous process
+    // before starting a new one, so we never accumulate stuck cards.
+    try {
+      const list = await plugin.listActivities()
+      const empty = { elapsedSeconds: "0", distanceMeters: "0", paceString: "", heartRate: "", isPaused: "0" }
+      await Promise.all(
+        list
+          .filter(a => a.state !== "dismissed" && a.state !== "ended")
+          .map(a =>
+            plugin.endActivity({
+              id: a.id,
+              contentState: empty,
+              dismissalPolicy: "immediate",
+            }).catch(() => {})
+          )
+      )
+    } catch {
+      // Silent.
+    }
+
     const id = newLogicalId()
     try {
       await plugin.startActivity({
@@ -144,8 +165,35 @@ export const LiveActivity = {
       await plugin.endActivity({
         id: activityId,
         contentState: content,
-        dismissalPolicy: "default",
+        // immediate so the card actually disappears now, not in 4 hours.
+        dismissalPolicy: "immediate",
       })
+    } catch {
+      // Silent.
+    }
+  },
+
+  // Sweep all in-flight Live Activities and dismiss them. Use on app launch so
+  // orphans from a previous force-killed session (where end() never ran) don't
+  // sit on the lock screen until iOS's own timeout. Also enforces "one workout
+  // card at a time" — call before start() to clear stragglers.
+  async endAll(): Promise<void> {
+    const plugin = getPlugin()
+    if (!plugin) return
+    try {
+      const list = await plugin.listActivities()
+      const empty = { elapsedSeconds: "0", distanceMeters: "0", paceString: "", heartRate: "", isPaused: "0" }
+      await Promise.all(
+        list
+          .filter(a => a.state !== "dismissed" && a.state !== "ended")
+          .map(a =>
+            plugin.endActivity({
+              id: a.id,
+              contentState: empty,
+              dismissalPolicy: "immediate",
+            }).catch(() => {})
+          )
+      )
     } catch {
       // Silent.
     }

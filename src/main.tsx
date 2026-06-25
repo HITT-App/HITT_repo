@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initNativePlugins } from "./lib/native";
+import { LiveActivity } from "./lib/live-activity";
 import {
   CACHE_VERSION_KEY,
   coverPreviewSnapshot,
@@ -274,6 +275,9 @@ async function bootstrap() {
   }
 
   await initNativePlugins();
+  // Sweep any Live Activity orphans from a previous force-killed session so
+  // they don't stack on the lock screen forever.
+  void LiveActivity.endAll();
   createRoot(document.getElementById("root")!).render(
     <Sentry.ErrorBoundary fallback={<p style={{ padding: 24, color: '#fff', background: '#0d0d0d', minHeight: '100dvh' }}>Something went wrong. Please restart the app.</p>}>
       <App />
