@@ -136,7 +136,7 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
             "mirrorWorkout": ["name": name, "activityType": type]
         ])
 
-        guard #available(iOS 26.0, *), HKHealthStore.isHealthDataAvailable() else {
+        guard HKHealthStore.isHealthDataAvailable() else {
             call.resolve(["mirroring": false]); return
         }
 
@@ -161,24 +161,20 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
                 NSLog("[WatchPlugin] mirror auth denied: %@", error?.localizedDescription ?? "no error")
                 call.resolve(["mirroring": false]); return
             }
-            if #available(iOS 26.0, *) {
-                do {
-                    let session = try HKWorkoutSession(healthStore: self.hkStore, configuration: config)
-                    self.mirrorSession = session
-                    // startActivity triggers the iPhone → Watch mirror invitation.
-                    // The Watch app's WKApplicationDelegate.handle(_:) fires and
-                    // routes to the Race tab when activityType == .swimBikeRun.
-                    session.startActivity(with: .now)
-                    NSLog("[WatchPlugin] mirror session started type=%d outdoor=%@",
-                          activityType.rawValue,
-                          config.locationType == .outdoor ? "yes" : "no")
-                    call.resolve(["mirroring": true])
-                } catch {
-                    NSLog("[WatchPlugin] HKWorkoutSession creation failed: %@", error.localizedDescription)
-                    call.resolve(["mirroring": false])
+            // Apple's documented API for iPhone-initiated Watch workout launch.
+            // Fires the paired Watch's WKApplicationDelegate.handle(_:) with the
+            // configuration — which our Watch app already routes to Race tab for
+            // .swimBikeRun. HKWorkoutSession.startActivity (what we tried first)
+            // only starts a local iPhone session and never notifies the Watch.
+            self.hkStore.startWatchApp(toHandle: config) { success, error in
+                if let error = error {
+                    NSLog("[WatchPlugin] startWatchApp error: %@", error.localizedDescription)
                 }
-            } else {
-                call.resolve(["mirroring": false])
+                NSLog("[WatchPlugin] startWatchApp success=%@ type=%d outdoor=%@",
+                      success ? "yes" : "no",
+                      activityType.rawValue,
+                      config.locationType == .outdoor ? "yes" : "no")
+                call.resolve(["mirroring": success])
             }
         }
         if needsPrompt {
