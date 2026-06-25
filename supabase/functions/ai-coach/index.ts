@@ -790,8 +790,10 @@ async function fetchSpoonacularMealPlan(
 
   // Canonical cache signature — same macros + same dietary constraints
   // return the same plan within 24h. Saves Spoonacular points and absorbs
-  // rate-limit bursts.
+  // rate-limit bursts. Bump `v` to invalidate the entire cache when planner
+  // logic changes.
   const cacheSignature = JSON.stringify({
+    v: 4,
     scope: targets.scope,
     cal: targetCal,
     p: targetProtein ?? null,
@@ -819,12 +821,79 @@ async function fetchSpoonacularMealPlan(
     console.warn('[ai-coach] cache read failed:', (err as Error).message);
   }
 
-  // For full-day plans, use Spoonacular's dedicated /mealplanner/generate
-  // endpoint — it's optimised for whole-day calorie distribution and
-  // produces tighter total-day matches than picking individual recipes.
+  // For full-day plans, route based on protein density:
+  //
+  // - Low/moderate protein density (<7% of cal target, ≤175g at 2500 kcal):
+  //   use Spoonacular's mealplanner/generate — optimised for calorie spread.
+  //
+  // - High protein density (>7%, e.g. bodybuilder requests):
+  //   build the day from high-protein-filtered complexSearch results.
+  //   mealplanner ignores protein, so it consistently under-delivers there.
   if (targets.scope === 'day') {
     const diet = dietPrefsToSpoonacular(dietPrefs) ?? undefined;
     const exclude = allergies.length ? allergies.join(',') : undefined;
+
+    const proteinDensity = targetProtein ? (targetProtein * 4) / targetCal : 0;
+    const useHighProteinPath = proteinDensity > 0.28; // 0.28 = 28% of cal from protein
+
+    if (useHighProteinPath && targetProtein) {
+      // Build 3 meals each hitting ~1/3 of targets, with strict protein filter
+      const perMealCal = Math.round(targetCal / 3);
+      const perMealProtein = Math.round(targetProtein / 3);
+
+      const slotConfig: Array<{ slot: 'breakfast' | 'lunch' | 'dinner'; type: string }> = [
+        { slot: 'breakfast', type: 'breakfast' },
+        { slot: 'lunch',     type: 'main course' },
+        { slot: 'dinner',    type: 'main course' },
+      ];
+
+      const meals: any[] = [];
+      const used = new Set<number>();
+      for (const { slot, type } of slotConfig) {
+        const candidates = await searchRecipes({
+          minProtein: Math.max(20, perMealProtein - 15),
+          minCalories: Math.max(200, perMealCal - 200),
+          maxCalories: perMealCal + 250,
+          diet,
+          intolerances: exclude,
+          type,
+          sort: 'random',
+          offset: Math.floor(Math.random() * 30),
+          number: 10,
+        });
+        if (!candidates || candidates.length === 0) continue;
+
+        // Score by closeness to per-meal protein and calorie targets
+        const score = (recipe: any) => {
+          const n = recipe.nutrition?.nutrients ?? [];
+          const find = (name: string) => n.find((x: any) => x.name === name)?.amount ?? 0;
+          return Math.abs(find('Calories') - perMealCal)
+               + Math.abs(find('Protein') - perMealProtein) * 4;
+        };
+        const best = [...candidates]
+          .filter((r: any) => !used.has(r.id))
+          .sort((a, b) => score(a) - score(b))[0];
+        if (best) {
+          used.add(best.id);
+          meals.push(recipeToMealInPlan(best, slot));
+        }
+      }
+
+      if (meals.length > 0) {
+        // Cache the result like the mealplanner path does
+        const totalProtein = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
+        if (totalProtein >= targetProtein * 0.7) {
+          try {
+            await supabase
+              .from('spoonacular_cache')
+              .upsert({ signature: cacheSignature, meals, created_at: new Date().toISOString() });
+          } catch { /* silent */ }
+        }
+        return meals;
+      }
+      // Fall through to mealplanner if high-protein search returned nothing
+    }
+
     const plan = await generateMealPlan({ targetCalories: targetCal, diet, exclude });
 
     if (!plan || !plan.meals?.length) return null;
@@ -842,43 +911,67 @@ async function fetchSpoonacularMealPlan(
       if (recipe) meals.push(recipeToMealInPlan(recipe, slots[i] ?? 'lunch'));
     });
 
-    // If protein target was specified but the day's total falls well short,
-    // add a high-protein snack to top it up.
+    // If protein target was specified but the day's total falls short, top
+    // up with up to 2 high-protein snacks. Real snacks max out around 35–45g
+    // of protein each — one snack rarely closes a 100g+ deficit, so we
+    // iterate until we're close enough or hit the 2-snack ceiling.
     if (targetProtein && meals.length > 0) {
-      const totalProtein = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
-      const deficit = targetProtein - totalProtein;
-      if (deficit >= 25) {
+      const usedRecipeIds = new Set<number>(plan.meals.map((m: any) => m.id));
+      let totalProtein = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const deficit = targetProtein - totalProtein;
+        if (deficit < 25) break;
+
+        // Real high-protein snack range: 25–45g per item
         const snack = await searchRecipes({
-          minProtein: Math.max(20, deficit - 10),
-          maxProtein: deficit + 30,
-          maxCalories: 600,
+          minProtein: 25,
+          maxProtein: 45,
+          maxCalories: 500,
           diet,
           intolerances: exclude,
           type: 'snack',
           sort: 'random',
-          offset: Math.floor(Math.random() * 10),
-          number: 5,
+          offset: Math.floor(Math.random() * 20),
+          number: 8,
         });
-        if (snack && snack.length > 0) {
-          // Pick the one closest to the deficit
-          const best = [...snack].sort((a, b) => {
+        if (!snack || snack.length === 0) break;
+
+        // Skip any recipe already in the plan, then pick the highest-protein
+        const candidate = [...snack]
+          .filter((r: any) => !usedRecipeIds.has(r.id))
+          .sort((a: any, b: any) => {
             const pa = a.nutrition?.nutrients?.find((n: any) => n.name === 'Protein')?.amount ?? 0;
             const pb = b.nutrition?.nutrients?.find((n: any) => n.name === 'Protein')?.amount ?? 0;
-            return Math.abs(pa - deficit) - Math.abs(pb - deficit);
+            return pb - pa;
           })[0];
-          meals.push(recipeToMealInPlan(best, 'snack'));
-        }
+        if (!candidate) break;
+
+        const mappedSnack = recipeToMealInPlan(candidate, 'snack');
+        usedRecipeIds.add(candidate.id);
+        meals.push(mappedSnack);
+        totalProtein += mappedSnack.protein_g ?? 0;
       }
     }
 
     if (meals.length > 0) {
-      // Write-through cache so next identical request skips Spoonacular
-      try {
-        await supabase
-          .from('spoonacular_cache')
-          .upsert({ signature: cacheSignature, meals, created_at: new Date().toISOString() });
-      } catch (err) {
-        console.warn('[ai-coach] cache write failed:', (err as Error).message);
+      // Only cache results that reasonably hit the protein target. Otherwise
+      // a low-protein day would be served back to every subsequent request
+      // for the same macros for 24h, masking improvements to the planner.
+      let shouldCache = true;
+      if (targetProtein) {
+        const totalProtein = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
+        if (totalProtein < targetProtein * 0.7) shouldCache = false;
+      }
+      if (shouldCache) {
+        try {
+          await supabase
+            .from('spoonacular_cache')
+            .upsert({ signature: cacheSignature, meals, created_at: new Date().toISOString() });
+        } catch (err) {
+          console.warn('[ai-coach] cache write failed:', (err as Error).message);
+        }
+      } else {
+        console.log('[ai-coach] not caching: protein short of target');
       }
       return meals;
     }
