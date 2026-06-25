@@ -242,6 +242,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
   const handleSend = useCallback(async (text: string) => {
     const uid = currentUserIdRef.current;
+    // Dismiss the wizard if it was open — the user has moved on. Without this
+    // a wizard opened in a previous turn lingers across every subsequent message.
+    setShowMealPlanWizard(false);
 
     if (isGoalQuestion(text)) {
       const answer = await queryUserGoal();
