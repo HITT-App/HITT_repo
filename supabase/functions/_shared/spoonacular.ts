@@ -135,12 +135,13 @@ export async function searchRecipes(filters: SearchFilters): Promise<Spoonacular
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) {
+      const body = await res.text().catch(() => "");
       if (res.status === 402) {
-        console.error("[spoonacular] quota exceeded (402)");
+        console.error("[spoonacular] quota exceeded (402):", body);
       } else if (res.status === 401) {
-        console.error("[spoonacular] auth failed (401) — check SPOONACULAR_API_KEY");
+        console.error("[spoonacular] auth failed (401) — check SPOONACULAR_API_KEY:", body);
       } else {
-        console.error("[spoonacular] HTTP", res.status, await res.text().catch(() => ""));
+        console.error("[spoonacular] HTTP", res.status, body);
       }
       return null;
     }
@@ -176,7 +177,8 @@ export async function generateMealPlan(opts: {
   try {
     const res = await fetch(`${BASE}/mealplanner/generate?${params}`);
     if (!res.ok) {
-      console.error('[spoonacular] mealplanner HTTP', res.status);
+      const body = await res.text().catch(() => "");
+      console.error('[spoonacular] mealplanner HTTP', res.status, body);
       return null;
     }
     return await res.json() as MealPlanGenerateResponse;
@@ -199,7 +201,8 @@ export async function getRecipeInfo(id: number): Promise<SpoonacularRecipe | nul
   try {
     const res = await fetch(`${BASE}/recipes/${id}/information?${params}`);
     if (!res.ok) {
-      console.error('[spoonacular] recipe info HTTP', res.status);
+      const body = await res.text().catch(() => "");
+      console.error('[spoonacular] recipe info HTTP', res.status, body);
       return null;
     }
     return await res.json() as SpoonacularRecipe;
