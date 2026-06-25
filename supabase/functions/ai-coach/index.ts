@@ -788,6 +788,37 @@ async function fetchSpoonacularMealPlan(
   const targetCal = targets.calories ?? 2000;
   const targetProtein = targets.protein_g;
 
+  // Canonical cache signature — same macros + same dietary constraints
+  // return the same plan within 24h. Saves Spoonacular points and absorbs
+  // rate-limit bursts.
+  const cacheSignature = JSON.stringify({
+    scope: targets.scope,
+    cal: targetCal,
+    p: targetProtein ?? null,
+    c: targets.carbs_g ?? null,
+    f: targets.fat_g ?? null,
+    diet: [...(dietPrefs ?? [])].sort(),
+    allergies: [...(allergies ?? [])].sort(),
+  });
+
+  // Try cache first
+  try {
+    const { data: cached } = await supabase
+      .from('spoonacular_cache')
+      .select('meals, created_at')
+      .eq('signature', cacheSignature)
+      .maybeSingle();
+    if (cached?.meals?.length) {
+      const ageMs = Date.now() - new Date(cached.created_at).getTime();
+      if (ageMs < 24 * 60 * 60 * 1000) {
+        console.log('[ai-coach] Spoonacular cache HIT (age:', Math.round(ageMs / 60000), 'min)');
+        return cached.meals as any[];
+      }
+    }
+  } catch (err) {
+    console.warn('[ai-coach] cache read failed:', (err as Error).message);
+  }
+
   // For full-day plans, use Spoonacular's dedicated /mealplanner/generate
   // endpoint — it's optimised for whole-day calorie distribution and
   // produces tighter total-day matches than picking individual recipes.
@@ -840,7 +871,18 @@ async function fetchSpoonacularMealPlan(
       }
     }
 
-    return meals.length > 0 ? meals : null;
+    if (meals.length > 0) {
+      // Write-through cache so next identical request skips Spoonacular
+      try {
+        await supabase
+          .from('spoonacular_cache')
+          .upsert({ signature: cacheSignature, meals, created_at: new Date().toISOString() });
+      } catch (err) {
+        console.warn('[ai-coach] cache write failed:', (err as Error).message);
+      }
+      return meals;
+    }
+    return null;
   }
 
   // Single-meal mode — use complexSearch with per-recipe filters
@@ -874,7 +916,13 @@ async function fetchSpoonacularMealPlan(
     return score;
   };
   const best = [...candidates].sort((a, b) => scoreRecipe(a) - scoreRecipe(b))[0];
-  return [recipeToMealInPlan(best, 'lunch')];
+  const meal = [recipeToMealInPlan(best, 'lunch')];
+  try {
+    await supabase
+      .from('spoonacular_cache')
+      .upsert({ signature: cacheSignature, meals: meal, created_at: new Date().toISOString() });
+  } catch { /* silent */ }
+  return meal;
 }
 
 function sseSingleAction(action: object): string {
@@ -1899,7 +1947,7 @@ serve(async (req) => {
       if (explicitMealRequest && spoonacularConfigured()) {
         const meals = await fetchSpoonacularMealPlan(
           explicitMealRequest,
-          supabase,
+          supabaseAdmin,
           userId,
         );
         if (meals && meals.length > 0) {

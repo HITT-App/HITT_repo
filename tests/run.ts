@@ -633,6 +633,25 @@ async function runCodeAudit() {
     fail('MP-11', 'meal_plan_defaults migration', 'Migration file not found');
   }
 
+  // MP-12: Spoonacular cache table + 24h read-through cache wired up.
+  // Reduces API point consumption and absorbs rate-limit bursts.
+  try {
+    const cacheSql = readFileSync('/Users/vanessa/hitt-app/supabase/migrations/20260625130000_spoonacular_cache.sql', 'utf-8');
+    const fn = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
+    const hasTable     = cacheSql.includes('create table') && cacheSql.includes('spoonacular_cache');
+    const hasReadCheck = fn.includes("from('spoonacular_cache')") && fn.includes('cache HIT');
+    const hasWrite     = fn.includes("from('spoonacular_cache')") && fn.includes('upsert(');
+    const hasTTL       = fn.includes('24 * 60 * 60 * 1000');
+    if (hasTable && hasReadCheck && hasWrite && hasTTL) {
+      pass('MP-12', 'Spoonacular 24h cache table + read-through wiring in ai-coach');
+    } else {
+      fail('MP-12', 'Spoonacular 24h cache table + read-through wiring in ai-coach',
+        `Missing: ${[!hasTable && 'table migration', !hasReadCheck && 'cache read', !hasWrite && 'cache write', !hasTTL && '24h TTL'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('MP-12', 'Spoonacular cache wiring', 'Migration or function file not found');
+  }
+
   // ── Camera pages: intermittent black-screen prevention ───────────────────
   //
   // A meal-scanner field report described a black camera viewport on first
