@@ -2,6 +2,7 @@ import Foundation
 import HealthKit
 import CoreLocation
 import WatchConnectivity
+import WatchKit
 
 final class WorkoutManager: NSObject {
     static let shared = WorkoutManager()
@@ -72,6 +73,10 @@ final class WorkoutManager: NSObject {
             let activityType = mirroredSession.workoutConfiguration.activityType
             NSLog("[HIIT.WorkoutMirror] iPhone started session type=\(activityType.rawValue)")
             DispatchQueue.main.async {
+                // Diagnostic — if the wrist buzzes when iPhone hits Send to Watch,
+                // the handler fired and the only remaining gap is the UI route.
+                // No buzz means the handler never ran. Remove once confirmed.
+                WKInterfaceDevice.current().play(.success)
                 let isTriathlon: Bool
                 if #available(watchOS 9.0, *) {
                     isTriathlon = activityType == .swimBikeRun
