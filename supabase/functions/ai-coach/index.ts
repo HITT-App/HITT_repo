@@ -4,6 +4,8 @@ import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 import {
   searchRecipes,
+  generateMealPlan,
+  getRecipeInfo,
   recipeToMealInPlan,
   dietPrefsToSpoonacular,
   spoonacularConfigured,
@@ -783,51 +785,96 @@ async function fetchSpoonacularMealPlan(
     console.warn('[ai-coach] could not load nutrition profile:', (err as Error).message);
   }
 
-  const meals_count = targets.scope === 'meal' ? 1 : 3;
-  // Spoonacular filters operate per-recipe, so divide day-totals across slots
-  const perMealCal      = targets.calories  ? Math.round(targets.calories  / meals_count) : null;
-  const perMealProtein  = targets.protein_g ? Math.round(targets.protein_g / meals_count) : null;
-  const perMealCarbs    = targets.carbs_g   ? Math.round(targets.carbs_g   / meals_count) : null;
-  const perMealFat      = targets.fat_g     ? Math.round(targets.fat_g     / meals_count) : null;
+  const targetCal = targets.calories ?? 2000;
+  const targetProtein = targets.protein_g;
 
-  const baseFilters: SearchFilters = {
-    minCalories: perMealCal ? perMealCal - 75  : undefined,
-    maxCalories: perMealCal ? perMealCal + 75  : undefined,
-    minProtein:  perMealProtein ? perMealProtein - 10 : undefined,
-    maxProtein:  perMealProtein ? perMealProtein + 10 : undefined,
-    minCarbs:    perMealCarbs ? perMealCarbs - 15 : undefined,
-    maxCarbs:    perMealCarbs ? perMealCarbs + 15 : undefined,
-    minFat:      perMealFat ? perMealFat - 5 : undefined,
-    maxFat:      perMealFat ? perMealFat + 5 : undefined,
+  // For full-day plans, use Spoonacular's dedicated /mealplanner/generate
+  // endpoint — it's optimised for whole-day calorie distribution and
+  // produces tighter total-day matches than picking individual recipes.
+  if (targets.scope === 'day') {
+    const diet = dietPrefsToSpoonacular(dietPrefs) ?? undefined;
+    const exclude = allergies.length ? allergies.join(',') : undefined;
+    const plan = await generateMealPlan({ targetCalories: targetCal, diet, exclude });
+
+    if (!plan || !plan.meals?.length) return null;
+
+    // mealplanner/generate returns just titles + ids. We need full recipe
+    // data for ingredients + instructions + per-recipe nutrition. Fetch
+    // each recipe in parallel.
+    const fullRecipes = await Promise.all(
+      plan.meals.map((m: any) => getRecipeInfo(m.id)),
+    );
+
+    const slots: Array<'breakfast' | 'lunch' | 'dinner'> = ['breakfast', 'lunch', 'dinner'];
+    const meals: any[] = [];
+    fullRecipes.forEach((recipe, i) => {
+      if (recipe) meals.push(recipeToMealInPlan(recipe, slots[i] ?? 'lunch'));
+    });
+
+    // If protein target was specified but the day's total falls well short,
+    // add a high-protein snack to top it up.
+    if (targetProtein && meals.length > 0) {
+      const totalProtein = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
+      const deficit = targetProtein - totalProtein;
+      if (deficit >= 25) {
+        const snack = await searchRecipes({
+          minProtein: Math.max(20, deficit - 10),
+          maxProtein: deficit + 30,
+          maxCalories: 600,
+          diet,
+          intolerances: exclude,
+          type: 'snack',
+          sort: 'random',
+          offset: Math.floor(Math.random() * 10),
+          number: 5,
+        });
+        if (snack && snack.length > 0) {
+          // Pick the one closest to the deficit
+          const best = [...snack].sort((a, b) => {
+            const pa = a.nutrition?.nutrients?.find((n: any) => n.name === 'Protein')?.amount ?? 0;
+            const pb = b.nutrition?.nutrients?.find((n: any) => n.name === 'Protein')?.amount ?? 0;
+            return Math.abs(pa - deficit) - Math.abs(pb - deficit);
+          })[0];
+          meals.push(recipeToMealInPlan(best, 'snack'));
+        }
+      }
+    }
+
+    return meals.length > 0 ? meals : null;
+  }
+
+  // Single-meal mode — use complexSearch with per-recipe filters
+  const perMealCal     = targetCal;
+  const perMealProtein = targetProtein;
+
+  const candidates = await searchRecipes({
+    minCalories: Math.max(150, perMealCal - 200),
+    maxCalories: perMealCal + 200,
+    minProtein:  perMealProtein ? Math.max(0, perMealProtein - 20) : undefined,
+    maxProtein:  perMealProtein ? perMealProtein + 30 : undefined,
+    minCarbs:    targets.carbs_g ? Math.max(0, targets.carbs_g - 25) : undefined,
+    maxCarbs:    targets.carbs_g ? targets.carbs_g + 25 : undefined,
+    minFat:      targets.fat_g ? Math.max(0, targets.fat_g - 10) : undefined,
+    maxFat:      targets.fat_g ? targets.fat_g + 10 : undefined,
     diet:        dietPrefsToSpoonacular(dietPrefs) ?? undefined,
     intolerances: allergies.length ? allergies.join(',') : undefined,
     sort:        'random',
     offset:      Math.floor(Math.random() * 20),
-    number:      1,
-  };
-
-  const slots: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> =
-    meals_count === 1 ? ['lunch'] : ['breakfast', 'lunch', 'dinner'];
-
-  const typeFor: Record<string, string> = {
-    breakfast: 'breakfast',
-    lunch:     'main course',
-    dinner:    'main course',
-    snack:     'snack',
-  };
-
-  const results = await Promise.all(
-    slots.map(slot => searchRecipes({ ...baseFilters, type: typeFor[slot] })),
-  );
-
-  const meals: any[] = [];
-  results.forEach((res, i) => {
-    if (res && res.length > 0) {
-      meals.push(recipeToMealInPlan(res[0], slots[i]));
-    }
+    number:      8,
   });
 
-  return meals.length > 0 ? meals : null;
+  if (!candidates || candidates.length === 0) return null;
+
+  // Pick the candidate closest to target
+  const scoreRecipe = (recipe: any) => {
+    const n = recipe.nutrition?.nutrients ?? [];
+    const find = (name: string) => n.find((x: any) => x.name === name)?.amount ?? 0;
+    let score = Math.abs(find('Calories') - perMealCal);
+    if (perMealProtein !== null) score += Math.abs(find('Protein') - perMealProtein) * 3;
+    return score;
+  };
+  const best = [...candidates].sort((a, b) => scoreRecipe(a) - scoreRecipe(b))[0];
+  return [recipeToMealInPlan(best, 'lunch')];
 }
 
 function sseSingleAction(action: object): string {

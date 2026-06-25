@@ -67,6 +67,23 @@ export interface SpoonacularSearchResponse {
   totalResults: number;
 }
 
+export interface MealPlanGenerateResponse {
+  meals: Array<{
+    id: number;
+    title: string;
+    readyInMinutes: number;
+    servings: number;
+    sourceUrl?: string;
+    imageType?: string;
+  }>;
+  nutrients: {
+    calories: number;
+    protein: number;
+    fat: number;
+    carbohydrates: number;
+  };
+}
+
 function getKey(): string | null {
   return Deno.env.get("SPOONACULAR_API_KEY") ?? null;
 }
@@ -134,6 +151,61 @@ export async function searchRecipes(filters: SearchFilters): Promise<Spoonacular
     return null;
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+// Generate a whole-day meal plan with a target calorie count. Returns 3 meals
+// (breakfast, lunch, dinner) with title + id only — caller must fetch full
+// recipe data via getRecipeInfo() to populate ingredients/instructions.
+export async function generateMealPlan(opts: {
+  targetCalories: number;
+  diet?: string;
+  exclude?: string;
+}): Promise<MealPlanGenerateResponse | null> {
+  const key = getKey();
+  if (!key) return null;
+
+  const params = new URLSearchParams({
+    apiKey: key,
+    timeFrame: 'day',
+    targetCalories: String(opts.targetCalories),
+  });
+  if (opts.diet) params.set('diet', opts.diet);
+  if (opts.exclude) params.set('exclude', opts.exclude);
+
+  try {
+    const res = await fetch(`${BASE}/mealplanner/generate?${params}`);
+    if (!res.ok) {
+      console.error('[spoonacular] mealplanner HTTP', res.status);
+      return null;
+    }
+    return await res.json() as MealPlanGenerateResponse;
+  } catch (err) {
+    console.error('[spoonacular] mealplanner failed:', (err as Error).message);
+    return null;
+  }
+}
+
+// Fetch full recipe data including ingredients + instructions + nutrition.
+export async function getRecipeInfo(id: number): Promise<SpoonacularRecipe | null> {
+  const key = getKey();
+  if (!key) return null;
+
+  const params = new URLSearchParams({
+    apiKey: key,
+    includeNutrition: 'true',
+  });
+
+  try {
+    const res = await fetch(`${BASE}/recipes/${id}/information?${params}`);
+    if (!res.ok) {
+      console.error('[spoonacular] recipe info HTTP', res.status);
+      return null;
+    }
+    return await res.json() as SpoonacularRecipe;
+  } catch (err) {
+    console.error('[spoonacular] recipe info failed:', (err as Error).message);
+    return null;
   }
 }
 
