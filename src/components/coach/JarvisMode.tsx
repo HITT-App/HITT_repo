@@ -18,7 +18,7 @@ import { MultiChoiceCard } from './MultiChoiceCard';
 import { JarvisMealPlanCard } from './JarvisMealPlanCard';
 import { JarvisMealPlanWizard } from './JarvisMealPlanWizard';
 import { JarvisDietaryPrefsCard } from './JarvisDietaryPrefsCard';
-import { saveMealPlan, getMealPlan } from '@/lib/mealPlanStorage';
+import { saveMealPlan, getMealPlan, clearMealPlan } from '@/lib/mealPlanStorage';
 import { format } from 'date-fns';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload, RecommendMealPlanPayload } from '@/hooks/useAI.types';
 
@@ -1268,7 +1268,18 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         {mealPlan && (
           <JarvisMealPlanCard
             plan={mealPlan}
-            onDismiss={() => setMealPlan(null)}
+            onDismiss={() => {
+              // Clear the saved plan too so it doesn't reappear on next mount.
+              // Without this the restore effect re-renders it after dismissal.
+              setMealPlan(null);
+              if (currentUserIdRef.current) clearMealPlan(currentUserIdRef.current);
+            }}
+            onReroll={() => {
+              // Clear current plan and open the wizard for a fresh selection
+              setMealPlan(null);
+              if (currentUserIdRef.current) clearMealPlan(currentUserIdRef.current);
+              setShowMealPlanWizard(true);
+            }}
             onLogged={(name) => {
               ai.appendAssistantMessage(`✅ Logged ${name}.`);
             }}

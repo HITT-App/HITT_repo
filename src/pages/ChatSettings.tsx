@@ -38,6 +38,8 @@ export default function ChatSettings() {
 
   const handleClearHistory = async () => {
     if (!user) return;
+
+    // 1. Delete all messages in the Jarvis conversation in Supabase
     const { data: conv } = await supabase
       .from('conversations')
       .select('id')
@@ -47,7 +49,26 @@ export default function ChatSettings() {
     if (conv) {
       await supabase.from('messages').delete().eq('conversation_id', conv.id);
     }
-    toast({ title: 'Chat history cleared', description: 'All messages have been deleted.' });
+
+    // 2. Clear the saved meal plan so it doesn't reappear on next Jarvis open
+    localStorage.removeItem(`hitt_meal_plan_${user.id}`);
+
+    // 3. Clear Jarvis onboarding skip flags so wizard cards behave like a fresh user
+    for (const key of ['goal', 'plan', 'diet']) {
+      localStorage.removeItem(`jarvis_skip_${key}_${user.id}`);
+    }
+    sessionStorage.removeItem('jarvis_onboarding_suppressed');
+    sessionStorage.removeItem('jarvis_last_greeted');
+
+    // 4. Force JarvisMode to remount on next visit so it picks up cleared state
+    // (the route change to /ai already triggers remount; this nudges if user
+    //  is on /chat-settings and navigates back).
+    toast({
+      title: 'Chat history cleared',
+      description: 'All messages and saved plans have been deleted. Re-open Jarvis to see a fresh start.',
+    });
+    // Send user back to /ai — JarvisMode will remount fresh
+    setTimeout(() => navigate('/ai', { replace: true }), 600);
   };
 
   const handleDeleteMemory = () => {

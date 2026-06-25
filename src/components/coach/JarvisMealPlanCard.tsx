@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Check, Loader2, X, ChevronDown } from 'lucide-react'
+import { Plus, Check, Loader2, X, ChevronDown, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/integrations/supabase/client'
@@ -10,11 +10,12 @@ interface JarvisMealPlanCardProps {
   plan: RecommendMealPlanPayload
   onDismiss: () => void
   onLogged: (mealName: string) => void
+  onReroll?: () => void
 }
 
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack']
 
-export function JarvisMealPlanCard({ plan, onDismiss, onLogged }: JarvisMealPlanCardProps) {
+export function JarvisMealPlanCard({ plan, onDismiss, onLogged, onReroll }: JarvisMealPlanCardProps) {
   const [confirmingMeal, setConfirmingMeal] = useState<MealInPlan | null>(null)
   const [loggingName, setLoggingName] = useState<string | null>(null)
   const [loggedNames, setLoggedNames] = useState<Set<string>>(new Set())
@@ -69,14 +70,27 @@ export function JarvisMealPlanCard({ plan, onDismiss, onLogged }: JarvisMealPlan
             {totalCals} kcal · {Math.round(totalProtein)}g protein
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-xs h-7 text-muted-foreground px-2"
-          onClick={onDismiss}
-        >
-          Dismiss
-        </Button>
+        <div className="flex items-center gap-1">
+          {onReroll && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs h-7 text-muted-foreground px-2 gap-1"
+              onClick={onReroll}
+            >
+              <RefreshCw className="w-3 h-3" />
+              New plan
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs h-7 text-muted-foreground px-2"
+            onClick={onDismiss}
+          >
+            Dismiss
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
