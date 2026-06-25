@@ -1675,14 +1675,27 @@ serve(async (req) => {
       }
     }
 
-    // Health metrics context
-    if (latestWeight) {
+    // Health metrics context — read weight from health_metrics (manual log
+    // or HealthKit sync) with fallback to profiles.weight_kg if present.
+    let resolvedWeightKg: number | null = null;
+    let weightSource = 'none';
+    if (latestWeight?.value) {
+      resolvedWeightKg = latestWeight.unit === 'lbs' ? latestWeight.value * 0.453592 : latestWeight.value;
+      weightSource = `health_metrics (logged ${latestWeight.recorded_at ?? 'recently'})`;
+    } else if ((profile as any)?.weight_kg) {
+      resolvedWeightKg = (profile as any).weight_kg;
+      weightSource = 'profiles.weight_kg';
+    }
+    console.log('[ai-coach] weight resolution:', { userId, resolvedWeightKg, weightSource });
+
+    if (resolvedWeightKg) {
       userContext += `\nBody Metrics:\n`;
-      userContext += `• Current weight: ${latestWeight.value} ${latestWeight.unit}\n`;
-      const weightKg = latestWeight.unit === 'lbs' ? latestWeight.value * 0.453592 : latestWeight.value;
-      const maintenance = Math.round(weightKg * 32);
+      const displayUnit = latestWeight?.unit === 'lbs' ? 'lbs' : 'kg';
+      const displayValue = latestWeight?.unit === 'lbs' ? latestWeight.value : Math.round(resolvedWeightKg * 10) / 10;
+      userContext += `• Current weight: ${displayValue} ${displayUnit}\n`;
+      const maintenance = Math.round(resolvedWeightKg * 32);
       userContext += `• Estimated maintenance calories: ~${maintenance} kcal/day\n`;
-      userContext += `• Protein target (2g/kg): ~${Math.round(weightKg * 2)}g/day\n`;
+      userContext += `• Protein target (2g/kg): ~${Math.round(resolvedWeightKg * 2)}g/day\n`;
     }
     if (latestHeartRate) {
       userContext += `• Resting heart rate: ${Math.round(latestHeartRate.value)} bpm\n`;
@@ -2031,7 +2044,7 @@ serve(async (req) => {
       const structuredMessages = lastUserIdx !== -1
         ? [
             ...baseStructured.slice(0, lastUserIdx),
-            { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
+            { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the user asks about their weight and the Body Metrics section contains 'Current weight' → state the value directly. If Body Metrics is absent, say 'I don't see a weight logged yet — add one in the Weight tab and I can personalise things'. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
             { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool." },
             { role: "system", content: "CRITICAL — MEAL PLAN ROUTING: ONLY call open_meal_plan_wizard when the user is EXPLICITLY asking about food, meals, eating, or nutrition planning. The trigger words are: meal, meals, eat, eating, food, breakfast, lunch, dinner, snack, recipe, diet, nutrition. DO trigger for: 'what should I eat', 'plan my meals', 'suggest meals', 'food ideas', 'meal plan', 'recipe ideas', 'what's for dinner', 'help me eat better'. DO NOT trigger for: 'what activity', 'workout suggestion', 'plan my day' (without food context), 'something to keep me cool', 'cardio idea', general chat, questions about workouts, schedules, or any non-food topic. When the request is about workouts → answer naturally or call schedule_plan. When the request is general → answer with text. Output ONLY the tool call when calling open_meal_plan_wizard — no text. NEVER call recommend_meal_plan; that's server-side only." },
             baseStructured[lastUserIdx],
