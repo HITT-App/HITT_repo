@@ -14,6 +14,7 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "sendStructuredWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startMirroredWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endMirroredWorkout", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "prepareHealthAuth", returnType: CAPPluginReturnPromise),
     ]
 
     private var workoutEventListeners: [String: CAPPluginCall] = [:]
@@ -28,11 +29,14 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
             name: .watchWorkoutEvent,
             object: nil
         )
-        // Request the full HealthKit scope once at launch — covers workouts,
-        // routes, distance, energy, heart rate. Without this, HKWorkoutSession
-        // creation for triathlon (and other mirrored workouts) silently fails,
-        // and the user otherwise has to grant each permission piecemeal.
+    }
+
+    /// Public Capacitor method — JS calls this AFTER sign-in so the comprehensive
+    /// HealthKit auth prompt doesn't appear before the user has authenticated.
+    /// Idempotent — iOS skips the UI on types that are already determined.
+    @objc func prepareHealthAuth(_ call: CAPPluginCall) {
         Self.requestComprehensiveHealthAuth(hkStore: hkStore)
+        call.resolve()
     }
 
     private static func requestComprehensiveHealthAuth(hkStore: HKHealthStore) {
@@ -145,10 +149,13 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
         config.locationType = Self.locationType(for: activityType)
 
         // Auth scope is comprehensive enough to cover the session + samples it
-        // will produce; if any required types aren't authorised the session
-        // creation throws silently.
+        // will produce. We only fire the auth prompt if at least one required
+        // type is still .notDetermined — otherwise iOS would no-op anyway, but
+        // avoiding the call removes a class of races where the dialog flashes
+        // briefly even with everything already granted.
         let shareTypes: Set<HKSampleType> = Self.shareTypesForMirroring()
-        hkStore.requestAuthorization(toShare: shareTypes, read: []) { [weak self] granted, error in
+        let needsPrompt = shareTypes.contains { hkStore.authorizationStatus(for: $0) == .notDetermined }
+        let proceed: (Bool, Error?) -> Void = { [weak self] granted, error in
             guard let self else { call.resolve(["mirroring": false]); return }
             guard granted else {
                 NSLog("[WatchPlugin] mirror auth denied: %@", error?.localizedDescription ?? "no error")
@@ -173,6 +180,11 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
             } else {
                 call.resolve(["mirroring": false])
             }
+        }
+        if needsPrompt {
+            hkStore.requestAuthorization(toShare: shareTypes, read: [], completion: proceed)
+        } else {
+            proceed(true, nil)
         }
     }
 

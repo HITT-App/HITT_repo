@@ -61,6 +61,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             userId: session.user.id,
             eventType: "sign_in",
           });
+          // Comprehensive HealthKit auth prompt — fires now so it's tied to a
+          // signed-in session, not at app boot before the user has logged in.
+          import("@/plugins/WatchPlugin").then(({ prepareWatchHealthAuth }) => {
+            void prepareWatchHealthAuth();
+          });
         } else if (event === "SIGNED_OUT") {
           resetAnalyticsUser();
           logSecurityEvent(SecurityEventTypes.AUTH_LOGOUT, {

@@ -8,6 +8,7 @@ interface WatchPluginInterface {
   sendStructuredWorkout(options: { workout: WatchWorkout }): Promise<void>;
   startMirroredWorkout(options: { activityType: string; workoutName?: string }): Promise<{ mirroring: boolean }>;
   endMirroredWorkout(): Promise<void>;
+  prepareHealthAuth(): Promise<void>;
   addListener(event: "workoutEvent", handler: (data: WatchWorkoutEvent) => void): Promise<{ remove: () => void }>;
 }
 
@@ -90,6 +91,14 @@ export const startWorkoutMirroring = async (activityType = "hiit", workoutName =
 export const endWorkoutMirroring = async (): Promise<void> => {
   if (!Capacitor.isNativePlatform()) return;
   try { await WatchPluginImpl.endMirroredWorkout(); } catch {}
+};
+
+// Call ONCE after sign-in so the comprehensive HealthKit prompt fires while
+// the user is in-app and authenticated, not at app launch before sign-in.
+// Idempotent — iOS skips the UI on types that are already determined.
+export const prepareWatchHealthAuth = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  try { await WatchPluginImpl.prepareHealthAuth(); } catch {}
 };
 
 export const onWatchWorkoutEvent = (handler: (event: WatchWorkoutEvent) => void) => {
