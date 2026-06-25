@@ -166,7 +166,7 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
             // configuration — which our Watch app already routes to Race tab for
             // .swimBikeRun. HKWorkoutSession.startActivity (what we tried first)
             // only starts a local iPhone session and never notifies the Watch.
-            self.hkStore.startWatchApp(toHandle: config) { success, error in
+            self.hkStore.startWatchApp(with: config) { success, error in
                 if let error = error {
                     NSLog("[WatchPlugin] startWatchApp error: %@", error.localizedDescription)
                 }
