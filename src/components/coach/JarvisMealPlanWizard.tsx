@@ -24,10 +24,17 @@ interface JarvisMealPlanWizardProps {
   onCancel: () => void
 }
 
+// Normalise diet prefs to lowercase — the Nutrition Dashboard saves "Vegetarian"
+// (capitalised) while older flows use "vegetarian". Match case-insensitively.
+const normDiet = (d: string[]) => new Set(d.map(x => String(x ?? '').toLowerCase().trim()))
+const isVegan       = (d: string[]) => normDiet(d).has('vegan')
+const isVegetarian  = (d: string[]) => { const n = normDiet(d); return n.has('vegetarian') || n.has('vegan') }
+const isPescatarian = (d: string[]) => { const n = normDiet(d); return n.has('pescatarian') || n.has('pescetarian') }
+
 const SOURCE_OPTIONS: Array<{ value: string; label: string; allowed: (diet: string[]) => boolean }> = [
-  { value: 'lean',  label: 'Lean meat (chicken, turkey)',     allowed: (d) => !d.includes('vegetarian') && !d.includes('vegan') && !d.includes('pescatarian') },
-  { value: 'red',   label: 'Red meat (beef, lamb)',           allowed: (d) => !d.includes('vegetarian') && !d.includes('vegan') && !d.includes('pescatarian') },
-  { value: 'fish',  label: 'Fish & seafood',                  allowed: (d) => !d.includes('vegetarian') && !d.includes('vegan') },
+  { value: 'lean',  label: 'Lean meat (chicken, turkey)',     allowed: (d) => !isVegetarian(d) && !isPescatarian(d) },
+  { value: 'red',   label: 'Red meat (beef, lamb)',           allowed: (d) => !isVegetarian(d) && !isPescatarian(d) },
+  { value: 'fish',  label: 'Fish & seafood',                  allowed: (d) => !isVegan(d) && (!isVegetarian(d) || isPescatarian(d)) },
   { value: 'plant', label: 'Plant-based (tofu, legumes, …)',  allowed: () => true },
 ]
 
@@ -105,9 +112,9 @@ export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizar
     if (!text.trim()) return null
     const lower = text.toLowerCase()
     const animalWords = ['chicken','beef','pork','lamb','fish','salmon','tuna','steak','bacon','duck','turkey']
-    if (dietPrefs.includes('vegetarian') || dietPrefs.includes('vegan')) {
+    if (isVegetarian(dietPrefs)) {
       const hit = animalWords.find(w => lower.includes(w))
-      if (hit) return `"${hit}" isn't compatible with your ${dietPrefs.includes('vegan') ? 'vegan' : 'vegetarian'} preferences.`
+      if (hit) return `"${hit}" isn't compatible with your ${isVegan(dietPrefs) ? 'vegan' : 'vegetarian'} preferences.`
     }
     return null
   }

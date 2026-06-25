@@ -763,7 +763,7 @@ async function fetchSpoonacularMealPlan(
   // rate-limit bursts. Bump `v` to invalidate the entire cache when planner
   // logic changes.
   const cacheSignature = JSON.stringify({
-    v: 4,
+    v: 5,
     scope: targets.scope,
     cal: targetCal,
     p: targetProtein ?? null,

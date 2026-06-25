@@ -246,19 +246,23 @@ export function recipeToMealInPlan(
 }
 
 // Diet preference list → Spoonacular's diet param (it expects a single string).
-// Returns null if none of our prefs map to a Spoonacular diet.
+// Returns null if none of our prefs map to a Spoonacular diet. Case-insensitive
+// — the Nutrition Dashboard saves capitalised values ("Vegetarian"), while
+// older code paths use lowercase. We normalise here.
+//
+// Note Spoonacular spells it "pescetarian" (not "pescatarian" as we do).
 export function dietPrefsToSpoonacular(prefs: string[]): string | null {
   if (!prefs?.length) return null;
-  // Spoonacular supports: gluten free, ketogenic, vegetarian, lacto-vegetarian,
-  // ovo-vegetarian, vegan, pescetarian, paleo, primal, whole30.
-  if (prefs.includes('vegan')) return 'vegan';
-  if (prefs.includes('vegetarian')) return 'vegetarian';
-  if (prefs.includes('pescatarian')) return 'pescetarian';
-  if (prefs.includes('paleo')) return 'paleo';
-  if (prefs.includes('keto') || prefs.includes('ketogenic')) return 'ketogenic';
-  if (prefs.includes('gluten_free') || prefs.includes('gluten-free')) return 'gluten free';
+  const norm = prefs.map(p => String(p ?? '').toLowerCase().trim());
+  if (norm.includes('vegan')) return 'vegan';
+  if (norm.includes('vegetarian')) return 'vegetarian';
+  if (norm.includes('pescatarian') || norm.includes('pescetarian')) return 'pescetarian';
+  if (norm.includes('paleo')) return 'paleo';
+  if (norm.includes('keto') || norm.includes('ketogenic') || norm.includes('low-carb') || norm.includes('lowcarb')) return 'ketogenic';
+  if (norm.includes('gluten_free') || norm.includes('gluten-free') || norm.includes('gluten free')) return 'gluten free';
   return null;
 }
+
 
 // Protein source bucket → Spoonacular-friendly ingredient keyword list.
 export function proteinBucketToKeywords(buckets: string[]): string {
