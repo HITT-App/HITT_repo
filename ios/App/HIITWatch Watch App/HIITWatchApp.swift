@@ -1,13 +1,16 @@
 import SwiftUI
 import HealthKit
+import WatchKit
 
-// Receives the system-level workout prompt when the paired iPhone starts
-// an HKWorkoutSession (iOS 26+ / watchOS 26+). Routes to the Ready screen.
+// Receives the system-level workout prompt when the paired iPhone calls
+// HKHealthStore.startWatchApp(with:). Routes to the Race tab for triathlons.
 class WatchAppDelegate: NSObject, WKApplicationDelegate {
     func handle(_ workoutConfiguration: HKWorkoutConfiguration) {
-        // .swimBikeRun is the triathlon activity type (watchOS 9+).
-        // Always route to Race tab — the plan arrives via WCSession shortly after
-        // and TriathlonView loads it via onReceive/onAppear.
+        // Diagnostic — buzz the wrist the instant this fires so we can tell
+        // whether watchOS actually launched the app in response to startWatchApp.
+        // Remove once auto-launch is confirmed working end-to-end.
+        WKInterfaceDevice.current().play(.success)
+
         let isTriathlon: Bool
         if #available(watchOS 9.0, *) {
             isTriathlon = workoutConfiguration.activityType == .swimBikeRun
