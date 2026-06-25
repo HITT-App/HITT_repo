@@ -100,7 +100,17 @@ export type MealInPlan = {
   protein_g: number
   carbs_g: number
   fat_g: number
-  ingredients: Array<{ amount: string; unit: string; name: string }>
+  ingredients: Array<{
+    amount: string
+    unit: string
+    name: string
+    // Optional per-ingredient nutrition (populated when sourced from
+    // Spoonacular). All values are for the listed amount.
+    calories?: number
+    protein_g?: number
+    carbs_g?: number
+    fat_g?: number
+  }>
   instructions: string[]
 }
 

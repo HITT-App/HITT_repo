@@ -45,6 +45,9 @@ export interface SpoonacularIngredient {
   unit: string;
   name: string;
   original?: string;
+  // When Spoonacular returns ingredient nutrition, it lives in this nested
+  // structure. Present when ?addRecipeInformation + nutrition flags fire.
+  nutrition?: { nutrients: SpoonacularNutrient[] };
 }
 
 export interface SpoonacularRecipe {
@@ -236,11 +239,25 @@ export function recipeToMealInPlan(
     protein_g: find('Protein'),
     carbs_g: find('Carbohydrates'),
     fat_g: find('Fat'),
-    ingredients: (recipe.extendedIngredients ?? []).map(i => ({
-      amount: String(i.amount ?? ''),
-      unit: i.unit ?? '',
-      name: i.name ?? '',
-    })),
+    ingredients: (recipe.extendedIngredients ?? []).map(i => {
+      // Per-ingredient nutrition — only present when Spoonacular returned it
+      const inutr = i.nutrition?.nutrients;
+      const find = inutr ? (name: string) => {
+        const m = inutr.find(x => x.name === name)?.amount;
+        return typeof m === 'number' ? Math.round(m) : undefined;
+      } : null;
+      return {
+        amount: String(i.amount ?? ''),
+        unit: i.unit ?? '',
+        name: i.name ?? '',
+        ...(find && {
+          calories:  find('Calories'),
+          protein_g: find('Protein'),
+          carbs_g:   find('Carbohydrates'),
+          fat_g:     find('Fat'),
+        }),
+      };
+    }),
     instructions: (recipe.analyzedInstructions?.[0]?.steps ?? []).map(s => s.step),
   };
 }

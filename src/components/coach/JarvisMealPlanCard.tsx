@@ -156,13 +156,23 @@ export function JarvisMealPlanCard({ plan, onDismiss, onLogged, onReroll }: Jarv
                   {meal.ingredients && meal.ingredients.length > 0 && (
                     <div className="pt-2.5">
                       <p className="text-xs font-semibold text-foreground mb-1.5">Ingredients</p>
-                      <ul className="space-y-0.5">
-                        {meal.ingredients.map((ing, i) => (
-                          <li key={i} className="text-xs text-muted-foreground flex gap-1.5">
-                            <span className="shrink-0 text-foreground/70">{ing.amount} {ing.unit}</span>
-                            <span>{ing.name}</span>
-                          </li>
-                        ))}
+                      <ul className="space-y-1">
+                        {meal.ingredients.map((ing, i) => {
+                          const hasMacros = ing.calories !== undefined || ing.protein_g !== undefined
+                          return (
+                            <li key={i} className="text-xs text-muted-foreground">
+                              <div className="flex gap-1.5">
+                                <span className="shrink-0 text-foreground/70">{ing.amount} {ing.unit}</span>
+                                <span>{ing.name}</span>
+                              </div>
+                              {hasMacros && (
+                                <div className="ml-1 mt-0.5 text-[10px] text-foreground/40">
+                                  {ing.calories ?? 0} kcal · {ing.protein_g ?? 0}P · {ing.carbs_g ?? 0}C · {ing.fat_g ?? 0}F
+                                </div>
+                              )}
+                            </li>
+                          )
+                        })}
                       </ul>
                     </div>
                   )}
