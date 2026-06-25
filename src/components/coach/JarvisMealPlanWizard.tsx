@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/integrations/supabase/client'
 import { Flame, Beef, Wheat, Droplets, ChefHat, ArrowLeft, X, Sparkles, Utensils } from 'lucide-react'
@@ -39,6 +39,7 @@ const SOURCE_OPTIONS: Array<{ value: string; label: string; allowed: (diet: stri
 ]
 
 export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizardProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
   // Wizard state
   const [step, setStep] = useState<Step>('scope')
   const [scope, setScope] = useState<Scope | null>(null)
@@ -93,6 +94,16 @@ export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizar
     })()
   }, [])
 
+  // Scroll the wizard into view whenever the step changes — it renders inline
+  // in the conversation and frequently lands below the fold otherwise.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [step])
+
   // Apply saved defaults — jumps to review
   const useDefaults = () => {
     if (!defaults) return
@@ -135,13 +146,17 @@ export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizar
       } catch { /* non-fatal */ }
     }
 
-    // Compose an explicit-macro prompt that the ai-coach regex fast-path will catch
+    // Compose an explicit-macro prompt that the ai-coach regex fast-path will catch.
+    // The wizard collects PER-MEAL macros. For day-mode we multiply by 3 so the
+    // extractor sees day totals (it divides by 3 again on the server). For
+    // single-meal mode we send per-meal values as-is.
+    const multiplier = scope === 'day' ? 3 : 1
     const parts: string[] = []
     parts.push(scope === 'meal' ? 'Suggest one meal' : 'Give me a meal plan for the day')
     if (calories) parts.push(`with ${calories} calories`)
-    if (macros.protein && proteinG) parts.push(`${proteinG}g of protein`)
-    if (macros.carbs && carbsG) parts.push(`${carbsG}g of carbs`)
-    if (macros.fat && fatG) parts.push(`${fatG}g of fat`)
+    if (macros.protein && proteinG) parts.push(`${proteinG * multiplier}g of protein`)
+    if (macros.carbs && carbsG) parts.push(`${carbsG * multiplier}g of carbs`)
+    if (macros.fat && fatG) parts.push(`${fatG * multiplier}g of fat`)
     if (proteinFreeText.trim()) parts.push(`featuring ${proteinFreeText.trim()}`)
     else if (proteinSources.length) {
       const labels = proteinSources.map(s => SOURCE_OPTIONS.find(o => o.value === s)?.label ?? s).join(', ')
@@ -195,7 +210,7 @@ export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizar
   // ─── Step renders ───
   if (step === 'scope') {
     return (
-      <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
+      <div ref={containerRef} className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
         <Header icon={Utensils} eyebrow="Plan your food" title="What are you looking for?" />
         {defaults && (
           <Button variant="outline" className="w-full h-11 rounded-xl gap-2" onClick={useDefaults}>
@@ -235,7 +250,7 @@ export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizar
         : 'A balanced day is typically 1800–2500 kcal.'
 
     return (
-      <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
+      <div ref={containerRef} className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
         <Header icon={Flame} eyebrow={isMeal ? 'Calorie budget' : 'Daily calorie target'}
           title={isMeal ? 'How many calories for this meal?' : 'How many calories for the day?'}
           subtext={helper} />
@@ -263,7 +278,7 @@ export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizar
       setMacros(m => ({ ...m, [k]: !m[k] }))
     const anyChecked = macros.protein || macros.carbs || macros.fat
     return (
-      <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
+      <div ref={containerRef} className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
         <Header icon={Beef} eyebrow="Macro targets" title="Want to target macros?" subtext="Pick any that matter for this plan." />
         <div className="space-y-2">
           {([
@@ -309,7 +324,7 @@ export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizar
       (!macros.carbs   || carbsG !== null) &&
       (!macros.fat     || fatG !== null)
     return (
-      <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
+      <div ref={containerRef} className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
         <Header icon={Beef} eyebrow="Macro targets" title="How much of each per meal?"
           subtext={scope === 'day' ? "We'll multiply across 3 meals to hit the day total." : undefined} />
         {macros.protein && (
@@ -361,7 +376,7 @@ export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizar
     }
     const freeTextError = validateFreeText(proteinFreeText)
     return (
-      <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
+      <div ref={containerRef} className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
         <Header icon={ChefHat} eyebrow="Protein source" title="Any preference for the meals?"
           subtext={dietPrefs.length ? `Filtered by your dietary prefs (${dietPrefs.join(', ')}).` : undefined} />
         <Button
@@ -405,7 +420,7 @@ export function JarvisMealPlanWizard({ onSubmit, onCancel }: JarvisMealPlanWizar
 
   // ─── Review ───
   return (
-    <div className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
+    <div ref={containerRef} className="bg-primary/10 border border-primary/30 rounded-2xl px-4 py-3 space-y-4">
       <Header icon={Sparkles} eyebrow="Review" title="Here's what I'm finding for you" />
       <ul className="space-y-1 text-sm text-foreground">
         <li>• {scope === 'day' ? 'Full day' : 'One meal'} · {calories} kcal{scope === 'meal' ? '' : ''}</li>

@@ -29,6 +29,8 @@ export function JarvisMealPlanCard({ plan, onDismiss, onLogged, onReroll }: Jarv
 
   const totalCals = plan.meals.reduce((s, m) => s + m.calories, 0)
   const totalProtein = plan.meals.reduce((s, m) => s + m.protein_g, 0)
+  const totalCarbs = plan.meals.reduce((s, m) => s + (m.carbs_g ?? 0), 0)
+  const totalFat = plan.meals.reduce((s, m) => s + (m.fat_g ?? 0), 0)
 
   const logMeal = async (meal: MealInPlan) => {
     setConfirmingMeal(null)
@@ -67,7 +69,7 @@ export function JarvisMealPlanCard({ plan, onDismiss, onLogged, onReroll }: Jarv
         <div>
           <p className="text-sm font-semibold text-foreground">Today's Meal Plan</p>
           <p className="text-xs text-muted-foreground">
-            {totalCals} kcal · {Math.round(totalProtein)}g protein
+            {totalCals} kcal · {Math.round(totalProtein)}P · {Math.round(totalCarbs)}C · {Math.round(totalFat)}F
           </p>
         </div>
         <div className="flex items-center gap-1">
@@ -112,7 +114,7 @@ export function JarvisMealPlanCard({ plan, onDismiss, onLogged, onReroll }: Jarv
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground leading-snug truncate">{meal.name}</p>
                   <p className="text-xs text-muted-foreground capitalize">
-                    {meal.meal_type} · {meal.calories} kcal · {meal.protein_g}g protein
+                    {meal.meal_type} · {meal.calories} kcal · {meal.protein_g}P · {meal.carbs_g ?? 0}C · {meal.fat_g ?? 0}F
                   </p>
                 </div>
                 {showDetail && (

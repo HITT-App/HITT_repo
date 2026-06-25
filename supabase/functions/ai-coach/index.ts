@@ -803,13 +803,28 @@ async function fetchSpoonacularMealPlan(
     const diet = dietPrefsToSpoonacular(dietPrefs) ?? undefined;
     const exclude = allergies.length ? allergies.join(',') : undefined;
 
-    const proteinDensity = targetProtein ? (targetProtein * 4) / targetCal : 0;
-    const useHighProteinPath = proteinDensity > 0.28; // 0.28 = 28% of cal from protein
+    // Tighter, percentage-based tolerance windows. ±25g on a 20g carb target
+    // means a 35g panini passes — too wide. Percentage tolerances honour the
+    // user's intent without being so strict the search returns nothing.
+    const macroBand = (target: number | null, frac: number, floor: number) =>
+      target ? { min: Math.max(0, target - Math.max(floor, target * frac)), max: target + Math.max(floor, target * frac) } : null;
 
-    if (useHighProteinPath && targetProtein) {
-      // Build 3 meals each hitting ~1/3 of targets, with strict protein filter
+    // Use complexSearch whenever the user specified ANY macro target.
+    // Spoonacular's /mealplanner/generate endpoint only respects calories —
+    // it silently ignores carbs/protein/fat filters. Only fall back to
+    // mealplanner when calories alone were specified.
+    const anyMacroSpecified = targets.protein_g !== null || targets.carbs_g !== null || targets.fat_g !== null;
+
+    if (anyMacroSpecified) {
+      // Build 3 meals each hitting ~1/3 of targets with macro filters applied.
       const perMealCal = Math.round(targetCal / 3);
-      const perMealProtein = Math.round(targetProtein / 3);
+      const perMealProtein = targetProtein ? Math.round(targetProtein / 3) : null;
+      const perMealCarbs   = targets.carbs_g ? Math.round(targets.carbs_g / 3) : null;
+      const perMealFat     = targets.fat_g ? Math.round(targets.fat_g / 3) : null;
+
+      const proteinBand = macroBand(perMealProtein, 0.25, 10);
+      const carbsBand   = macroBand(perMealCarbs,   0.30, 8);
+      const fatBand     = macroBand(perMealFat,     0.30, 5);
 
       const slotConfig: Array<{ slot: 'breakfast' | 'lunch' | 'dinner'; type: string }> = [
         { slot: 'breakfast', type: 'breakfast' },
@@ -821,9 +836,14 @@ async function fetchSpoonacularMealPlan(
       const used = new Set<number>();
       for (const { slot, type } of slotConfig) {
         const candidates = await searchRecipes({
-          minProtein: Math.max(20, perMealProtein - 15),
-          minCalories: Math.max(200, perMealCal - 200),
-          maxCalories: perMealCal + 250,
+          minCalories: Math.max(150, perMealCal - 200),
+          maxCalories: perMealCal + 200,
+          minProtein:  proteinBand?.min,
+          maxProtein:  proteinBand?.max,
+          minCarbs:    carbsBand?.min,
+          maxCarbs:    carbsBand?.max,
+          minFat:      fatBand?.min,
+          maxFat:      fatBand?.max,
           diet,
           intolerances: exclude,
           type,
@@ -833,12 +853,15 @@ async function fetchSpoonacularMealPlan(
         });
         if (!candidates || candidates.length === 0) continue;
 
-        // Score by closeness to per-meal protein and calorie targets
+        // Score by closeness to per-meal targets. Protein weighted heaviest.
         const score = (recipe: any) => {
           const n = recipe.nutrition?.nutrients ?? [];
           const find = (name: string) => n.find((x: any) => x.name === name)?.amount ?? 0;
-          return Math.abs(find('Calories') - perMealCal)
-               + Math.abs(find('Protein') - perMealProtein) * 4;
+          let s = Math.abs(find('Calories') - perMealCal);
+          if (perMealProtein !== null) s += Math.abs(find('Protein') - perMealProtein) * 4;
+          if (perMealCarbs   !== null) s += Math.abs(find('Carbohydrates') - perMealCarbs) * 3;
+          if (perMealFat     !== null) s += Math.abs(find('Fat') - perMealFat) * 2;
+          return s;
         };
         const best = [...candidates]
           .filter((r: any) => !used.has(r.id))
@@ -850,9 +873,13 @@ async function fetchSpoonacularMealPlan(
       }
 
       if (meals.length > 0) {
-        // Cache the result like the mealplanner path does
-        const totalProtein = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
-        if (totalProtein >= targetProtein * 0.7) {
+        // Cache only if results reasonably honour the most important target.
+        let shouldCache = true;
+        if (targetProtein) {
+          const totalProtein = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
+          if (totalProtein < targetProtein * 0.65) shouldCache = false;
+        }
+        if (shouldCache) {
           try {
             await supabase
               .from('spoonacular_cache')
@@ -861,7 +888,7 @@ async function fetchSpoonacularMealPlan(
         }
         return meals;
       }
-      // Fall through to mealplanner if high-protein search returned nothing
+      // Fall through to mealplanner if macro-filtered search returned nothing
     }
 
     const plan = await generateMealPlan({ targetCalories: targetCal, diet, exclude });
@@ -952,15 +979,24 @@ async function fetchSpoonacularMealPlan(
   const perMealCal     = targetCal;
   const perMealProtein = targetProtein;
 
+  // Percentage tolerances so low-carb (20g) requests don't match high-carb
+  // recipes (35g panini). 30% / floor protects against the search returning
+  // zero results for extreme low targets.
+  const bandFor = (target: number | null, frac: number, floor: number) =>
+    target ? { min: Math.max(0, target - Math.max(floor, target * frac)), max: target + Math.max(floor, target * frac) } : null;
+  const proteinBand = bandFor(perMealProtein,   0.30, 10);
+  const carbsBand   = bandFor(targets.carbs_g,  0.30, 5);
+  const fatBand     = bandFor(targets.fat_g,    0.30, 4);
+
   const candidates = await searchRecipes({
     minCalories: Math.max(150, perMealCal - 200),
     maxCalories: perMealCal + 200,
-    minProtein:  perMealProtein ? Math.max(0, perMealProtein - 20) : undefined,
-    maxProtein:  perMealProtein ? perMealProtein + 30 : undefined,
-    minCarbs:    targets.carbs_g ? Math.max(0, targets.carbs_g - 25) : undefined,
-    maxCarbs:    targets.carbs_g ? targets.carbs_g + 25 : undefined,
-    minFat:      targets.fat_g ? Math.max(0, targets.fat_g - 10) : undefined,
-    maxFat:      targets.fat_g ? targets.fat_g + 10 : undefined,
+    minProtein:  proteinBand?.min,
+    maxProtein:  proteinBand?.max,
+    minCarbs:    carbsBand?.min,
+    maxCarbs:    carbsBand?.max,
+    minFat:      fatBand?.min,
+    maxFat:      fatBand?.max,
     diet:        dietPrefsToSpoonacular(dietPrefs) ?? undefined,
     intolerances: allergies.length ? allergies.join(',') : undefined,
     sort:        'random',
@@ -976,6 +1012,8 @@ async function fetchSpoonacularMealPlan(
     const find = (name: string) => n.find((x: any) => x.name === name)?.amount ?? 0;
     let score = Math.abs(find('Calories') - perMealCal);
     if (perMealProtein !== null) score += Math.abs(find('Protein') - perMealProtein) * 3;
+    if (targets.carbs_g)         score += Math.abs(find('Carbohydrates') - targets.carbs_g) * 3;
+    if (targets.fat_g)           score += Math.abs(find('Fat') - targets.fat_g) * 2;
     return score;
   };
   const best = [...candidates].sort((a, b) => scoreRecipe(a) - scoreRecipe(b))[0];

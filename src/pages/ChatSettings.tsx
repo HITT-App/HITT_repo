@@ -39,15 +39,18 @@ export default function ChatSettings() {
   const handleClearHistory = async () => {
     if (!user) return;
 
-    // 1. Delete all messages in the Jarvis conversation in Supabase
-    const { data: conv } = await supabase
+    // 1. Find ALL Jarvis conversations (history may have multiple if older
+    //    deletes only nuked messages without the row). Delete messages, then
+    //    the conversation rows themselves so useAI creates a fresh one.
+    const { data: convs } = await supabase
       .from('conversations')
       .select('id')
       .eq('user_id', user.id)
-      .eq('title', 'Jarvis')
-      .maybeSingle();
-    if (conv) {
-      await supabase.from('messages').delete().eq('conversation_id', conv.id);
+      .eq('title', 'Jarvis');
+    if (convs && convs.length > 0) {
+      const ids = convs.map(c => c.id);
+      await supabase.from('messages').delete().in('conversation_id', ids);
+      await supabase.from('conversations').delete().in('id', ids);
     }
 
     // 2. Clear the saved meal plan so it doesn't reappear on next Jarvis open
@@ -60,18 +63,15 @@ export default function ChatSettings() {
     sessionStorage.removeItem('jarvis_onboarding_suppressed');
     sessionStorage.removeItem('jarvis_last_greeted');
 
-    // 4. Force JarvisMode to remount on next visit so it picks up cleared state
-    // (the route change to /ai already triggers remount; this nudges if user
-    //  is on /chat-settings and navigates back).
     toast({
       title: 'Chat history cleared',
       description: 'All messages and saved plans deleted. Reloading…',
     });
-    // Full page reload guarantees JarvisMode + useAI state is wiped. Navigate
-    // alone isn't enough because the useAI hook caches messages internally,
-    // and React Router won't remount if we're already navigating to /ai.
+    // Use replace + cache-bust query param so the service worker doesn't serve
+    // a stale shell and React Router fully remounts. The bust param is harmless
+    // and ignored by all routes.
     setTimeout(() => {
-      window.location.href = '/ai';
+      window.location.replace(`/ai?cleared=${Date.now()}`);
     }, 600);
   };
 
