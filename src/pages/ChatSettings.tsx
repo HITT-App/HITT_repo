@@ -65,10 +65,14 @@ export default function ChatSettings() {
     //  is on /chat-settings and navigates back).
     toast({
       title: 'Chat history cleared',
-      description: 'All messages and saved plans have been deleted. Re-open Jarvis to see a fresh start.',
+      description: 'All messages and saved plans deleted. Reloading…',
     });
-    // Send user back to /ai — JarvisMode will remount fresh
-    setTimeout(() => navigate('/ai', { replace: true }), 600);
+    // Full page reload guarantees JarvisMode + useAI state is wiped. Navigate
+    // alone isn't enough because the useAI hook caches messages internally,
+    // and React Router won't remount if we're already navigating to /ai.
+    setTimeout(() => {
+      window.location.href = '/ai';
+    }, 600);
   };
 
   const handleDeleteMemory = () => {

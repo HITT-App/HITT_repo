@@ -635,54 +635,13 @@ const STRUCTURED_TOOLS = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "recommend_meal_plan",
-      description: "Generate a full day meal plan for the user. Call when the user asks for a meal plan, day of eating, or what they should eat today. Generate all meals inline — do NOT look up recipe IDs. Respect the user's dietary preferences, allergens, calorie target, and fitness goal from their profile.",
-      parameters: {
-        type: "object",
-        properties: {
-          meals: {
-            type: "array",
-            description: "Array of 3–5 meals covering the day (breakfast, lunch, dinner, and 1–2 snacks as appropriate).",
-            items: {
-              type: "object",
-              properties: {
-                meal_type: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"], description: "When this meal is eaten." },
-                name: { type: "string", description: "Short, appetising meal name." },
-                emoji: { type: "string", description: "Single emoji representing the meal." },
-                description: { type: "string", description: "One sentence describing the meal." },
-                calories: { type: "integer", description: "Estimated calories." },
-                protein_g: { type: "integer", description: "Protein in grams." },
-                carbs_g: { type: "integer", description: "Carbohydrates in grams." },
-                fat_g: { type: "integer", description: "Fat in grams." },
-                ingredients: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      amount: { type: "string" },
-                      unit: { type: "string" },
-                      name: { type: "string" },
-                    },
-                    required: ["amount", "unit", "name"],
-                  },
-                },
-                instructions: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "Step-by-step preparation instructions.",
-                },
-              },
-              required: ["meal_type", "name", "emoji", "description", "calories", "protein_g", "carbs_g", "fat_g", "ingredients", "instructions"],
-            },
-          },
-        },
-        required: ["meals"],
-      },
-    },
-  },
+  // Note: recommend_meal_plan tool is intentionally removed from the LLM's
+  // callable tools. Meal plans are now ONLY emitted server-side from the
+  // Spoonacular fast-path (when the user types explicit macros) or by the
+  // wizard submission flow. This prevents Gemini from inventing meals when
+  // the system prompt asks it to open the wizard instead.
+  // The 'recommend_meal_plan' action type still exists in the dispatcher
+  // and frontend so server-side code paths can emit it.
   {
     type: "function",
     function: {
@@ -2100,12 +2059,12 @@ serve(async (req) => {
           model: "gemini-2.5-flash",
           messages: [
             ...(injectedMessages as any[]).slice(0, -1),
-            { role: "system", content: "RETRY: Your previous attempt produced no output. Call the recommend_meal_plan tool now with a complete day of 3–5 meals. If the user specified a calorie or macro target, distribute across the meals so totals match exactly. If no target, build a balanced 2000 kcal day. Output the tool call ONLY — no text before or after." },
+            { role: "system", content: "RETRY: Your previous attempt produced no output. If the user asked about meals or food, call open_meal_plan_wizard. If they asked to log food, call log_food. If they want to schedule workouts, call schedule_plan. Output the tool call ONLY — no text. If none of those apply, respond with a brief natural-language answer." },
             (injectedMessages as any[]).at(-1),
           ],
           stream: false,
           tools: STRUCTURED_TOOLS,
-          tool_choice: { type: "function", function: { name: "recommend_meal_plan" } },
+          tool_choice: "auto",
           max_tokens: 8192,
         });
 
