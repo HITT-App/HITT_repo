@@ -1,7 +1,11 @@
 import SwiftUI
 
-private let hiitOrange = Color(red: 1, green: 0.541, blue: 0.149)
+private let hiitOrange    = Color(red: 1,     green: 0.541, blue: 0.149)
+private let hiitOrangeDim = Color(red: 0.227, green: 0.141, blue: 0.071)
+private let dimText       = Color(white: 0.541)
 
+// Crown-scrubbed sport picker. 5 visible rows centered on the focused row,
+// orange-tinted focused row with glow, crown-position indicator on the right.
 struct ActivityPickerView: View {
     let onSelect: (WatchActivity) -> Void
     let onCancel: () -> Void
@@ -12,73 +16,26 @@ struct ActivityPickerView: View {
 
     private var activities: [WatchActivity] { WATCH_ACTIVITIES }
 
+    private let rowHeight: CGFloat = 50
+    private let rowSpacing: CGFloat = 6
+
     var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                Color.black.ignoresSafeArea()
+        ZStack(alignment: .topLeading) {
+            Color.black.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    // Header
-                    Text("CHOOSE SPORT")
-                        .font(.system(size: 10, weight: .semibold))
-                        .tracking(1.2)
-                        .foregroundColor(Color(white: 0.54))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
-                        .padding(.bottom, 6)
-
-                    // Picker rows
-                    ScrollViewReader { proxy in
-                        ScrollView(.vertical, showsIndicators: false) {
-                            LazyVStack(spacing: 4) {
-                                // Padding items top
-                                Color.clear.frame(height: geo.size.height * 0.25)
-
-                                ForEach(Array(activities.enumerated()), id: \.element.id) { i, activity in
-                                    PickerRowButton(
-                                        activity: activity,
-                                        index: i,
-                                        selectedIdx: selectedIdx,
-                                        onTap: {
-                                            if i == selectedIdx { onSelect(activity) }
-                                            else { selectedIdx = i }
-                                        }
-                                    )
-                                    .id(i)
-                                }
-
-                                // Padding items bottom
-                                Color.clear.frame(height: geo.size.height * 0.25)
-                            }
-                        }
-                        .onChange(of: selectedIdx) { idx in
-                            withAnimation(.easeOut(duration: 0.18)) {
-                                proxy.scrollTo(idx, anchor: .center)
-                            }
-                        }
-                    }
+            VStack(spacing: 0) {
+                HiitTopLabel("CHOOSE SPORT")
+                ZStack {
+                    rowStack
+                    fadeTop
+                    fadeBottom
                 }
-
-                // Scrollbar indicator (right edge)
-                VStack {
-                    Spacer()
-                    GeometryReader { _ in
-                        let progress = activities.isEmpty ? 0 : Double(selectedIdx) / Double(activities.count - 1)
-                        VStack {
-                            Spacer(minLength: progress * (geo.size.height - 60))
-                            Capsule()
-                                .fill(hiitOrange)
-                                .frame(width: 3, height: 24)
-                                .shadow(color: hiitOrange.opacity(0.8), radius: 4)
-                        }
-                    }
-                    .frame(width: 6)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.trailing, 2)
+                .clipped()
             }
+
+            crownIndicator
+                .padding(.trailing, 4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
         }
         .focusable()
         .focused($crownFocused)
@@ -96,73 +53,122 @@ struct ActivityPickerView: View {
         }
         .onAppear {
             crownFocused = true
-            crownValue = 0
+            crownValue = Double(selectedIdx)
         }
     }
-}
 
-private struct PickerRowButton: View {
-    let activity: WatchActivity
-    let index: Int
-    let selectedIdx: Int
-    let onTap: () -> Void
+    // MARK: - Subviews
 
-    var body: some View {
-        Button(action: onTap) {
-            ActivityRow(
-                activity: activity,
-                isFocused: index == selectedIdx,
-                offset: abs(index - selectedIdx)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct ActivityRow: View {
-    let activity: WatchActivity
-    let isFocused: Bool
-    let offset: Int   // distance from selected (0 = selected)
-
-    var body: some View {
-        let scale: Double = isFocused ? 1.0 : (offset == 1 ? 0.95 : 0.90)
-        let opacity: Double = isFocused ? 1.0 : (offset == 1 ? 0.65 : 0.35)
-        let hiitOrange = Color(red: 1, green: 0.541, blue: 0.149)
-
-        HStack(spacing: 10) {
+    // Stack of visible rows (focused + 2 above + 2 below).
+    private var rowStack: some View {
+        GeometryReader { geo in
+            let center = geo.size.height / 2 - rowHeight / 2
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isFocused ? activity.color.opacity(0.25) : Color.white.opacity(0.06))
-                    .frame(width: 34, height: 34)
+                ForEach(-2...2, id: \.self) { off in
+                    let i = ((selectedIdx + off) % activities.count + activities.count) % activities.count
+                    let activity = activities[i]
+                    PickerRow(activity: activity, focused: off == 0)
+                        .onTapGesture {
+                            if off == 0 { onSelect(activity) } else { selectedIdx = i }
+                        }
+                        .offset(y: center + CGFloat(off) * (rowHeight + rowSpacing))
+                        .animation(.easeOut(duration: 0.18), value: selectedIdx)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    private var fadeTop: some View {
+        VStack {
+            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                .frame(height: 20)
+                .allowsHitTesting(false)
+            Spacer()
+        }
+    }
+
+    private var fadeBottom: some View {
+        VStack {
+            Spacer()
+            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                .frame(height: 20)
+                .allowsHitTesting(false)
+        }
+    }
+
+    private var crownIndicator: some View {
+        GeometryReader { geo in
+            let trackTop: CGFloat = 28
+            let trackBottom: CGFloat = 18
+            let trackHeight = geo.size.height - trackTop - trackBottom
+            let chipHeight: CGFloat = 28
+            let denom = max(1, activities.count - 1)
+            let chipY = trackTop + (CGFloat(selectedIdx) / CGFloat(denom)) * (trackHeight - chipHeight)
+            ZStack(alignment: .top) {
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 3, height: trackHeight)
+                    .offset(y: trackTop)
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(hiitOrange)
+                    .frame(width: 3, height: chipHeight)
+                    .shadow(color: hiitOrange.opacity(0.8), radius: 3)
+                    .offset(y: chipY)
+                    .animation(.easeOut(duration: 0.18), value: selectedIdx)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .frame(width: 6)
+    }
+}
+
+private struct PickerRow: View {
+    let activity: WatchActivity
+    let focused: Bool
+
+    var body: some View {
+        HStack(spacing: 9) {
+            ZStack {
+                Circle()
+                    .fill(focused ? activity.color.opacity(0.18) : Color.white.opacity(0.09))
+                    .frame(width: 32, height: 32)
                 Image(systemName: activity.icon)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(isFocused ? activity.color : Color(white: 0.54))
+                    .foregroundColor(focused ? activity.color : Color(white: 0.65))
             }
-
             Text(activity.name)
-                .font(.system(size: isFocused ? 15 : 13, weight: isFocused ? .semibold : .regular))
-                .foregroundColor(isFocused ? .white : Color(white: 0.54))
+                .font(.system(size: focused ? 15 : 13, weight: focused ? .bold : .semibold))
+                .foregroundColor(focused ? .white : Color(white: 0.62))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 11)
+        .frame(maxWidth: .infinity)
+        .frame(height: 50)
+        .background(rowBackground)
+        .overlay(rowBorder)
+        .cornerRadius(13)
+        .shadow(color: focused ? hiitOrange.opacity(0.25) : .clear, radius: 8)
+        .padding(.horizontal, 12)
+    }
 
-            Spacer()
-
-            if isFocused {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(hiitOrange)
+    private var rowBackground: some View {
+        Group {
+            if focused {
+                LinearGradient(
+                    colors: [hiitOrangeDim, Color(red: 0.227, green: 0.118, blue: 0.039).opacity(0.4)],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            } else {
+                Color.white.opacity(0.07)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isFocused ? Color.white.opacity(0.08) : Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isFocused ? hiitOrange.opacity(0.7) : Color.clear, lineWidth: 1.5)
-                )
-        )
-        .scaleEffect(scale)
-        .opacity(opacity)
-        .animation(.easeOut(duration: 0.15), value: isFocused)
+    }
+
+    private var rowBorder: some View {
+        RoundedRectangle(cornerRadius: 13)
+            .stroke(focused ? hiitOrange : Color.white.opacity(0.08), lineWidth: focused ? 2 : 1)
     }
 }
