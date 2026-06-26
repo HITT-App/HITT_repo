@@ -99,10 +99,17 @@
 			);
 			target = 268523972FEBD48100E3A525 /* HIITLiveActivityExtension */;
 		};
+		26815C402FA8975B00338984 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 26815C142FA8975B00338984 /* HIITWatch Watch App */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		26815C162FA8975B00338984 /* HIITWatch Watch App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "HIITWatch Watch App"; sourceTree = "<group>"; };
+		26815C162FA8975B00338984 /* HIITWatch Watch App */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (26815C402FA8975B00338984 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = "HIITWatch Watch App"; sourceTree = "<group>"; };
 		2685239E2FEBD48100E3A525 /* HIITLiveActivity */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (268523B42FEBEE1300E3A525 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = HIITLiveActivity; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
