@@ -415,6 +415,25 @@ struct HiitTopLabel: View {
     }
 }
 
+// Legacy small-caps label — kept while other views are still on the old style.
+// Remove when every screen has been migrated to HiitTopLabel.
+struct TopLabel: View {
+    let text: String
+    let color: Color
+    init(_ text: String, color: Color = Color(white: 0.54)) {
+        self.text = text; self.color = color
+    }
+    var body: some View {
+        Text(text)
+            .font(.system(size: 9, weight: .semibold))
+            .tracking(1.3)
+            .foregroundColor(color)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+    }
+}
+
 struct PageDots: View {
     let count: Int
     let current: Int
