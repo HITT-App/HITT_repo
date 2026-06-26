@@ -491,6 +491,7 @@ struct ActiveWorkoutView: View {
         WorkoutManager.shared.start(w, outdoor: outdoor)
         phase = .active
         page = 0
+        WorkoutCoordinator.shared.workoutInProgress = true
         startTicker()
     }
 
@@ -503,6 +504,7 @@ struct ActiveWorkoutView: View {
         ticker?.invalidate(); ticker = nil
         WorkoutManager.shared.end()
         phase = .idle
+        WorkoutCoordinator.shared.workoutInProgress = false
     }
 
     private func confirmEnd(save: Bool) {

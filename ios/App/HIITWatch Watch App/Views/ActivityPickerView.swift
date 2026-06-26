@@ -16,8 +16,8 @@ struct ActivityPickerView: View {
 
     private var activities: [WatchActivity] { WATCH_ACTIVITIES }
 
-    private let rowHeight: CGFloat = 50
-    private let rowSpacing: CGFloat = 6
+    private let rowHeight: CGFloat = 36
+    private let rowSpacing: CGFloat = 4
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -128,30 +128,30 @@ private struct PickerRow: View {
     let focused: Bool
 
     var body: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: 6) {
             ZStack {
                 Circle()
                     .fill(focused ? activity.color.opacity(0.18) : Color.white.opacity(0.09))
-                    .frame(width: 32, height: 32)
+                    .frame(width: 24, height: 24)
                 Image(systemName: activity.icon)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(focused ? activity.color : Color(white: 0.65))
             }
             Text(activity.name)
-                .font(.system(size: focused ? 15 : 13, weight: focused ? .bold : .semibold))
+                .font(.system(size: focused ? 12 : 10, weight: focused ? .bold : .semibold))
                 .foregroundColor(focused ? .white : Color(white: 0.62))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 11)
+        .padding(.horizontal, 8)
         .frame(maxWidth: .infinity)
-        .frame(height: 50)
+        .frame(height: 36)
         .background(rowBackground)
         .overlay(rowBorder)
-        .cornerRadius(13)
-        .shadow(color: focused ? hiitOrange.opacity(0.25) : .clear, radius: 8)
-        .padding(.horizontal, 12)
+        .cornerRadius(10)
+        .shadow(color: focused ? hiitOrange.opacity(0.25) : .clear, radius: 6)
+        .padding(.horizontal, 10)
     }
 
     private var rowBackground: some View {
@@ -168,7 +168,7 @@ private struct PickerRow: View {
     }
 
     private var rowBorder: some View {
-        RoundedRectangle(cornerRadius: 13)
-            .stroke(focused ? hiitOrange : Color.white.opacity(0.08), lineWidth: focused ? 2 : 1)
+        RoundedRectangle(cornerRadius: 10)
+            .stroke(focused ? hiitOrange : Color.white.opacity(0.08), lineWidth: focused ? 1.5 : 0.8)
     }
 }

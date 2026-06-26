@@ -7,6 +7,9 @@ final class WorkoutCoordinator: NSObject, ObservableObject {
     @Published var activeTab: Int = 0
     @Published var pendingWorkoutName: String? = nil
     @Published var pendingStructuredWorkout: WatchWorkout? = nil
+    // When true, ContentView pins to the workout tab and disables the
+    // horizontal swipe so the user can't accidentally leave a live workout.
+    @Published var workoutInProgress: Bool = false
 
     private override init() { super.init() }
 

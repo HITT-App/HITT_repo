@@ -81,59 +81,62 @@ private struct OpenDayScreen: View {
     private let streakDays = 12
 
     var body: some View {
+        // Sized for the smallest watch (SE 3 40mm = 162×197pt). Layout has to
+        // clear the ~17pt system time at the top and the page dot row added by
+        // the parent TabView.
         VStack(spacing: 0) {
             HiitTopLabel("TODAY")
 
             // Hero row: step ring + steps count
-            HStack(spacing: 13) {
+            HStack(spacing: 9) {
                 StepRing(progress: stepsGoalPct)
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(steps.formatted())
-                        .font(.system(size: 34, weight: .heavy, design: .rounded))
+                        .font(.system(size: 22, weight: .heavy, design: .rounded))
                         .monospacedDigit()
                         .foregroundColor(.white)
-                        .kerning(-1.2)
+                        .kerning(-0.6)
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
                     Text("STEPS · \(Int(stepsGoalPct * 100))%")
-                        .font(.system(size: 11, weight: .bold))
-                        .tracking(1.3)
+                        .font(.system(size: 8.5, weight: .bold))
+                        .tracking(0.9)
                         .foregroundColor(dimText)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 10)
+            .padding(.horizontal, 10)
+            .padding(.top, 6)
 
             // 3-up stat grid
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 StatTile(icon: "heart.fill", iconColor: hrRed, value: "\(avgHr)", unit: "bpm", label: "AVG HR")
                 StatTile(icon: "flame.fill", iconColor: hiitOrange, value: "\(cal)", unit: nil, label: "CAL")
                 StatTile(icon: "trophy.fill", iconColor: goldYellow, value: "\(streakDays)", unit: "d", label: "STREAK")
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
+            .padding(.horizontal, 8)
+            .padding(.top, 6)
 
-            Spacer(minLength: 6)
+            Spacer(minLength: 4)
 
             // Pick a sport CTA
             Button(action: onPickSport) {
-                HStack(spacing: 8) {
+                HStack(spacing: 5) {
                     Image(systemName: "bolt.fill")
-                        .font(.system(size: 13, weight: .heavy))
+                        .font(.system(size: 10, weight: .heavy))
                     Text("Pick a sport")
-                        .font(.system(size: 14, weight: .heavy))
+                        .font(.system(size: 11, weight: .heavy))
                 }
                 .foregroundColor(Color(red: 0.10, green: 0.04, blue: 0))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 11)
+                .padding(.vertical, 7)
                 .background(hiitOrange)
-                .cornerRadius(15)
-                .shadow(color: hiitOrange.opacity(0.4), radius: 8, y: 0)
+                .cornerRadius(11)
+                .shadow(color: hiitOrange.opacity(0.4), radius: 6, y: 0)
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.bottom, 6)
-
-            PageDots(count: 5, current: 0)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 2)
         }
     }
 }
@@ -146,16 +149,16 @@ private struct StepRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.08), lineWidth: 6)
+                .stroke(Color.white.opacity(0.08), lineWidth: 4)
             Circle()
                 .trim(from: 0, to: progress)
-                .stroke(stepGreen, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                .stroke(stepGreen, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Image(systemName: "figure.run")
-                .font(.system(size: 22, weight: .medium))
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(stepGreen)
         }
-        .frame(width: 60, height: 60)
+        .frame(width: 42, height: 42)
     }
 }
 
@@ -169,33 +172,33 @@ private struct StatTile: View {
     let label: String
 
     var body: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 3) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 10, weight: .medium))
                 .foregroundColor(iconColor)
             HStack(alignment: .lastTextBaseline, spacing: 1) {
                 Text(value)
-                    .font(.system(size: 19, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
                     .monospacedDigit()
                     .foregroundColor(.white)
-                    .kerning(-0.5)
+                    .kerning(-0.3)
                 if let unit {
                     Text(unit)
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 7, weight: .semibold))
                         .foregroundColor(dimText)
                 }
             }
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             Text(label)
-                .font(.system(size: 8, weight: .heavy))
-                .tracking(0.7)
+                .font(.system(size: 6.5, weight: .heavy))
+                .tracking(0.5)
                 .foregroundColor(dimText2)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 9)
+        .padding(.vertical, 6)
         .background(tileBg)
-        .cornerRadius(11)
+        .cornerRadius(8)
     }
 }
 
@@ -400,18 +403,18 @@ struct HiitTopLabel: View {
         self.color = color
     }
     var body: some View {
-        HStack(spacing: 7) {
-            RoundedRectangle(cornerRadius: 2)
+        HStack(spacing: 5) {
+            RoundedRectangle(cornerRadius: 1.5)
                 .fill(color)
-                .frame(width: 4, height: 16)
+                .frame(width: 3, height: 10)
             Text(text)
-                .font(.system(size: 12, weight: .heavy))
-                .tracking(1.3)
+                .font(.system(size: 9, weight: .heavy))
+                .tracking(1.1)
                 .foregroundColor(color)
             Spacer(minLength: 0)
         }
-        .padding(.leading, 14)
-        .padding(.top, 4)
+        .padding(.leading, 10)
+        .padding(.top, 2)
     }
 }
 
