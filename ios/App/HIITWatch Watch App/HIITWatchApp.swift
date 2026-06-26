@@ -6,11 +6,6 @@ import WatchKit
 // HKHealthStore.startWatchApp(with:). Routes to the Race tab for triathlons.
 class WatchAppDelegate: NSObject, WKApplicationDelegate {
     func handle(_ workoutConfiguration: HKWorkoutConfiguration) {
-        // Diagnostic — buzz the wrist the instant this fires so we can tell
-        // whether watchOS actually launched the app in response to startWatchApp.
-        // Remove once auto-launch is confirmed working end-to-end.
-        WKInterfaceDevice.current().play(.success)
-
         let isTriathlon: Bool
         if #available(watchOS 9.0, *) {
             isTriathlon = workoutConfiguration.activityType == .swimBikeRun

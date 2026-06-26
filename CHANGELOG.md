@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-26] — Triathlon Watch auto-launch actually works now
+
+- **Tap Send to Watch on the iPhone and the Apple Watch wakes itself and opens straight to the Race tab.** Previously the plan arrived on the Watch but you had to open the HIIT app on the Watch yourself; on the build before this one, only WCSession delivered the plan and the launch never fired
+
 ## [2026-06-25] — Hotfix: outdoor activity tracker crashed on launch
 
 - **Starting a Run, Walk, or Cycle no longer crashes the app** — the new "Finish [activity]" button at the bottom of the live tracker referenced an icon that wasn't imported, causing an immediate crash when the tracker opened. The icon is now properly imported and the tracker loads as expected

@@ -78,6 +78,25 @@ NutritionDashboard, WorkoutLibrary, Profile, BodyScan.
 New `.swift` files placed in the Watch App directory are included automatically. Do NOT add them
 manually to the Xcode project file.
 
+**Explicit `Info.plist`, not synthesised `INFOPLIST_KEY_*`** — the Watch target uses an explicit
+`HIITWatch Watch App/Info.plist` and `GENERATE_INFOPLIST_FILE = NO`. This is deliberate. The Xcode
+`INFOPLIST_KEY_*` build-setting synthesis path does NOT cleanly handle keys whose value must be an
+array. We hit this hard with `WKBackgroundModes` — `INFOPLIST_KEY_WKBackgroundModes =
+"workout-processing"` (the only syntax the synthesis supports) was silently dropped from the built
+plist entirely, which made watchOS treat the app as ineligible for workout launches via
+`HKHealthStore.startWatchApp(with:)`. The iPhone side reported `success=yes` because it had no way
+to know the Watch hadn't accepted the launch. Lesson: **for any plist key that must be an array,
+use an explicit Info.plist and verify with `plutil -p` on the BUILT binary, not the source**. If a
+key is missing from the built plist, that's where the bug is. Because the Watch group is
+file-system-synchronized, the new `Info.plist` is excluded from the Resources phase via a
+`PBXFileSystemSynchronizedBuildFileExceptionSet` (mirrors the HIITLiveActivity widget pattern).
+
+**Triathlon Watch auto-launch** — call chain is iPhone `HKHealthStore.startWatchApp(with:)` →
+watchOS launches Watch app → `WatchAppDelegate.handle(_:)` fires (declared in
+`ios/App/HIITWatch Watch App/HIITWatchApp.swift`) → routes to Race tab for
+`.swimBikeRun` configurations. The iPhone Info.plist also needs `LSApplicationCategoryType =
+public.app-category.healthcare-fitness` — `startWatchApp` is gated to apps in that category.
+
 **UserDefaults persistence** — any data the Watch needs to survive app restarts must be saved to
 `UserDefaults.standard` when received. Pattern established for `todayWorkout` and `triathlonPlan`
 in `WatchSessionManager.swift`. Add the same for any new persisted data.
