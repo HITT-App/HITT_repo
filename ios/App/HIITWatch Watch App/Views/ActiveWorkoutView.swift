@@ -240,6 +240,8 @@ struct ActiveWorkoutView: View {
             onDone: {
                 overlay = .none
                 phase = .idle
+                coordinator.clearPending()
+                coordinator.activeTab = 0
             }
         )
     }
@@ -503,6 +505,8 @@ struct ActiveWorkoutView: View {
         WorkoutManager.shared.end()
         phase = .idle
         WorkoutCoordinator.shared.workoutInProgress = false
+        coordinator.clearPending()
+        coordinator.activeTab = 0
     }
 
     private func confirmEnd(save: Bool) {
@@ -516,6 +520,13 @@ struct ActiveWorkoutView: View {
         maxHR = 0; totalHR = 0; hrSamples = 0
         phase = .idle
         overlay = save ? .completion : .none
+        WorkoutCoordinator.shared.workoutInProgress = false
+        if !save {
+            // Discarding sends them straight home; on a save the completion
+            // screen handles the "Done" → home transition itself.
+            coordinator.clearPending()
+            coordinator.activeTab = 0
+        }
     }
 
     private func confirmSwitch(to activity: WatchActivity) {
