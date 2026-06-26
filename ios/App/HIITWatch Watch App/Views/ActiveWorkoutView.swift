@@ -340,34 +340,32 @@ struct ActiveWorkoutView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
-        .overlay(
-            PageDots(count: pageCount, current: page).padding(.bottom, 2),
-            alignment: .bottom
-        )
     }
 
     // Page 1 — Main metrics
     private var metricsPage: some View {
         VStack(spacing: 0) {
             // Sport header
-            HStack(spacing: 6) {
-                Image(systemName: workoutIcon).font(.system(size: 11)).foregroundColor(workoutColor)
-                Text(workoutName.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(1).foregroundColor(workoutColor)
+            HStack(spacing: 5) {
+                Image(systemName: workoutIcon).font(.system(size: 9)).foregroundColor(workoutColor)
+                Text(workoutName.uppercased()).font(.system(size: 9, weight: .semibold)).tracking(0.8).foregroundColor(workoutColor).lineLimit(1)
                 Spacer()
-                Circle().fill(hiitRed).frame(width: 5, height: 5)
+                Circle().fill(hiitRed).frame(width: 4, height: 4)
                     .opacity(elapsedSeconds % 2 == 0 ? 1 : 0.3)
             }
-            .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 4)
+            .padding(.horizontal, 10).padding(.top, 4).padding(.bottom, 2)
 
-            // Elapsed time — large
+            // Elapsed time — large but fits
             Text(timeFormatted(elapsedSeconds))
-                .font(.system(size: 50, weight: .black, design: .monospaced))
+                .font(.system(size: 30, weight: .black, design: .monospaced))
                 .foregroundColor(.white)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
                 .frame(maxWidth: .infinity)
-                .padding(.bottom, 6)
+                .padding(.bottom, 4)
 
             // 2x2 metrics grid
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 4) {
                 MetricTile(value: heartRate > 0 ? "\(heartRate)" : "—", unit: "BPM",
                            color: hiitRed, icon: "heart.fill")
                 MetricTile(value: String(format: "%.2f", distanceKm), unit: "KM",
@@ -377,7 +375,7 @@ struct ActiveWorkoutView: View {
                 MetricTile(value: "\(calories)", unit: "CAL",
                            color: hiitGold, icon: "flame.fill")
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 6)
         }
     }
 
@@ -599,16 +597,23 @@ struct ActiveWorkoutView: View {
 private struct MetricTile: View {
     let value: String; let unit: String; let color: Color; let icon: String
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon).foregroundColor(color).font(.system(size: 11))
+        HStack(spacing: 4) {
+            Image(systemName: icon).foregroundColor(color).font(.system(size: 9))
             VStack(alignment: .leading, spacing: 0) {
-                Text(value).font(.system(size: 18, weight: .bold, design: .monospaced)).foregroundColor(.white)
-                Text(unit).font(.system(size: 8, weight: .medium)).foregroundColor(dimText)
+                Text(value)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                Text(unit)
+                    .font(.system(size: 7, weight: .medium))
+                    .foregroundColor(dimText)
+                    .lineLimit(1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 8).padding(.horizontal, 10)
-        .background(rowBg).cornerRadius(10)
+        .padding(.vertical, 5).padding(.horizontal, 6)
+        .background(rowBg).cornerRadius(8)
     }
 }
 

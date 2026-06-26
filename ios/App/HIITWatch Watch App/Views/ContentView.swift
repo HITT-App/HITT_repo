@@ -14,7 +14,6 @@ struct ContentView: View {
                 TodayView().tag(0)
                 workoutTab.tag(1)
                 TriathlonView().tag(2)
-                StatsView().tag(3)
             }
             .tabViewStyle(.page)
             .onReceive(coordinator.$pendingStructuredWorkout) { workout in

@@ -24,7 +24,19 @@ struct ActivityPickerView: View {
             Color.black.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                HiitTopLabel("CHOOSE SPORT")
+                HStack(spacing: 6) {
+                    Button(action: onCancel) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(hiitOrange)
+                            .frame(width: 22, height: 22)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    HiitTopLabel("CHOOSE SPORT")
+                }
+                .padding(.leading, 6)
                 ZStack {
                     rowStack
                     fadeTop
