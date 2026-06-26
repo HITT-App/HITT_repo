@@ -423,6 +423,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HIIT;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HIIT reads your heart rate, calories, and distance to display live workout stats on your watch.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HIIT saves your workouts, including triathlon legs, to Apple Health.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HIIT uses your watch's GPS to map your outdoor activities.";
@@ -450,7 +451,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 8.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
 		};
@@ -475,6 +476,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HIIT;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HIIT reads your heart rate, calories, and distance to display live workout stats on your watch.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HIIT saves your workouts, including triathlon legs, to Apple Health.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HIIT uses your watch's GPS to map your outdoor activities.";
@@ -501,7 +503,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 8.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
 		};
