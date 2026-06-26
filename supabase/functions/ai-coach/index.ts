@@ -816,28 +816,44 @@ async function fetchSpoonacularMealPlan(
     const anyMacroSpecified = targets.protein_g !== null || targets.carbs_g !== null || targets.fat_g !== null;
 
     if (anyMacroSpecified) {
-      // Build 3 meals each hitting ~1/3 of targets with macro filters applied.
-      const perMealCal = Math.round(targetCal / 3);
-      const perMealProtein = targetProtein ? Math.round(targetProtein / 3) : null;
-      const perMealCarbs   = targets.carbs_g ? Math.round(targets.carbs_g / 3) : null;
-      const perMealFat     = targets.fat_g ? Math.round(targets.fat_g / 3) : null;
-
-      const proteinBand = macroBand(perMealProtein, 0.25, 10);
-      const carbsBand   = macroBand(perMealCarbs,   0.30, 8);
-      const fatBand     = macroBand(perMealFat,     0.30, 5);
-
-      const slotConfig: Array<{ slot: 'breakfast' | 'lunch' | 'dinner'; type: string }> = [
-        { slot: 'breakfast', type: 'breakfast' },
-        { slot: 'lunch',     type: 'main course' },
-        { slot: 'dinner',    type: 'main course' },
+      // Realistic per-meal ratios. Even-thirds (33% breakfast) overshoots a
+      // typical breakfast and the recipe search returns nothing.
+      const slotConfig: Array<{ slot: 'breakfast' | 'lunch' | 'dinner'; type: string; ratio: number }> = [
+        { slot: 'breakfast', type: 'breakfast',  ratio: 0.25 },
+        { slot: 'lunch',     type: 'main course', ratio: 0.40 },
+        { slot: 'dinner',    type: 'main course', ratio: 0.35 },
       ];
+
+      // Rolling targets: after each meal is picked, the remaining target is
+      // distributed across the slots still to come (weighted by their ratios).
+      // This makes over/under-shoots in earlier slots auto-correct in later
+      // ones, so total-day error stays small even when individual meals drift.
+      let remainingCal     = targetCal;
+      let remainingProtein = targetProtein ?? 0;
+      let remainingCarbs   = targets.carbs_g ?? 0;
+      let remainingFat     = targets.fat_g ?? 0;
+      let remainingRatio   = 1;
 
       const meals: any[] = [];
       const used = new Set<number>();
-      for (const { slot, type } of slotConfig) {
+      for (const { slot, type, ratio } of slotConfig) {
+        // Share of remaining target this slot should claim.
+        const share = ratio / remainingRatio;
+        const slotCal     = Math.max(180, Math.round(remainingCal * share));
+        const slotProtein = targetProtein ? Math.round(remainingProtein * share) : null;
+        const slotCarbs   = targets.carbs_g ? Math.round(remainingCarbs * share)   : null;
+        const slotFat     = targets.fat_g ? Math.round(remainingFat * share)       : null;
+
+        // Tight bands so the per-meal nutrition actually matches the target.
+        // Floors stop the band from collapsing on tiny targets (e.g. low-carb).
+        const calBand     = macroBand(slotCal,     0.15, 80);
+        const proteinBand = macroBand(slotProtein, 0.20, 8);
+        const carbsBand   = macroBand(slotCarbs,   0.25, 6);
+        const fatBand     = macroBand(slotFat,     0.25, 4);
+
         const candidates = await searchRecipes({
-          minCalories: Math.max(150, perMealCal - 200),
-          maxCalories: perMealCal + 200,
+          minCalories: calBand?.min,
+          maxCalories: calBand?.max,
           minProtein:  proteinBand?.min,
           maxProtein:  proteinBand?.max,
           minCarbs:    carbsBand?.min,
@@ -849,42 +865,120 @@ async function fetchSpoonacularMealPlan(
           type,
           sort: 'random',
           offset: Math.floor(Math.random() * 30),
-          number: 10,
+          number: 12,
         });
-        if (!candidates || candidates.length === 0) continue;
 
-        // Score by closeness to per-meal targets. Protein weighted heaviest.
+        // Fall back to a 50%-wider search if the tight band returns nothing —
+        // better a slightly looser meal than a missing one.
+        const widened = (candidates && candidates.length > 0) ? candidates : await searchRecipes({
+          minCalories: macroBand(slotCal, 0.25, 120)?.min,
+          maxCalories: macroBand(slotCal, 0.25, 120)?.max,
+          minProtein:  macroBand(slotProtein, 0.30, 12)?.min,
+          maxProtein:  macroBand(slotProtein, 0.30, 12)?.max,
+          diet,
+          intolerances: exclude,
+          type,
+          sort: 'random',
+          offset: Math.floor(Math.random() * 30),
+          number: 12,
+        });
+        if (!widened || widened.length === 0) {
+          // Skip this slot — leave remaining* untouched so the next slot will
+          // try to absorb the unfilled share. (remainingRatio stays the same.)
+          continue;
+        }
+
+        // Score by closeness to per-slot targets. Protein weighted heaviest
+        // because it's typically the constraint users care about most.
         const score = (recipe: any) => {
           const n = recipe.nutrition?.nutrients ?? [];
           const find = (name: string) => n.find((x: any) => x.name === name)?.amount ?? 0;
-          let s = Math.abs(find('Calories') - perMealCal);
-          if (perMealProtein !== null) s += Math.abs(find('Protein') - perMealProtein) * 4;
-          if (perMealCarbs   !== null) s += Math.abs(find('Carbohydrates') - perMealCarbs) * 3;
-          if (perMealFat     !== null) s += Math.abs(find('Fat') - perMealFat) * 2;
+          let s = Math.abs(find('Calories') - slotCal);
+          if (slotProtein !== null) s += Math.abs(find('Protein') - slotProtein) * 5;
+          if (slotCarbs   !== null) s += Math.abs(find('Carbohydrates') - slotCarbs) * 3;
+          if (slotFat     !== null) s += Math.abs(find('Fat') - slotFat) * 2;
           return s;
         };
-        const best = [...candidates]
+        const best = [...widened]
           .filter((r: any) => !used.has(r.id))
           .sort((a, b) => score(a) - score(b))[0];
-        if (best) {
-          used.add(best.id);
-          meals.push(recipeToMealInPlan(best, slot));
+        if (!best) {
+          continue;
         }
+        used.add(best.id);
+        const mapped = recipeToMealInPlan(best, slot);
+        meals.push(mapped);
+
+        // Subtract what this meal actually delivers from the running total.
+        remainingCal     -= mapped.calories ?? 0;
+        remainingProtein -= mapped.protein_g ?? 0;
+        remainingCarbs   -= mapped.carbs_g ?? 0;
+        remainingFat     -= mapped.fat_g ?? 0;
+        remainingRatio   -= ratio;
+      }
+
+      // After 3 meals: top up with up to 2 snacks if we're still short on
+      // calories or protein. This is where the day's totals close in.
+      const totals = () => meals.reduce((acc, m) => ({
+        cal:     acc.cal     + (m.calories  ?? 0),
+        protein: acc.protein + (m.protein_g ?? 0),
+        carbs:   acc.carbs   + (m.carbs_g   ?? 0),
+        fat:     acc.fat     + (m.fat_g     ?? 0),
+      }), { cal: 0, protein: 0, carbs: 0, fat: 0 });
+
+      for (let snackAttempt = 0; snackAttempt < 2; snackAttempt++) {
+        const t = totals();
+        const calDeficit     = targetCal - t.cal;
+        const proteinDeficit = targetProtein ? targetProtein - t.protein : 0;
+        const needCals    = calDeficit > 180;
+        const needProtein = proteinDeficit > 15;
+        if (!needCals && !needProtein) break;
+
+        // Aim snack at the larger remaining gap — calorie-led if cals are way
+        // short, protein-led if calories are mostly there but protein isn't.
+        const snackCal     = needCals ? Math.max(180, Math.min(550, calDeficit)) : 350;
+        const snackProtein = needProtein ? Math.max(10, Math.min(45, proteinDeficit)) : null;
+        const candidates = await searchRecipes({
+          minCalories: Math.max(150, snackCal - 120),
+          maxCalories: snackCal + 120,
+          minProtein:  snackProtein ? Math.max(5, snackProtein - 8) : undefined,
+          maxProtein:  snackProtein ? snackProtein + 12 : undefined,
+          diet,
+          intolerances: exclude,
+          type: 'snack',
+          sort: 'random',
+          offset: Math.floor(Math.random() * 20),
+          number: 10,
+        });
+        if (!candidates || candidates.length === 0) break;
+        const candidate = [...candidates]
+          .filter((r: any) => !used.has(r.id))
+          .sort((a: any, b: any) => {
+            // Prefer high protein when protein is short, else closest to snack cal target.
+            const n = (r: any, name: string) => r.nutrition?.nutrients?.find((x: any) => x.name === name)?.amount ?? 0;
+            if (needProtein) return n(b, 'Protein') - n(a, 'Protein');
+            return Math.abs(n(a, 'Calories') - snackCal) - Math.abs(n(b, 'Calories') - snackCal);
+          })[0];
+        if (!candidate) break;
+        used.add(candidate.id);
+        meals.push(recipeToMealInPlan(candidate, 'snack'));
       }
 
       if (meals.length > 0) {
-        // Cache only if results reasonably honour the most important target.
-        let shouldCache = true;
-        if (targetProtein) {
-          const totalProtein = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
-          if (totalProtein < targetProtein * 0.65) shouldCache = false;
-        }
+        // Cache only if the day actually lands close to target — within 10%
+        // on calories AND on protein (if requested). Otherwise the bad plan
+        // would be served back to every subsequent identical request for 24h.
+        const t = totals();
+        let shouldCache = Math.abs(t.cal - targetCal) <= targetCal * 0.10;
+        if (targetProtein && Math.abs(t.protein - targetProtein) > targetProtein * 0.10) shouldCache = false;
         if (shouldCache) {
           try {
             await supabase
               .from('spoonacular_cache')
               .upsert({ signature: cacheSignature, meals, created_at: new Date().toISOString() });
           } catch { /* silent */ }
+        } else {
+          console.log('[ai-coach] not caching day plan: totals miss target by >10%', { cal: t.cal, targetCal, protein: t.protein, targetProtein });
         }
         return meals;
       }
