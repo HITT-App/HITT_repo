@@ -763,7 +763,7 @@ async function fetchSpoonacularMealPlan(
   // rate-limit bursts. Bump `v` to invalidate the entire cache when planner
   // logic changes.
   const cacheSignature = JSON.stringify({
-    v: 5,
+    v: 6, // bump on planner logic change so old loose plans don't get served back
     scope: targets.scope,
     cal: targetCal,
     p: targetProtein ?? null,
@@ -868,23 +868,42 @@ async function fetchSpoonacularMealPlan(
           number: 12,
         });
 
-        // Fall back to a 50%-wider search if the tight band returns nothing —
-        // better a slightly looser meal than a missing one.
-        const widened = (candidates && candidates.length > 0) ? candidates : await searchRecipes({
-          minCalories: macroBand(slotCal, 0.25, 120)?.min,
-          maxCalories: macroBand(slotCal, 0.25, 120)?.max,
-          minProtein:  macroBand(slotProtein, 0.30, 12)?.min,
-          maxProtein:  macroBand(slotProtein, 0.30, 12)?.max,
-          diet,
-          intolerances: exclude,
-          type,
-          sort: 'random',
-          offset: Math.floor(Math.random() * 30),
-          number: 12,
-        });
+        let widened = candidates;
+
+        // Wider band #1 (calorie + protein loosened): only fires if tight band returned nothing
         if (!widened || widened.length === 0) {
-          // Skip this slot — leave remaining* untouched so the next slot will
-          // try to absorb the unfilled share. (remainingRatio stays the same.)
+          widened = await searchRecipes({
+            minCalories: macroBand(slotCal, 0.25, 120)?.min,
+            maxCalories: macroBand(slotCal, 0.25, 120)?.max,
+            minProtein:  slotProtein ? Math.max(5, slotProtein - 20) : undefined,
+            diet,
+            intolerances: exclude,
+            type,
+            sort: 'random',
+            offset: Math.floor(Math.random() * 30),
+            number: 15,
+          });
+        }
+        // Wider band #2 (protein-only filter, no upper cap, broaden cal): last resort.
+        // For high-protein requests where a slot's tight cal+protein band is
+        // genuinely empty in Spoonacular's corpus, just find ANY recipe of
+        // that type with at-least-some protein and let the snack loop close
+        // the day's totals.
+        if (!widened || widened.length === 0) {
+          widened = await searchRecipes({
+            minCalories: Math.max(150, Math.round(slotCal * 0.5)),
+            maxCalories: Math.round(slotCal * 1.7),
+            minProtein:  slotProtein ? Math.max(5, Math.round(slotProtein * 0.4)) : undefined,
+            diet,
+            intolerances: exclude,
+            type,
+            sort: 'random',
+            offset: Math.floor(Math.random() * 30),
+            number: 15,
+          });
+        }
+        if (!widened || widened.length === 0) {
+          console.log('[ai-coach] no candidates for slot', slot, 'cal≈', slotCal, 'protein≈', slotProtein);
           continue;
         }
 
@@ -907,6 +926,7 @@ async function fetchSpoonacularMealPlan(
         }
         used.add(best.id);
         const mapped = recipeToMealInPlan(best, slot);
+        console.log('[ai-coach] picked', slot, mapped.name, 'cal:', mapped.calories, 'p:', mapped.protein_g, '(target cal:', slotCal, 'p:', slotProtein, ')');
         meals.push(mapped);
 
         // Subtract what this meal actually delivers from the running total.
@@ -926,7 +946,9 @@ async function fetchSpoonacularMealPlan(
         fat:     acc.fat     + (m.fat_g     ?? 0),
       }), { cal: 0, protein: 0, carbs: 0, fat: 0 });
 
-      for (let snackAttempt = 0; snackAttempt < 2; snackAttempt++) {
+      // Up to 4 snack top-ups so high-protein days actually close the protein
+      // gap even when several slots had to widen and undershoot.
+      for (let snackAttempt = 0; snackAttempt < 4; snackAttempt++) {
         const t = totals();
         const calDeficit     = targetCal - t.cal;
         const proteinDeficit = targetProtein ? targetProtein - t.protein : 0;
