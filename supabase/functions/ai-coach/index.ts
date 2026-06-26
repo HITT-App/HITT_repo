@@ -864,46 +864,56 @@ async function fetchSpoonacularMealPlan(
           intolerances: exclude,
           type,
           sort: 'random',
-          offset: Math.floor(Math.random() * 30),
+          offset: Math.floor(Math.random() * 10), // small random offset for variety
           number: 12,
         });
+        console.log('[ai-coach] slot', slot, 'tight band:', candidates?.length ?? 0, 'candidates');
 
         let widened = candidates;
 
-        // Wider band #1 (calorie + protein loosened): only fires if tight band returned nothing
+        // Wider band #1: loosen calorie + protein. Drop random offset — at this
+        // point we just need ANY hit, page 1 most likely has results.
         if (!widened || widened.length === 0) {
           widened = await searchRecipes({
-            minCalories: macroBand(slotCal, 0.25, 120)?.min,
-            maxCalories: macroBand(slotCal, 0.25, 120)?.max,
-            minProtein:  slotProtein ? Math.max(5, slotProtein - 20) : undefined,
+            minCalories: macroBand(slotCal, 0.30, 150)?.min,
+            maxCalories: macroBand(slotCal, 0.30, 150)?.max,
+            minProtein:  slotProtein ? Math.max(5, slotProtein - 25) : undefined,
             diet,
             intolerances: exclude,
             type,
             sort: 'random',
-            offset: Math.floor(Math.random() * 30),
-            number: 15,
+            number: 20,
           });
+          console.log('[ai-coach] slot', slot, 'widen-1:', widened?.length ?? 0);
         }
-        // Wider band #2 (protein-only filter, no upper cap, broaden cal): last resort.
-        // For high-protein requests where a slot's tight cal+protein band is
-        // genuinely empty in Spoonacular's corpus, just find ANY recipe of
-        // that type with at-least-some protein and let the snack loop close
-        // the day's totals.
+        // Wider band #2: drop carbs/fat entirely, broaden cal range hard, keep
+        // type + diet + intolerances (the user-safety ones).
         if (!widened || widened.length === 0) {
           widened = await searchRecipes({
             minCalories: Math.max(150, Math.round(slotCal * 0.5)),
-            maxCalories: Math.round(slotCal * 1.7),
-            minProtein:  slotProtein ? Math.max(5, Math.round(slotProtein * 0.4)) : undefined,
+            maxCalories: Math.round(slotCal * 2.0),
+            minProtein:  slotProtein ? Math.max(5, Math.round(slotProtein * 0.3)) : undefined,
             diet,
             intolerances: exclude,
             type,
-            sort: 'random',
-            offset: Math.floor(Math.random() * 30),
-            number: 15,
+            number: 20,
           });
+          console.log('[ai-coach] slot', slot, 'widen-2:', widened?.length ?? 0);
+        }
+        // Wider band #3: drop the type filter too. Better a "main course" for
+        // breakfast than a missing meal. Still respects diet + allergies.
+        if (!widened || widened.length === 0) {
+          widened = await searchRecipes({
+            minCalories: Math.max(150, Math.round(slotCal * 0.5)),
+            maxCalories: Math.round(slotCal * 2.0),
+            diet,
+            intolerances: exclude,
+            number: 20,
+          });
+          console.log('[ai-coach] slot', slot, 'widen-3 (no type):', widened?.length ?? 0);
         }
         if (!widened || widened.length === 0) {
-          console.log('[ai-coach] no candidates for slot', slot, 'cal≈', slotCal, 'protein≈', slotProtein);
+          console.log('[ai-coach] DROPPED slot', slot, 'cal≈', slotCal, 'protein≈', slotProtein);
           continue;
         }
 
@@ -954,26 +964,40 @@ async function fetchSpoonacularMealPlan(
         const proteinDeficit = targetProtein ? targetProtein - t.protein : 0;
         const needCals    = calDeficit > 180;
         const needProtein = proteinDeficit > 15;
+        console.log('[ai-coach] snack', snackAttempt, 'needs: cal=', needCals, 'protein=', needProtein, 'deficits:', { calDeficit, proteinDeficit });
         if (!needCals && !needProtein) break;
 
         // Aim snack at the larger remaining gap — calorie-led if cals are way
         // short, protein-led if calories are mostly there but protein isn't.
         const snackCal     = needCals ? Math.max(180, Math.min(550, calDeficit)) : 350;
         const snackProtein = needProtein ? Math.max(10, Math.min(45, proteinDeficit)) : null;
-        const candidates = await searchRecipes({
-          minCalories: Math.max(150, snackCal - 120),
-          maxCalories: snackCal + 120,
-          minProtein:  snackProtein ? Math.max(5, snackProtein - 8) : undefined,
-          maxProtein:  snackProtein ? snackProtein + 12 : undefined,
+
+        let snackCandidates = await searchRecipes({
+          minCalories: Math.max(150, snackCal - 150),
+          maxCalories: snackCal + 150,
+          minProtein:  snackProtein ? Math.max(5, snackProtein - 10) : undefined,
           diet,
           intolerances: exclude,
           type: 'snack',
           sort: 'random',
-          offset: Math.floor(Math.random() * 20),
-          number: 10,
+          number: 20,
         });
-        if (!candidates || candidates.length === 0) break;
-        const candidate = [...candidates]
+        // Snack corpus is small in Spoonacular — try without the type filter.
+        if (!snackCandidates || snackCandidates.length === 0) {
+          snackCandidates = await searchRecipes({
+            minCalories: Math.max(150, snackCal - 150),
+            maxCalories: snackCal + 150,
+            minProtein:  snackProtein ? Math.max(5, snackProtein - 10) : undefined,
+            diet,
+            intolerances: exclude,
+            number: 20,
+          });
+        }
+        if (!snackCandidates || snackCandidates.length === 0) {
+          console.log('[ai-coach] snack search returned 0, stopping top-up');
+          break;
+        }
+        const candidate = [...snackCandidates]
           .filter((r: any) => !used.has(r.id))
           .sort((a: any, b: any) => {
             // Prefer high protein when protein is short, else closest to snack cal target.
@@ -981,9 +1005,14 @@ async function fetchSpoonacularMealPlan(
             if (needProtein) return n(b, 'Protein') - n(a, 'Protein');
             return Math.abs(n(a, 'Calories') - snackCal) - Math.abs(n(b, 'Calories') - snackCal);
           })[0];
-        if (!candidate) break;
+        if (!candidate) {
+          console.log('[ai-coach] snack: all candidates already used');
+          break;
+        }
         used.add(candidate.id);
-        meals.push(recipeToMealInPlan(candidate, 'snack'));
+        const mappedSnack = recipeToMealInPlan(candidate, 'snack');
+        console.log('[ai-coach] picked snack', mappedSnack.name, 'cal:', mappedSnack.calories, 'p:', mappedSnack.protein_g);
+        meals.push(mappedSnack);
       }
 
       if (meals.length > 0) {
