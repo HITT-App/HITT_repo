@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { onWatchWorkoutEvent } from "@/plugins/WatchPlugin";
 import { Capacitor } from "@capacitor/core";
+import { generateTriathlonCard, type TriathlonShareLeg } from "@/components/workout/ShareCardCanvas";
 
 let initialised = false;
 
@@ -9,6 +10,11 @@ export function initWatchEventHandler() {
   initialised = true;
 
   onWatchWorkoutEvent(async (event) => {
+    if (event.event === "triathlonShareRequested") {
+      await handleTriathlonShare(event.raceName ?? "Triathlon", event.legs ?? []);
+      return;
+    }
+
     if (event.event !== "workoutCompleted") return;
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -37,4 +43,41 @@ export function initWatchEventHandler() {
       return;
     }
   });
+}
+
+async function handleTriathlonShare(raceName: string, legs: TriathlonShareLeg[]) {
+  if (!legs.length) return;
+  const dataUrl = await generateTriathlonCard(raceName, legs);
+  const blob = await (await fetch(dataUrl)).blob();
+  const file = new File([blob], `${raceName.replace(/\s+/g, "-").toLowerCase()}-triathlon.png`, { type: "image/png" });
+
+  const totalSec = legs.reduce((s, l) => s + (l.elapsedSeconds ?? 0), 0);
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  const timeLabel = totalSec >= 3600
+    ? `${Math.floor(totalSec / 3600)}h ${Math.floor((totalSec % 3600) / 60)}m`
+    : `${mins}m ${String(secs).padStart(2, "0")}s`;
+
+  const shareData: ShareData = {
+    title: `${raceName} — ${timeLabel}`,
+    text: `Just finished ${raceName} in ${timeLabel} 🏆`,
+    files: [file],
+  };
+
+  try {
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      await navigator.share(shareData);
+      return;
+    }
+  } catch {
+    // User cancelled or share failed — fall through to download
+  }
+
+  // Fallback: download the PNG so the user has it locally
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }

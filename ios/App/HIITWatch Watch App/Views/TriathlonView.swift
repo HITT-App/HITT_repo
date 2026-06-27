@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 private let hiitOrange = Color(red: 1,     green: 0.541, blue: 0.149)
 private let hiitGold   = Color(red: 1,     green: 0.752, blue: 0.180)
@@ -21,6 +22,7 @@ struct TriathlonView: View {
     @State private var distKm: [Double] = [0, 0, 0]
     @State private var heartRate: Int   = 0
     @State private var raceFinished     = false
+    @State private var confetti: [(x: Double, y: Double, color: Color, size: Double)] = []
 
     enum LegState { case idle, active, done }
 
@@ -262,51 +264,96 @@ struct TriathlonView: View {
     // MARK: - Race summary screen
 
     private var raceSummaryScreen: some View {
-        VStack(spacing: 0) {
-            TopLabel("FINISHED", color: hiitGold)
+        ZStack {
+            RadialGradient(
+                gradient: Gradient(colors: [hiitGold.opacity(0.2), .clear]),
+                center: .center, startRadius: 10, endRadius: 100
+            ).ignoresSafeArea()
 
-            VStack(spacing: 2) {
-                Image(systemName: "medal.fill")
-                    .font(.system(size: 28)).foregroundColor(hiitGold)
-                    .shadow(color: hiitGold.opacity(0.4), radius: 6)
-                    .padding(.top, 3)
-                Text(fmtTime(elapsed.reduce(0, +)))
-                    .font(.system(size: 20, weight: .black, design: .monospaced))
-                    .foregroundColor(.white)
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                Text("Total time").font(.system(size: 8)).foregroundColor(dimText)
+            ForEach(0..<confetti.count, id: \.self) { i in
+                Circle()
+                    .fill(confetti[i].color)
+                    .frame(width: confetti[i].size, height: confetti[i].size)
+                    .shadow(color: confetti[i].color.opacity(0.8), radius: 3)
+                    .position(x: confetti[i].x, y: confetti[i].y)
             }
 
-            // Per-leg grid
-            HStack(spacing: 4) {
-                ForEach(0..<min(elapsed.count, 3), id: \.self) { i in
-                    VStack(spacing: 2) {
-                        Text(fmtTime(elapsed[i]))
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(legColors[i])
-                            .lineLimit(1).minimumScaleFactor(0.7)
-                        Text(legLabels[i])
-                            .font(.system(size: 7, weight: .bold)).tracking(0.8).foregroundColor(dimText2)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.05))
-                    .cornerRadius(6)
+            VStack(spacing: 0) {
+                TopLabel("RACE COMPLETE", color: hiitGold)
+
+                VStack(spacing: 1) {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 22)).foregroundColor(hiitGold)
+                        .shadow(color: hiitGold.opacity(0.6), radius: 6)
+                        .padding(.top, 2)
+                    Text(fmtTime(elapsed.reduce(0, +)))
+                        .font(.system(size: 20, weight: .black, design: .monospaced))
+                        .foregroundColor(.white)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                    Text("Total time").font(.system(size: 7)).foregroundColor(dimText)
                 }
-            }
-            .padding(.horizontal, 8).padding(.top, 6)
 
-            Spacer(minLength: 2)
+                HStack(spacing: 3) {
+                    ForEach(0..<min(elapsed.count, 3), id: \.self) { i in
+                        VStack(spacing: 1) {
+                            Text(fmtTime(elapsed[i]))
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundColor(legColors[i])
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                            Text(legLabels[i])
+                                .font(.system(size: 7, weight: .bold)).tracking(0.6).foregroundColor(dimText2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 3)
+                        .background(Color.white.opacity(0.05))
+                        .cornerRadius(5)
+                    }
+                }
+                .padding(.horizontal, 8).padding(.top, 4)
 
-            Button(action: { raceFinished = false; plan = nil }) {
-                Text("Save")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(Color(red: 0.1, green: 0.08, blue: 0.0))
-                    .frame(maxWidth: .infinity).padding(.vertical, 6)
-                    .background(hiitGold).cornerRadius(16)
+                Spacer(minLength: 2)
+
+                VStack(spacing: 3) {
+                    Button(action: { shareRace() }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "square.and.arrow.up").font(.system(size: 9))
+                            Text("Share")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundColor(Color(red: 0.1, green: 0.08, blue: 0.0))
+                        .frame(maxWidth: .infinity).padding(.vertical, 6)
+                        .background(hiitGold).cornerRadius(14)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { raceFinished = false; plan = nil }) {
+                        Text("Done")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity).padding(.vertical, 5)
+                            .background(Color.white.opacity(0.10)).cornerRadius(14)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 8).padding(.bottom, 4)
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 8).padding(.bottom, 4)
+        }
+        .onAppear { generateConfetti() }
+    }
+
+    private func shareRace() {
+        guard let p = plan else { return }
+        TriathlonManager.shared.requestPhoneShare(p, elapsed: elapsed, distKm: distKm)
+        WKInterfaceDevice.current().play(.success)
+    }
+
+    private func generateConfetti() {
+        let colors: [Color] = [hiitOrange, hiitGold, hiitGreen, swimBlue,
+                               Color(red: 1, green: 0.45, blue: 0.6),
+                               Color(red: 0.655, green: 0.545, blue: 0.980)]
+        confetti = (0..<12).map { _ in
+            (x: Double.random(in: 20...160), y: Double.random(in: 20...200),
+             color: colors.randomElement()!, size: Double.random(in: 4...7))
         }
     }
 

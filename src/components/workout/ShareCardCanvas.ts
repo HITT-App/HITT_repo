@@ -580,3 +580,131 @@ export async function generateMapCard(
 
   return canvas.toDataURL('image/png');
 }
+
+/** Triathlon card — gold trophy, total time, per-leg breakdown. 1080×1080 PNG. */
+export interface TriathlonShareLeg {
+  type: 'swim' | 'bike' | 'run';
+  elapsedSeconds: number;
+  distanceKm: number;
+}
+
+function fmtRaceTime(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export async function generateTriathlonCard(
+  raceName: string,
+  legs: TriathlonShareLeg[],
+): Promise<string> {
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d')!;
+
+  // Dark gradient background (charcoal → near-black)
+  const bg = ctx.createLinearGradient(0, 0, 0, SIZE);
+  bg.addColorStop(0, '#1a1410');
+  bg.addColorStop(1, '#070707');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Soft gold radial bloom behind the trophy
+  const bloom = ctx.createRadialGradient(SIZE / 2, 280, 20, SIZE / 2, 280, 320);
+  bloom.addColorStop(0, 'rgba(255, 192, 46, 0.35)');
+  bloom.addColorStop(1, 'rgba(255, 192, 46, 0)');
+  ctx.fillStyle = bloom;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Trophy emoji
+  ctx.font = '180px system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🏆', SIZE / 2, 320);
+
+  // Eyebrow
+  ctx.fillStyle = '#FFC02E';
+  ctx.font = '700 28px system-ui, -apple-system, sans-serif';
+  ctx.fillText('RACE COMPLETE', SIZE / 2, 380);
+
+  // Race name (truncate if it would overflow)
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 56px system-ui, -apple-system, sans-serif';
+  const maxNameWidth = SIZE - 120;
+  let raceLabel = raceName;
+  while (ctx.measureText(raceLabel).width > maxNameWidth && raceLabel.length > 3) {
+    raceLabel = raceLabel.slice(0, -1);
+  }
+  if (raceLabel !== raceName) raceLabel = raceLabel.slice(0, -1) + '…';
+  ctx.fillText(raceLabel, SIZE / 2, 450);
+
+  // Total time
+  const totalSeconds = legs.reduce((s, l) => s + (l.elapsedSeconds ?? 0), 0);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 130px ui-monospace, "SF Mono", Menlo, monospace';
+  ctx.fillText(fmtRaceTime(totalSeconds), SIZE / 2, 600);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = '500 24px system-ui, -apple-system, sans-serif';
+  ctx.fillText('TOTAL TIME', SIZE / 2, 640);
+
+  // Per-leg cards
+  const legMeta: Record<TriathlonShareLeg['type'], { label: string; emoji: string; color: string }> = {
+    swim: { label: 'SWIM', emoji: '🌊', color: '#5AC8FA' },
+    bike: { label: 'BIKE', emoji: '🚴', color: '#5BE3A0' },
+    run:  { label: 'RUN',  emoji: '🏃', color: '#FFC02E' },
+  };
+
+  const cardCount = Math.min(3, legs.length);
+  const gap = 24;
+  const sideMargin = 60;
+  const cardW = (SIZE - sideMargin * 2 - gap * (cardCount - 1)) / cardCount;
+  const cardH = 220;
+  const cardY = 720;
+
+  legs.slice(0, cardCount).forEach((leg, i) => {
+    const meta = legMeta[leg.type];
+    const x = sideMargin + i * (cardW + gap);
+
+    // Rounded card background
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    const r = 24;
+    ctx.beginPath();
+    ctx.moveTo(x + r, cardY);
+    ctx.lineTo(x + cardW - r, cardY);
+    ctx.quadraticCurveTo(x + cardW, cardY, x + cardW, cardY + r);
+    ctx.lineTo(x + cardW, cardY + cardH - r);
+    ctx.quadraticCurveTo(x + cardW, cardY + cardH, x + cardW - r, cardY + cardH);
+    ctx.lineTo(x + r, cardY + cardH);
+    ctx.quadraticCurveTo(x, cardY + cardH, x, cardY + cardH - r);
+    ctx.lineTo(x, cardY + r);
+    ctx.quadraticCurveTo(x, cardY, x + r, cardY);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.font = '60px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(meta.emoji, x + cardW / 2, cardY + 70);
+
+    ctx.fillStyle = meta.color;
+    ctx.font = '700 22px system-ui, -apple-system, sans-serif';
+    ctx.fillText(meta.label, x + cardW / 2, cardY + 110);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 40px ui-monospace, "SF Mono", Menlo, monospace';
+    ctx.fillText(fmtRaceTime(leg.elapsedSeconds ?? 0), x + cardW / 2, cardY + 160);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = '500 22px system-ui, -apple-system, sans-serif';
+    ctx.fillText(
+      `${(leg.distanceKm ?? 0).toFixed(2)} km`,
+      x + cardW / 2,
+      cardY + 195,
+    );
+  });
+
+  await stampWatermark(ctx);
+  return canvas.toDataURL('image/png');
+}

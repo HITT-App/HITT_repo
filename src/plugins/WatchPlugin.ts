@@ -39,13 +39,27 @@ export interface WatchExercise {
   restAfterExerciseSeconds?: number;
 }
 
+export interface TriathlonLegResult {
+  type: "swim" | "bike" | "run";
+  elapsedSeconds: number;
+  distanceKm: number;
+}
+
 export interface WatchWorkoutEvent {
-  event: "workoutStarted" | "workoutCompleted" | "workoutCancelled";
+  event:
+    | "workoutStarted"
+    | "workoutCompleted"
+    | "workoutCancelled"
+    | "triathlonCompleted"
+    | "triathlonShareRequested";
   workoutId?: string;
   workoutName?: string;
   durationSeconds?: number;
   calories?: number;
   averageHeartRate?: number;
+  // Triathlon completion / share-request events
+  raceName?: string;
+  legs?: TriathlonLegResult[];
 }
 
 const WatchPluginImpl = registerPlugin<WatchPluginInterface>("Watch");

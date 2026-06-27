@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-27] — Triathlon Share: Watch → iPhone share card
+
+- **Tap Share on the Watch race-summary and the iPhone share sheet pops with a triathlon card** — finish a triathlon on the Watch, tap the new gold Share button on the celebrate screen, and an iOS share sheet opens on your phone with a 1080×1080 PNG of your race: gold trophy, race name, total time, and per-leg breakdown (Swim/Bike/Run). Caption auto-fills with "Just finished {race} in {time} 🏆". If the Watch sends the request while the iPhone's locked or backgrounded, the message queues via WCSession `transferUserInfo` and surfaces the next time you open the app
+- **Race-complete screen on the Watch now matches the celebrate pattern** — confetti, gold trophy, "RACE COMPLETE" eyebrow, total time, three per-leg tiles, and the new Share + Done buttons. Replaces the simpler "FINISHED" + Save layout
+
 ## [2026-06-27] — Triathlon Watch fits 40mm screens + meal plan accuracy fixes
 
 - **Triathlon screens now fit the Apple Watch SE 3 40mm** — the race-ready, in-race, and race-summary screens were rendering taller than the 197pt screen height, hiding the header and Start button. All three screens have been shrunk: race title 24→15pt, leg rows from 30pt circles to 20pt, in-race timer 38→24pt, summary medal 48→28pt. Timer/distance values now scale down instead of wrapping

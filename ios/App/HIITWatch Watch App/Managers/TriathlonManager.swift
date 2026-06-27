@@ -75,6 +75,16 @@ final class TriathlonManager: NSObject {
     }
 
     func notifyPhoneFinished(_ plan: TriathlonPlan, elapsed: [Int], distKm: [Double]) {
+        sendCompletionPayload(event: "triathlonCompleted", plan: plan, elapsed: elapsed, distKm: distKm)
+    }
+
+    // User tapped Share on the Watch summary screen. The phone listens for
+    // this and generates a share card image, then presents the iOS share sheet.
+    func requestPhoneShare(_ plan: TriathlonPlan, elapsed: [Int], distKm: [Double]) {
+        sendCompletionPayload(event: "triathlonShareRequested", plan: plan, elapsed: elapsed, distKm: distKm)
+    }
+
+    private func sendCompletionPayload(event: String, plan: TriathlonPlan, elapsed: [Int], distKm: [Double]) {
         guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
         var legResults: [[String: Any]] = []
         for i in 0..<plan.legs.count {
@@ -85,14 +95,16 @@ final class TriathlonManager: NSObject {
             ])
         }
         let payload: [String: Any] = [
-            "event": "triathlonCompleted",
+            "event": event,
             "raceName": plan.name,
             "legs": legResults
         ]
         if WCSession.default.isReachable {
-            WCSession.default.sendMessage(payload, replyHandler: nil, errorHandler: nil)
+            WCSession.default.sendMessage(payload, replyHandler: nil, errorHandler: { _ in
+                WCSession.default.transferUserInfo(payload)
+            })
         } else {
-            try? WCSession.default.updateApplicationContext(payload)
+            WCSession.default.transferUserInfo(payload)
         }
     }
 
