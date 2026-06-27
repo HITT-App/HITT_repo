@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-06-27] — Triathlon Watch fits 40mm screens + meal plan accuracy fixes
+
+- **Triathlon screens now fit the Apple Watch SE 3 40mm** — the race-ready, in-race, and race-summary screens were rendering taller than the 197pt screen height, hiding the header and Start button. All three screens have been shrunk: race title 24→15pt, leg rows from 30pt circles to 20pt, in-race timer 38→24pt, summary medal 48→28pt. Timer/distance values now scale down instead of wrapping
+- **Spoonacular meal plans no longer overshoot calorie target** — the snack top-up loop was happily stacking 350-cal snacks chasing the last few grams of protein, pushing a 1800-cal request to 2252 kcal. Now hard-capped at target × 1.05, max 2 snack attempts, and protein-led snacks ranked by protein density (g per kcal) so you close the gap without ballooning calories
+- **Recipe ingredients now show per-portion quantities** — Spoonacular returns macros per serving but ingredient amounts for the whole recipe (so a "513 kcal Mushroom Tofu Stew" was listing 6 cups of broth, which is 4 portions' worth). Ingredient amounts are now divided by the recipe's serving count and rendered as clean fractions (½, ⅓, ¾) instead of raw decimals
+- **Jarvis no longer refuses meal-plan requests** — when the regex fast-path missed your wording, the LLM was falling through to "I can't directly create a meal plan with specific calorie and protein targets" because the system prompt was telling it to use a tool it doesn't have. Rewrote the meal-plan instructions and added "do that again" / "same as before" support — the regex now looks back through conversation history for prior numeric targets and re-runs from those
+
 ## [2026-06-26] — Triathlon Watch auto-launch actually works now
 
 - **Tap Send to Watch on the iPhone and the Apple Watch wakes itself and opens straight to the Race tab.** Previously the plan arrived on the Watch but you had to open the HIIT app on the Watch yourself; on the build before this one, only WCSession delivered the plan and the launch never fired

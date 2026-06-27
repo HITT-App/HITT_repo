@@ -215,6 +215,28 @@ export async function getRecipeInfo(id: number): Promise<SpoonacularRecipe | nul
   }
 }
 
+// Format a per-serving ingredient quantity for display.
+// Spoonacular's `extendedIngredients[].amount` is the WHOLE-recipe amount.
+// Dividing by servings gives the per-portion quantity, but raw fractions look
+// ugly ("0.6666666666666666 cups"). Render common fractions and 1-decimal max.
+function fmtAmount(amount: number): string {
+  if (!Number.isFinite(amount) || amount <= 0) return '';
+  const rounded = Math.round(amount * 100) / 100;
+  // Whole numbers stay whole
+  if (Math.abs(rounded - Math.round(rounded)) < 0.05) return String(Math.round(rounded));
+  // Near-thirds and quarters look better as fractions
+  const whole = Math.floor(rounded);
+  const frac = rounded - whole;
+  const fracStr =
+    Math.abs(frac - 0.25) < 0.05 ? '¼' :
+    Math.abs(frac - 0.33) < 0.05 ? '⅓' :
+    Math.abs(frac - 0.5)  < 0.05 ? '½' :
+    Math.abs(frac - 0.66) < 0.05 ? '⅔' :
+    Math.abs(frac - 0.75) < 0.05 ? '¾' : null;
+  if (fracStr) return whole > 0 ? `${whole}${fracStr}` : fracStr;
+  return rounded.toFixed(1).replace(/\.0$/, '');
+}
+
 // Map a Spoonacular recipe to the MealInPlan shape the app already uses.
 export function recipeToMealInPlan(
   recipe: SpoonacularRecipe,
@@ -230,6 +252,11 @@ export function recipeToMealInPlan(
     snack: '🥪',
   };
 
+  // Spoonacular nutrition is already per serving, but ingredient amounts are
+  // for the whole recipe. Divide by servings so the ingredient list matches
+  // the per-portion macros we display.
+  const servings = Math.max(1, recipe.servings ?? 1);
+
   return {
     meal_type: mealType,
     name: recipe.title,
@@ -242,19 +269,20 @@ export function recipeToMealInPlan(
     ingredients: (recipe.extendedIngredients ?? []).map(i => {
       // Per-ingredient nutrition — only present when Spoonacular returned it
       const inutr = i.nutrition?.nutrients;
-      const find = inutr ? (name: string) => {
+      const findI = inutr ? (name: string) => {
         const m = inutr.find(x => x.name === name)?.amount;
-        return typeof m === 'number' ? Math.round(m) : undefined;
+        return typeof m === 'number' ? Math.round(m / servings) : undefined;
       } : null;
+      const perServingAmount = typeof i.amount === 'number' ? i.amount / servings : 0;
       return {
-        amount: String(i.amount ?? ''),
+        amount: fmtAmount(perServingAmount),
         unit: i.unit ?? '',
         name: i.name ?? '',
-        ...(find && {
-          calories:  find('Calories'),
-          protein_g: find('Protein'),
-          carbs_g:   find('Carbohydrates'),
-          fat_g:     find('Fat'),
+        ...(findI && {
+          calories:  findI('Calories'),
+          protein_g: findI('Protein'),
+          carbs_g:   findI('Carbohydrates'),
+          fat_g:     findI('Fat'),
         }),
       };
     }),

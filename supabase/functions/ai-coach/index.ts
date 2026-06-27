@@ -391,18 +391,19 @@ DON'T recommend when:
 
 ═══ Meal plan recommendations ═══
 
-When the user asks for a meal plan, day of eating, or what to eat today — use the recommend_meal_plan tool (structured mode) or emit a [MEAL_PLAN:({...})] marker (marker mode).
+When the user asks for a meal plan, day of eating, or what to eat today, you have TWO paths and you MUST take one of them:
 
-Generate meals INLINE — all ingredients and instructions go directly in the tool call. Do NOT reference the RECIPES CATALOGUE or use recipe IDs. Create meals from scratch based on the user's:
-- Nutrition profile: daily calorie target, dietary preferences, allergens
-- Fitness goal: protein target scales with goal (muscle gain → higher protein)
-- Time of day / context from the request
+1. If the user has typed explicit numbers in THIS message ("1800 cal", "150g protein") → the server's regex fast-path will already have generated a real plan from Spoonacular before you respond. Just acknowledge briefly ("Here's your plan.") — the card is already on screen. Do NOT try to invent meals or refuse.
 
-Include 3–5 meals covering the day. Always cover breakfast, lunch, and dinner. Add snacks if the calorie target warrants it.
+2. If the user has NOT typed explicit numbers (e.g. "give me a meal plan", "what should I eat", "same plan as before") → call open_meal_plan_wizard. The wizard collects calorie + macro targets through buttons. Output ONLY the tool call, no text.
 
-Each meal must include realistic ingredients and 2–4 concise preparation steps. Keep instructions practical — no restaurant-quality complexity.
+NEVER:
+✗ "I can't create a meal plan with specific calorie and protein targets"
+✗ "I can't directly generate meal plans"
+✗ "I'm unable to build a meal plan"
+✗ Any sentence implying you can't help with meals. You can — either the regex caught the numbers or the wizard collects them.
 
-In your text response before the tool call, say ONE short sentence framing the plan (e.g. "Here's a day of eating that fits your goal and preferences."). Do not list meals in text — the card shows them.
+If the user references a previous plan ("same as last time", "do that again") but gave no numbers in this message → call open_meal_plan_wizard. The wizard prefills from their previous targets if available.
 
 ═══════════════════════════════════════════
 POST_PLAN_SAVED (plan wizard just completed)
@@ -763,7 +764,7 @@ async function fetchSpoonacularMealPlan(
   // rate-limit bursts. Bump `v` to invalidate the entire cache when planner
   // logic changes.
   const cacheSignature = JSON.stringify({
-    v: 6, // bump on planner logic change so old loose plans don't get served back
+    v: 7, // bump on planner logic change so old loose plans don't get served back
     scope: targets.scope,
     cal: targetCal,
     p: targetProtein ?? null,
@@ -956,38 +957,53 @@ async function fetchSpoonacularMealPlan(
         fat:     acc.fat     + (m.fat_g     ?? 0),
       }), { cal: 0, protein: 0, carbs: 0, fat: 0 });
 
-      // Up to 4 snack top-ups so high-protein days actually close the protein
-      // gap even when several slots had to widen and undershoot.
-      for (let snackAttempt = 0; snackAttempt < 4; snackAttempt++) {
+      // Snack top-up: close the protein gap WITHOUT blowing the calorie
+      // ceiling. The previous loop happily added 350-cal snacks chasing
+      // protein and ended up 25% over target. Now:
+      //   - hard ceiling: total cal must stay under targetCal × 1.05
+      //   - max 2 attempts (more typically pushes us over)
+      //   - if protein-led, demand protein density (≥2g protein per 100 cal)
+      const CAL_CEILING = Math.round(targetCal * 1.05);
+      for (let snackAttempt = 0; snackAttempt < 2; snackAttempt++) {
         const t = totals();
         const calDeficit     = targetCal - t.cal;
         const proteinDeficit = targetProtein ? targetProtein - t.protein : 0;
+        const calHeadroom    = CAL_CEILING - t.cal;
         const needCals    = calDeficit > 180;
         const needProtein = proteinDeficit > 15;
-        console.log('[ai-coach] snack', snackAttempt, 'needs: cal=', needCals, 'protein=', needProtein, 'deficits:', { calDeficit, proteinDeficit });
+        console.log('[ai-coach] snack', snackAttempt, 'deficits:', { calDeficit, proteinDeficit, calHeadroom });
         if (!needCals && !needProtein) break;
+        // No room left under the ceiling — stop even if protein is still short.
+        // A 100-cal protein shake is the only thing that fits at this point and
+        // Spoonacular's snack corpus rarely has those.
+        if (calHeadroom < 120) {
+          console.log('[ai-coach] snack: no calorie headroom (', calHeadroom, '), stopping');
+          break;
+        }
 
-        // Aim snack at the larger remaining gap — calorie-led if cals are way
-        // short, protein-led if calories are mostly there but protein isn't.
-        const snackCal     = needCals ? Math.max(180, Math.min(550, calDeficit)) : 350;
-        const snackProtein = needProtein ? Math.max(10, Math.min(45, proteinDeficit)) : null;
+        // Calorie target for the snack: never above what's left under the
+        // ceiling. Protein-led snacks aim small so we can fit two if needed.
+        const snackCalTarget = needCals
+          ? Math.min(calHeadroom, Math.max(180, Math.min(450, calDeficit)))
+          : Math.min(calHeadroom, 300);
+        const snackProtein   = needProtein ? Math.max(10, Math.min(40, proteinDeficit)) : null;
 
         let snackCandidates = await searchRecipes({
-          minCalories: Math.max(150, snackCal - 150),
-          maxCalories: snackCal + 150,
-          minProtein:  snackProtein ? Math.max(5, snackProtein - 10) : undefined,
+          minCalories: Math.max(120, snackCalTarget - 120),
+          maxCalories: Math.min(calHeadroom, snackCalTarget + 100),
+          minProtein:  snackProtein ? Math.max(8, snackProtein - 10) : undefined,
           diet,
           intolerances: exclude,
           type: 'snack',
           sort: 'random',
           number: 20,
         });
-        // Snack corpus is small in Spoonacular — try without the type filter.
+        // Snack corpus is small — try without the type filter.
         if (!snackCandidates || snackCandidates.length === 0) {
           snackCandidates = await searchRecipes({
-            minCalories: Math.max(150, snackCal - 150),
-            maxCalories: snackCal + 150,
-            minProtein:  snackProtein ? Math.max(5, snackProtein - 10) : undefined,
+            minCalories: Math.max(120, snackCalTarget - 120),
+            maxCalories: Math.min(calHeadroom, snackCalTarget + 100),
+            minProtein:  snackProtein ? Math.max(8, snackProtein - 10) : undefined,
             diet,
             intolerances: exclude,
             number: 20,
@@ -997,16 +1013,26 @@ async function fetchSpoonacularMealPlan(
           console.log('[ai-coach] snack search returned 0, stopping top-up');
           break;
         }
+        const nutrientOf = (r: any, name: string) =>
+          r.nutrition?.nutrients?.find((x: any) => x.name === name)?.amount ?? 0;
+
         const candidate = [...snackCandidates]
           .filter((r: any) => !used.has(r.id))
+          // Never pick a snack that would push us over the ceiling.
+          .filter((r: any) => nutrientOf(r, 'Calories') <= calHeadroom)
           .sort((a: any, b: any) => {
-            // Prefer high protein when protein is short, else closest to snack cal target.
-            const n = (r: any, name: string) => r.nutrition?.nutrients?.find((x: any) => x.name === name)?.amount ?? 0;
-            if (needProtein) return n(b, 'Protein') - n(a, 'Protein');
-            return Math.abs(n(a, 'Calories') - snackCal) - Math.abs(n(b, 'Calories') - snackCal);
+            if (needProtein) {
+              // Rank by protein density (g protein per kcal) — gets us back on
+              // protein target without ballooning calories.
+              const densA = nutrientOf(a, 'Protein') / Math.max(50, nutrientOf(a, 'Calories'));
+              const densB = nutrientOf(b, 'Protein') / Math.max(50, nutrientOf(b, 'Calories'));
+              return densB - densA;
+            }
+            return Math.abs(nutrientOf(a, 'Calories') - snackCalTarget)
+                 - Math.abs(nutrientOf(b, 'Calories') - snackCalTarget);
           })[0];
         if (!candidate) {
-          console.log('[ai-coach] snack: all candidates already used');
+          console.log('[ai-coach] snack: nothing under calorie ceiling');
           break;
         }
         used.add(candidate.id);
@@ -2191,7 +2217,7 @@ serve(async (req) => {
             ...baseStructured.slice(0, lastUserIdx),
             { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the user asks about their weight and the Body Metrics section contains 'Current weight' → state the value directly. If Body Metrics is absent, say 'I don't see a weight logged yet — add one in the Weight tab and I can personalise things'. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
             { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it, you MUST call the log_food tool. Do NOT ask the user for nutrition information. Estimate calories, protein, carbs, fat, and fiber yourself based on typical serving sizes. Always pick a category (breakfast/lunch/dinner/snack) — infer from time of day or default to snack. The user expects you to know typical food values; asking them defeats the purpose of the tool." },
-            { role: "system", content: "CRITICAL — MEAL PLAN ROUTING: ONLY call open_meal_plan_wizard when the user is EXPLICITLY asking about food, meals, eating, or nutrition planning. The trigger words are: meal, meals, eat, eating, food, breakfast, lunch, dinner, snack, recipe, diet, nutrition. DO trigger for: 'what should I eat', 'plan my meals', 'suggest meals', 'food ideas', 'meal plan', 'recipe ideas', 'what's for dinner', 'help me eat better'. DO NOT trigger for: 'what activity', 'workout suggestion', 'plan my day' (without food context), 'something to keep me cool', 'cardio idea', general chat, questions about workouts, schedules, or any non-food topic. When the request is about workouts → answer naturally or call schedule_plan. When the request is general → answer with text. Output ONLY the tool call when calling open_meal_plan_wizard — no text. NEVER call recommend_meal_plan; that's server-side only." },
+            { role: "system", content: "CRITICAL — MEAL PLAN ROUTING: ONLY call open_meal_plan_wizard when the user is EXPLICITLY asking about food, meals, eating, or nutrition planning. The trigger words are: meal, meals, eat, eating, food, breakfast, lunch, dinner, snack, recipe, diet, nutrition. DO trigger for: 'what should I eat', 'plan my meals', 'suggest meals', 'food ideas', 'meal plan', 'recipe ideas', 'what's for dinner', 'help me eat better', AND for references to a prior plan like 'same as before', 'do that again', 'the plan I asked for'. DO NOT trigger for: 'what activity', 'workout suggestion', 'plan my day' (without food context), 'something to keep me cool', 'cardio idea', general chat, questions about workouts, schedules, or any non-food topic. When the request is about workouts → answer naturally or call schedule_plan. When the request is general → answer with text. Output ONLY the tool call when calling open_meal_plan_wizard — no text. NEVER call recommend_meal_plan; that's server-side only. NEVER refuse a meal-plan request with phrases like 'I can't create a meal plan' or 'I can't directly generate meal plans' — those are forbidden. If the user wants meals, you EITHER fast-path (server already handled it) OR open the wizard. There is no third option." },
             baseStructured[lastUserIdx],
           ]
         : baseStructured;
@@ -2205,7 +2231,22 @@ serve(async (req) => {
       // protein"), skip the LLM entirely and fetch real recipes from
       // Spoonacular. This eliminates the Gemini tool-call reliability
       // failure mode for the most common explicit case.
-      const explicitMealRequest = extractExplicitMealTargets(lastUserContent);
+      //
+      // Also handles "do that again" / "same as before" / "the meal plan I
+      // asked for" — if the current message references a prior plan but has
+      // no numbers, scan back through earlier user messages for the most
+      // recent one with explicit targets and re-run from those.
+      let explicitMealRequest = extractExplicitMealTargets(lastUserContent);
+      if (!explicitMealRequest && /\b(again|same as before|same plan|previous|like (last|before)|last time|that meal plan|the meal plan)\b/i.test(lastUserContent)) {
+        const priorUserMessages = (structuredMessages as any[])
+          .filter(m => m.role === 'user')
+          .slice(0, -1)
+          .reverse();
+        for (const m of priorUserMessages) {
+          const found = extractExplicitMealTargets(String(m.content ?? '').toLowerCase());
+          if (found) { explicitMealRequest = found; break; }
+        }
+      }
       if (explicitMealRequest && spoonacularConfigured()) {
         const meals = await fetchSpoonacularMealPlan(
           explicitMealRequest,
