@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { upsertActivities } from "../_shared/activity-upsert.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,7 +58,7 @@ serve(async (req) => {
     const endedAt = body.endedAt ?? now;
     const startedAt = body.startedAt ?? new Date(Date.now() - body.durationSeconds * 1000).toISOString();
 
-    const { error } = await admin.from("activity_logs").insert({
+    const result = await upsertActivities(admin, [{
       user_id: user.id,
       activity_type: body.activityType ?? "hiit",
       started_at: startedAt,
@@ -65,14 +66,11 @@ serve(async (req) => {
       duration_seconds: body.durationSeconds,
       calories_burned: body.calories || null,
       avg_heart_rate: body.averageHeartRate || null,
-      status: "completed",
       source_platform: "apple_watch",
       source_platform_id: body.workoutId,
-    }).onConflict("user_id, source_platform, source_platform_id").ignore();
+    }]);
 
-    if (error) throw error;
-
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, ...result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
