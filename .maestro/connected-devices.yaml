@@ -32,10 +32,10 @@ appId: com.hiitfitness.app
     text: "Connected Devices"
 
 # Connected Devices page loads. Expect EITHER device rows OR empty-state copy.
-- assertVisible:
-    text: "Connected Devices"
-- assertVisible:
-    text: "Apple Watch|Garmin|Fitbit|Whoop|Oura|No devices syncing yet"
+- assertVisible: "Connected Devices"
+- extendedWaitUntil:
+    visible:
+      text: "Apple Watch|Garmin|Fitbit|Whoop|Oura|No devices syncing yet"
     timeout: 5000
 
 # Tap the Sync button (top-right icon, aria-label "Sync now"). Should fire
