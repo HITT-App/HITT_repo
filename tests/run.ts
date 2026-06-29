@@ -2132,27 +2132,42 @@ async function runUIFeedbackAudit() {
     fail('WD-09', 'usePrimaryWearable.ts persistence', 'file not found');
   }
 
-  // ── WD-10: Triathlon.tsx uses the WearableSetupCard component instead of
-  // an inline "Start Race on Apple Watch" button. Catches the regression
-  // where someone refactors and the Apple-Watch-only copy leaks back into
-  // the default path that all users see.
-  try {
-    const path = `${SRC}/pages/Triathlon.tsx`;
-    const src = readFileSync(path, 'utf8');
-    const importsCard = /import\s+\{[^}]*WearableSetupCard[^}]*\}\s+from/.test(src);
-    const rendersCard = /<WearableSetupCard\b/.test(src);
-    const bareAppleString = /Start Race on Apple Watch/.test(src);
-    if (importsCard && rendersCard && !bareAppleString) {
-      pass('WD-10', 'Triathlon.tsx renders <WearableSetupCard> instead of inline Apple-Watch-only button');
-    } else {
-      const issues: string[] = [];
-      if (!importsCard) issues.push('WearableSetupCard not imported');
-      if (!rendersCard) issues.push('<WearableSetupCard> not rendered');
-      if (bareAppleString) issues.push('"Start Race on Apple Watch" still lives in Triathlon.tsx (should only exist inside the component)');
-      fail('WD-10', 'Triathlon.tsx vendor-aware launch contract', issues.join('; '));
+  // ── WD-10..16: Every activity launch page renders the WearableLaunchCard
+  // with the correct activityType. Catches refactors that leak Apple-Watch-
+  // only copy back into the default path, or pages that drift away from the
+  // shared component (instruction copy duplication).
+  const launchPageCases: Array<{
+    id: string;
+    page: string;
+    activityType: string;
+    forbiddenString?: string;
+  }> = [
+    { id: 'WD-10', page: 'Triathlon.tsx',     activityType: 'triathlon', forbiddenString: '"Start Race on Apple Watch"' },
+    { id: 'WD-14', page: 'ActivityLive.tsx',  activityType: 'gps' },
+    { id: 'WD-15', page: 'WorkoutPlayer.tsx', activityType: 'structured', forbiddenString: 'Send to Apple Watch' },
+    { id: 'WD-16', page: 'GymTimer.tsx',      activityType: 'gym' },
+  ];
+
+  for (const tc of launchPageCases) {
+    try {
+      const src = readFileSync(`${SRC}/pages/${tc.page}`, 'utf8');
+      const importsCard = /import\s+\{[^}]*WearableLaunchCard[^}]*\}\s+from/.test(src);
+      const rendersCard = /<WearableLaunchCard\b/.test(src);
+      const passesActivityType = new RegExp(`activityType=["']${tc.activityType}["']`).test(src);
+      const hasForbidden = tc.forbiddenString ? new RegExp(tc.forbiddenString).test(src) : false;
+      if (importsCard && rendersCard && passesActivityType && !hasForbidden) {
+        pass(tc.id, `${tc.page} renders <WearableLaunchCard activityType="${tc.activityType}">`);
+      } else {
+        const issues: string[] = [];
+        if (!importsCard) issues.push('WearableLaunchCard not imported');
+        if (!rendersCard) issues.push('<WearableLaunchCard> not rendered');
+        if (!passesActivityType) issues.push(`activityType="${tc.activityType}" not set`);
+        if (hasForbidden && tc.forbiddenString) issues.push(`forbidden string ${tc.forbiddenString} still present`);
+        fail(tc.id, `${tc.page} vendor-aware launch contract`, issues.join('; '));
+      }
+    } catch {
+      fail(tc.id, `${tc.page} vendor-aware launch contract`, `${tc.page} not readable`);
     }
-  } catch {
-    fail('WD-10', 'Triathlon.tsx vendor-aware launch contract', 'Triathlon.tsx not readable');
   }
 }
 

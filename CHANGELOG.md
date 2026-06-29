@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-29] — Vendor-aware launch on every activity
+
+- **Vendor-aware launch card on every workout, not just Triathlon** — Run/Walk/Cycle (GPS), structured HIIT workouts, and Gym timer pre-start screens all now show the same wearable-aware card. Apple Watch users get a one-tap "Start on Apple Watch" button (correct activity type per workout: Running / Walking / Cycling / Strength). Garmin/Fitbit/Whoop/Oura users see vendor-specific instructions for tracking the activity on their device while HITT syncs the result from Apple Health
+- **Phone-only users see a clean screen** — no wearable detected means no card, just the universal Start button
+- **Apple Watch now recognises more activity types from the iPhone** — `startWorkoutMirroring` now correctly maps walking/hiking/rowing/yoga in addition to running/cycling/swimming/strength/triathlon
+
 ## [2026-06-29] — Vendor-aware Triathlon launch (Garmin / Fitbit / Whoop / Oura)
 
 - **The Triathlon page now adapts to whatever wearable you actually use** — Apple Watch users still get the one-tap "Start Race on Apple Watch" button, but a Garmin user sees real Garmin multisport setup steps for their watch, a Whoop / Oura user sees a clear "your device doesn't track multisport, use phone GPS" card, and a phone-only user sees friendly framing. Detection is based on which wearable shows up in your recent activity log (30-day window), with Apple Watch winning ties unless another vendor strictly dominates

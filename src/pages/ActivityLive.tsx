@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useActivity } from "@/hooks/useActivity";
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges";
+import { usePrimaryWearable } from "@/hooks/usePrimaryWearable";
+import { WearableLaunchCard } from "@/components/wearable/WearableLaunchCard";
+import { startWorkoutMirroring } from "@/plugins/WatchPlugin";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -68,7 +71,11 @@ function writePersistedWorkout(data: PersistedWorkout): void {
   Preferences.set({ key: PERSIST_KEY, value: JSON.stringify(data) }).catch(() => {});
 }
 
-const RC = { bg: '#0a0a0a', card: '#141414', line: '#262626', fg: '#fafafa', dim: '#9a9a9a', primary: '#f97316' };
+const RC = { bg: '#0a0a0a', card: '#141414', line: '#262626', line2: '#333333', fg: '#fafafa', dim: '#9a9a9a', primary: '#f97316', good: '#4ade80', gold: '#F0B53C' };
+const tint = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+};
 
 // --- MET values ---
 const MET_VALUES: Record<string, number> = {
@@ -94,6 +101,9 @@ const ActivityLive = () => {
   const [searchParams] = useSearchParams();
   const activityType = searchParams.get("type") || searchParams.get("sport") || "jogging";
   const { logActivity, markActivityOnboardingComplete } = useActivity();
+  const { wearable: primaryWearable } = usePrimaryWearable();
+  const [watchLaunching, setWatchLaunching] = useState(false);
+  const [watchLaunched, setWatchLaunched] = useState(false);
   const { recordWorkout } = useStreaksAndBadges();
 
   // Pre-start setup phase — timer and recording don't begin until user taps Start
@@ -383,6 +393,24 @@ const ActivityLive = () => {
       return !p;
     });
   }, [isLocked]);
+
+  const launchOnAppleWatch = async () => {
+    if (watchLaunching || watchLaunched) return;
+    setWatchLaunching(true);
+    try {
+      const label = activityType.charAt(0).toUpperCase() + activityType.slice(1);
+      const ok = await startWorkoutMirroring(activityType, label);
+      if (ok) {
+        setWatchLaunched(true);
+      } else {
+        toast.error("Couldn't start on Apple Watch — make sure the HITT Watch app is installed and try again.");
+      }
+    } catch {
+      toast.error("Couldn't start on Apple Watch — make sure the HITT Watch app is installed and try again.");
+    } finally {
+      setWatchLaunching(false);
+    }
+  };
 
   const handleFinish = () => {
     if (settings.autoVibrate) navigator.vibrate?.([100, 100, 200]);
@@ -684,7 +712,16 @@ const ActivityLive = () => {
           )}
         </div>
 
-        <div style={{ padding: '0 16px 32px' }}>
+        <div style={{ padding: '0 16px 32px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <WearableLaunchCard
+            wearable={primaryWearable}
+            activityType="gps"
+            tokens={RC}
+            tint={tint}
+            onLaunchAppleWatch={launchOnAppleWatch}
+            watchLaunching={watchLaunching}
+            watchLaunched={watchLaunched}
+          />
           <button
             onClick={() => {
               const now = Date.now();

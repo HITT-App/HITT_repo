@@ -9,6 +9,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Switch } from "@/components/ui/switch"
 import { useActivity } from "@/hooks/useActivity"
 import { useStreaksAndBadges } from "@/hooks/useStreaksAndBadges"
+import { usePrimaryWearable } from "@/hooks/usePrimaryWearable"
+import { WearableLaunchCard } from "@/components/wearable/WearableLaunchCard"
+import { startWorkoutMirroring } from "@/plugins/WatchPlugin"
+import type { PrimaryWearable } from "@/lib/wearable-detection"
 import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
@@ -21,8 +25,13 @@ import { Capacitor } from "@capacitor/core"
 
 // ── palette ────────────────────────────────────────────────────────────────────
 const WP = {
-  bg: '#0a0a0a', surface: '#141414', line: '#262626',
+  bg: '#0a0a0a', surface: '#141414', line: '#262626', line2: '#333333',
   fg: '#fafafa', dim: '#9a9a9a', accent: '#f97316',
+  good: '#4ade80', gold: '#F0B53C',
+}
+const tintWP = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`
 }
 const REST_SECS = 30
 
@@ -222,8 +231,12 @@ type AIWorkoutMeta = {
   description?: string
 }
 
-function ReadyScreen({ workout, exercises, onStart, onBack }: {
-  workout: AIWorkoutMeta; exercises: ExerciseSnapshot[]; onStart: () => void; onBack: () => void
+function ReadyScreen({ workout, exercises, onStart, onBack, primaryWearable, onLaunchAppleWatch, watchLaunching, watchLaunched }: {
+  workout: AIWorkoutMeta; exercises: ExerciseSnapshot[]; onStart: () => void; onBack: () => void;
+  primaryWearable: PrimaryWearable;
+  onLaunchAppleWatch: () => void;
+  watchLaunching: boolean;
+  watchLaunched: boolean;
 }) {
   const safeTop = 'calc(var(--safe-area-inset-top, 44px) + 10px)'
   return (
@@ -283,6 +296,17 @@ function ReadyScreen({ workout, exercises, onStart, onBack }: {
 
       {/* pinned footer */}
       <div style={{ flexShrink: 0, padding: '16px 18px 30px', display: 'flex', flexDirection: 'column', gap: 10, borderTop: `1px solid ${WP.line}`, background: WP.bg }}>
+        {Capacitor.isNativePlatform() && (
+          <WearableLaunchCard
+            wearable={primaryWearable}
+            activityType="gym"
+            tokens={{ card: WP.surface, line2: WP.line2, fg: WP.fg, dim: WP.dim, good: WP.good, gold: WP.gold }}
+            tint={tintWP}
+            onLaunchAppleWatch={onLaunchAppleWatch}
+            watchLaunching={watchLaunching}
+            watchLaunched={watchLaunched}
+          />
+        )}
         <button onClick={onStart} style={{ width: '100%', height: 58, borderRadius: 18, border: 0, cursor: 'pointer', background: WP.accent, color: '#1a0a00', fontSize: 17, fontWeight: 800, fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, boxShadow: '0 8px 26px rgba(249,115,22,.3)', touchAction: 'manipulation' }}>
           <Play size={18} /> Start workout
         </button>
@@ -575,6 +599,24 @@ const GymTimer = () => {
   // ─── Scheduled row (Mode A only) ─────────────────────────────────────────
   const [scheduledRow, setScheduledRow] = useState<ScheduledWorkoutRow | null>(null)
 
+  // ─── Wearable launch ──────────────────────────────────────────────────────
+  const { wearable: primaryWearable } = usePrimaryWearable()
+  const [watchLaunching, setWatchLaunching] = useState(false)
+  const [watchLaunched, setWatchLaunched] = useState(false)
+  const launchOnAppleWatch = async () => {
+    if (watchLaunching || watchLaunched) return
+    setWatchLaunching(true)
+    try {
+      const ok = await startWorkoutMirroring('gym', 'Gym session')
+      if (ok) setWatchLaunched(true)
+      else toast({ title: "Couldn't start on Apple Watch", description: "Make sure the HITT Watch app is installed." })
+    } catch {
+      toast({ title: "Couldn't start on Apple Watch", description: "Make sure the HITT Watch app is installed." })
+    } finally {
+      setWatchLaunching(false)
+    }
+  }
+
   // Resolved AI workout content
   const aiContent: AIWorkoutPayload | null = scheduledRow
     ? {
@@ -838,6 +880,10 @@ const GymTimer = () => {
             exercises={exercises}
             onStart={startWorkout}
             onBack={() => navigate(-1)}
+            primaryWearable={primaryWearable}
+            onLaunchAppleWatch={launchOnAppleWatch}
+            watchLaunching={watchLaunching}
+            watchLaunched={watchLaunched}
           />
         )}
 

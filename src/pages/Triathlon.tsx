@@ -15,7 +15,7 @@ import { startGpsWatch } from "@/lib/native-gps";
 import type { GpsPoint } from "@/lib/gps-filter";
 import { sendTriathlonToWatch, isWatchAvailable, startWorkoutMirroring, endWorkoutMirroring } from "@/plugins/WatchPlugin";
 import { usePrimaryWearable } from "@/hooks/usePrimaryWearable";
-import { WearableSetupCard } from "@/components/triathlon/WearableSetupCard";
+import { WearableLaunchCard } from "@/components/wearable/WearableLaunchCard";
 
 // ── Design tokens ─────────────────────────────────────────────
 const C = {
@@ -471,13 +471,14 @@ const Triathlon = () => {
 
           {/* Actions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 8 }}>
-            <WearableSetupCard
+            <WearableLaunchCard
               wearable={primaryWearable}
+              activityType="triathlon"
               tokens={C}
               tint={tint}
-              onSendToWatch={sendToWatch}
-              watchSending={watchSending}
-              watchSent={watchSent}
+              onLaunchAppleWatch={sendToWatch}
+              watchLaunching={watchSending}
+              watchLaunched={watchSent}
             />
             <button
               onClick={() => setScreen('ready')}

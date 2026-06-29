@@ -10,6 +10,9 @@ import { AIFormAnalysis } from '@/components/workout/AIFormAnalysis'
 import { notifyUser, schedulePBShareReminder } from '@/lib/notify'
 import { startWorkoutMirroring, endWorkoutMirroring, sendWorkoutToWatch } from '@/plugins/WatchPlugin'
 import { sendStructuredWorkoutToWatch } from '@/plugins/WatchPlugin'
+import { usePrimaryWearable } from '@/hooks/usePrimaryWearable'
+import { WearableLaunchCard } from '@/components/wearable/WearableLaunchCard'
+import type { PrimaryWearable } from '@/lib/wearable-detection'
 import { Capacitor } from '@capacitor/core'
 import { getYouTubeEmbedUrl } from '@/lib/video'
 import {
@@ -20,8 +23,13 @@ import {
 
 // ── palette ────────────────────────────────────────────────────────────────────
 const WP = {
-  bg: '#0a0a0a', surface: '#141414', line: '#262626',
+  bg: '#0a0a0a', surface: '#141414', line: '#262626', line2: '#333333',
   fg: '#fafafa', dim: '#9a9a9a', accent: '#f97316',
+  good: '#4ade80', gold: '#F0B53C',
+}
+const tintWP = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`
 }
 const REST_SECS = 30
 
@@ -259,8 +267,12 @@ function TransportControls({ playing, onPrev, onToggle, onNext }: {
 // SCREENS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function ReadyScreen({ workout, exercises, onStart, onBack, onSendToWatch }: {
-  workout: Workout; exercises: Exercise[]; onStart: () => void; onBack: () => void; onSendToWatch: () => void
+function ReadyScreen({ workout, exercises, onStart, onBack, onSendToWatch, primaryWearable, watchLaunching, watchLaunched }: {
+  workout: Workout; exercises: Exercise[]; onStart: () => void; onBack: () => void;
+  onSendToWatch: () => void;
+  primaryWearable: PrimaryWearable;
+  watchLaunching: boolean;
+  watchLaunched: boolean;
 }) {
   const safeTop = 'calc(var(--safe-area-inset-top, 44px) + 10px)'
   return (
@@ -320,14 +332,20 @@ function ReadyScreen({ workout, exercises, onStart, onBack, onSendToWatch }: {
 
       {/* pinned footer */}
       <div style={{ flexShrink: 0, padding: '16px 18px 30px', display: 'flex', flexDirection: 'column', gap: 10, borderTop: `1px solid ${WP.line}`, background: WP.bg }}>
+        {Capacitor.isNativePlatform() && exercises.length > 0 && (
+          <WearableLaunchCard
+            wearable={primaryWearable}
+            activityType="structured"
+            tokens={{ card: WP.surface, line2: WP.line2, fg: WP.fg, dim: WP.dim, good: WP.good, gold: WP.gold }}
+            tint={tintWP}
+            onLaunchAppleWatch={onSendToWatch}
+            watchLaunching={watchLaunching}
+            watchLaunched={watchLaunched}
+          />
+        )}
         <button onClick={onStart} style={{ width: '100%', height: 58, borderRadius: 18, border: 0, cursor: 'pointer', background: WP.accent, color: '#1a0a00', fontSize: 17, fontWeight: 800, fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, boxShadow: '0 8px 26px rgba(249,115,22,.3)', touchAction: 'manipulation' }}>
           <Play size={18} /> Start workout
         </button>
-        {Capacitor.isNativePlatform() && exercises.length > 0 && (
-          <button onClick={onSendToWatch} style={{ width: '100%', height: 50, borderRadius: 16, cursor: 'pointer', border: `1px solid ${WP.line}`, background: WP.surface, color: WP.fg, fontFamily: 'inherit', fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, touchAction: 'manipulation' }}>
-            <span style={{ color: WP.accent, display: 'grid' }}><Watch size={18} /></span> Send to Apple Watch
-          </button>
-        )}
       </div>
 
       {/* back button */}
@@ -604,6 +622,9 @@ export default function WorkoutPlayer() {
   const { toast } = useToast()
   const { recordWorkout, newBadges, clearNewBadges } = useStreaksAndBadges()
   const [pointsEarned, setPointsEarned] = useState(0)
+  const { wearable: primaryWearable } = usePrimaryWearable()
+  const [watchLaunching, setWatchLaunching] = useState(false)
+  const [watchLaunched, setWatchLaunched] = useState(false)
 
   // data
   const [workout, setWorkout] = useState<Workout | null>(null)
@@ -712,17 +733,25 @@ export default function WorkoutPlayer() {
   }
 
   const sendToWatch = async () => {
-    if (!workout || !exercises.length) return
-    await sendStructuredWorkoutToWatch({
-      id: workout.id, name: workout.title,
-      durationMinutes: workout.duration_minutes,
-      exercises: exercises.map(ex => ({
-        id: ex.id, name: ex.title,
-        sets: ex.sets ?? undefined, reps: ex.reps ?? undefined,
-        durationSeconds: ex.duration_seconds ?? undefined,
-      })),
-    })
-    toast({ title: 'Sent to Apple Watch', description: 'Open your Watch to begin.' })
+    if (!workout || !exercises.length || watchLaunching || watchLaunched) return
+    setWatchLaunching(true)
+    try {
+      await sendStructuredWorkoutToWatch({
+        id: workout.id, name: workout.title,
+        durationMinutes: workout.duration_minutes,
+        exercises: exercises.map(ex => ({
+          id: ex.id, name: ex.title,
+          sets: ex.sets ?? undefined, reps: ex.reps ?? undefined,
+          durationSeconds: ex.duration_seconds ?? undefined,
+        })),
+      })
+      setWatchLaunched(true)
+      toast({ title: 'Sent to Apple Watch', description: 'Open your Watch to begin.' })
+    } catch {
+      toast({ title: "Couldn't send to Apple Watch", description: 'Make sure the HITT Watch app is installed.' })
+    } finally {
+      setWatchLaunching(false)
+    }
   }
 
   // ── transitions ───────────────────────────────────────────────────────────
@@ -885,6 +914,9 @@ export default function WorkoutPlayer() {
         <ReadyScreen
           workout={workout} exercises={exercises}
           onStart={startWorkout} onBack={() => navigate(-1)} onSendToWatch={sendToWatch}
+          primaryWearable={primaryWearable}
+          watchLaunching={watchLaunching}
+          watchLaunched={watchLaunched}
         />
       )}
 
