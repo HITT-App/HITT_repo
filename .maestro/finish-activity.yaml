@@ -32,8 +32,10 @@ appId: com.hiitfitness.app
 
 # THE CONTRACT: the completion screen MUST appear within 3 seconds of tap,
 # regardless of network. Before the fix this would never fire because
-# setShowCompleted(true) sat behind 3 awaited Supabase calls.
+# setShowCompleted(true) sat behind 3 awaited Supabase calls. The
+# "Share workout" header is unique to the completion screen.
 - extendedWaitUntil:
-    visible:
-      text: "Great work|Nice effort|Amazing|Quick.*session completed"
+    visible: "Share workout"
     timeout: 3000
+- assertVisible: "DURATION"
+- assertVisible: "DISTANCE"
