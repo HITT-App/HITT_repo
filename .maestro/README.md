@@ -58,6 +58,9 @@ If the flow fails on a `tapOn` step, Maestro saves a screenshot to
 |---|---|---|
 | `finish-activity.yaml`        | Tap "Ready?" → tap Finish → completion screen renders within 3s (regression guard for the Finish bug fixed on 2026-06-29) | App open on ActivityLive pre-start screen |
 | `connected-devices.yaml`      | Page renders + Sync button responds | App open on Connected Devices page |
+| `launch-card-activity.yaml`   | ActivityLive pre-start still has Ready? button + GPS pill (catches launch-card layout regressions) | App open on ActivityLive pre-start screen |
+| `launch-card-workout.yaml`    | WorkoutPlayer ReadyScreen still has Start workout button + "The plan" section | App open on a scheduled HIIT workout's ReadyScreen |
+| `launch-card-gym.yaml`        | GymTimer ReadyScreen still has Start workout button | App open on a gym/AI workout's ReadyScreen |
 
 Both flows are **anchored** — they start from a known screen rather than
 navigating there. Reason: the home-page navigation paths use icon-only

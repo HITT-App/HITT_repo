@@ -1,0 +1,23 @@
+# Smoke test for the ActivityLive pre-start launch card.
+#
+# IMPORTANT: navigate to the activity pre-start screen MANUALLY before
+# running this flow (Home → Run / Walk / Cycle). The flow confirms the
+# Ready? button still renders below whatever the wearable launch card
+# decided to show (or hide) for the current user.
+#
+# What this catches: a regression where the new <WearableLaunchCard>
+# breaks the layout or eats the Ready? button.
+
+appId: com.hiitfitness.app
+---
+- launchApp:
+    clearState: false
+    stopApp: false
+
+# We expect to be on the pre-start screen of a GPS activity.
+- assertVisible: "Ready?"
+
+# GPS status pill is one of the three known states — ensures the page rendered
+# fully, not in a partial / error state.
+- assertVisible:
+    text: "GPS ready|Acquiring GPS|Location access denied"

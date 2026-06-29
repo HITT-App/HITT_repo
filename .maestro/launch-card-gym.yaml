@@ -1,0 +1,16 @@
+# Smoke test for the GymTimer ReadyScreen launch card.
+#
+# IMPORTANT: navigate to a gym/AI workout's ReadyScreen MANUALLY before
+# running this flow (e.g. from a scheduled session or via the Jarvis
+# "start now" CTA on an AI-generated workout). The flow confirms the
+# Start button still renders below whatever launch card the user's
+# wearable variant decided to show.
+
+appId: com.hiitfitness.app
+---
+- launchApp:
+    clearState: false
+    stopApp: false
+
+# Universal Start button is always visible regardless of detected wearable.
+- assertVisible: "Start workout"

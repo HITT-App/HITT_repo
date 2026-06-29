@@ -1,0 +1,21 @@
+# Smoke test for the WorkoutPlayer ReadyScreen launch card.
+#
+# IMPORTANT: navigate to a scheduled HIIT workout's ReadyScreen MANUALLY
+# before running this flow (Schedule → tap a scheduled workout → opens
+# the pre-start screen with the plan + Start button). The flow confirms
+# the Start button still renders below whatever launch card the user's
+# wearable variant decided to show.
+
+appId: com.hiitfitness.app
+---
+- launchApp:
+    clearState: false
+    stopApp: false
+
+# Universal Start button is always visible regardless of detected wearable.
+- assertVisible: "Start workout"
+
+# "The plan" section header is unique to the WorkoutPlayer ReadyScreen
+# (Triathlon and ActivityLive don't render it) — disambiguates against
+# any other screen with a Start button.
+- assertVisible: "The plan"
