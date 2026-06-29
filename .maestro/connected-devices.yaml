@@ -9,13 +9,13 @@ appId: com.hiitfitness.app
 - launchApp:
     clearState: false
 
-# Confirm we're on the Connected Devices page
+# Confirm we're on the new dedicated Connected Devices page (not the
+# Profile/Settings tab which also has a "Connected Devices" nav row).
+# "Sources auto-detected" is unique to the dedicated page.
 - assertVisible: "Connected Devices"
-
-# Expect EITHER device rows OR empty-state copy
 - extendedWaitUntil:
     visible:
-      text: "Apple Watch|Garmin|Fitbit|Whoop|Oura|No devices syncing yet"
+      text: "Sources auto-detected|No devices syncing yet"
     timeout: 5000
 
 # Tap the sync button (top-right refresh icon — has aria-label "Sync now").
