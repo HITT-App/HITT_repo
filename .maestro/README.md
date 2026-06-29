@@ -23,9 +23,11 @@ brew install openjdk
 ## Running the flows
 
 ```bash
-# 1. Boot an iPhone simulator (one-time per sim choice)
+# 1. Boot an iPhone simulator. List what's actually installed first —
+#    Xcode ships different model names per iOS version. As of iOS 26
+#    the models are iPhone 17 / 17 Pro / 17 Pro Max / 17e / Air.
 xcrun simctl list devices available | grep -i "iphone"
-xcrun simctl boot "iPhone 16 Pro"       # or any other model
+xcrun simctl boot "iPhone 17 Pro"       # pick one from the list above
 
 # 2. Install the HITT app on the booted simulator
 cd ~/hitt-app
