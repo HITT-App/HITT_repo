@@ -1,0 +1,18 @@
+# HITT Connect IQ — build descriptor
+#
+# Defines build targets and resource scoping for each device family.
+# Connect IQ SDK 4.x is the floor — see manifest.xml for the supported product list.
+
+project.manifest = manifest.xml
+
+# Default resources / source for every device
+base.sourcePath = source
+base.resourcePath = resources
+
+# Per-device resource overrides go here once we have device-specific layouts.
+# Example (uncomment + add resources/round-240x240/ when CIQ-09 lands):
+#
+#   fr255.resourcePath = $(base.resourcePath);resources-round-240x240
+#   fr265.resourcePath = $(base.resourcePath);resources-round-260x260
+#   venu3.resourcePath = $(base.resourcePath);resources-round-454x454
+#   edge840.resourcePath = $(base.resourcePath);resources-rect-246x322

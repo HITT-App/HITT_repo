@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<!--
+
+  HITT Connect IQ — app manifest
+
+  Generated at scaffold time. The `application` UUID below is a placeholder
+  — replace with the UUID reserved when the Connect IQ Store developer
+  account is approved (TAPI-02). DO NOT publish with the placeholder UUID.
+
+  Target SDK floor: 4.0.0 (devices released 2022+). See README.md.
+
+-->
+<iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
+
+  <iq:application
+    entry="HittApp"
+    id="00000000-0000-0000-0000-000000000000"
+    launcherIcon="@Drawables.LauncherIcon"
+    minSdkVersion="4.0.0"
+    name="@Strings.AppName"
+    type="watch-app"
+    version="0.1.0">
+
+    <iq:products>
+      <!-- Forerunner -->
+      <iq:product id="fr165"/>
+      <iq:product id="fr165m"/>
+      <iq:product id="fr255"/>
+      <iq:product id="fr255s"/>
+      <iq:product id="fr255m"/>
+      <iq:product id="fr255sm"/>
+      <iq:product id="fr265"/>
+      <iq:product id="fr265s"/>
+      <iq:product id="fr955"/>
+      <iq:product id="fr965"/>
+
+      <!-- Fenix / Epix -->
+      <iq:product id="fenix7"/>
+      <iq:product id="fenix7pro"/>
+      <iq:product id="fenix7s"/>
+      <iq:product id="fenix7spro"/>
+      <iq:product id="fenix7x"/>
+      <iq:product id="fenix7xpro"/>
+      <iq:product id="fenix8"/>
+      <iq:product id="fenix8s"/>
+      <iq:product id="epix2"/>
+      <iq:product id="epix2pro42mm"/>
+      <iq:product id="epix2pro47mm"/>
+      <iq:product id="epix2pro51mm"/>
+
+      <!-- Venu -->
+      <iq:product id="venu3"/>
+      <iq:product id="venu3s"/>
+      <iq:product id="venusq2"/>
+      <iq:product id="venusq2m"/>
+
+      <!-- Edge -->
+      <iq:product id="edge540"/>
+      <iq:product id="edge840"/>
+      <iq:product id="edge1040"/>
+      <iq:product id="edge1050"/>
+
+      <!-- Instinct -->
+      <iq:product id="instinct2"/>
+      <iq:product id="instinct2s"/>
+      <iq:product id="instinct2x"/>
+      <iq:product id="instinct3"/>
+    </iq:products>
+
+    <iq:permissions>
+      <!-- Required: record an activity -->
+      <iq:uses-permission id="Fit"/>
+      <iq:uses-permission id="Sensor"/>
+      <iq:uses-permission id="UserProfile"/>
+
+      <!-- Required: foreground HTTP to HITT backend (auth, today's workout, post completed activity) -->
+      <iq:uses-permission id="Communications"/>
+
+      <!-- Required: persist token + cached plan across launches -->
+      <iq:uses-permission id="PersistedContent"/>
+    </iq:permissions>
+
+    <iq:languages>
+      <iq:language>eng</iq:language>
+    </iq:languages>
+
+    <iq:barrels/>
+
+  </iq:application>
+
+</iq:manifest>

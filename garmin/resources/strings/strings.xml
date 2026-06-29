@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+  HITT Connect IQ — user-facing strings (English).
+
+  Strings get added story-by-story as Monkey C views land. Today's set
+  covers only the bare minimum the scaffold references (the app name).
+
+-->
+<strings>
+
+  <string id="AppName">HITT</string>
+
+  <!-- Strings for later stories. Commented out until referenced from source. -->
+  <!--
+  <string id="SignInTitle">Sign in with HITT</string>
+  <string id="SignInBody">Open HITT on your phone and enter this code.</string>
+  <string id="SignInWaiting">Waiting for confirmation…</string>
+  <string id="SignInError">Couldn't sign in. Try again.</string>
+  <string id="TodayNoWorkout">No workout scheduled today.</string>
+  <string id="StartButton">Start</string>
+  <string id="PauseButton">Pause</string>
+  <string id="ResumeButton">Resume</string>
+  <string id="StopButton">Stop</string>
+  <string id="SaveButton">Save</string>
+  <string id="DiscardButton">Discard</string>
+  <string id="ResumeRecovered">Resume previous workout?</string>
+  -->
+
+</strings>

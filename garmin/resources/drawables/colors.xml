@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+  HITT theme tokens for Connect IQ.
+
+  Mirrors the iPhone + Apple Watch app: orange primary on dark background.
+  Use these in layouts instead of literal hex values so we can swap themes
+  later (e.g. AMOLED-friendly variants on Venu/Epix).
+
+-->
+<resources>
+
+  <!-- Brand colours -->
+  <color id="hitt_orange"        value="0xF97316"/>  <!-- primary action / accent -->
+  <color id="hitt_orange_muted"  value="0xC55F12"/>  <!-- pressed / subdued primary -->
+  <color id="hitt_dark"          value="0x0A0A0A"/>  <!-- background -->
+  <color id="hitt_card"          value="0x141414"/>  <!-- card / surface above background -->
+  <color id="hitt_line"          value="0x262626"/>  <!-- borders / dividers -->
+  <color id="hitt_fg"            value="0xFAFAFA"/>  <!-- primary text -->
+  <color id="hitt_fg_dim"        value="0x9A9A9A"/>  <!-- secondary text -->
+  <color id="hitt_fg_dimmer"     value="0x5A5A5A"/>  <!-- tertiary / placeholder text -->
+
+  <!-- Semantic -->
+  <color id="hitt_good"          value="0x4ADE80"/>  <!-- success / "in zone" -->
+  <color id="hitt_warn"          value="0xFACC15"/>  <!-- warning / threshold -->
+  <color id="hitt_bad"           value="0xEF4444"/>  <!-- error / over -->
+
+  <!-- Workout phase colours (HIIT interval engine, CIQ-07) -->
+  <color id="hitt_work"          value="0xF97316"/>  <!-- work interval — orange -->
+  <color id="hitt_rest"          value="0x3B82F6"/>  <!-- rest interval — blue -->
+  <color id="hitt_warmup"        value="0xFACC15"/>  <!-- warmup — amber -->
+  <color id="hitt_cooldown"      value="0x14B8A6"/>  <!-- cooldown — teal -->
+
+</resources>
