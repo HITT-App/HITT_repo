@@ -33,7 +33,10 @@ const config: CapacitorConfig = {
     },
   },
   ios: {
-    scheme: 'hiitfitness',
+    // Xcode build scheme name — must match the scheme defined in App.xcodeproj.
+    // The "hiitfitness://" URL scheme that opens the app from links lives in
+    // Info.plist's CFBundleURLSchemes, not here.
+    scheme: 'App',
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
     backgroundColor: '#0a0a0a',
