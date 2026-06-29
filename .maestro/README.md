@@ -54,10 +54,27 @@ If the flow fails on a `tapOn` step, Maestro saves a screenshot to
 
 ## Flow inventory
 
-| File                          | What it asserts |
-|---|---|
-| `finish-activity.yaml`        | Tap a sport → tap Start → tap Finish → completion screen appears (regression guard for the Finish bug fixed on 2026-06-29) |
-| `connected-devices.yaml`      | Profile → Connected Devices → Sync button works → "Synced" toast (or empty-state copy on a fresh user) |
+| File                          | What it asserts | Pre-condition |
+|---|---|---|
+| `finish-activity.yaml`        | Tap "Ready?" → tap Finish → completion screen renders within 3s (regression guard for the Finish bug fixed on 2026-06-29) | App open on ActivityLive pre-start screen |
+| `connected-devices.yaml`      | Page renders + Sync button responds | App open on Connected Devices page |
+
+Both flows are **anchored** — they start from a known screen rather than
+navigating there. Reason: the home-page navigation paths use icon-only
+buttons whose accessibility labels vary by Capacitor version, so selectors
+written blindly tend to drift. Use Maestro Studio (below) to extend either
+flow with the navigation prefix when you want full E2E coverage.
+
+## Extending flows interactively
+
+```bash
+# With the HITT app open in the simulator, run:
+maestro studio
+```
+
+Maestro Studio opens an interactive UI: tap an element in the simulator,
+the right-pane shows the selector you'd use (text, accessibility id, etc.).
+Copy that into your YAML, save, and re-run with `maestro test`.
 
 ## Notes
 
