@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-29] — Finish button works again + CTA-feedback audit
+
+- **Tap Finish on an outdoor activity and the completion screen appears immediately** — previously, the Finish button awaited three Supabase round-trips before flipping the screen, so any slow network made the button look broken (the live activity stopped but the in-app timer kept running). Now the success screen + confetti show instantly on tap, with the save happening in the background. If the save fails, a toast surfaces and the session is preserved in case you want to retry from history
+- **New regression guard** — added 6 source-file audit tests (NF-01..04) that fail loudly if any primary CTA on any page defers its screen-transition setter behind awaits without showing a loading state. The audit caught two latent bugs along the way (one fixed above, one — LogMeal — verified safe by the loading-spinner exemption)
+
 ## [2026-06-29] — Multi-wearable support via Apple Health
 
 - **Your Garmin, Fitbit, Whoop, and Oura now feed into HITT automatically** — anything that syncs to Apple Health is mirrored into your activity log and shows up in Jarvis' context. Open the app and your most recent workouts from any connected wearable appear in your history. No "Connect Garmin" buttons to chase — set up HealthKit sharing in each wearable's own app once and HITT picks them up

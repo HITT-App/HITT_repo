@@ -384,7 +384,7 @@ const ActivityLive = () => {
     });
   }, [isLocked]);
 
-  const handleFinish = async () => {
+  const handleFinish = () => {
     if (settings.autoVibrate) navigator.vibrate?.([100, 100, 200]);
     gpsWatchRef.current?.stop();
     wakeLockRef.current?.release();
@@ -401,81 +401,100 @@ const ActivityLive = () => {
       });
     }
 
-    try {
-      const inserted = await logActivity.mutateAsync({
-        activity_type: activityType,
-        duration_seconds: elapsed,
-        distance_km: Number(distanceKm.toFixed(2)),
-        calories_burned: calories,
-        intensity_level: 3,
-      });
-      // Successful save to backend — discard recovery snapshot.
-      await clearPersistedWorkout();
+    // ── Immediate visible feedback ───────────────────────────────────────
+    // Flip the screen synchronously so the user gets confirmation the tap
+    // landed. Previous version awaited 3+ Supabase round-trips before doing
+    // this, so any network hang made the button look broken.
+    setShowCompleted(true);
+    confetti({
+      particleCount: 120,
+      spread: 80,
+      origin: { y: 0.6 },
+      colors: ["hsl(24,95%,50%)", "#FFD700", "#FF6347", "#ffffff"],
+    });
 
-      // Fire-and-forget: write to Apple Health so the activity appears in Fitness with its route.
-      const startedAt = sessionStartedAtRef.current || (Date.now() - elapsed * 1000);
-      const endedAt = Date.now();
-      const healthMetadata: Record<string, string | number | boolean> = {};
-      const supabaseId = (inserted as { id?: string } | null)?.id;
-      if (supabaseId) healthMetadata.HITT_ACTIVITY_ID = supabaseId;
-      const healthParams = {
-        activityType,
-        startedAt,
-        endedAt,
-        distanceMeters: totalDistance,
-        calories,
-        positions: positionsRef.current.map((p) => ({
-          lat: p.lat,
-          lng: p.lng,
-          ts: p.ts,
-          alt: p.alt ?? null,
-        })),
-        metadata: healthMetadata,
-      };
-      void (async () => {
-        try {
-          const result = await saveActivityToHealth(healthParams);
-          if (result.ok) return;
-          if (
-            !healthAuthRetriedRef.current &&
-            (result.reason === "permission_denied" || result.reason === "denied")
-          ) {
-            healthAuthRetriedRef.current = true;
-            const auth = await ensureHealthWriteAuth();
-            if (auth.ok) {
-              const retry = await saveActivityToHealth(healthParams);
-              if (!retry.ok) {
-                console.error("[health-write] retry failed:", retry.reason);
+    // Snapshot values that the background task needs — captured here so
+    // they reflect end-of-session state, not whatever the next render sees.
+    const finalElapsed = elapsed;
+    const finalDistanceKm = Number(distanceKm.toFixed(2));
+    const finalDistanceMeters = totalDistance;
+    const finalCalories = calories;
+    const finalActivityType = activityType;
+    const finalPositions = positionsRef.current.map((p) => ({
+      lat: p.lat,
+      lng: p.lng,
+      ts: p.ts,
+      alt: p.alt ?? null,
+    }));
+    const finalStartedAt = sessionStartedAtRef.current || (Date.now() - finalElapsed * 1000);
+
+    // ── Background persistence ───────────────────────────────────────────
+    // Errors surface as a toast on the completion screen. If the Supabase
+    // insert fails, the recovery snapshot stays in place (we only clear it
+    // on success), so the user can retry from history.
+    void (async () => {
+      try {
+        const inserted = await logActivity.mutateAsync({
+          activity_type: finalActivityType,
+          duration_seconds: finalElapsed,
+          distance_km: finalDistanceKm,
+          calories_burned: finalCalories,
+          intensity_level: 3,
+        });
+        // Successful save to backend — discard recovery snapshot.
+        await clearPersistedWorkout();
+
+        // Apple Health write — fire-and-forget within the background task.
+        const healthMetadata: Record<string, string | number | boolean> = {};
+        const supabaseId = (inserted as { id?: string } | null)?.id;
+        if (supabaseId) healthMetadata.HITT_ACTIVITY_ID = supabaseId;
+        const healthParams = {
+          activityType: finalActivityType,
+          startedAt: finalStartedAt,
+          endedAt: Date.now(),
+          distanceMeters: finalDistanceMeters,
+          calories: finalCalories,
+          positions: finalPositions,
+          metadata: healthMetadata,
+        };
+        void (async () => {
+          try {
+            const result = await saveActivityToHealth(healthParams);
+            if (result.ok) return;
+            if (
+              !healthAuthRetriedRef.current &&
+              (result.reason === "permission_denied" || result.reason === "denied")
+            ) {
+              healthAuthRetriedRef.current = true;
+              const auth = await ensureHealthWriteAuth();
+              if (auth.ok) {
+                const retry = await saveActivityToHealth(healthParams);
+                if (!retry.ok) {
+                  console.error("[health-write] retry failed:", retry.reason);
+                }
+              } else {
+                console.error("[health-write] auth failed:", auth.reason);
               }
-            } else {
-              console.error("[health-write] auth failed:", auth.reason);
+            } else if (result.reason !== "not_native") {
+              console.error("[health-write] save failed:", result.reason);
             }
-          } else if (result.reason !== "not_native") {
-            console.error("[health-write] save failed:", result.reason);
+          } catch (err) {
+            console.error("[health-write] unexpected error:", err);
           }
-        } catch (err) {
-          console.error("[health-write] unexpected error:", err);
-        }
-      })();
+        })();
 
-      const pts = await recordWorkout();
-      setPointsEarned(pts);
-      Analytics.workoutCompleted({
-        type: activityType,
-        durationSecs: elapsed,
-        distanceKm: distanceKm > 0 ? Number(distanceKm.toFixed(2)) : undefined,
-        calories,
-      });
-      setShowCompleted(true);
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: ["hsl(24,95%,50%)", "#FFD700", "#FF6347", "#ffffff"],
-      });
-    } catch {
-      toast.error("Failed to save activity");
-    }
+        const pts = await recordWorkout();
+        setPointsEarned(pts);
+        Analytics.workoutCompleted({
+          type: finalActivityType,
+          durationSecs: finalElapsed,
+          distanceKm: finalDistanceKm > 0 ? finalDistanceKm : undefined,
+          calories: finalCalories,
+        });
+      } catch {
+        toast.error("Couldn't save your activity — your session is preserved, retry from history.");
+      }
+    })();
   };
 
   // --- Completion message ---

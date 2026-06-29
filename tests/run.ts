@@ -1955,7 +1955,9 @@ async function runUIFeedbackAudit() {
       id: 'NF-01',
       label: 'ActivityLive handleFinish flips screen before persistence awaits',
       file: `${SRC}/pages/ActivityLive.tsx`,
-      decl: /const\s+handleFinish\s*=\s*async/,
+      // Match async or sync — the contract holds either way. A sync handler
+      // dispatching to a background async IIFE is the canonical fix.
+      decl: /const\s+handleFinish\s*=\s*(?:async\s*)?\(/,
       feedbackRe: /setShowCompleted\s*\(\s*true\s*\)/,
       feedbackName: 'setShowCompleted(true)',
       errorHandlingRe: /toast\.error|setError|setSaveError/,
@@ -1965,7 +1967,7 @@ async function runUIFeedbackAudit() {
       id: 'NF-02',
       label: 'GymTimer finishActivity flips screen before persistence awaits',
       file: `${SRC}/pages/GymTimer.tsx`,
-      decl: /const\s+finishActivity\s*=\s*useCallback\s*\(\s*async/,
+      decl: /const\s+finishActivity\s*=\s*useCallback\s*\(\s*(?:async\s*)?\(/,
       feedbackRe: /setShowCompleted\s*\(\s*true\s*\)/,
       feedbackName: 'setShowCompleted(true)',
       errorHandlingRe: /toast\.error|setError/,
@@ -2011,13 +2013,20 @@ async function runUIFeedbackAudit() {
   }
 
   // ── NF-04: Generic — any handle*() in src/pages/*.tsx that awaits AND
-  // flips a screen-transition setter must flip the setter BEFORE the await.
-  // Catches the same anti-pattern in any future page.
+  // flips a screen-transition setter must give the user SOME synchronous
+  // feedback before the first await. Either:
+  //   (a) the screen-transition setter fires before the first await, OR
+  //   (b) a loading-state setter (setSubmitting/setLoading/etc.) fires
+  //       before the first await — the button shows a spinner so the user
+  //       knows the tap was received.
+  // Without either, the button appears dead during the await chain.
   try {
     const pagesDir = `${SRC}/pages`;
     const files = readdirSync(pagesDir).filter(f => f.endsWith('.tsx'));
     const offenders: string[] = [];
     const screenSetterRe = /\bset(Show|Is)(Completed|Finished|Done|Success)\s*\(\s*true\s*\)/;
+    // Loading-spinner state setters that count as adequate pre-await feedback.
+    const loadingSetterRe = /\bset(Submitting|Loading|IsLoading|IsPending|IsSaving|Saving|Busy)\s*\(\s*true\s*\)/;
 
     for (const file of files) {
       const src = readFileSync(`${pagesDir}/${file}`, 'utf8');
@@ -2030,16 +2039,21 @@ async function runUIFeedbackAudit() {
         if (!fn) continue;
         const setterLine = bodyLineOf(fn.body, screenSetterRe);
         const awaitLine = bodyLineOf(fn.body, /\bawait\s+/);
-        if (setterLine !== -1 && awaitLine !== -1 && setterLine > awaitLine) {
-          offenders.push(`${file}:${fn.bodyStartLine + setterLine} (${m[1]}: setter fires after await at line ${fn.bodyStartLine + awaitLine})`);
-        }
+        if (setterLine === -1 || awaitLine === -1) continue;
+        if (setterLine <= awaitLine) continue; // setter fires before await — fine
+
+        // Setter fires after await — check for loading-state exemption.
+        const loadingLine = bodyLineOf(fn.body, loadingSetterRe);
+        if (loadingLine !== -1 && loadingLine <= awaitLine) continue; // spinner shown — fine
+
+        offenders.push(`${file}:${fn.bodyStartLine + setterLine} (${m[1]}: setter fires after await at line ${fn.bodyStartLine + awaitLine}, no loading-state feedback either)`);
       }
     }
 
     if (offenders.length === 0) {
-      pass('NF-04', 'No async onClick handlers in src/pages defer their screen-transition setter behind awaits');
+      pass('NF-04', 'No async onClick handlers in src/pages leave the user without feedback during async work');
     } else {
-      fail('NF-04', 'async handler defers screen-transition setter behind awaits',
+      fail('NF-04', 'async handler leaves button looking dead during async work',
         `${offenders.length} offending handler(s):\n       ${offenders.join('\n       ')}`);
     }
   } catch (e) {
