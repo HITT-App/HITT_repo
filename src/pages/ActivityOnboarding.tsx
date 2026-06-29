@@ -284,8 +284,12 @@ const ActivityOnboarding = () => {
         )}
       </div>
 
-      {/* Footer */}
-      <div className="p-6 pt-0">
+      {/* Footer — pad for the home-indicator safe area so the CTA never sits
+          behind the swipe bar on notched iPhones. */}
+      <div
+        className="px-6 pt-0"
+        style={{ paddingBottom: "calc(var(--safe-area-inset-bottom, 0px) + 24px)" }}
+      >
         <Button
           className="w-full"
           onClick={handleNext}

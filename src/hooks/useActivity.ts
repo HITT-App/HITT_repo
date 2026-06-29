@@ -201,6 +201,26 @@ export const useActivity = () => {
     return score;
   };
 
+  // Flip activity onboarding flag — used after a successful workout completes,
+  // since by that point the user has clearly figured out how to use activities.
+  // Fixes the loop where new users who bypass the onboarding wizard get bounced
+  // back to it every time they tap X on the completion screen.
+  const markActivityOnboardingComplete = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) return;
+      const { error } = await supabase
+        .from("activity_preferences")
+        .upsert(
+          { user_id: user.id, onboarding_completed: true },
+          { onConflict: "user_id", ignoreDuplicates: false },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activity-preferences"] });
+    },
+  });
+
   // Log activity
   const logActivity = useMutation({
     mutationFn: async (data: {
@@ -246,5 +266,6 @@ export const useActivity = () => {
     savePreferences,
     saveGoals,
     logActivity,
+    markActivityOnboardingComplete,
   };
 };

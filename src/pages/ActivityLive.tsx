@@ -93,7 +93,7 @@ const ActivityLive = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activityType = searchParams.get("type") || searchParams.get("sport") || "jogging";
-  const { logActivity } = useActivity();
+  const { logActivity, markActivityOnboardingComplete } = useActivity();
   const { recordWorkout } = useStreaksAndBadges();
 
   // Pre-start setup phase — timer and recording don't begin until user taps Start
@@ -444,6 +444,12 @@ const ActivityLive = () => {
         // Successful save to backend — discard recovery snapshot.
         await clearPersistedWorkout();
 
+        // A user who's finished an activity doesn't need the activity-onboarding
+        // wizard. Without this, new users who bypass onboarding (e.g. via deep
+        // links or home shortcuts) get bounced to /activity-onboarding every
+        // time they tap X on the completion screen — see task #21.
+        markActivityOnboardingComplete.mutate();
+
         // Apple Health write — fire-and-forget within the background task.
         const healthMetadata: Record<string, string | number | boolean> = {};
         const supabaseId = (inserted as { id?: string } | null)?.id;
@@ -619,7 +625,7 @@ const ActivityLive = () => {
             <LiveActivityMap positions={positions} gpsStatus="active" fitBoundsOnMount />
           ) : undefined
         }
-        onDone={() => navigate("/activity", { replace: true })}
+        onDone={() => navigate("/activity-dashboard", { replace: true })}
         postData={{
           duration: Math.floor(elapsed / 60),
           calories,

@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-29] — Stop the activity-onboarding loop + below-the-fold CTA fix
+
+- **Finishing a workout no longer bounces you back to "set up your activity preferences"** — new users who started a Run/Walk/Cycle without going through the activity-onboarding wizard first got sent to it every time they tapped X on the completion screen, forever. Now finishing a workout marks the wizard "done" automatically, and the X button goes straight to the activity dashboard instead of via the redirect that was triggering the wizard
+- **Activity-onboarding "Continue" button is visible again** — was sitting behind the iPhone home-indicator swipe bar on notched devices. Added safe-area padding so it always clears the bottom
+
 ## [2026-06-29] — Finish button works again + CTA-feedback audit
 
 - **Tap Finish on an outdoor activity and the completion screen appears immediately** — previously, the Finish button awaited three Supabase round-trips before flipping the screen, so any slow network made the button look broken (the live activity stopped but the in-app timer kept running). Now the success screen + confetti show instantly on tap, with the save happening in the background. If the save fails, a toast surfaces and the session is preserved in case you want to retry from history
