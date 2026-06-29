@@ -14,12 +14,16 @@ appId: com.hiitfitness.app
 
 # Confirm we're on the new dedicated Connected Devices page (not the
 # Profile/Settings tab which also has a "Connected Devices" nav row).
-# "Sources auto-detected" is unique to the dedicated page.
+# Both strings below are unique to the dedicated page — one of them MUST
+# be visible regardless of whether the user has any devices syncing.
 - assertVisible: "Connected Devices"
-- extendedWaitUntil:
-    visible:
-      text: "Sources auto-detected|No devices syncing yet"
-    timeout: 5000
+- runFlow:
+    when:
+      notVisible: "No devices syncing yet"
+    commands:
+      - extendedWaitUntil:
+          visible: "Last "
+          timeout: 5000
 
 # Tap the sync button (top-right refresh icon — has aria-label "Sync now").
 # Both match strategies are tried because Maestro accessibility-label lookups
