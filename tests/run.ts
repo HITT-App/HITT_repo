@@ -1823,6 +1823,231 @@ async function runDatabaseTests() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// SECTION 4.5 — PRIMARY CTA UI FEEDBACK AUDIT
+//
+// Bug class this catches: an async onClick handler that awaits multiple
+// network calls before flipping a "we're done" state setter. The button
+// click fires but the screen doesn't change, so the user thinks the button
+// is broken. The classic case: ActivityLive's "Finish" button used to do
+//   try { await mutateAsync(...); await clearPersisted(); ... setShowCompleted(true) }
+// — if any of those awaits hangs, the screen never transitions. The fix is
+// to flip the visible state synchronously first, then run persistence in
+// the background.
+// ════════════════════════════════════════════════════════════════════════════
+
+// Extract the body of a top-level arrow function declaration like
+//   const handlerName = async (...) => { ... }
+// or `const handlerName = useCallback(async (...) => { ... }, [deps])`.
+// Returns the body content (excluding the outer braces) and the absolute
+// line number of the opening brace.
+function extractArrowBody(src: string, declRegex: RegExp): { body: string; bodyStartLine: number } | null {
+  const match = src.match(declRegex);
+  if (!match) return null;
+  const startIdx = match.index!;
+  // Find the `=>` then the opening `{`
+  const arrowIdx = src.indexOf('=>', startIdx);
+  if (arrowIdx === -1) return null;
+  const openIdx = src.indexOf('{', arrowIdx);
+  if (openIdx === -1) return null;
+  // Brace-match to find the close
+  let depth = 0;
+  let i = openIdx;
+  for (; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) break;
+    }
+  }
+  if (depth !== 0) return null;
+  const body = src.slice(openIdx + 1, i);
+  const bodyStartLine = src.slice(0, openIdx).split('\n').length;
+  return { body, bodyStartLine };
+}
+
+// Line offset (relative to body) of the first regex match, or -1.
+function bodyLineOf(body: string, re: RegExp): number {
+  const lines = body.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    if (re.test(lines[i])) return i;
+  }
+  return -1;
+}
+
+interface FeedbackAuditCase {
+  id: string;
+  label: string;
+  file: string;
+  decl: RegExp;                          // matches the handler declaration line
+  feedbackRe: RegExp;                    // synchronous UI-feedback call (e.g. setShowCompleted(true))
+  feedbackName: string;                  // human-readable name for error messages
+  errorHandlingRe?: RegExp;              // optional: silent-catch guard
+  errorHandlingName?: string;
+}
+
+function runFeedbackCase(c: FeedbackAuditCase) {
+  let src: string;
+  try {
+    src = readFileSync(c.file, 'utf8');
+  } catch {
+    fail(c.id, c.label, `cannot read ${c.file}`);
+    return;
+  }
+  const fn = extractArrowBody(src, c.decl);
+  if (!fn) {
+    fail(c.id, c.label, `handler declaration matching ${c.decl} not found in ${c.file.split('/').pop()}`);
+    return;
+  }
+  const firstAwaitLine = bodyLineOf(fn.body, /\bawait\s+/);
+  const feedbackLine = bodyLineOf(fn.body, c.feedbackRe);
+  if (feedbackLine === -1) {
+    fail(c.id, c.label,
+      `${c.feedbackName} not called anywhere in handler — user gets no visible feedback when the button is tapped`);
+    return;
+  }
+  if (firstAwaitLine !== -1 && feedbackLine > firstAwaitLine) {
+    fail(c.id, c.label,
+      `${c.feedbackName} at line ${fn.bodyStartLine + feedbackLine} fires AFTER first await at line ${fn.bodyStartLine + firstAwaitLine}. ` +
+      `If any await hangs, the screen never transitions — the user sees "the button does nothing". ` +
+      `Move ${c.feedbackName} to the top of the handler so feedback is synchronous.`);
+    return;
+  }
+  pass(c.id, `${c.label} (${c.feedbackName} at line ${fn.bodyStartLine + feedbackLine}, first await at line ${firstAwaitLine === -1 ? 'n/a' : fn.bodyStartLine + firstAwaitLine})`);
+}
+
+function runErrorHandlingCase(c: FeedbackAuditCase) {
+  if (!c.errorHandlingRe || !c.errorHandlingName) return;
+  let src: string;
+  try { src = readFileSync(c.file, 'utf8'); }
+  catch { return; }
+  const fn = extractArrowBody(src, c.decl);
+  if (!fn) return;
+  // Walk every `catch (...) { ... }` block in the handler body. As long as
+  // at least one of them surfaces the error to the user (toast / state
+  // setter / navigate), we're satisfied — nested IIFEs may have their own
+  // catches that only log to console, and that's fine, but the OUTER
+  // failure path must be visible.
+  const catchRe = /\bcatch\s*(?:\([^)]*\))?\s*\{([\s\S]*?)\}/g;
+  let hasFeedback = false;
+  let foundAnyCatch = false;
+  let m: RegExpExecArray | null;
+  while ((m = catchRe.exec(fn.body)) !== null) {
+    foundAnyCatch = true;
+    if (c.errorHandlingRe.test(m[1])) { hasFeedback = true; break; }
+  }
+  if (!foundAnyCatch) {
+    fail(`${c.id}-CATCH`, `${c.label} — catch block surfaces error to user`,
+      `no try/catch found in handler — async errors silently swallowed`);
+  } else if (hasFeedback) {
+    pass(`${c.id}-CATCH`, `${c.label} — catch block calls ${c.errorHandlingName}`);
+  } else {
+    fail(`${c.id}-CATCH`, `${c.label} — catch block surfaces error to user`,
+      `no catch block calls ${c.errorHandlingName}. Errors are swallowed — the user has no idea the tap failed.`);
+  }
+}
+
+async function runUIFeedbackAudit() {
+  section('PRIMARY CTA UI FEEDBACK (immediate-feedback contract)');
+
+  const cases: FeedbackAuditCase[] = [
+    {
+      id: 'NF-01',
+      label: 'ActivityLive handleFinish flips screen before persistence awaits',
+      file: `${SRC}/pages/ActivityLive.tsx`,
+      decl: /const\s+handleFinish\s*=\s*async/,
+      feedbackRe: /setShowCompleted\s*\(\s*true\s*\)/,
+      feedbackName: 'setShowCompleted(true)',
+      errorHandlingRe: /toast\.error|setError|setSaveError/,
+      errorHandlingName: 'toast.error / setError',
+    },
+    {
+      id: 'NF-02',
+      label: 'GymTimer finishActivity flips screen before persistence awaits',
+      file: `${SRC}/pages/GymTimer.tsx`,
+      decl: /const\s+finishActivity\s*=\s*useCallback\s*\(\s*async/,
+      feedbackRe: /setShowCompleted\s*\(\s*true\s*\)/,
+      feedbackName: 'setShowCompleted(true)',
+      errorHandlingRe: /toast\.error|setError/,
+      errorHandlingName: 'toast.error / setError',
+    },
+  ];
+
+  for (const c of cases) {
+    runFeedbackCase(c);
+    runErrorHandlingCase(c);
+  }
+
+  // ── NF-03: ActivityLive Finish button stays clickable when not locked ─────
+  // Catches a different class of regression: the button has `disabled={isLocked}`
+  // and `pointer-events-none` only when locked. If a future change ever ties
+  // it to a stale state (e.g. `disabled={isSaving}` without ever flipping
+  // isSaving back), this test fails.
+  try {
+    const src = readFileSync(`${SRC}/pages/ActivityLive.tsx`, 'utf8');
+    const finishButtonMatch = src.match(/onClick=\{handleFinish\}[\s\S]{0,400}/);
+    if (!finishButtonMatch) {
+      fail('NF-03', 'ActivityLive Finish button references handleFinish via onClick', 'onClick={handleFinish} not found');
+    } else {
+      const region = finishButtonMatch[0];
+      // The only state that's allowed to gate this button is the user-controlled
+      // lock toggle. Anything else (isSaving, isLoading, isPending) suggests a
+      // state that might get stuck.
+      const disabledMatch = region.match(/disabled=\{([^}]+)\}/);
+      if (!disabledMatch) {
+        pass('NF-03', 'ActivityLive Finish button has no disabled gate');
+      } else {
+        const disabledExpr = disabledMatch[1].trim();
+        if (disabledExpr === 'isLocked' || disabledExpr === '!isLocked') {
+          pass('NF-03', `ActivityLive Finish button disabled only by user-controlled lock (disabled={${disabledExpr}})`);
+        } else {
+          fail('NF-03', 'ActivityLive Finish button disabled by stale-state risk',
+            `disabled={${disabledExpr}} — if this state never resets, the button looks broken. Only "isLocked" is acceptable here.`);
+        }
+      }
+    }
+  } catch {
+    fail('NF-03', 'ActivityLive Finish button disabled-gate audit', 'ActivityLive.tsx not readable');
+  }
+
+  // ── NF-04: Generic — any handle*() in src/pages/*.tsx that awaits AND
+  // flips a screen-transition setter must flip the setter BEFORE the await.
+  // Catches the same anti-pattern in any future page.
+  try {
+    const pagesDir = `${SRC}/pages`;
+    const files = readdirSync(pagesDir).filter(f => f.endsWith('.tsx'));
+    const offenders: string[] = [];
+    const screenSetterRe = /\bset(Show|Is)(Completed|Finished|Done|Success)\s*\(\s*true\s*\)/;
+
+    for (const file of files) {
+      const src = readFileSync(`${pagesDir}/${file}`, 'utf8');
+      // Find each `const handle... = async (...)` or `useCallback(async ...)` arrow.
+      const handlerRe = /const\s+(handle\w+)\s*=\s*(?:useCallback\s*\(\s*)?async/g;
+      let m: RegExpExecArray | null;
+      while ((m = handlerRe.exec(src)) !== null) {
+        const declRe = new RegExp(`const\\s+${m[1]}\\s*=\\s*(?:useCallback\\s*\\(\\s*)?async`);
+        const fn = extractArrowBody(src, declRe);
+        if (!fn) continue;
+        const setterLine = bodyLineOf(fn.body, screenSetterRe);
+        const awaitLine = bodyLineOf(fn.body, /\bawait\s+/);
+        if (setterLine !== -1 && awaitLine !== -1 && setterLine > awaitLine) {
+          offenders.push(`${file}:${fn.bodyStartLine + setterLine} (${m[1]}: setter fires after await at line ${fn.bodyStartLine + awaitLine})`);
+        }
+      }
+    }
+
+    if (offenders.length === 0) {
+      pass('NF-04', 'No async onClick handlers in src/pages defer their screen-transition setter behind awaits');
+    } else {
+      fail('NF-04', 'async handler defers screen-transition setter behind awaits',
+        `${offenders.length} offending handler(s):\n       ${offenders.join('\n       ')}`);
+    }
+  } catch (e) {
+    fail('NF-04', 'Generic CTA UI-feedback audit', `scan failed: ${e}`);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // SECTION 5 — APPLE WATCH ACTIVITY LAUNCH
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -2125,6 +2350,7 @@ async function main() {
   }
 
   await runCodeAudit();
+  await runUIFeedbackAudit();
   await runAICoachTests();
   await runWorkoutPlanTests();
   await runDatabaseTests();
