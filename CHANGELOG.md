@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-06-29] — Multi-wearable support via Apple Health
+
+- **Your Garmin, Fitbit, Whoop, and Oura now feed into HITT automatically** — anything that syncs to Apple Health is mirrored into your activity log and shows up in Jarvis' context. Open the app and your most recent workouts from any connected wearable appear in your history. No "Connect Garmin" buttons to chase — set up HealthKit sharing in each wearable's own app once and HITT picks them up
+- **New Connected Devices screen** — Profile → Connected Devices lists every wearable that's contributed data in the last 14 days, with last-sync timestamps and a Sync button that re-pulls from Apple Health. Includes a "Whoop syncs HR + workouts only — strain & recovery stay in the Whoop app" caveat since that's a Whoop ecosystem limit, not ours
+- **Smart cross-source deduplication** — if you finish a workout on your Apple Watch AND your phone also picks it up from HealthKit, we keep only one row. Same for any third-party app re-saving the same session. Done via a fingerprint hash so even when device IDs differ, identical workouts merge
+
 ## [2026-06-27] — Triathlon Share: Watch → iPhone share card
 
 - **Tap Share on the Watch race-summary and the iPhone share sheet pops with a triathlon card** — finish a triathlon on the Watch, tap the new gold Share button on the celebrate screen, and an iOS share sheet opens on your phone with a 1080×1080 PNG of your race: gold trophy, race name, total time, and per-leg breakdown (Swim/Bike/Run). Caption auto-fills with "Just finished {race} in {time} 🏆". If the Watch sends the request while the iPhone's locked or backgrounded, the message queues via WCSession `transferUserInfo` and surfaces the next time you open the app

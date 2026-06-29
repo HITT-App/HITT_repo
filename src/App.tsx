@@ -20,9 +20,15 @@ import { PageLoader } from "@/components/PageLoader";
 import { useCacheVersion } from "@/hooks/useCacheVersion";
 import { useNativePush } from "@/hooks/useNativePush";
 import { initWatchEventHandler } from "@/lib/watch-event-handler";
+import { initHealthKitSync } from "@/lib/healthkit-sync";
 
 // Activate watch workout event → Supabase write-back (no-op on non-native)
 initWatchEventHandler();
+
+// HealthKit aggregator: pulls workouts/HR/steps/sleep from any wearable that
+// syncs to Apple Health (Garmin, Fitbit, Whoop, Oura, etc.) into Supabase so
+// Jarvis can reason about them. No-op on non-native.
+initHealthKitSync();
 
 // Critical pages loaded eagerly
 import Index from "./pages/Index";
@@ -36,6 +42,7 @@ const Assessment = lazy(() => import("./pages/Assessment"));
 const AICoach = lazy(() => import("./pages/AICoach"));
 const AISurface = lazy(() => import("./components/AISurface").then(m => ({ default: m.AISurface })));
 const Profile = lazy(() => import("./pages/Profile"));
+const ConnectedDevices = lazy(() => import("./pages/ConnectedDevices"));
 const ProfileSetup = lazy(() => import("./pages/ProfileSetup"));
 const AssessmentResults = lazy(() => import("./pages/AssessmentResults"));
 const HealthMetrics = lazy(() => import("./pages/HealthMetrics"));
@@ -185,6 +192,7 @@ const App = () => (
             <Route path="/ai-coach" element={<ProtectedRoute><AICoach /></ProtectedRoute>} />
             <Route path="/ai" element={<ProtectedRoute><AISurface /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/connected-devices" element={<ProtectedRoute><ConnectedDevices /></ProtectedRoute>} />
             <Route path="/health-metrics" element={<ProtectedRoute><HealthMetrics /></ProtectedRoute>} />
             <Route path="/activity" element={<ProtectedRoute><ActivityTracker /></ProtectedRoute>} />
             <Route path="/activity-onboarding" element={<ProtectedRoute><ActivityOnboarding /></ProtectedRoute>} />

@@ -88,7 +88,15 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
       count: 'exact',
     });
 
-  if (error) throw error;
+  if (error) {
+    console.error('[activity-upsert] upsert error:', JSON.stringify({
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    }));
+    throw new Error(`upsert failed: ${error.message ?? 'unknown'} (${error.code ?? '?'})`);
+  }
 
   return { inserted: count ?? 0, skipped: skipped + (fresh.length - (count ?? 0)) };
 }

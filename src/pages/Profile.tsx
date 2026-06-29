@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Camera, Loader2, User, Target, Shield, Mic, Sun, Moon,
-  Pencil, Check, X, Calendar, Lock, Globe, Trash2, Bell, ChevronRight, Upload,
+  Pencil, Check, X, Calendar, Lock, Globe, Trash2, Bell, ChevronRight, Upload, Watch,
 } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 
@@ -568,7 +568,22 @@ export default function Profile() {
             </p>
           </div>
 
-          {/* Connected Devices (Watch Sync) */}
+          {/* All wearables — Apple Watch, Garmin, Fitbit, Whoop, Oura via HealthKit */}
+          <button
+            onClick={() => navigate('/connected-devices')}
+            className="w-full flex items-center justify-between p-4 bg-secondary rounded-xl active:opacity-70 transition-opacity"
+          >
+            <div className="flex items-center gap-3">
+              <Watch className="w-4 h-4 text-muted-foreground" />
+              <div className="text-left">
+                <p className="font-medium text-sm">Connected Devices</p>
+                <p className="text-xs text-muted-foreground">Apple Watch, Garmin, Fitbit, Whoop &amp; more</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+
+          {/* Legacy single-device sync — keep for "Sync Now" affordance */}
           <WatchSyncSection />
 
           {/* Password */}
