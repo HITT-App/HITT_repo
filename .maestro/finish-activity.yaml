@@ -1,0 +1,54 @@
+# Regression guard for the Finish-button-does-nothing bug fixed 2026-06-29.
+#
+# Bug shape: ActivityLive.handleFinish awaited 3 Supabase round-trips before
+# flipping setShowCompleted(true), so any slow network made the Finish button
+# look unresponsive. Now the success screen fires synchronously on tap.
+#
+# This flow drives a real Walk activity through the live tracker and asserts
+# the completion screen appears within ~3 seconds of tapping Finish.
+
+appId: com.hiitfitness.app
+---
+- launchApp:
+    clearState: false      # reuse the persisted session — sign in manually once
+
+# Land on a page with the Quick Add menu visible. The Index/home tab is the
+# default, but the launch may restore the last viewed page.
+- runFlow:
+    when:
+      notVisible: "Quick Add"
+    commands:
+      - tapOn:
+          text: "Home"
+          optional: true
+
+# Open the Quick Add menu and start a Walk. The label inside the menu may
+# evolve — adjust the text matcher here if it drifts.
+- tapOn:
+    text: "Quick Add"
+- tapOn:
+    text: "Walk"
+    optional: false
+
+# Pre-start screen — wait for GPS to acquire ("GPS ready" appears), then tap.
+- assertVisible:
+    text: "Walk"
+- assertVisible:
+    text: "Ready?"
+    timeout: 10000
+- tapOn: "Ready?"
+
+# Activity in progress. Give it a beat to register movement / Live Activity
+# spin-up, then tap Finish. Button text is dynamic ("Finish Walk" etc.) so
+# we match a prefix.
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "Finish.*"
+
+# THE CONTRACT: the completion screen MUST appear within 3 seconds of tap,
+# regardless of network. Before the fix this test would timeout because
+# setShowCompleted(true) sat behind 3 awaited Supabase calls.
+- assertVisible:
+    text: "Great work|Nice effort|Amazing|Quick.*session completed"
+    timeout: 3000

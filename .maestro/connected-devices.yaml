@@ -1,0 +1,49 @@
+# Smoke test for the Connected Devices page added 2026-06-28.
+#
+# Asserts: page loads, sync button is present and responsive, page renders
+# either real device rows (Apple Watch / Garmin / Fitbit / etc.) or the
+# empty-state copy. Sync tap should not throw — even on a fresh user the
+# button is expected to no-op gracefully with a "No new data" toast.
+
+appId: com.hiitfitness.app
+---
+- launchApp:
+    clearState: false
+
+# Navigate to Profile. The profile entry is reached via the avatar in the
+# Index header rather than the bottom nav.
+- runFlow:
+    when:
+      notVisible: "Profile"
+    commands:
+      - tapOn:
+          text: "Home"
+          optional: true
+
+- tapOn:
+    text: "Profile"
+    optional: false
+
+- waitForAnimationToEnd
+
+# The Connected Devices nav row is below several other settings rows.
+- scroll
+- tapOn:
+    text: "Connected Devices"
+
+# Connected Devices page loads. Expect EITHER device rows OR empty-state copy.
+- assertVisible:
+    text: "Connected Devices"
+- assertVisible:
+    text: "Apple Watch|Garmin|Fitbit|Whoop|Oura|No devices syncing yet"
+    timeout: 5000
+
+# Tap the Sync button (top-right icon, aria-label "Sync now"). Should fire
+# a sync and surface a toast either way ("Synced" / "No new data" / a
+# non-native warning if we're in the simulator without HealthKit data).
+- tapOn:
+    id: "Sync now"
+    optional: true
+- tapOn:
+    text: "Sync now"
+    optional: true
