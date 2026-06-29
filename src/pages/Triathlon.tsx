@@ -14,6 +14,8 @@ import { GpsFilter } from "@/lib/gps-filter";
 import { startGpsWatch } from "@/lib/native-gps";
 import type { GpsPoint } from "@/lib/gps-filter";
 import { sendTriathlonToWatch, isWatchAvailable, startWorkoutMirroring, endWorkoutMirroring } from "@/plugins/WatchPlugin";
+import { usePrimaryWearable } from "@/hooks/usePrimaryWearable";
+import { WearableSetupCard } from "@/components/triathlon/WearableSetupCard";
 
 // ── Design tokens ─────────────────────────────────────────────
 const C = {
@@ -183,6 +185,7 @@ const Triathlon = () => {
   const [targetKm, setTargetKm] = useState([3.8, 180, 42.2]);
   const [watchSent, setWatchSent] = useState(false);
   const [watchSending, setWatchSending] = useState(false);
+  const { wearable: primaryWearable } = usePrimaryWearable();
   const [legData, setLegData] = useState<LegData[]>([
     { elapsed: 0, distance: 0, calories: 0, positions: [] },
     { elapsed: 0, distance: 0, calories: 0, positions: [] },
@@ -468,23 +471,14 @@ const Triathlon = () => {
 
           {/* Actions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 8 }}>
-            <button
-              onClick={sendToWatch}
-              disabled={watchSending}
-              style={{
-                width: '100%', cursor: 'pointer', borderRadius: 14, padding: '13px 0',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                fontSize: 13.5, fontWeight: 650,
-                border: `1px solid ${watchSent ? tint(C.good, 0.4) : C.line2}`,
-                background: watchSent ? tint(C.good, 0.1) : C.card,
-                color: watchSent ? C.good : C.fg,
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              {watchSent
-                ? <><Check size={16} color={C.good} strokeWidth={2.2} /> Starting on Apple Watch</>
-                : <><Watch size={16} color={C.dim} strokeWidth={2.2} /> {watchSending ? 'Starting…' : 'Start Race on Apple Watch'}</>}
-            </button>
+            <WearableSetupCard
+              wearable={primaryWearable}
+              tokens={C}
+              tint={tint}
+              onSendToWatch={sendToWatch}
+              watchSending={watchSending}
+              watchSent={watchSent}
+            />
             <button
               onClick={() => setScreen('ready')}
               style={{

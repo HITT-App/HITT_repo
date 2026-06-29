@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-29] — Vendor-aware Triathlon launch (Garmin / Fitbit / Whoop / Oura)
+
+- **The Triathlon page now adapts to whatever wearable you actually use** — Apple Watch users still get the one-tap "Start Race on Apple Watch" button, but a Garmin user sees real Garmin multisport setup steps for their watch, a Whoop / Oura user sees a clear "your device doesn't track multisport, use phone GPS" card, and a phone-only user sees friendly framing. Detection is based on which wearable shows up in your recent activity log (30-day window), with Apple Watch winning ties unless another vendor strictly dominates
+- **Universal phone-GPS "Start race" button stays visible for everyone** — works regardless of detected wearable, so you always have a working path even if the vendor-specific copy doesn't apply
+
 ## [2026-06-29] — Stop the activity-onboarding loop + below-the-fold CTA fix
 
 - **Finishing a workout no longer bounces you back to "set up your activity preferences"** — new users who started a Run/Walk/Cycle without going through the activity-onboarding wizard first got sent to it every time they tapped X on the completion screen, forever. Now finishing a workout marks the wizard "done" automatically, and the X button goes straight to the activity dashboard instead of via the redirect that was triggering the wizard

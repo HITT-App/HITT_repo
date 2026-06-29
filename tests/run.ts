@@ -2131,6 +2131,29 @@ async function runUIFeedbackAudit() {
   } catch {
     fail('WD-09', 'usePrimaryWearable.ts persistence', 'file not found');
   }
+
+  // ── WD-10: Triathlon.tsx uses the WearableSetupCard component instead of
+  // an inline "Start Race on Apple Watch" button. Catches the regression
+  // where someone refactors and the Apple-Watch-only copy leaks back into
+  // the default path that all users see.
+  try {
+    const path = `${SRC}/pages/Triathlon.tsx`;
+    const src = readFileSync(path, 'utf8');
+    const importsCard = /import\s+\{[^}]*WearableSetupCard[^}]*\}\s+from/.test(src);
+    const rendersCard = /<WearableSetupCard\b/.test(src);
+    const bareAppleString = /Start Race on Apple Watch/.test(src);
+    if (importsCard && rendersCard && !bareAppleString) {
+      pass('WD-10', 'Triathlon.tsx renders <WearableSetupCard> instead of inline Apple-Watch-only button');
+    } else {
+      const issues: string[] = [];
+      if (!importsCard) issues.push('WearableSetupCard not imported');
+      if (!rendersCard) issues.push('<WearableSetupCard> not rendered');
+      if (bareAppleString) issues.push('"Start Race on Apple Watch" still lives in Triathlon.tsx (should only exist inside the component)');
+      fail('WD-10', 'Triathlon.tsx vendor-aware launch contract', issues.join('; '));
+    }
+  } catch {
+    fail('WD-10', 'Triathlon.tsx vendor-aware launch contract', 'Triathlon.tsx not readable');
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
