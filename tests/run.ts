@@ -2059,6 +2059,78 @@ async function runUIFeedbackAudit() {
   } catch (e) {
     fail('NF-04', 'Generic CTA UI-feedback audit', `scan failed: ${e}`);
   }
+
+  // ── WD-07: wearable-detection.ts exists + exports getPrimaryWearable + the
+  // exact set of 6 PrimaryWearable values documented in the plan. Catches type
+  // drift between the detector and any UI variants that consume it.
+  try {
+    const path = `${SRC}/lib/wearable-detection.ts`;
+    const src = readFileSync(path, 'utf8');
+    const hasExport = /export\s+async\s+function\s+getPrimaryWearable\s*\(/.test(src);
+    const expectedValues = ['apple_watch', 'garmin', 'fitbit', 'whoop', 'oura', 'phone_only'];
+    const allPresent = expectedValues.every(v => src.includes(`"${v}"`) || src.includes(`'${v}'`));
+    if (hasExport && allPresent) {
+      pass('WD-07', 'wearable-detection.ts exports getPrimaryWearable and lists all 6 PrimaryWearable values');
+    } else {
+      fail('WD-07', 'wearable-detection.ts contract',
+        `${!hasExport ? 'getPrimaryWearable export missing. ' : ''}${!allPresent ? 'one or more of [' + expectedValues.join(', ') + '] missing.' : ''}`);
+    }
+  } catch {
+    fail('WD-07', 'wearable-detection.ts exists', 'file not found');
+  }
+
+  // ── WD-08: usePrimaryWearable hook caches with staleTime ≥ 1h. Prevents the
+  // hook from re-fetching on every page focus, hammering Supabase and flickering
+  // the UI between variants. Audit resolves identifier references one level
+  // deep so `staleTime: STALE_TIME_MS` with a top-level const definition still
+  // evaluates cleanly.
+  try {
+    const path = `${SRC}/hooks/usePrimaryWearable.ts`;
+    const src = readFileSync(path, 'utf8');
+    const staleMatch = src.match(/staleTime:\s*([^,\n}]+)/);
+    if (!staleMatch) {
+      fail('WD-08', 'usePrimaryWearable sets staleTime', 'staleTime not set on the useQuery options');
+    } else {
+      let expr = staleMatch[1].trim();
+      // If it's a single identifier, resolve it via `const NAME = <expr>;`.
+      const identMatch = expr.match(/^([A-Z_][A-Z0-9_]*)$/);
+      if (identMatch) {
+        const defMatch = src.match(new RegExp(`const\\s+${identMatch[1]}\\s*=\\s*([^;]+);`));
+        if (defMatch) expr = defMatch[1].trim();
+      }
+      // Strip trailing `as const` / type annotations.
+      expr = expr.replace(/\s+as\s+\w+.*$/, '');
+      const safe = /^[\d\s+\-*/()_]+$/.test(expr);
+      const value = safe ? Function(`"use strict"; return (${expr.replace(/_/g, '')});`)() as number : NaN;
+      if (Number.isFinite(value) && value >= 60 * 60 * 1000) {
+        pass('WD-08', `usePrimaryWearable staleTime is ≥ 1h (got ${value}ms)`);
+      } else {
+        fail('WD-08', 'usePrimaryWearable staleTime ≥ 1h',
+          `resolved staleTime expression "${expr}" → ${value} — must be ≥ ${60 * 60 * 1000}`);
+      }
+    }
+  } catch {
+    fail('WD-08', 'usePrimaryWearable.ts exists', 'file not found');
+  }
+
+  // ── WD-09: localStorage decision cache persists across sessions. Prevents
+  // the UI from flickering between vendor variants on cold start while the
+  // React Query result loads.
+  try {
+    const path = `${SRC}/hooks/usePrimaryWearable.ts`;
+    const src = readFileSync(path, 'utf8');
+    const reads = /localStorage\.getItem/.test(src);
+    const writes = /localStorage\.setItem/.test(src);
+    const placeholder = /placeholderData\s*:/.test(src);
+    if (reads && writes && placeholder) {
+      pass('WD-09', 'usePrimaryWearable persists decisions across sessions (localStorage + placeholderData)');
+    } else {
+      fail('WD-09', 'usePrimaryWearable persistence contract',
+        `missing: ${[!reads && 'localStorage.getItem', !writes && 'localStorage.setItem', !placeholder && 'placeholderData'].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('WD-09', 'usePrimaryWearable.ts persistence', 'file not found');
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
