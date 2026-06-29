@@ -11,8 +11,11 @@
 
 appId: com.hiitfitness.app
 ---
+# Attach to the currently running app — don't terminate/relaunch (which
+# would wipe whatever screen you've manually navigated to).
 - launchApp:
     clearState: false
+    stopApp: false
 
 # Confirm we're on the ActivityLive pre-start screen.
 - assertVisible: "Ready?"

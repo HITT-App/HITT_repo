@@ -21,16 +21,33 @@ interface DeviceRow {
   lastMetricAt: string | null;
 }
 
+// Canonical source_platform values come from several places that have
+// evolved over time:
+//   - useHealthSync.ts (legacy) writes "healthkit" for HR/steps
+//   - sync-healthkit edge function writes "apple_health" for aggregated daily
+//     stats and "apple_health_native" / "healthkit_other" for general samples
+//   - logActivity writes "hitt_phone" for in-app GPS workouts
+//   - the Watch direct path writes "apple_watch"
+// Map everything that's "data via Apple Health, not a known brand" to a
+// single canonical "apple_health" key so the user sees ONE Apple Health row.
+const CANONICAL_ALIASES: Record<string, string> = {
+  healthkit:           "apple_health",
+  apple_health_native: "apple_health",
+  healthkit_other:     "apple_health",
+};
+
+function canonicalPlatform(raw: string): string {
+  return CANONICAL_ALIASES[raw] ?? raw;
+}
+
 const FRIENDLY: Record<string, { label: string; caveat?: string }> = {
-  apple_watch:           { label: "Apple Watch" },
-  garmin:                { label: "Garmin" },
-  fitbit:                { label: "Fitbit" },
-  whoop:                 { label: "Whoop", caveat: "HR + workouts only — strain & recovery stay in the Whoop app" },
-  oura:                  { label: "Oura" },
-  apple_health:          { label: "Apple Health (aggregated)" },
-  apple_health_native:   { label: "Apple Health (native)" },
-  hitt_phone:            { label: "HITT iPhone GPS" },
-  healthkit_other:       { label: "Other (via Apple Health)" },
+  apple_watch:  { label: "Apple Watch" },
+  garmin:       { label: "Garmin" },
+  fitbit:       { label: "Fitbit" },
+  whoop:        { label: "Whoop", caveat: "HR + workouts only — strain & recovery stay in the Whoop app" },
+  oura:         { label: "Oura" },
+  apple_health: { label: "Apple Health" },
+  hitt_phone:   { label: "HITT iPhone GPS" },
 };
 
 function friendlyFor(platform: string) {
@@ -40,7 +57,7 @@ function friendlyFor(platform: string) {
 function iconFor(platform: string) {
   if (platform === "apple_watch") return Watch;
   if (platform === "garmin" || platform === "fitbit" || platform === "whoop" || platform === "oura") return Activity;
-  if (platform === "apple_health" || platform === "apple_health_native") return Heart;
+  if (platform === "apple_health") return Heart;
   return Activity;
 }
 
@@ -80,8 +97,8 @@ async function loadDevices(userId: string): Promise<DeviceRow[]> {
     map.set(platform, row);
   };
 
-  (activitiesRes.data ?? []).forEach(r => upsert(r.source_platform as string, "activity", r.started_at as string));
-  (metricsRes.data ?? []).forEach(r => upsert(r.source_platform as string, "metric", r.recorded_at as string));
+  (activitiesRes.data ?? []).forEach(r => upsert(canonicalPlatform(r.source_platform as string), "activity", r.started_at as string));
+  (metricsRes.data ?? []).forEach(r => upsert(canonicalPlatform(r.source_platform as string), "metric", r.recorded_at as string));
 
   // Sort by most recent contribution descending.
   return [...map.values()].sort((a, b) => {
