@@ -489,15 +489,55 @@ Quick reference for which Claude Code agent to use per story.
 
 ---
 
-## 7. Open Questions
+## 7. Decisions Locked In (2026-06-29)
 
-To resolve with owner before starting Phase 1:
+1. **Auth flow → Device-pair code via Supabase Auth.**
+   Connect IQ app shows a 6-digit code on the watch. User enters it into the HITT iPhone app, which calls a Supabase edge function to mint a long-lived token bound to that user. Watch stores the token in `Application.Storage`. No new OAuth provider, no parallel auth system. (Replaces the "OAuth pairing" wording in CIQ-02 — see addendum.)
 
-1. **Garmin OAuth host:** does HITT have an OAuth provider, or do we add one to Supabase Auth? (Affects CIQ-02 effort.)
-2. **Device-matrix floor:** Forerunner 245+ / Fenix 6+ as our floor, or do we go newer (255/7+) for a smaller test surface?
-3. **Triathlon scope:** ship triathlon in Phase 2, or hold it for a follow-up release after the simpler single-sport flow is proven?
-4. **EEA priority:** is launching in EEA at the same time as global a hard requirement, or acceptable to ship global first?
-5. **Pricing:** is HITT Connect IQ free, or tied to a HITT subscription? (Affects store listing copy and any in-app gate.)
+2. **Device floor → Connect IQ SDK 4.x.**
+   Supported: Forerunner 255+, Fenix 7+, Epix 2+, Venu 3+, Edge 540+, Instinct 2+. All devices released 2022 or later. ~12 representative test targets instead of 50+. Older device support is a post-launch decision based on demand.
+
+3. **Triathlon → Ships in Phase 2** (CIQ-08 stays).
+
+4. **EEA → Ship global first, submit EEA same day.**
+   UK / US / Canada / Australia / Asia users get the app on approval day. EU users see an "available in your region soon" notice in the iPhone app's Garmin section, then get it 2–6 weeks later when EEA review passes.
+
+5. **Pricing → Free Connect IQ app, gated by HITT subscription.**
+   The Connect IQ app is free to install from the Connect IQ Store. Sign-in requires a HITT account, which is created via the iPhone app (free) and subscribed to via App Store IAP. Without an active HITT subscription, the Connect IQ app shows the user's status and offers structured workouts only if their plan covers it. The iPhone app remains the source of truth for billing — same pattern as Strava, TrainingPeaks, Wahoo, Komoot.
+
+   **Onboarding flow:**
+   1. User installs HITT Connect IQ from the Garmin Connect mobile app (free).
+   2. Watch displays "Sign in with HITT" + 6-digit code.
+   3. User opens iPhone HITT app → Settings → "Connect Garmin Watch" → enters code.
+   4. If not subscribed, iPhone app shows paywall.
+   5. On subscription, watch pairs and Phase 2 features unlock.
+
+   **Implication:** Connect IQ app is technically standalone-installable but practically requires the iPhone app. This is the standard Connect IQ pattern.
+
+---
+
+## 8. Addendum — CIQ-02 revised under the device-pair code flow
+
+The original CIQ-02 (OAuth pairing) is simpler under the device-pair flow. Replace the acceptance criteria with:
+
+#### CIQ-02 (revised) — Device-pair code login
+
+> **As** a Garmin user, **I want** to sign in to my HITT account from the watch app with a short code, **so that** I don't need to type a password on the watch.
+
+- **Acceptance:**
+  - First launch → "Sign in with HITT" → calls a Supabase edge function `garmin-pair-start` which returns a 6-digit code.
+  - Watch displays the code and a "Waiting for sign-in…" screen.
+  - iPhone HITT app exposes Settings → "Connect Garmin Watch" → text field for the code.
+  - On code entry, iPhone calls `garmin-pair-confirm` with the code + signed-in user ID. Backend mints a long-lived token, marks the pair record consumed.
+  - Watch polls `garmin-pair-status` every 5s. On success, receives the token, stores it in `Application.Storage`, transitions to home screen.
+  - Codes expire after 10 minutes and are single-use.
+  - Sign-out clears the token and revokes server-side.
+- **Track:** CIQ / INF / IOS
+- **Effort:** 2 agent-days (down from 3 — simpler than full OAuth)
+- **Deps:** CIQ-01
+- **Agent:** Plan (device-pair sequence design) → general-purpose
+
+This is the same code-pair pattern Sonos uses to pair speakers and Apple uses for AirPlay handoffs. Well-trodden, no third-party OAuth library needed on the watch.
 
 ---
 
