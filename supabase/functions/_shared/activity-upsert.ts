@@ -34,9 +34,20 @@ export async function activityFingerprint(row: Pick<ActivityRow, 'user_id' | 'ac
     .join('');
 }
 
+export interface InsertedSummary {
+  id: string;
+  activity_type: string;
+  started_at: string;
+  ended_at?: string | null;
+  duration_seconds: number;
+  calories_burned?: number | null;
+  source_platform: string;
+}
+
 export interface UpsertResult {
   inserted: number;
   skipped: number;
+  insertedRows?: InsertedSummary[];
 }
 
 // Upsert one or many activities. Rows whose fingerprint already exists in the
@@ -80,13 +91,15 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
 
   // Same-source dedupe handled by the partial unique index — any conflict on
   // (user_id, source_platform, source_platform_id) is silently dropped.
-  const { error, count } = await admin
+  // Select the inserted rows so the caller can surface them (e.g. for the
+  // share-prompt feature) without a second query.
+  const { data: insertedData, error } = await admin
     .from('activity_logs')
     .upsert(fresh, {
       onConflict: 'user_id, source_platform, source_platform_id',
       ignoreDuplicates: true,
-      count: 'exact',
-    });
+    })
+    .select('id, activity_type, started_at, ended_at, duration_seconds, calories_burned, source_platform');
 
   if (error) {
     console.error('[activity-upsert] upsert error:', JSON.stringify({
@@ -98,5 +111,10 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
     throw new Error(`upsert failed: ${error.message ?? 'unknown'} (${error.code ?? '?'})`);
   }
 
-  return { inserted: count ?? 0, skipped: skipped + (fresh.length - (count ?? 0)) };
+  const inserted = (insertedData ?? []) as InsertedSummary[];
+  return {
+    inserted: inserted.length,
+    skipped: skipped + (fresh.length - inserted.length),
+    insertedRows: inserted,
+  };
 }

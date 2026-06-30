@@ -163,6 +163,19 @@ export async function syncHealthKitNow(): Promise<{ ok: boolean; sent?: number; 
     return { ok: false, reason: `http_${res?.status ?? "network"}` };
   }
 
+  // Surface freshly-inserted activities to the share-prompt helper. Server
+  // returns `workouts.insertedRows` per `_shared/activity-upsert.ts`.
+  try {
+    const json = await res.clone().json();
+    const inserted = json?.workouts?.insertedRows;
+    if (Array.isArray(inserted) && inserted.length > 0) {
+      const { maybePromptShareForNewActivity } = await import("./share-prompt");
+      maybePromptShareForNewActivity(inserted);
+    }
+  } catch {
+    // Non-fatal — sync succeeded, prompt is opportunistic
+  }
+
   await writeLastSyncISO(new Date().toISOString());
   return { ok: true, sent: workouts.length };
 }

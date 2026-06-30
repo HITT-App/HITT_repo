@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, Search, Filter, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, Search, Filter, ChevronRight, Share2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,31 @@ const ActivityHistory = () => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [calorieRange, setCalorieRange] = useState([0, 500]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // "New since last visit" marker — set by share-prompt.ts after each sync.
+  // Activities synced after this timestamp are flagged with a ✨ badge until
+  // the user shares or the marker advances on next sync.
+  const lastShareCheckISO = typeof window !== "undefined"
+    ? localStorage.getItem("hitt_last_share_check_at")
+    : null;
+  const lastShareCheckMs = lastShareCheckISO ? new Date(lastShareCheckISO).getTime() : 0;
+
+  const isNewSinceLastVisit = (startedAt: string) =>
+    lastShareCheckMs > 0 && new Date(startedAt).getTime() > lastShareCheckMs;
+
+  const handleShare = (e: React.MouseEvent, log: any) => {
+    e.stopPropagation();
+    window.dispatchEvent(new CustomEvent("hitt:open-jarvis-share", {
+      detail: {
+        workoutId: log.id,
+        workoutTitle: log.activity_type
+          ? log.activity_type.charAt(0).toUpperCase() + log.activity_type.slice(1).replace("-", " ")
+          : "Workout",
+        durationMin: Math.max(1, Math.round((log.duration_seconds || 0) / 60)),
+        calories: log.calories_burned || 0,
+      },
+    }));
+  };
 
   // Group logs by date
   const groupedLogs = logs.reduce((acc, log) => {
@@ -126,35 +151,55 @@ const ActivityHistory = () => {
                     <div className="space-y-2">
                       {dayLogs
                         .filter((log) => filteredLogs.includes(log))
-                        .map((log) => (
-                          <Card
-                            key={log.id}
-                            className="p-4 cursor-pointer hover:bg-muted/50"
-                            onClick={() => navigate(`/activity/${log.id}`)}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                {(activityIcons[log.activity_type] || "⚡") === '💪' ? <HEmoji name="workouts" size={16}/> : <span className="text-xl">{activityIcons[log.activity_type] || "⚡"}</span>}
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="font-medium capitalize">
-                                  {log.activity_type.replace("-", " ")}
-                                </h4>
-                                <p className="text-sm text-muted-foreground">
-                                  {format(parseISO(log.started_at), "h:mm a")} -{" "}
-                                  {Math.round((log.duration_seconds || 0) / 60)} min
-                                </p>
-                              </div>
-                              <div className="text-right text-sm">
-                                <div className="text-muted-foreground">
-                                  <HEmoji name="streak" size={14} style={{verticalAlign:'middle'}}/> {log.calories_burned || 0} kcal
+                        .map((log) => {
+                          const isFresh = isNewSinceLastVisit(log.started_at);
+                          return (
+                            <Card
+                              key={log.id}
+                              className="p-4 cursor-pointer hover:bg-muted/50"
+                              onClick={() => navigate(`/activity/${log.id}`)}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                  {(activityIcons[log.activity_type] || "⚡") === '💪' ? <HEmoji name="workouts" size={16}/> : <span className="text-xl">{activityIcons[log.activity_type] || "⚡"}</span>}
                                 </div>
-                                <div className="text-primary">+{log.score_impact} score</div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <h4 className="font-medium capitalize truncate">
+                                      {log.activity_type.replace("-", " ")}
+                                    </h4>
+                                    {isFresh && (
+                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-medium shrink-0">
+                                        <Sparkles className="w-2.5 h-2.5" />
+                                        New
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    {format(parseISO(log.started_at), "h:mm a")} -{" "}
+                                    {Math.round((log.duration_seconds || 0) / 60)} min
+                                  </p>
+                                </div>
+                                <div className="text-right text-sm">
+                                  <div className="text-muted-foreground">
+                                    <HEmoji name="streak" size={14} style={{verticalAlign:'middle'}}/> {log.calories_burned || 0} kcal
+                                  </div>
+                                  <div className="text-primary">+{log.score_impact} score</div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
+                                  onClick={(e) => handleShare(e, log)}
+                                  aria-label="Share activity"
+                                >
+                                  <Share2 className="w-4 h-4" />
+                                </Button>
+                                <ChevronRight className="w-5 h-5 text-muted-foreground" />
                               </div>
-                              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                            </div>
-                          </Card>
-                        ))}
+                            </Card>
+                          );
+                        })}
                     </div>
                   </div>
                 ))
