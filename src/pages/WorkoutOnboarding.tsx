@@ -336,8 +336,11 @@ export default function WorkoutOnboarding() {
             <HIITLogo size="md" className="mb-6" />
             <h2 className="text-xl font-bold mb-2">Is there a specific body area you want to target?</h2>
             <p className="text-muted-foreground mb-6">Select one or multiple</p>
-            
-            <div className="grid grid-cols-4 gap-3 flex-1">
+
+            {/* flex-1 grows to fill space; place-content-center vertically
+                centres the body-area grid so buttons sit mid-screen rather
+                than hugging the top under the heading */}
+            <div className="flex-1 grid grid-cols-4 gap-3 place-content-center">
               {BODY_AREAS.map(area => {
                 const isSelected = selectedBodyAreas.includes(area.id);
                 return (
@@ -345,9 +348,9 @@ export default function WorkoutOnboarding() {
                     key={area.id}
                     onClick={() => toggleBodyArea(area.id)}
                     className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all",
-                      isSelected 
-                        ? "border-primary bg-primary/5" 
+                      "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all min-h-[80px]",
+                      isSelected
+                        ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50"
                     )}
                   >
