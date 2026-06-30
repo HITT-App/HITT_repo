@@ -58,13 +58,15 @@ After a successful HealthKit sync, if `inserted > 0` *and* at least one of the n
 | Rule | Reason |
 |---|---|
 | **Once per app session.** Use `sessionStorage` flag `hitt_share_prompt_shown` — cleared on app kill, not on background. | Don't badger the user repeatedly if they open and close the app several times. |
-| **Newest activity wins** if multiple are inserted in one sync. | A morning run + an evening ride both synced at once — pick the most recent. |
-| **Skip if the activity is >24h old** (HealthKit's 48h sync window can backfill). | Stale share offers feel weird. The 24h gate keeps it post-workout-ish. |
+| **"New" = activity ended after `last_share_check_at`** (localStorage timestamp, updated each time we run this check). Hard ceiling: max 14 days back, no matter how long the gap. | Compassionate to users who take rest days / breaks — if they're away for 5 days and come back to a workout from day 1 of that gap, they should still get the offer. The 14-day ceiling stops us surfacing ancient history if someone returns after months. |
+| **Show newest activity in the toast.** If more than one new activity was found, append a "+N more →" link in the toast that deep-links to Activity History. | Multiple activities in one sync (the week-off Garmin user) shouldn't be silently collapsed — surface that there's more to share, but don't make the toast a picker. |
 | **Skip if `auto_share_prompts: false` in user prefs.** | A future opt-out toggle (Settings → Notifications → "Prompt to share after wearable activities") — phase 2. |
 
 ### UX — toast, not modal
 
-A modal interrupts the user. A small toast at the top of the screen, persistent for ~10s, with a Share button and a tap-elsewhere-to-dismiss:
+A modal interrupts the user. A small toast at the top of the screen, persistent for ~10s, with a Share button and a tap-elsewhere-to-dismiss.
+
+**Single new activity:**
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -74,10 +76,27 @@ A modal interrupts the user. A small toast at the top of the screen, persistent 
 └─────────────────────────────────────────────┘
 ```
 
+**Multiple new activities since last check:**
+
+```
+┌─────────────────────────────────────────────┐
+│  Welcome back — 4 new activities synced     │
+│  🏃 8.5 km run · 47 min · 612 kcal          │  ← newest
+│  [Share this] [Browse all →] [Not now]      │
+└─────────────────────────────────────────────┘
+```
+
 - Uses the existing `sonner` toast library (already wired throughout the app — `toast()` etc).
-- "Share" → fires `hitt:open-jarvis-share` with the new activity's stats → JarvisMode opens.
+- "Share" / "Share this" → fires `hitt:open-jarvis-share` with the newest activity's stats → JarvisMode opens.
+- "Browse all →" → navigates to `/activity-history` where each unshared activity has its own Share button (see "Activity History changes" below).
 - "Not now" → dismisses, doesn't re-prompt this session.
 - Auto-dismiss after 10s if untouched.
+
+### Activity History changes (small companion build)
+
+For the "Browse all" path to make sense, each activity row in `/activity-history` and `/activity/:id` needs a tappable Share icon — same dispatch, same JarvisMode overlay. This is exactly Option 1 from the original two-option proposal. **Build them together** — the toast's "Browse all" link points into screens that need to exist or the link is hollow.
+
+A small "✨ New since your last visit" badge on each fresh activity in Activity History makes it obvious which ones the toast was talking about; tap the badge or the row to expand + share. Badge clears once the user shares or explicitly dismisses.
 
 ### Where it surfaces
 
@@ -97,26 +116,45 @@ The edge function (`supabase/functions/sync-healthkit/index.ts`) already has the
 
 ```typescript
 // src/lib/share-prompt.ts
-const SESSION_FLAG = 'hitt_share_prompt_shown';
-const SHAREABLE_SOURCES = ['garmin', 'fitbit', 'whoop', 'oura', 'wahoo', 'polar', 'coros', 'apple_watch'];
-const MAX_AGE_HOURS = 24;
+const SESSION_FLAG       = 'hitt_share_prompt_shown';
+const LAST_CHECK_KEY     = 'hitt_last_share_check_at';   // ISO timestamp
+const MAX_LOOKBACK_DAYS  = 14;
+const SHAREABLE_SOURCES  = ['garmin', 'fitbit', 'whoop', 'oura', 'wahoo', 'polar', 'coros', 'apple_watch'];
 
-export function maybePromptShareForNewActivity(inserted: InsertedActivity[]) {
+export function maybePromptShareForNewActivity(inserted: InsertedActivity[], navigate: NavigateFn) {
   if (sessionStorage.getItem(SESSION_FLAG)) return;
+
+  const lastCheckRaw = localStorage.getItem(LAST_CHECK_KEY);
+  const lastCheck    = lastCheckRaw ? new Date(lastCheckRaw) : new Date(Date.now() - MAX_LOOKBACK_DAYS * 86_400_000);
+  const floor        = new Date(Math.max(lastCheck.getTime(), Date.now() - MAX_LOOKBACK_DAYS * 86_400_000));
+
+  // "New" = ended after last check, source is shareable, has meaningful stats
   const candidates = inserted.filter(a =>
     SHAREABLE_SOURCES.includes(a.source_platform) &&
-    (Date.now() - new Date(a.started_at).getTime()) < MAX_AGE_HOURS * 3600 * 1000,
-  );
+    new Date(a.ended_at ?? a.started_at) > floor &&
+    a.duration_seconds >= 60 &&
+    a.calories > 0,
+  ).sort((a, b) => +new Date(b.started_at) - +new Date(a.started_at));
+
+  // Always advance the marker so next sync compares against this point,
+  // even if we don't prompt (avoids re-prompting forever on a single bad row).
+  localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
+
   if (candidates.length === 0) return;
-  // Newest first
-  const winner = candidates.sort((a, b) => +new Date(b.started_at) - +new Date(a.started_at))[0];
   sessionStorage.setItem(SESSION_FLAG, '1');
 
-  toast(`New activity from ${displaySource(winner.source_platform)}`, {
+  const winner = candidates[0];
+  const extra  = candidates.length - 1;
+
+  const title = extra === 0
+    ? `New activity from ${displaySource(winner.source_platform)}`
+    : `Welcome back — ${candidates.length} new activities synced`;
+
+  toast(title, {
     description: `${emojiFor(winner.activity_type)} ${formatStats(winner)}`,
     duration: 10_000,
     action: {
-      label: 'Share',
+      label: extra === 0 ? 'Share' : 'Share this',
       onClick: () => {
         window.dispatchEvent(new CustomEvent('hitt:open-jarvis-share', {
           detail: {
@@ -128,8 +166,17 @@ export function maybePromptShareForNewActivity(inserted: InsertedActivity[]) {
         }));
       },
     },
-    cancel: { label: 'Not now', onClick: () => {} },
+    // sonner supports a single primary action; "Browse all" rendered as a
+    // separate toast.message child link or as an extra toast that follows.
+    // Implementation will pick one — see UX section.
   });
+
+  // If there are more, hand a navigation breadcrumb back to the caller —
+  // they decide whether to render the "+N more" as a chip in-toast or as a
+  // subtle secondary toast underneath.
+  if (extra > 0) {
+    // ... render "+{extra} more →" link → navigate('/activity-history?since=' + lastCheckRaw)
+  }
 }
 ```
 
@@ -149,34 +196,41 @@ Add `auto_share_prompts` (boolean, default true) to `profiles` or local preferen
 
 ## Edge cases worth thinking through
 
-1. **User finishes activity, lets phone sleep, opens HITT next day.** The activity is now >24h old. We skip the prompt to keep it post-workout-relevant. They can still share manually from Activity History (option 1 from our other scope).
-2. **Multiple activities synced at once** (e.g. user wore the Garmin for a week without opening HITT). We pick only the most recent, and only if it's <24h old. The rest just appear in history.
-3. **Activity has 0 calories / 0 duration** (bad HealthKit data). Helper filters these out — share card with "0 kcal · 0 min" looks broken.
-4. **User opens HITT, sees prompt, taps Share, closes JarvisMode without sharing.** They've seen the offer; we don't re-prompt this session even if they re-foreground.
-5. **Re-opening the app after a force-kill.** `sessionStorage` clears; the prompt re-fires for the same activity. Acceptable — the activity's <24h old, the user's clearly engaged. To prevent forever-loops on a single activity, we could persist a `last_prompted_activity_id` in localStorage — but probably over-engineering for v1.
-6. **iPhone Locale / RTL.** The toast copy needs to flow through i18n if/when HITT adds it. For now hard-coded English.
+1. **User opens app every day, no activities for 3 days, then a Garmin run drops in.** `last_share_check_at` advances each open; when the run arrives it's newer than the marker → prompt fires. ✅
+2. **User takes a 5-day break, comes back to 4 synced activities.** Marker is 5 days old; all 4 are after it; none are >14 days old; prompt fires with "4 new activities synced — share this [+ 3 more →]". ✅
+3. **User on vacation for a month.** `last_share_check_at` is 30 days old. We cap lookback at 14 days, so anything older than 14 days back from now is silently ignored. Activities from the last 14 days of the trip still surface. ✅
+4. **User force-kills, re-opens.** `sessionStorage` clears; `localStorage` `last_share_check_at` was already advanced on the prior open. So we won't re-prompt the same activity — it's older than the marker now. ✅
+5. **Marker never set (first-ever launch).** Defaults to "14 days ago" so first sync after install still surfaces recent activity. ✅
+6. **Bad HealthKit data — 0 calories / 0 duration / <60s.** Filtered out. Share card with "0 kcal" looks broken. ✅
+7. **User opens HITT, sees prompt, taps Share, closes JarvisMode without actually sharing.** They've seen the offer; we don't re-prompt this session. They can still hit Share on the activity in Activity History (universal Share button). ✅
+8. **User opens HITT, sees prompt, dismisses with "Not now".** `sessionStorage` flag set; no re-prompt this session. The activities stay flagged in Activity History as "✨ New since your last visit" for that session until they share or background-foreground (which advances the marker). ✅
+9. **iPhone Locale / RTL.** Toast copy hard-coded English for v1; route through i18n if/when HITT adds it.
 
 ---
 
 ## Effort
 
 - `syncHealthKitNow` return-shape change + edge function plumbing: 0.5 day
-- `share-prompt.ts` helper + display utilities: 0.5 day
-- Wiring + Watch dedup logic: 0.5 day
-- Manual QA across sources (Garmin via Connect → HealthKit, Fitbit, Apple Watch dedup, iPhone HITT workout): 0.5 day
+- `share-prompt.ts` helper with `last_share_check_at` logic + 14-day ceiling + multi-activity handling: 0.75 day
+- Wiring + Apple Watch dedup logic: 0.5 day
+- Activity History per-row Share icons + "✨ New since last visit" badge: 0.75 day
+- Manual QA across sources (Garmin via Connect → HealthKit, Fitbit, Apple Watch dedup, iPhone HITT workout, the gap-of-days scenarios): 0.5 day
 
-**Total: ~2 agent-days.**
+**Total: ~3 agent-days.**
 
-No new infra, no migrations, no native code, no plugin work. Pure TypeScript + an existing toast library.
+(Up from the original 2 days — the multi-activity handling + activity-history companion build adds ~1 day but makes the "Browse all →" link in the toast actually meaningful.)
+
+No new infra, no migrations, no native code, no plugin work. Pure TypeScript + an existing toast library + minor styling in Activity History.
 
 ---
 
 ## Open questions for owner
 
-1. **24h cut-off** — accept the recommendation, or extend (e.g. share offer up to 48h)?
+1. **14-day max lookback** — accept the recommendation, or tighten/loosen? Anything older than this is silently ignored even after a long break.
 2. **Settings toggle in v1 or v2?** Recommend v2.
-3. **Title copy** — "New activity from Garmin" vs "🏃 Just finished?" vs something more on-brand. Word-smithing.
-4. **Share what for Apple Health activities?** Currently those are silenced. Should we prompt for them too if they look workout-like (≥10 min, ≥50 kcal)?
+3. **Title copy** — "Welcome back — N new activities synced" vs "🏃 N new workouts ready to share" vs something more on-brand. Word-smithing.
+4. **Share what for Apple Health generic activities?** Currently silenced. Should we prompt for them too if they look workout-like (≥10 min, ≥50 kcal)?
+5. **"Browse all" rendering** — inline as a secondary action in the same sonner toast (sonner supports `action` + `cancel`, third button is hacky), OR as a follow-up toast that stacks underneath ("+3 more in Activity History"), OR a small chip on the right side of the toast? My instinct: stacked follow-up toast — gives the multi-activity case visual weight without cramming three buttons into the primary toast.
 
 ---
 
