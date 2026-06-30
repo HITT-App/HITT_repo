@@ -4,8 +4,12 @@ import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
   Flame, Users, TrendingUp, Loader2, Share2, Sparkles,
-  Send, Pencil, Trash2, EyeOff, Bell, Trophy,
+  Send, Pencil, Trash2, EyeOff, Bell, Trophy, Ban,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -15,7 +19,7 @@ import { useCommunityPosts, useCommunityActions, CommunityPost } from "@/hooks/u
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useCommunityProfile } from "@/hooks/useCommunity";
-import { useSavedPosts } from "@/hooks/useCommunityExtras";
+import { useSavedPosts, useBlockedUsers } from "@/hooks/useCommunityExtras";
 import { useReactions, ReactionType } from "@/hooks/useReactions";
 import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
 import { useStories } from "@/hooks/useStories";
@@ -36,6 +40,7 @@ const CommunityFeed = () => {
   const { profile } = useProfile();
   const { profile: communityProfile } = useCommunityProfile();
   const { isPostSaved, savePost, unsavePost } = useSavedPosts();
+  const { blockedUsers, blockUser } = useBlockedUsers();
   const { unreadCount } = useCommunityNotifications();
   const { storyGroups } = useStories();
   const [hiddenPosts, setHiddenPosts] = useState<string[]>([]);
@@ -44,6 +49,7 @@ const CommunityFeed = () => {
   const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingBlock, setPendingBlock] = useState<{ userId: string; displayName: string } | null>(null);
   const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { is_liked: boolean; likes_count: number }>>({});
   // postId -> the option index the user voted for (set from DB on mount, then optimistically on click).
   const [pollVotes, setPollVotes] = useState<Record<string, number>>({});
@@ -107,16 +113,22 @@ const CommunityFeed = () => {
     return () => observer.disconnect();
   }, [hasMore, loadingMore, loadMore]);
 
-  // Tab filtering
+  // Tab filtering — also exclude posts from users the current user has blocked.
+  const blockedUserIds = useMemo(
+    () => new Set(blockedUsers.map(b => b.blocked_id)),
+    [blockedUsers],
+  );
   const filteredPosts = useMemo(() => {
-    let result = posts.filter((p) => !hiddenPosts.includes(p.id));
+    let result = posts.filter(
+      (p) => !hiddenPosts.includes(p.id) && !blockedUserIds.has(p.user_id),
+    );
     if (activeTab === "trending") {
       result = [...result].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
     } else if (activeTab === "following") {
       result = result.filter((p) => followingIds.has(p.user_id));
     }
     return result;
-  }, [posts, hiddenPosts, activeTab, followingIds]);
+  }, [posts, hiddenPosts, blockedUserIds, activeTab, followingIds]);
 
   const handleConfirmDelete = async () => {
     if (!pendingDeleteId) return;
@@ -127,6 +139,12 @@ const CommunityFeed = () => {
 
   const handleHidePost = (postId: string) => {
     setHiddenPosts((prev) => [...prev, postId]);
+  };
+
+  const handleConfirmBlock = async () => {
+    if (!pendingBlock) return;
+    await blockUser(pendingBlock.userId);
+    setPendingBlock(null);
   };
 
   const myDisplayName = communityProfile?.display_name || profile?.display_name || user?.email || "";
@@ -507,7 +525,7 @@ const CommunityFeed = () => {
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuContent align="end" className="w-44">
                     {user && post.user_id === user.id ? (
                       <>
                         <DropdownMenuItem onClick={() => navigate(`/community/create?edit=${post.id}`)}>
@@ -521,9 +539,20 @@ const CommunityFeed = () => {
                         </DropdownMenuItem>
                       </>
                     ) : (
-                      <DropdownMenuItem onClick={() => handleHidePost(post.id)}>
-                        <EyeOff className="w-4 h-4 mr-2" /> Hide
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem onClick={() => handleHidePost(post.id)}>
+                          <EyeOff className="w-4 h-4 mr-2" /> Hide
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setPendingBlock({
+                            userId: post.user_id,
+                            displayName: post.profile?.display_name || post.profile?.username || "this user",
+                          })}
+                        >
+                          <Ban className="w-4 h-4 mr-2" /> Block user
+                        </DropdownMenuItem>
+                      </>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -735,6 +764,27 @@ const CommunityFeed = () => {
         onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
         onConfirm={handleConfirmDelete}
       />
+
+      {/* Block confirmation dialog */}
+      <AlertDialog open={!!pendingBlock} onOpenChange={(open) => { if (!open) setPendingBlock(null); }}>
+        <AlertDialogContent className="max-w-sm rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Block {pendingBlock?.displayName}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You won't see their posts, comments or reactions. They won't be notified. You can unblock them anytime from Settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              className="w-full bg-destructive hover:bg-destructive/90"
+              onClick={handleConfirmBlock}
+            >
+              <Ban className="w-4 h-4 mr-2" /> Block
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full mt-0">Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

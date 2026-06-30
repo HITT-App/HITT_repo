@@ -703,11 +703,25 @@ export const useCommunityComments = (postId: string) => {
   const fetchComments = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: commentsData, error } = await supabase
-        .from('community_comments')
-        .select('*')
-        .eq('post_id', postId)
-        .order('created_at', { ascending: true });
+
+      // Fetch comments and the current user's blocklist in parallel so we can
+      // hide comments from blocked authors on the client.
+      const [commentsResult, blocksResult] = await Promise.all([
+        supabase
+          .from('community_comments')
+          .select('*')
+          .eq('post_id', postId)
+          .order('created_at', { ascending: true }),
+        user
+          ? supabase
+              .from('community_blocks')
+              .select('blocked_id')
+              .eq('blocker_id', user.id)
+          : Promise.resolve({ data: [] as { blocked_id: string }[] | null }),
+      ]);
+      const { data: rawCommentsData, error } = commentsResult;
+      const blockedIds = new Set((blocksResult.data || []).map(b => b.blocked_id));
+      const commentsData = (rawCommentsData || []).filter(c => !blockedIds.has(c.user_id));
 
       if (error) throw error;
 
