@@ -1,9 +1,10 @@
 # HITT Garmin Connect IQ — Delivery Spec
 
 **Doc owner:** Vanessa
-**Status:** Draft v1
-**Last updated:** 2026-06-29
-**Target output path:** `~/hitt-app/docs/specs/SPEC_garmin_connect_iq.md`
+**Status:** Draft v2 — pivoted away from Training API (2026-06-30)
+**Last updated:** 2026-06-30
+
+> ⚠️ **2026-06-30 — major revision.** Garmin paused the Connect Developer Program (Training API / Activity API / Health API — server-side, gated approvals). Connect IQ (on-watch SDK) and the iOS Companion SDK are **unaffected** and remain freely available. The original two-track architecture in this spec is no longer viable — Track A (Training API push) is closed. See **§9 Revision A** for the new closed-loop architecture, which now does everything via direct Bluetooth between the HITT iPhone app and a HITT Connect IQ app. Earlier sections (§§1–8) describe the original plan and remain as historical context. Read §9 for what's actually being built.
 
 ---
 
@@ -557,3 +558,237 @@ This is the same code-pair pattern Sonos uses to pair speakers and Apple uses fo
 - [Garmin and Strava integration](https://support.strava.com/hc/en-us/articles/216918057-Garmin-and-Strava)
 - [Connect IQ approval timeline forum thread](https://forums.garmin.com/developer/connect-iq/f/connect-iq-web-store/428068/app-approval-process-taking-longer-than-usual-10-days)
 - [EEA approval process forum thread](https://forums.garmin.com/developer/connect-iq/f/discussion/380687/app-approved-on-iq-store---waiting-for-eea-approval)
+
+---
+
+## 9. Revision A — Connect IQ–only path (2026-06-30)
+
+### Context
+
+Garmin's Connect Developer Program — the gated server-side APIs (Training, Activity, Health, User) — is paused for new partners. The application form has been removed; Garmin's forum representative confirmed "no projected re-opening date." Existing partners can still use the APIs; new applicants cannot.
+
+**This invalidates Track A** (push HITT workouts to Garmin's native calendar). It does **not** affect Connect IQ, which is a separate product with no gated approvals.
+
+### What's still available
+
+- **Connect IQ SDK** — free, public, builds Monkey C apps that run on Garmin watches. Distribution via Connect IQ Store has a review process but no "program" to apply to.
+- **Connect IQ Companion App SDK for iOS** — official `ConnectIQ.xcframework`, MIT-style licence, Swift Package Manager install. Lets a native iPhone app talk directly to Connect IQ apps on paired Garmin watches over Bluetooth LE. No Garmin Connect Mobile install required on the user's phone. Open repo: `github.com/garmin/connectiq-companion-app-sdk-ios`.
+- **`Toybox.Communications.transmit()`** on the watch side — sends messages back to the iPhone over BLE. Supports Strings, Numbers, Dictionaries, Arrays, ByteArrays (API 6.0+).
+
+### Revised architecture
+
+Closed-loop, all data flows through HITT — Garmin servers are not in the data path.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  HITT iPhone (Capacitor)                    │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Custom Capacitor plugin wrapping ConnectIQ.xcframework│  │
+│  └────────────────────┬──────────────────────────────────┘  │
+│                       │ Bluetooth LE                         │
+└───────────────────────┼──────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│             HITT Connect IQ app (Monkey C)                  │
+│  - Receives triathlon plans + structured workouts via BLE   │
+│  - Records activity via Toybox.ActivityRecording            │
+│  - Sends summary + FIT chunks back via BLE                  │
+└─────────────────────────────────────────────────────────────┘
+                                                  ▲
+                                                  │
+                                                  │
+            ┌─────────────────────────────────────┘
+            │ HTTPS (from iPhone, not from watch)
+            ▼
+   ┌──────────────────┐
+   │     Supabase     │
+   └──────────────────┘
+```
+
+**This is structurally identical to how HITT's Apple Watch app works today** — `WCSession` between iPhone and Apple Watch, then iPhone uploads to Supabase. The only change is the transport (Connect IQ Companion SDK vs WCSession) and the watch runtime (Monkey C vs Swift).
+
+### What we keep from the original plan
+
+- All Phase 2 / 3 stories (CIQ-04 through CIQ-13). The on-watch experience — recording, HIIT interval engine, triathlon multi-sport, live data overlay, crash recovery, settings, multi-device test, store submission — is unchanged.
+- The pair-code auth flow (revised CIQ-02) still works, just via Bluetooth instead of HTTP.
+- The HITT theme + colors + manifest scaffold in `garmin/` is unchanged.
+- The TAPI-04 workout schema mapping spec is **partially repurposed** — we still need to translate HITT workouts into a structured representation for the watch, just in our own JSON over Bluetooth instead of Garmin's calendar format. ~70% of TAPI-04's logic transfers.
+
+### What we drop
+
+| Story (original) | Status now | Reason |
+|---|---|---|
+| TAPI-01 Developer Program application | **Cancelled** | Program paused — no point applying |
+| TAPI-03 `garmin-push-workout` edge function | **Cancelled** | No Training API to push to |
+| TAPI-05 OAuth pairing flow | **Cancelled** | No Garmin OAuth without User API; auth happens between HITT and watch directly |
+| TAPI-06 Activity API webhook receiver | **Cancelled** | No Activity API; activities arrive via the Connect IQ app over Bluetooth instead |
+| TAPI-07 Daily workout-push scheduler | **Cancelled** | No calendar to push to |
+| TAPI-02 Connect IQ Store developer account | **Still needed** | Connect IQ Store remains open |
+| TAPI-04 Workout schema mapping | **Re-scoped** | Becomes "HITT workout → BLE message format" instead of "→ Garmin JSON" |
+
+### New stories
+
+#### CIQ-14 — Capacitor plugin wrapping `ConnectIQ.xcframework`
+
+> **As** the HITT iPhone app, **I want** a Capacitor plugin that exposes Garmin watch discovery, pairing, and message send/receive, **so that** TypeScript code can talk to a HITT Connect IQ app on the user's Garmin.
+
+- **Acceptance:**
+  - New `src/plugins/GarminPlugin.ts` + native iOS shim under `ios/App/App/GarminPlugin.swift`.
+  - Methods: `isAvailable()`, `discoverDevices()`, `connectDevice(uuid)`, `sendMessage(payload)`, `onWatchEvent((event) => ...)`.
+  - iOS adds `ConnectIQ.xcframework` via SPM in `ios/App/Package.swift`.
+  - "Uses Bluetooth LE accessories" added to Info.plist background modes.
+  - Drop-in pattern mirrors the existing `WatchPlugin.ts` (Apple Watch bridge).
+- **Effort:** 4 agent-days
+- **Deps:** TAPI-02 (need the reserved app UUID for the Connect IQ side to match)
+- **Agent:** Plan (architecture) → general-purpose
+
+#### CIQ-15 — Watch ↔ phone message protocol
+
+> **As** the system, **I want** a versioned message format between HITT iPhone and HITT Connect IQ app, **so that** both sides agree on workout/triathlon/event shapes.
+
+- **Acceptance:**
+  - Schema doc at `docs/specs/garmin_ble_protocol.md`.
+  - Phone → Watch messages: `pushWorkout(workoutId, exercises[])`, `pushTriathlon(plan)`, `clearActive()`.
+  - Watch → Phone events: `workoutStarted`, `workoutCompleted({fit_chunks, summary})`, `lapAdded`, `transitionEntered`.
+  - Version field on every message; receiver tolerates unknown fields for forward-compat.
+  - FIT files chunked (16KB chunks per `transmit()` call, reassembled phone-side).
+- **Effort:** 2 agent-days
+- **Deps:** none
+- **Agent:** Plan → general-purpose
+
+#### CIQ-16 — Phone-side FIT ingestion + Supabase upload
+
+> **As** a user, **I want** my Garmin-recorded activity to appear in HITT seconds after I finish, **so that** I don't have to wait for any cloud sync.
+
+- **Acceptance:**
+  - On `workoutCompleted` event, iPhone reassembles FIT chunks, parses with a FIT JS library (e.g. `garmin-fit-sdk` via Capacitor or a small Swift FIT parser), extracts summary metrics + GPS track.
+  - Posts to `/functions/v1/log-watch-workout` (already exists for Apple Watch — reuse).
+  - Deduplicates against any HealthKit-derived copy of the same activity (start-time + duration match within 60s).
+- **Effort:** 3 agent-days
+- **Deps:** CIQ-14, CIQ-15
+- **Agent:** general-purpose
+
+#### CIQ-17 — Garmin Connect → Apple Health fallback path documentation
+
+> **As** a Garmin user who doesn't have HITT's Connect IQ app yet, **I want** my Garmin activities to still flow into HITT, **so that** I get value before installing the watch app.
+
+- **Acceptance:**
+  - In-app help screen explaining how to enable Garmin Connect → Apple Health sync.
+  - HITT detects HealthKit activities with source bundle `com.garmin` and attributes them.
+  - Settings panel shows "Garmin → Apple Health sync working" / "not yet enabled" with a deep link.
+- **Effort:** 1.5 agent-days
+- **Deps:** none (independent path, useful immediately)
+- **Agent:** general-purpose
+
+### Revised delivery phases
+
+#### Phase 0 — Foundation (revised)
+
+| Story | Effort |
+|---|---|
+| TAPI-02 Connect IQ Store developer account (still needed) | 0.5 |
+| CIQ-17 Garmin → HealthKit fallback help screen | 1.5 |
+| CIQ-01 Connect IQ project scaffold (done — 2026-06-29) | ✓ |
+| TAPI-04 Workout schema mapping (done — 2026-06-29, partial re-use) | ✓ |
+| CIQ-15 BLE protocol design | 2 |
+
+**Phase 0 total: 4 agent-days remaining** + Connect IQ Store account external wait
+
+#### Phase 1 — MVP closed-loop (replaces old Phase 1)
+
+| Story | Effort |
+|---|---|
+| CIQ-14 Capacitor plugin wrapping `ConnectIQ.xcframework` | 4 |
+| CIQ-02 Pair-code login (now over BLE, not HTTP) | 2 |
+| CIQ-03 Persistent storage layer | 1 |
+| CIQ-04 Activity recording start/pause/lap/stop | 4 |
+| CIQ-16 Phone-side FIT ingestion + Supabase upload | 3 |
+| IOS-01 (revised) Garmin connection status — now shows BLE pairing status | 1.5 |
+
+**Phase 1 total: 15.5 agent-days**
+
+#### Phase 2 — Structured workouts (unchanged)
+
+| Story | Effort |
+|---|---|
+| CIQ-06 Pull today's workout (from iPhone via BLE, not HTTP) | 1.5 |
+| CIQ-07 HIIT interval engine | 4 |
+| CIQ-08 Triathlon multi-sport (the owner's flagship — see §10) | 5 |
+| CIQ-09 Live data overlay | 3 |
+
+**Phase 2 total: 13.5 agent-days**
+
+#### Phase 3 — Polish + store submission (unchanged)
+
+| Story | Effort |
+|---|---|
+| CIQ-10 Crash recovery | 2 |
+| CIQ-11 Settings | 1.5 |
+| CIQ-12 Multi-device test matrix | 3 |
+| CIQ-13 Connect IQ Store submission | 2 |
+
+**Phase 3 total: 8.5 agent-days**
+
+### Revised cumulative estimate
+
+| Phase | Old plan | New plan |
+|---|---|---|
+| Phase 0 | 5.5 | 4 (+ done items) |
+| Phase 1 | 22 | 15.5 |
+| Phase 2 | 14 | 13.5 |
+| Phase 3 | 8.5 | 8.5 |
+| **Total** | **50** | **~41 agent-days** |
+
+**~9 agent-days saved** by dropping the Training API path (it was 6 cancelled stories totalling ~13 days, partially offset by 3 new stories totalling ~9 days).
+
+Calendar timeline also improves: **the longest external blocker (the Developer Program approval, weeks to months) is gone.** Only the Connect IQ Store developer account (days to weeks) and the eventual store-submission review remain.
+
+Realistic end-to-end: **~2.5–3 months of focused work + 1–4 weeks of store review** = ~3–4 months to "available on Connect IQ Store globally," roughly 1–2 months faster than the original plan.
+
+### What we lose by going Connect IQ–only
+
+To be explicit:
+
+1. **No HITT workouts in Garmin Connect's native calendar.** A user who never installs the HITT Connect IQ app won't see HITT workouts on their watch via Garmin's native workout player. The HITT app on the watch is the only way to access HITT plans.
+2. **No automatic ingestion of activities recorded outside HITT.** If a user starts a regular Garmin "Run" activity from their watch (without using the HITT Connect IQ app), HITT only sees it via the Apple Health bridge — i.e. they need Garmin Connect → Apple Health sync enabled (which is the existing problem; CIQ-17 addresses it via in-app help).
+3. **No direct Garmin health data** (steps / sleep / HRV / body composition). HealthKit is the only path; Garmin Connect iOS pushes these to Apple Health if the user toggles it on.
+
+For HITT's actual use case — structured-workout brain on the wrist, triathlon race plan with auto-advance, post-activity sync — none of these losses matter materially. The Connect IQ app delivers the differentiated experience; the HealthKit fallback covers ad-hoc activities.
+
+### Revised risk register (additions and removals)
+
+- **R1 (Developer Program rejects application) — RESOLVED by removal.** No application needed.
+- **R3 (EEA approval delays Europe launch) — Still applies** to the Connect IQ Store submission.
+- **R4 (Device matrix breakage) — Still applies.**
+- **R5 (Monkey C learning curve) — Still applies.**
+- **NEW R14 — Connect IQ Companion SDK is open source but not heavily maintained.** Last release Jan 2026 (v1.8.0). If Garmin's iOS SDK falls behind iOS versions, our integration could break. Mitigation: pin to a known-working SDK version, smoke-test on each new iOS major.
+- **NEW R15 — Bluetooth foreground requirements on iPhone.** Background BLE is supported but has caveats. iPhone needs "Uses Bluetooth LE accessories" capability and the app must be the active BLE central when the watch sends data. Mitigation: clear UX showing "open HITT to receive your activity" if foreground-required, and silent push to wake the app where possible.
+- **NEW R16 — No native Garmin Connect data integration means HITT misses passive metrics for non-HITT users.** A Garmin user who wears the watch but doesn't run HITT activities still has rich data Garmin holds (sleep, HRV, etc.) that we can't access. Mitigation: lean on HealthKit's bridge; document the limitation in onboarding; revisit if Garmin reopens the program.
+
+---
+
+## 10. CIQ-08 confirmed — the owner's triathlon auto-advance use case
+
+The owner asked whether Garmin can be made to sequence triathlon legs (preload distances → auto-advance → record everything in one session). Investigation (2026-06-30) confirms:
+
+- **Native Garmin Multisport profile** — supports the activity type but no preloaded distances; user manages transitions manually or via unreliable GPS detection.
+- **Training API** — doesn't accept multisport workouts at all. (Moot now anyway — program paused.)
+- **Connect IQ app** — **yes**, this is the path. Uses a single `ActivityRecording.Session` with `SPORT_MULTISPORT`, manages leg state in Monkey C, calls `addLap()` when each preloaded distance is reached, updates the UI for the next leg.
+
+CIQ-08 already covers exactly this. The 5-day estimate stands. The output is one FIT file tagged `SPORT_MULTISPORT` with laps — HITT shows clean per-leg metrics (it knows which lap is which leg from the plan we pushed); Garmin Connect sees one blended activity with laps. That trade-off is acceptable for our use case.
+
+For users who want the cleaner Garmin Connect per-sport view on race day: in-app docs recommend they use Garmin's native Multisport profile and let the activity flow into HITT via the Apple Health bridge. Two paths, both supported.
+
+### Additional sources (Revision A)
+
+- [Connect IQ Overview (vs Developer Program)](https://developer.garmin.com/connect-iq/overview/)
+- [Connect IQ Companion App SDK for iOS (GitHub)](https://github.com/garmin/connectiq-companion-app-sdk-ios)
+- [Connect IQ Companion App Example iOS](https://github.com/garmin/connectiq-companion-app-example-ios)
+- [Communicating with Mobile Apps — Connect IQ Core Topics](https://developer.garmin.com/connect-iq/core-topics/communicating-with-mobile-apps/)
+- [Mobile SDK for iOS — Connect IQ Core Topics](https://developer.garmin.com/connect-iq/core-topics/mobile-sdk-for-ios/)
+- [Connect Developer Program — paused](https://developer.garmin.com/gc-developer-program/)
+- [Forum: GCDP access rejected without notification (2025)](https://forums.garmin.com/developer/connect-iq/f/discussion/434542/garmin-connect-developer-program---access-request-rejected-without-notification)
+- [Forum: iOS Companion background execution](https://forums.garmin.com/developer/connect-iq/f/discussion/7533/ios-companion-app---background-execution-mode)
+- [Toybox.ActivityRecording.Session (multisport recording)](https://developer.garmin.com/connect-iq/api-docs/Toybox/ActivityRecording/Session.html)
+- [the5krunner — Garmin Auto Activity Detect Transition](https://the5krunner.com/2024/01/05/garmin-auto-activity-detect-transition-for-multisport-profiles-how-does-it-work/)
