@@ -1658,7 +1658,11 @@ serve(async (req) => {
       supabaseAdmin.from('health_metrics').select('value').eq('user_id', userId).eq('metric_type', 'steps').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
-      supabaseAdmin.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g, dietary_tags, allergens').limit(50),
+      // Prefer owner-curated recipes (source='owner') over legacy seed rows so
+      // Jarvis recommends from the owner library when it exists. Order by
+      // source ASC happens to put 'legacy' before 'owner' alphabetically, so
+      // we sort owner-first explicitly.
+      supabaseAdmin.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g, dietary_tags, allergens, source').order('source', { ascending: false }).limit(50),
       supabaseAdmin.from('body_scans').select('estimated_body_fat, confidence_level, scanned_at, analysis').eq('user_id', userId).order('scanned_at', { ascending: false }).limit(2),
     ]);
 
@@ -2247,7 +2251,12 @@ serve(async (req) => {
           if (found) { explicitMealRequest = found; break; }
         }
       }
-      if (explicitMealRequest && spoonacularConfigured()) {
+      // Spoonacular fast-path is gated by MEAL_SOURCE_SPOONACULAR_ENABLED
+      // (default OFF). Owner-curated meals are preferred; this fast-path
+      // produces multi-meal day plans from Spoonacular, which the owner has
+      // asked us to stop using for recommendations.
+      const spoonacularEnabled = (Deno.env.get("MEAL_SOURCE_SPOONACULAR_ENABLED") ?? "").toLowerCase() === "true";
+      if (explicitMealRequest && spoonacularEnabled && spoonacularConfigured()) {
         const meals = await fetchSpoonacularMealPlan(
           explicitMealRequest,
           supabaseAdmin,
