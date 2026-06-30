@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-06-30] — Backlog sweep: Jarvis loop, Watch teardown, real Watch stats, swipe lock, toast cleanup
+
+- **No more Jarvis ↔ wizard loop** — a returning user with past scheduled workouts but no current/future ones would get bounced repeatedly between the Jarvis no-plan prompt and the schedule wizard. The greet effect now checks "have you EVER scheduled anything" not just "do you have something coming up", and the close buttons on both Jarvis and the schedule wizard now navigate cleanly to home instead of bouncing through history
+- **App tutorial doesn't re-appear for returning users** — was only marking itself "seen" when the user reached the final step; now marks on first mount so any exit path (force-quit, partial completion) still counts
+- **Watch back-to-back workouts work properly** — added an 8-second cooldown after ending a mirrored workout so HealthKit's teardown completes before a new session starts. Previously a fast restart would silently fail
+- **Watch today screen shows real numbers** — steps, calories, heart rate, and streak now come from HealthKit on the Watch instead of placeholder values (8214 / 612 / 72 / 12). Streak counts consecutive days with a logged workout
+- **Horizontal swipe locked during active Watch workout, without destroying state** — previous fix accidentally rebuilt the view tree and threw users back to the picker mid-countdown. New approach uses a conditional high-priority drag gesture so the view tree stays identical and the countdown timer survives
+- **Triathlon "Send to Watch" error toast is now user-friendly** — was showing Capacitor plugin diagnostics from an old debugging session. Now says "Couldn't reach your Apple Watch — make sure the HITT Watch app is installed and try again". Diagnostics still logged to Xcode for us
+
 ## [2026-06-29] — Vendor-aware launch on every activity
 
 - **Vendor-aware launch card on every workout, not just Triathlon** — Run/Walk/Cycle (GPS), structured HIIT workouts, and Gym timer pre-start screens all now show the same wearable-aware card. Apple Watch users get a one-tap "Start on Apple Watch" button (correct activity type per workout: Running / Walking / Cycling / Strength). Garmin/Fitbit/Whoop/Oura users see vendor-specific instructions for tracking the activity on their device while HITT syncs the result from Apple Health

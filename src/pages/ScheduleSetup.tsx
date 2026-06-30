@@ -412,7 +412,7 @@ export default function ScheduleSetup() {
             ))}
           </div>
         </div>
-        <button onClick={() => navigate(returnTo)} className="text-muted-foreground p-1 -mr-1">
+        <button onClick={() => navigate('/', { replace: true })} className="text-muted-foreground p-1 -mr-1">
           <X className="w-5 h-5" />
         </button>
       </header>

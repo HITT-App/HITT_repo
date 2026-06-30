@@ -201,6 +201,13 @@ export const AppTutorial = ({ onComplete }: { onComplete: () => void }) => {
   const s = STEPS[step];
   const isLast = step === STEPS.length - 1;
 
+  // Mark the tutorial as seen as soon as it mounts so it never re-shows for this user,
+  // even if they force-quit, navigate away, or otherwise bail before reaching the final step.
+  // Without this, returning users hit the tutorial again on next launch.
+  useEffect(() => {
+    localStorage.setItem("hiit_tutorial_complete", "true");
+  }, []);
+
   // One-time delay: ignore taps for the first 1.2s so iOS system dialogs can be dismissed
   // without accidentally advancing the tutorial
   useEffect(() => {

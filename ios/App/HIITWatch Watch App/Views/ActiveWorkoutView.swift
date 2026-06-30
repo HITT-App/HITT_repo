@@ -580,6 +580,7 @@ struct ActiveWorkoutView: View {
         else if let name = coordinator.pendingWorkoutName { setActivity(name: name); phase = .ready }
 
         WorkoutManager.shared.onStateChange = { running, name in
+            WorkoutCoordinator.shared.workoutInProgress = running
             if running { self.phase = .active; if let n = name { self.setActivity(name: n) }; self.startTicker() }
             else { self.ticker?.invalidate(); self.ticker = nil
                    self.elapsedSeconds = 0; self.heartRate = 0; self.calories = 0; self.distanceKm = 0

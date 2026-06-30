@@ -693,6 +693,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       let hasSchedule = false;
       let hasWorkoutToday = false;
       let hasDietaryPrefs = false;
+      let hasEverScheduled = false;
       let uid: string | undefined;
 
       try {
@@ -705,16 +706,19 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
             { data: prefs },
             { count: futureCount },
             { count: todayCount },
+            { count: anyCount },
             { data: dietPrefs },
           ] = await Promise.all([
             supabase.from('workout_preferences').select('workout_goal').eq('user_id', uid).maybeSingle(),
             supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', uid).gte('scheduled_date', today),
             supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('scheduled_date', today),
+            supabase.from('scheduled_workouts').select('id', { count: 'exact', head: true }).eq('user_id', uid),
             supabase.from('nutrition_profiles').select('food_preferences, allergies').eq('user_id', uid).maybeSingle(),
           ]);
           hasGoal = !!prefs?.workout_goal;
           hasSchedule = (futureCount ?? 0) > 0;
           hasWorkoutToday = (todayCount ?? 0) > 0;
+          hasEverScheduled = (anyCount ?? 0) > 0;
           const meaningfulFoodPrefs = ((dietPrefs?.food_preferences ?? []) as string[]).filter(
             p => p && p !== 'no_preference' && p !== 'omnivore'
           );
@@ -726,7 +730,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
       // Always update refs so handleSend has current state
       hasGoalRef.current = hasGoal;
-      hasScheduleRef.current = hasSchedule;
+      hasScheduleRef.current = hasSchedule || hasEverScheduled;
       hasDietaryPrefsRef.current = hasDietaryPrefs;
 
       await new Promise(r => setTimeout(r, 400));
@@ -735,14 +739,19 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       // onboarding cards until the app is restarted (sessionStorage clears on restart).
       const onboardingSuppressed = sessionStorage.getItem('jarvis_onboarding_suppressed') === 'true';
 
-      // No goal → show goal setup card (unless dismissed this session)
-      if (!hasGoal && uid && !onboardingSuppressed && localStorage.getItem(skipKey('goal', uid)) !== 'true') {
+      // If the user has ever scheduled a workout, they've onboarded — never re-show
+      // the goal/plan prompts. Prevents the back-arrow loop where bouncing between
+      // /ai and /schedule-setup re-triggered the no-plan card on every Jarvis remount.
+      const hasOnboarded = hasEverScheduled;
+
+      // No goal → show goal setup card (unless dismissed this session or already onboarded)
+      if (!hasGoal && !hasOnboarded && uid && !onboardingSuppressed && localStorage.getItem(skipKey('goal', uid)) !== 'true') {
         setPendingGoalPrompt(true);
         return;
       }
 
-      // Goal set but no plan → show plan setup card (unless dismissed)
-      if (!hasSchedule && uid && !onboardingSuppressed && localStorage.getItem(skipKey('plan', uid)) !== 'true') {
+      // Goal set but no plan → show plan setup card (unless dismissed or already onboarded)
+      if (!hasSchedule && !hasOnboarded && uid && !onboardingSuppressed && localStorage.getItem(skipKey('plan', uid)) !== 'true') {
         setPendingNoPlanPrompt(true);
         return;
       }

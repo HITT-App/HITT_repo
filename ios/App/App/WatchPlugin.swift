@@ -21,6 +21,12 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
     // iOS 26+: real HKWorkoutSession that triggers the Watch face prompt
     private var mirrorSession: AnyObject?
     private let hkStore = HKHealthStore()
+    // HKWorkoutSession.end() has a ~8s teardown window where the session is still
+    // persisting data. Starting another mirrored session inside that window causes
+    // HealthKit to reject silently. Track the last end time so startMirroredWorkout
+    // can delay until teardown is safely complete.
+    private var lastMirroringEndAt: Date?
+    private static let mirroringEndCooldown: TimeInterval = 8
 
     public override func load() {
         NotificationCenter.default.addObserver(
@@ -128,6 +134,23 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
     // Fallback: WCSession message navigates the Watch app if already open.
 
     @objc func startMirroredWorkout(_ call: CAPPluginCall) {
+        // If a previous mirrored session ended inside the HK teardown window,
+        // delay until it completes — otherwise HealthKit silently rejects the
+        // new session. Happy path (no recent end) falls straight through.
+        if let endedAt = lastMirroringEndAt {
+            let elapsed = Date().timeIntervalSince(endedAt)
+            if elapsed < Self.mirroringEndCooldown {
+                let remaining = Self.mirroringEndCooldown - elapsed
+                NSLog("[WatchPlugin] start delayed %.2fs for HK teardown cooldown", remaining)
+                DispatchQueue.main.asyncAfter(deadline: .now() + remaining) { [weak self] in
+                    self?.lastMirroringEndAt = nil
+                    self?.startMirroredWorkout(call)
+                }
+                return
+            }
+            lastMirroringEndAt = nil
+        }
+
         let name = call.getString("workoutName") ?? "HIIT Workout"
         let type = call.getString("activityType") ?? "hiit"
 
@@ -207,6 +230,9 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func endMirroredWorkout(_ call: CAPPluginCall) {
         WatchBridge.shared.sendRawMessage(["clearMirrorWorkout": true])
+        // Stamp BEFORE the end call so the cooldown window starts at the moment
+        // teardown begins, not after it returns.
+        lastMirroringEndAt = Date()
         if #available(iOS 26.0, *) {
             (mirrorSession as? HKWorkoutSession)?.end()
         }

@@ -286,6 +286,7 @@ struct StructuredWorkoutView: View {
                     showEndConfirm = false
                     mainTicker?.invalidate(); mainTicker = nil
                     WorkoutManager.shared.end()
+                    WorkoutCoordinator.shared.workoutInProgress = false
                     phase = .done
                 }) {
                     Text("End & Save")
@@ -333,6 +334,7 @@ struct StructuredWorkoutView: View {
         exerciseIndex = 0
         setIndex = 0
         totalElapsed = WorkoutManager.shared.elapsedSeconds
+        WorkoutCoordinator.shared.workoutInProgress = true
         startMainTimer()
         enterExercisePhase()
     }
@@ -378,6 +380,7 @@ struct StructuredWorkoutView: View {
         isAdvancing = false
         mainTicker?.invalidate(); mainTicker = nil
         WorkoutManager.shared.end()
+        WorkoutCoordinator.shared.workoutInProgress = false
         WKInterfaceDevice.current().play(.retry)
         phase = .done
     }

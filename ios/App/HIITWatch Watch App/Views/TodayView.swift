@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import HealthKit
 
 // MARK: - Design tokens (mirror watch-screens.jsx)
 
@@ -72,13 +73,23 @@ struct TodayView: View {
 private struct OpenDayScreen: View {
     let onPickSport: () -> Void
 
-    // TODO #15: wire to HealthKit for live values. Placeholders for now so the
-    // visual is right; missing reads display as "—".
-    private let steps = 8214
-    private let stepsGoalPct = 0.82
-    private let avgHr = 72
-    private let cal = 612
-    private let streakDays = 12
+    // Live HealthKit values. Default to 0 so a failed/empty read shows zero
+    // rather than a fictional number — the iPhone-side auth flow has already
+    // requested permissions, so we just read here.
+    @State private var steps: Int = 0
+    @State private var avgHr: Int = 0
+    @State private var cal: Int = 0
+    @State private var streakDays: Int = 0
+
+    // Default daily step goal — 10k is the Apple Health convention. If we ever
+    // surface a configurable goal we can pipe it through here.
+    private let stepsGoal: Int = 10_000
+    private var stepsGoalPct: Double {
+        guard stepsGoal > 0 else { return 0 }
+        return min(1.0, Double(steps) / Double(stepsGoal))
+    }
+
+    private let healthStore = HKHealthStore()
 
     var body: some View {
         // Sized for the smallest watch (SE 3 40mm = 162×197pt). Layout has to
@@ -138,6 +149,88 @@ private struct OpenDayScreen: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 2)
         }
+        .onAppear {
+            loadSteps()
+            loadCalories()
+            loadHeartRate()
+            loadStreak()
+        }
+    }
+
+    // MARK: - HealthKit reads
+
+    private func loadSteps() {
+        guard HKHealthStore.isHealthDataAvailable(),
+              let type = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return }
+        let start = Calendar.current.startOfDay(for: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+        let q = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, stats, _ in
+            let total = stats?.sumQuantity()?.doubleValue(for: .count()) ?? 0
+            DispatchQueue.main.async { steps = Int(total.rounded()) }
+        }
+        healthStore.execute(q)
+    }
+
+    private func loadCalories() {
+        guard HKHealthStore.isHealthDataAvailable(),
+              let type = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) else { return }
+        let start = Calendar.current.startOfDay(for: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+        let q = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, stats, _ in
+            let total = stats?.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
+            DispatchQueue.main.async { cal = Int(total.rounded()) }
+        }
+        healthStore.execute(q)
+    }
+
+    private func loadHeartRate() {
+        guard HKHealthStore.isHealthDataAvailable(),
+              let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let q = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
+            guard let sample = samples?.first as? HKQuantitySample else { return }
+            let bpm = sample.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            DispatchQueue.main.async { avgHr = Int(bpm.rounded()) }
+        }
+        healthStore.execute(q)
+    }
+
+    private func loadStreak() {
+        // Count consecutive days (ending today, or yesterday if today is empty)
+        // that contain at least one workout. 60-day lookback is plenty —
+        // anything longer would dominate the wrist for negligible payoff.
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+        let calendar = Calendar.current
+        let now = Date()
+        guard let start = calendar.date(byAdding: .day, value: -60, to: now) else { return }
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: now, options: [])
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        let q = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: predicate, limit: 500, sortDescriptors: [sort]) { _, samples, _ in
+            let workouts = (samples as? [HKWorkout]) ?? []
+            let days: Set<Date> = Set(workouts.map { calendar.startOfDay(for: $0.startDate) })
+
+            let today = calendar.startOfDay(for: now)
+            var anchor = today
+            if !days.contains(today) {
+                // Today not done yet — start counting from yesterday so a fresh
+                // morning doesn't reset a real streak.
+                guard let y = calendar.date(byAdding: .day, value: -1, to: today) else {
+                    DispatchQueue.main.async { streakDays = 0 }
+                    return
+                }
+                anchor = y
+            }
+
+            var count = 0
+            var cursor = anchor
+            while days.contains(cursor) {
+                count += 1
+                guard let prev = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
+                cursor = prev
+            }
+            DispatchQueue.main.async { streakDays = count }
+        }
+        healthStore.execute(q)
     }
 }
 

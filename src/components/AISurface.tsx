@@ -27,7 +27,7 @@ export function AISurface() {
       <header
         className="flex items-center px-4 py-3 border-b border-border/40 bg-background shrink-0"
       >
-        <button onClick={() => navigate(-1)} className="p-1 -ml-1 mr-2">
+        <button onClick={() => navigate('/', { replace: true })} className="p-1 -ml-1 mr-2">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-base font-semibold">AI Coach</h1>
@@ -45,7 +45,7 @@ export function AISurface() {
         <TabsContent value="chat" className="flex-1 min-h-0 mt-0 data-[state=inactive]:hidden">
           {activeTab === 'chat' && (
             <JarvisMode
-              onClose={() => prefillMessage ? navigate('/') : navigate(-1)}
+              onClose={() => navigate('/', { replace: true })}
               healthProfile={healthProfile ?? undefined}
               prefillMessage={prefillMessage}
             />

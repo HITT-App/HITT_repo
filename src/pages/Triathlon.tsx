@@ -294,18 +294,6 @@ const Triathlon = () => {
     let sendError: string | null = null;
     let mirrorError: string | null = null;
 
-    // Surface the actual Capacitor bridge state up front — if the Watch plugin
-    // isn't registered the user (and us) see the truth instead of "queued".
-    const cap = (window as any).Capacitor;
-    const diagBits: string[] = [];
-    if (cap) {
-      diagBits.push(`native=${cap.isNativePlatform?.() ?? '?'}`);
-      diagBits.push(`watchAvail=${cap.isPluginAvailable?.('Watch') ?? '?'}`);
-      diagBits.push(`pluginsKnown=${Object.keys(cap.Plugins ?? {}).join(',') || '(none)'}`);
-    } else {
-      diagBits.push('Capacitor=undefined');
-    }
-
     try {
       await sendTriathlonToWatch({
         name: raceName,
@@ -317,12 +305,14 @@ const Triathlon = () => {
       });
     } catch (err: any) {
       sendError = err?.code ? `${err.code}: ${err.message ?? err}` : String(err?.message ?? err);
+      console.error('[Triathlon] sendTriathlonToWatch failed:', sendError);
     }
 
     try {
       mirroring = await startWorkoutMirroring('triathlon', raceName);
     } catch (err: any) {
       mirrorError = err?.code ? `${err.code}: ${err.message ?? err}` : String(err?.message ?? err);
+      console.error('[Triathlon] startWorkoutMirroring failed:', mirrorError);
     }
 
     setWatchSent(true);
@@ -331,21 +321,21 @@ const Triathlon = () => {
     if (sendError || mirrorError) {
       toast({
         variant: 'destructive',
-        title: 'Watch send FAILED — diagnostics:',
-        description: `${diagBits.join(' · ')}${sendError ? ` · sendErr=${sendError}` : ''}${mirrorError ? ` · mirrorErr=${mirrorError}` : ''}`,
+        title: "Couldn't reach your Apple Watch",
+        description: "Make sure the HITT Watch app is installed on your paired watch and try again.",
       });
       return;
     }
 
     if (mirroring) {
-      toast({ title: 'Starting on Apple Watch ⌚', description: `Tap the prompt on your Watch to open the Race screen. ${diagBits.join(' · ')}` });
+      toast({ title: 'Starting on Apple Watch ⌚', description: 'Tap the prompt on your Watch to open the Race screen.' });
       setTimeout(() => endWorkoutMirroring(), 8000);
     } else {
       const reachable = await isWatchAvailable().catch(() => false);
       if (reachable) {
-        toast({ title: 'Plan sent to Watch ⌚', description: `Open the Race screen on your Watch to begin. ${diagBits.join(' · ')}` });
+        toast({ title: 'Plan sent to Watch ⌚', description: 'Open the Race screen on your Watch to begin.' });
       } else {
-        toast({ title: 'Plan queued for Watch ⌚', description: `Open the HIIT app on your Watch. ${diagBits.join(' · ')}` });
+        toast({ title: 'Plan queued for Watch ⌚', description: 'Open the HIIT app on your Watch.' });
       }
     }
   };
