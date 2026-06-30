@@ -31,7 +31,7 @@ const CommunityFeed = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("popular");
   const { posts, loading, loadingMore, hasMore, loadMore, refetch } = useCommunityPosts();
-  const { likePost, unlikePost, deletePost } = useCommunityActions();
+  const { likePost, unlikePost, deletePost, castVote } = useCommunityActions();
   const { user } = useAuth();
   const { profile } = useProfile();
   const { profile: communityProfile } = useCommunityProfile();
@@ -45,6 +45,11 @@ const CommunityFeed = () => {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { is_liked: boolean; likes_count: number }>>({});
+  // postId -> the option index the user voted for (set from DB on mount, then optimistically on click).
+  const [pollVotes, setPollVotes] = useState<Record<string, number>>({});
+  // postId -> local vote-count array, applied on top of post.poll_options.votes for immediate UI feedback.
+  const [optimisticPollCounts, setOptimisticPollCounts] = useState<Record<string, number[]>>({});
+  const [votingPosts, setVotingPosts] = useState<string[]>([]);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Reactions hook
@@ -63,6 +68,28 @@ const CommunityFeed = () => {
     };
     fetchFollowing();
   }, [user]);
+
+  // Fetch user's poll votes for any polls in the current feed
+  useEffect(() => {
+    if (!user) return;
+    const pollIds = posts.filter(p => p.post_type === 'poll').map(p => p.id);
+    if (pollIds.length === 0) return;
+    const fetchVotes = async () => {
+      const { data } = await supabase
+        .from('community_poll_votes')
+        .select('post_id, option_index')
+        .eq('user_id', user.id)
+        .in('post_id', pollIds);
+      if (data && data.length > 0) {
+        setPollVotes(prev => {
+          const next = { ...prev };
+          for (const v of data) next[v.post_id] = v.option_index;
+          return next;
+        });
+      }
+    };
+    fetchVotes();
+  }, [user, posts]);
 
   // Infinite scroll: trigger loadMore when the sentinel enters the viewport
   useEffect(() => {
@@ -152,6 +179,40 @@ const CommunityFeed = () => {
     }
 
     setLikingPosts((prev) => prev.filter((id) => id !== post.id));
+  };
+
+  const handleVote = async (post: CommunityPost, optionIndex: number) => {
+    if (!user) { navigate("/auth"); return; }
+    if (pollVotes[post.id] !== undefined) return; // already voted
+    if (votingPosts.includes(post.id)) return;
+    if (!post.poll_options) return;
+
+    setVotingPosts(prev => [...prev, post.id]);
+
+    // Optimistic: mark this option as the user's vote and bump its count.
+    const baseVotes = post.poll_options.votes;
+    const nextCounts = baseVotes.slice();
+    nextCounts[optionIndex] = (nextCounts[optionIndex] || 0) + 1;
+    setOptimisticPollCounts(prev => ({ ...prev, [post.id]: nextCounts }));
+    setPollVotes(prev => ({ ...prev, [post.id]: optionIndex }));
+
+    const success = await castVote(post.id, optionIndex);
+
+    if (!success) {
+      // Revert
+      setOptimisticPollCounts(prev => {
+        const next = { ...prev };
+        delete next[post.id];
+        return next;
+      });
+      setPollVotes(prev => {
+        const next = { ...prev };
+        delete next[post.id];
+        return next;
+      });
+    }
+
+    setVotingPosts(prev => prev.filter(id => id !== post.id));
   };
 
   const handleDoubleTapLike = (post: CommunityPost) => {
@@ -542,32 +603,51 @@ const CommunityFeed = () => {
               )}
 
               {/* Poll */}
-              {post.post_type === "poll" && post.poll_options && (
-                <div className="mx-3.5 mb-2.5 space-y-2">
-                  {post.poll_options.options.map((option, idx) => {
-                    const totalVotes = post.poll_options!.votes.reduce((a, b) => a + b, 0);
-                    const pct = totalVotes > 0 ? Math.round((post.poll_options!.votes[idx] / totalVotes) * 100) : 0;
-                    return (
-                      <button
-                        key={idx}
-                        className="w-full relative rounded-xl border border-border/60 overflow-hidden text-left p-3 touch-manipulation transition-colors hover:border-primary/30"
-                      >
-                        <div
-                          className="absolute inset-y-0 left-0 bg-primary/8 rounded-xl transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
-                        <div className="relative flex justify-between items-center">
-                          <span className="text-sm font-medium">{option}</span>
-                          <span className="text-xs font-semibold text-muted-foreground">{pct}%</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                  <p className="text-[11px] text-muted-foreground px-1">
-                    {post.poll_options.votes.reduce((a, b) => a + b, 0)} votes
-                  </p>
-                </div>
-              )}
+              {post.post_type === "poll" && post.poll_options && (() => {
+                const votesArr = optimisticPollCounts[post.id] ?? post.poll_options.votes;
+                const totalVotes = votesArr.reduce((a, b) => a + b, 0);
+                const myVote = pollVotes[post.id];
+                const hasVoted = myVote !== undefined;
+                const isVoting = votingPosts.includes(post.id);
+                return (
+                  <div className="mx-3.5 mb-2.5 space-y-2">
+                    {post.poll_options.options.map((option, idx) => {
+                      const pct = totalVotes > 0 ? Math.round((votesArr[idx] / totalVotes) * 100) : 0;
+                      const isMine = myVote === idx;
+                      return (
+                        <button
+                          key={idx}
+                          disabled={hasVoted || isVoting}
+                          onClick={(e) => { e.stopPropagation(); handleVote(post, idx); }}
+                          className={cn(
+                            "w-full relative rounded-xl border overflow-hidden text-left p-3 touch-manipulation transition-colors",
+                            isMine ? "border-primary/60 ring-1 ring-primary/30" : "border-border/60",
+                            !hasVoted && !isVoting && "hover:border-primary/30 cursor-pointer",
+                            (hasVoted || isVoting) && "cursor-default",
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "absolute inset-y-0 left-0 rounded-xl transition-all",
+                              isMine ? "bg-primary/20" : "bg-primary/8",
+                            )}
+                            style={{ width: hasVoted ? `${pct}%` : "0%" }}
+                          />
+                          <div className="relative flex justify-between items-center">
+                            <span className="text-sm font-medium">{option}</span>
+                            {hasVoted && (
+                              <span className="text-xs font-semibold text-muted-foreground">{pct}%</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                    <p className="text-[11px] text-muted-foreground px-1">
+                      {totalVotes} vote{totalVotes === 1 ? "" : "s"}{hasVoted ? " · You voted" : ""}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* Before/After */}
               {post.post_type === "before-after" && (post.before_image_url || post.after_image_url) && (

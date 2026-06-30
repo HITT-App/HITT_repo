@@ -587,6 +587,48 @@ export const useCommunityActions = () => {
     }
   };
 
+  const castVote = async (postId: string, optionIndex: number) => {
+    if (!user) {
+      toast({
+        title: 'Sign in to vote',
+        description: 'You must be logged in to vote on polls',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('community_poll_votes')
+        .insert({
+          post_id: postId,
+          user_id: user.id,
+          option_index: optionIndex,
+        });
+
+      if (error) {
+        // 23505 = unique_violation — user already voted on this poll
+        if ((error as { code?: string }).code === '23505') {
+          toast({
+            title: "You've already voted",
+            description: 'Only one vote per poll',
+          });
+          return false;
+        }
+        throw error;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error casting vote:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to record your vote',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const createOrUpdateProfile = async (profileData: {
     username?: string;
     display_name?: string;
@@ -647,6 +689,7 @@ export const useCommunityActions = () => {
     unlikePost,
     followUser,
     unfollowUser,
+    castVote,
     createOrUpdateProfile,
   };
 };
