@@ -133,7 +133,7 @@ export function ScheduleCard() {
             ▶ Start
           </button>
           <button
-            onClick={() => navigate('/workout-schedule')}
+            onClick={() => navigate(`/workout-schedule?reschedule=${item.id}`)}
             style={{ flex: 1, height: 42, borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--foreground)', fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}
           >
             Reschedule

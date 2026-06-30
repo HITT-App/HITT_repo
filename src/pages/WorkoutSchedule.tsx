@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
@@ -45,6 +45,7 @@ function workoutColor(w: ScheduledWorkout): string {
 
 export default function WorkoutSchedule() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const { toast } = useToast()
 
@@ -64,6 +65,45 @@ export default function WorkoutSchedule() {
   useEffect(() => {
     if (user) fetchScheduledWorkouts()
   }, [user, currentDate, view])
+
+  // Deep-link: ?reschedule=<id> opens the day picker for that scheduled workout
+  useEffect(() => {
+    const targetId = searchParams.get('reschedule')
+    if (!targetId || !user) return
+    const inView = scheduledWorkouts.find(w => w.id === targetId)
+    const openFor = (w: ScheduledWorkout) => {
+      setActiveWorkout(w)
+      setShowDayPicker(true)
+      setShowActionSheet(true)
+    }
+    if (inView) {
+      openFor(inView)
+      const next = new URLSearchParams(searchParams)
+      next.delete('reschedule')
+      setSearchParams(next, { replace: true })
+      return
+    }
+    // Not in current week/month — fetch directly by id
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('scheduled_workouts')
+        .select(`
+          id, workout_id, workout_source, workout_title,
+          estimated_duration_minutes, scheduled_date, scheduled_time, status,
+          workout:workouts (id, title, duration_minutes, category, thumbnail_url)
+        `)
+        .eq('id', targetId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (cancelled) return
+      if (data) openFor(data as unknown as ScheduledWorkout)
+      const next = new URLSearchParams(searchParams)
+      next.delete('reschedule')
+      setSearchParams(next, { replace: true })
+    })()
+    return () => { cancelled = true }
+  }, [scheduledWorkouts, searchParams, setSearchParams, user])
 
   // Real-time subscription
   useEffect(() => {
@@ -321,6 +361,17 @@ export default function WorkoutSchedule() {
                 boxShadow: '0 18px 40px -14px rgba(249,115,22,0.6)',
               }}>
                 <div style={{ position: 'absolute', top: -40, right: -30, width: 150, height: 150, borderRadius: 999, background: 'rgba(255,255,255,0.16)' }} />
+                <button
+                  onClick={(e) => openActions(nextUp, e)}
+                  aria-label="More actions"
+                  style={{
+                    position: 'absolute', top: 4, right: 4, width: 36, height: 36, borderRadius: 12,
+                    background: 'rgba(26,10,0,0.18)', border: 'none', display: 'grid', placeItems: 'center',
+                    color: '#1a0a00', cursor: 'pointer', zIndex: 1,
+                  }}
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
                 <div style={{ position: 'relative' }}>
                   <span style={{
                     fontSize: 9.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',

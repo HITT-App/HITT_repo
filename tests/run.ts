@@ -2169,6 +2169,40 @@ async function runUIFeedbackAudit() {
       fail(tc.id, `${tc.page} vendor-aware launch contract`, `${tc.page} not readable`);
     }
   }
+
+  // ── SCH-01..03: Schedule page action wiring. Catches regression of the
+  // up-next delete + reschedule deep-link bugs fixed in 2026-06-30.
+  try {
+    const src = readFileSync(`${SRC}/pages/WorkoutSchedule.tsx`, 'utf8');
+    if (/openActions\(nextUp\b/.test(src)) {
+      pass('SCH-01', 'WorkoutSchedule hero card wires openActions(nextUp, ...) — delete reachable from up-next');
+    } else {
+      fail('SCH-01', 'WorkoutSchedule hero card openActions wiring',
+        'openActions(nextUp, ...) not found — up-next item has no action sheet, so delete is unreachable');
+    }
+    const hasSearchParams = /useSearchParams/.test(src);
+    const honoursDeepLink = /searchParams\.get\(['"]reschedule['"]\)/.test(src);
+    if (hasSearchParams && honoursDeepLink) {
+      pass('SCH-02', 'WorkoutSchedule honours ?reschedule=<id> deep link from ScheduleCard');
+    } else {
+      fail('SCH-02', 'WorkoutSchedule reschedule deep-link contract',
+        `${!hasSearchParams ? 'useSearchParams not imported. ' : ''}${!honoursDeepLink ? "searchParams.get('reschedule') not read." : ''}`);
+    }
+  } catch {
+    fail('SCH-01', 'WorkoutSchedule.tsx readable', 'file not found');
+  }
+
+  try {
+    const src = readFileSync(`${SRC}/components/home/ScheduleCard.tsx`, 'utf8');
+    if (/reschedule=\$\{item\.id\}/.test(src)) {
+      pass('SCH-03', 'ScheduleCard Reschedule button passes item.id via deep link');
+    } else {
+      fail('SCH-03', 'ScheduleCard reschedule contract',
+        '`?reschedule=${item.id}` not found — Reschedule button lands on the page with no item context, picker never opens');
+    }
+  } catch {
+    fail('SCH-03', 'ScheduleCard.tsx readable', 'file not found');
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

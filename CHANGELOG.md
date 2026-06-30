@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-06-30] — Schedule page: delete the up-next item + reschedule opens picker
+
+- **You can now delete the "Up next" workout** — the hero card on the Schedule page was missing the ⋯ menu that per-day rows have, so the up-next item was the one workout you couldn't remove without first deleting everything around it. Added the menu — it opens the same Move / Remove sheet the other items use
+- **Reschedule button actually reschedules** — tapping Reschedule on a scheduled workout from the home card now opens the 28-day picker directly, with the workout pre-selected. Previously dumped you on the Schedule page with no context, picker never opened
+
 ## [2026-06-30] — Backlog sweep: Jarvis loop, Watch teardown, real Watch stats, swipe lock, toast cleanup
 
 - **No more Jarvis ↔ wizard loop** — a returning user with past scheduled workouts but no current/future ones would get bounced repeatedly between the Jarvis no-plan prompt and the schedule wizard. The greet effect now checks "have you EVER scheduled anything" not just "do you have something coming up", and the close buttons on both Jarvis and the schedule wizard now navigate cleanly to home instead of bouncing through history
