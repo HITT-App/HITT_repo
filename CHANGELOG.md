@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-06-30] — Live Activity widget extension no longer crashes on launch
+
+- **Lock-screen Live Activity widget loads reliably** — the extension was crashing on iOS 26 simulators (and intermittently on real devices) with an internal XPC bundle-ID lookup failure. Root cause: the widget target had both `GENERATE_INFOPLIST_FILE = YES` AND an explicit `INFOPLIST_FILE`, producing a Frankenstein Info.plist where `CFBundleIdentifier` and other required keys could end up unset. Fixed by making the Info.plist self-contained with all required keys (same approach used for the Watch app's `WKBackgroundModes` fix in June) and turning off synthesis
+
 ## [2026-06-30] — Schedule page: delete the up-next item + reschedule opens picker
 
 - **You can now delete the "Up next" workout** — the hero card on the Schedule page was missing the ⋯ menu that per-day rows have, so the up-next item was the one workout you couldn't remove without first deleting everything around it. Added the menu — it opens the same Move / Remove sheet the other items use
