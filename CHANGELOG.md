@@ -1,8 +1,9 @@
 # HITT App Changelog
 
-## [2026-06-30] — Live Activity widget extension no longer crashes on launch
+## [2026-06-30] — Live Activity no longer crashes the app on iOS simulator
 
-- **Lock-screen Live Activity widget loads reliably** — the extension was crashing on iOS 26 simulators (and intermittently on real devices) with an internal XPC bundle-ID lookup failure. Root cause: the widget target had both `GENERATE_INFOPLIST_FILE = YES` AND an explicit `INFOPLIST_FILE`, producing a Frankenstein Info.plist where `CFBundleIdentifier` and other required keys could end up unset. Fixed by making the Info.plist self-contained with all required keys (same approach used for the Watch app's `WKBackgroundModes` fix in June) and turning off synthesis
+- **Live Activities are now skipped entirely on the iOS Simulator** — Apple has a known iOS 26 simulator regression where widget extensions crash at startup with an XPC bundle-id fault, which took down the parent app. Now detected via a native `isSimulator` check and the Live Activity calls become silent no-ops on sim. Real devices unaffected — TestFlight users will continue to see the lock-screen workout card as before
+- **Widget extension Info.plist also hardened** — was set up with both `GENERATE_INFOPLIST_FILE = YES` AND an explicit `INFOPLIST_FILE` containing only `NSExtension`. The synthesis path could silently drop required keys (`CFBundleIdentifier`, `CFBundleExecutable`). Now self-contained with all required keys, synthesis disabled — same approach we used for the Watch app's `WKBackgroundModes` fix in June
 
 ## [2026-06-30] — Schedule page: delete the up-next item + reschedule opens picker
 

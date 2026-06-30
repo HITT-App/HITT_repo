@@ -10,6 +10,7 @@
 
 import { Capacitor } from "@capacitor/core"
 import { LiveActivity as LiveActivityPlugin } from "capacitor-live-activity"
+import { isIOSSimulator } from "@/plugins/WatchPlugin"
 
 export type WorkoutAttributes = {
   workoutType: string
@@ -59,6 +60,17 @@ function getPlugin(): PluginShape | null {
   return (LiveActivityPlugin as unknown as PluginShape) ?? null
 }
 
+// Cached after first check so we don't ping the native side on every call.
+// Live Activities are skipped on the iOS 26 simulator — the widget
+// extension has a known XPC bundle-id crash there that takes down the app.
+// Real devices are unaffected.
+let liveActivityDisabled: boolean | null = null
+async function shouldSkip(): Promise<boolean> {
+  if (liveActivityDisabled !== null) return liveActivityDisabled
+  liveActivityDisabled = await isIOSSimulator()
+  return liveActivityDisabled
+}
+
 function attrsToRecord(a: WorkoutAttributes): Record<string, string> {
   return {
     workoutType: a.workoutType,
@@ -99,6 +111,7 @@ export const LiveActivity = {
   ): Promise<LiveActivityHandle | null> {
     const plugin = getPlugin()
     if (!plugin) return null
+    if (await shouldSkip()) return null
     try {
       const { value } = await plugin.isAvailable()
       if (!value) return null

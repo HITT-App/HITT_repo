@@ -15,7 +15,19 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "startMirroredWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endMirroredWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "prepareHealthAuth", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isSimulator", returnType: CAPPluginReturnPromise),
     ]
+
+    /// Returns true when running in the iOS Simulator. Used by JS to skip
+    /// Live Activity starts — iOS 26 sim has a recurring XPC crash in the
+    /// widget extension that takes down the parent app. Real devices unaffected.
+    @objc func isSimulator(_ call: CAPPluginCall) {
+        #if targetEnvironment(simulator)
+        call.resolve(["isSimulator": true])
+        #else
+        call.resolve(["isSimulator": false])
+        #endif
+    }
 
     private var workoutEventListeners: [String: CAPPluginCall] = [:]
     // iOS 26+: real HKWorkoutSession that triggers the Watch face prompt

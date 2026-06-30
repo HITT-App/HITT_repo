@@ -9,6 +9,7 @@ interface WatchPluginInterface {
   startMirroredWorkout(options: { activityType: string; workoutName?: string }): Promise<{ mirroring: boolean }>;
   endMirroredWorkout(): Promise<void>;
   prepareHealthAuth(): Promise<void>;
+  isSimulator(): Promise<{ isSimulator: boolean }>;
   addListener(event: "workoutEvent", handler: (data: WatchWorkoutEvent) => void): Promise<{ remove: () => void }>;
 }
 
@@ -114,6 +115,26 @@ export const endWorkoutMirroring = async (): Promise<void> => {
 export const prepareWatchHealthAuth = async (): Promise<void> => {
   if (!Capacitor.isNativePlatform()) return;
   try { await WatchPluginImpl.prepareHealthAuth(); } catch {}
+};
+
+// Cached simulator-detection check. Used by LiveActivity to skip starts on
+// the iOS 26 simulator (widget extension XPC crash, real devices unaffected).
+// Web platforms return false. Native iOS calls the WatchPlugin's native check
+// which uses #if targetEnvironment(simulator) — 100% reliable, no heuristics.
+let isSimulatorCached: boolean | null = null;
+export const isIOSSimulator = async (): Promise<boolean> => {
+  if (isSimulatorCached !== null) return isSimulatorCached;
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "ios") {
+    isSimulatorCached = false;
+    return false;
+  }
+  try {
+    const { isSimulator } = await WatchPluginImpl.isSimulator();
+    isSimulatorCached = !!isSimulator;
+  } catch {
+    isSimulatorCached = false;
+  }
+  return isSimulatorCached;
 };
 
 export const onWatchWorkoutEvent = (handler: (event: WatchWorkoutEvent) => void) => {
