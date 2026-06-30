@@ -242,6 +242,18 @@ struct ActiveWorkoutView: View {
                 phase = .idle
                 coordinator.clearPending()
                 coordinator.activeTab = 0
+            },
+            onShare: {
+                // Ad-hoc Watch activity — no HITT DB workoutId available, so we
+                // synthesize one from the name + timestamp so iPhone-side
+                // dedup logic still treats it as a unique share event.
+                let synthId = "watch-\(Int(Date().timeIntervalSince1970))-\(workoutName.replacingOccurrences(of: " ", with: "-").lowercased())"
+                WorkoutManager.shared.notifyPhoneShareRequested(
+                    workoutId: synthId,
+                    workoutName: workoutName,
+                    calories: completionCalories,
+                    durationSeconds: completionElapsed
+                )
             }
         )
     }

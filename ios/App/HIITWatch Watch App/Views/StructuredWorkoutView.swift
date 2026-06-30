@@ -269,7 +269,15 @@ struct StructuredWorkoutView: View {
     private var doneView: some View {
         CompletionView(
             variant: .celebrate(elapsedSeconds: totalElapsed, calories: calories, workoutName: workout.name),
-            onDone: { WorkoutCoordinator.shared.clearStructuredWorkout() }
+            onDone: { WorkoutCoordinator.shared.clearStructuredWorkout() },
+            onShare: {
+                WorkoutManager.shared.notifyPhoneShareRequested(
+                    workoutId: workout.id,
+                    workoutName: workout.name,
+                    calories: calories,
+                    durationSeconds: totalElapsed
+                )
+            }
         )
     }
 

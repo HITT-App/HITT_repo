@@ -51,7 +51,8 @@ export interface WatchWorkoutEvent {
     | "workoutCompleted"
     | "workoutCancelled"
     | "triathlonCompleted"
-    | "triathlonShareRequested";
+    | "triathlonShareRequested"
+    | "shareRequested";
   workoutId?: string;
   workoutName?: string;
   durationSeconds?: number;

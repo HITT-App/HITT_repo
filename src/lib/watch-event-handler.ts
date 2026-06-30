@@ -15,6 +15,22 @@ export function initWatchEventHandler() {
       return;
     }
 
+    // User tapped "Share to phone" on the Watch completion screen.
+    // Dispatch the same custom event the iPhone WorkoutPlayer uses so the
+    // VoiceController overlay opens JarvisMode's share card with these stats.
+    if (event.event === "shareRequested") {
+      const durationMin = Math.max(1, Math.round((event.durationSeconds ?? 0) / 60));
+      window.dispatchEvent(new CustomEvent("hitt:open-jarvis-share", {
+        detail: {
+          workoutId: event.workoutId ?? `watch-${Date.now()}`,
+          workoutTitle: event.workoutName ?? "Watch Workout",
+          durationMin,
+          calories: event.calories ?? 0,
+        },
+      }));
+      return;
+    }
+
     if (event.event !== "workoutCompleted") return;
 
     const { data: { session } } = await supabase.auth.getSession();

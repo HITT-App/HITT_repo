@@ -262,6 +262,28 @@ final class WorkoutManager: NSObject {
             WCSession.default.transferUserInfo(payload)
         }
     }
+
+    /// Asks the iPhone HITT app to open the post-workout share card. Fires when the
+    /// user taps "Share" on the watch's completion screen. The phone listens via
+    /// watch-event-handler.ts → dispatches hitt:open-jarvis-share → VoiceController
+    /// renders JarvisMode with sharePromptDetail populated.
+    func notifyPhoneShareRequested(workoutId: String, workoutName: String, calories: Int, durationSeconds: Int) {
+        let payload: [String: Any] = [
+            "event": "shareRequested",
+            "workoutId": workoutId,
+            "workoutName": workoutName,
+            "calories": calories,
+            "durationSeconds": durationSeconds,
+        ]
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(payload, replyHandler: nil, errorHandler: { _ in
+                WCSession.default.transferUserInfo(payload)
+            })
+        } else {
+            WCSession.default.transferUserInfo(payload)
+        }
+    }
 }
 
 // MARK: - HKWorkoutSessionDelegate

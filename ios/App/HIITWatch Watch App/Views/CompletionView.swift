@@ -16,15 +16,18 @@ enum CompletionVariant {
 struct CompletionView: View {
     let variant: CompletionVariant
     let onDone: () -> Void
+    /// Optional — when set, surfaces a "Share to phone" button alongside Save.
+    /// Tapping it hands off to the iPhone HITT app to render the share card.
+    var onShare: (() -> Void)? = nil
 
     var body: some View {
         switch variant {
         case let .celebrate(elapsed, cals, name):
-            CelebrateScreen(elapsedSeconds: elapsed, calories: cals, workoutName: name, onDone: onDone)
+            CelebrateScreen(elapsedSeconds: elapsed, calories: cals, workoutName: name, onDone: onDone, onShare: onShare)
         case let .streak(days, _):
             StreakScreen(days: days, onDone: onDone)
         case let .personalBest(activity, time, improvement):
-            PRScreen(activityName: activity, time: time, improvement: improvement, onDone: onDone)
+            PRScreen(activityName: activity, time: time, improvement: improvement, onDone: onDone, onShare: onShare)
         }
     }
 }
@@ -36,8 +39,10 @@ private struct CelebrateScreen: View {
     let calories: Int
     let workoutName: String
     let onDone: () -> Void
+    var onShare: (() -> Void)? = nil
 
     @State private var confetti: [(x: Double, y: Double, color: Color, size: Double)] = []
+    @State private var shareTapped: Bool = false
 
     var body: some View {
         ZStack {
@@ -89,7 +94,29 @@ private struct CelebrateScreen: View {
                         .background(hiitOrange).cornerRadius(22)
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 14).padding(.bottom, 12)
+                .padding(.horizontal, 14)
+
+                if let onShare = onShare {
+                    Button(action: {
+                        onShare()
+                        shareTapped = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: shareTapped ? "checkmark" : "square.and.arrow.up")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(shareTapped ? "Opening on phone" : "Share to phone")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 8)
+                        .background(Color.white.opacity(0.12)).cornerRadius(18)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 14).padding(.top, 4).padding(.bottom, 12)
+                    .disabled(shareTapped)
+                } else {
+                    Spacer().frame(height: 12)
+                }
             }
         }
         .onAppear { generateConfetti() }
@@ -169,6 +196,9 @@ private struct PRScreen: View {
     let time: String
     let improvement: String
     let onDone: () -> Void
+    var onShare: (() -> Void)? = nil
+
+    @State private var shareTapped: Bool = false
 
     var body: some View {
         ZStack {
@@ -211,7 +241,29 @@ private struct PRScreen: View {
                         .background(hiitGreen).cornerRadius(20)
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 14).padding(.bottom, 12)
+                .padding(.horizontal, 14)
+
+                if let onShare = onShare {
+                    Button(action: {
+                        onShare()
+                        shareTapped = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: shareTapped ? "checkmark" : "square.and.arrow.up")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(shareTapped ? "Opening on phone" : "Share to phone")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 8)
+                        .background(Color.white.opacity(0.12)).cornerRadius(18)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 14).padding(.top, 4).padding(.bottom, 12)
+                    .disabled(shareTapped)
+                } else {
+                    Spacer().frame(height: 12)
+                }
             }
         }
     }
