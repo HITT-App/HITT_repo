@@ -139,7 +139,11 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
         <div className="flex flex-col flex-1 px-5 pb-6">
           <h2 className="text-lg font-bold mb-1">Your plan</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            {isGenerating ? 'Building your programme…' : `${scheduledItems.length} sessions across the next 4 weeks`}
+            {isGenerating
+              ? 'Building your programme…'
+              : error
+                ? 'We hit a snag building your plan'
+                : `${scheduledItems.length} sessions across the next 4 weeks`}
           </p>
 
           {isGenerating && (
@@ -149,10 +153,21 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
           )}
 
           {!isGenerating && error && (
-            <p className="text-destructive text-sm mt-4">{error}</p>
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-2">
+              <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-destructive" />
+              </div>
+              <p className="text-sm text-foreground max-w-xs">{error}</p>
+              <Button
+                className="w-full h-12 rounded-2xl"
+                onClick={() => generatePlan({ goal, experience, daysPerWeek, selectedDays, sessionMinutes })}
+              >
+                Try again
+              </Button>
+            </div>
           )}
 
-          {!isGenerating && scheduledItems.length > 0 && (
+          {!isGenerating && !error && scheduledItems.length > 0 && (
             <div className="flex-1 overflow-y-auto space-y-2 mb-4">
               {scheduledItems.slice(0, 12).map((item, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50">
@@ -173,7 +188,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
             </div>
           )}
 
-          {!isGenerating && scheduledItems.length > 0 && (
+          {!isGenerating && !error && scheduledItems.length > 0 && (
             <Button className="w-full h-12 rounded-2xl" onClick={handleAddToSchedule} disabled={confirming}>
               {confirming ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Checking…</> : 'Add to my schedule'}
             </Button>

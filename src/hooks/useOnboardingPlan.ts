@@ -1,8 +1,26 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { ExerciseSnapshot } from '@/integrations/supabase/types';
 import { format } from 'date-fns';
+
+// Maps any abort-shaped error (client cancel, upstream gateway timeout) to a
+// human-readable string. Without this, users see literal "AbortError: The
+// signal has been aborted" when the LLM gateway hits its 55s timeout.
+function friendlyError(err: unknown): string {
+  if (err instanceof Error) {
+    const name = err.name;
+    const msg = err.message ?? '';
+    const looksAborted =
+      name === 'AbortError' ||
+      /aborted|abort|signal|timeout/i.test(msg);
+    if (looksAborted) {
+      return 'This is taking longer than expected — please try again.';
+    }
+    return msg || 'Something went wrong';
+  }
+  return 'Something went wrong';
+}
 
 export interface OnboardingAnswers {
   goal: string;
@@ -24,6 +42,16 @@ export function useOnboardingPlan() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [scheduledItems, setScheduledItems] = useState<ScheduledItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Cancel any in-flight plan generation when the consumer unmounts so the
+  // user doesn't see stale errors if they navigate away mid-request.
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
+  }, []);
 
   const mapToSelectedDays = (
     planItems: { day_index: number; workout_title: string; exercises_snapshot: ExerciseSnapshot[] }[],
@@ -56,6 +84,13 @@ export function useOnboardingPlan() {
 
   const generatePlan = useCallback(async (answers: OnboardingAnswers) => {
     if (!user) return;
+
+    // Cancel any in-flight request before starting a new one (covers rapid
+    // back-and-forth taps from the review step).
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsGenerating(true);
     setError(null);
     setScheduledItems([]);
@@ -69,6 +104,7 @@ export function useOnboardingPlan() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-workout-plan`,
         {
           method: 'POST',
+          signal: controller.signal,
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             goal: answers.goal,
@@ -82,6 +118,9 @@ export function useOnboardingPlan() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        // The edge function wraps upstream LLM gateway timeouts as
+        // { error: "AbortError: ..." } via String(err). Map that back to a
+        // friendly message before throwing.
         throw new Error(body.error ?? 'Plan generation failed');
       }
 
@@ -90,6 +129,16 @@ export function useOnboardingPlan() {
         data.items ?? [];
 
       const mapped = mapToSelectedDays(planItems, answers.selectedDays);
+
+      // Defensive: if the LLM returned items but mapping dropped them all (e.g.
+      // empty selectedDays), surface a clear error rather than a "0 sessions" UI.
+      if (planItems.length > 0 && mapped.length === 0) {
+        throw new Error('Could not place the plan on your chosen days — please try again.');
+      }
+      if (planItems.length === 0) {
+        throw new Error('We couldn\'t build a plan this time — please try again.');
+      }
+
       setScheduledItems(
         mapped.map(m => ({
           workout_source: 'ai_generated' as const,
@@ -98,9 +147,12 @@ export function useOnboardingPlan() {
           scheduled_date: format(m.date, 'yyyy-MM-dd'),
         }))
       );
-    } catch (err: any) {
-      setError(err.message ?? 'Something went wrong');
+    } catch (err: unknown) {
+      // Silent cancel — caller deliberately aborted (e.g. unmount).
+      if (controller.signal.aborted) return;
+      setError(friendlyError(err));
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setIsGenerating(false);
     }
   }, [user]);

@@ -106,6 +106,11 @@ serve(async (req) => {
       ],
       response_format: { type: "json_object" },
       max_tokens: 32000,
+      // 4 weeks of structured workouts is a lot of JSON; the default 55s
+      // gateway timeout regularly clipped responses mid-stream and surfaced
+      // as a raw AbortError in the UI. 110s comfortably fits Gemini 2.5 Flash
+      // on this workload while staying inside the Supabase edge function wall.
+      timeout_ms: 110_000,
     });
 
     const aiResponseText = await aiResponse.text();
