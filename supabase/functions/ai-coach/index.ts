@@ -937,22 +937,41 @@ async function fetchOwnerMealPlan(
       return null;
     }
 
-    // Calorie is the primary target the user cares about — weight it 2×
-    // heavier than macros so we don't drift to a low-cal pick just because it
-    // nailed the protein number.
+    // Direction-aware scoring — treat each macro the way users actually mean
+    // it when they type the number:
+    //
+    //   • calories → TARGET  (penalise both directions; half-penalise slight
+    //                         overshoot up to +10%)
+    //   • protein  → FLOOR   (penalise undershoot only; overshoot is fine)
+    //   • carbs    → CEILING (penalise overshoot only; undershoot is fine)
+    //   • fat      → CEILING (same as carbs — typically speced as a limit)
+    //
+    // Without this, "1800 kcal / 90 g protein / 60 g carbs" ends up scoring a
+    // 91 g-carb pick as equally good as a 30 g-carb pick because both are the
+    // same distance from 60. Real users hate that.
     const scored = filtered
       .map((r) => {
-        const dCal = ((Number(r.calories) - slotCal) / Math.max(1, slotCal)) ** 2;
-        const dP = targetProtein
-          ? ((Number(r.protein_g) - slotProtein) / Math.max(1, slotProtein)) ** 2
+        const rCal = Number(r.calories);
+        const rP = Number(r.protein_g);
+        const rC = Number(r.carbs_g);
+        const rF = Number(r.fat_g);
+
+        const overshoot = Math.max(0, rCal - slotCal);
+        const undershoot = Math.max(0, slotCal - rCal);
+        const softOvershoot = Math.max(0, overshoot - slotCal * 0.10); // 10% headroom
+        const dCal = (undershoot ** 2 + softOvershoot ** 2) / Math.max(1, slotCal ** 2);
+
+        const proteinFloor = targetProtein
+          ? Math.max(0, slotProtein - rP) ** 2 / Math.max(1, slotProtein ** 2)
           : 0;
-        const dC = targetCarbs
-          ? ((Number(r.carbs_g) - slotCarbs) / Math.max(1, slotCarbs)) ** 2
+        const carbsCeiling = targetCarbs
+          ? Math.max(0, rC - slotCarbs) ** 2 / Math.max(1, slotCarbs ** 2)
           : 0;
-        const dF = targetFat
-          ? ((Number(r.fat_g) - slotFat) / Math.max(1, slotFat)) ** 2
+        const fatCeiling = targetFat
+          ? Math.max(0, rF - slotFat) ** 2 / Math.max(1, slotFat ** 2)
           : 0;
-        return { row: r, score: 2 * dCal + dP + dC + dF };
+
+        return { row: r, score: 2 * dCal + proteinFloor + carbsCeiling + fatCeiling };
       })
       .sort((a, b) => a.score - b.score);
 
@@ -997,15 +1016,20 @@ async function fetchOwnerMealPlan(
     meals.push(ownerRecipeToMealInPlan(chosen, slot, ingResp.data ?? [], stepResp.data ?? []));
   }
 
-  // If total is still >15% short of the calorie target after 3 meals, add a
-  // snack to close the gap. Owner curated 165 snacks specifically for this.
-  const totalCal = meals.reduce((sum, m) => sum + (m.calories ?? 0), 0);
-  const shortfall = targetCal - totalCal;
-  if (shortfall > targetCal * 0.15) {
-    console.log('[ai-coach owner-meal] calorie shortfall', shortfall, 'kcal — adding snack');
+  // Keep adding snacks until we're within 10% of the calorie target or we've
+  // padded 3 times (any more starts looking silly). Owner curated 165 snacks
+  // specifically for this backfill.
+  for (let padAttempts = 0; padAttempts < 3; padAttempts++) {
+    const totalCal = meals.reduce((sum, m) => sum + (m.calories ?? 0), 0);
+    const shortfall = targetCal - totalCal;
+    if (shortfall <= targetCal * 0.10) break;
+
     const totalP = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
     const totalC = meals.reduce((s, m) => s + (m.carbs_g ?? 0), 0);
     const totalF = meals.reduce((s, m) => s + (m.fat_g ?? 0), 0);
+    console.log(
+      '[ai-coach owner-meal] shortfall', shortfall, 'kcal — adding snack (pass', padAttempts + 1, ')',
+    );
     const snack = await pickBestForSlot(
       'snack',
       shortfall,
@@ -1013,14 +1037,14 @@ async function fetchOwnerMealPlan(
       Math.max(0, targetCarbs - totalC),
       Math.max(0, targetFat - totalF),
     );
-    if (snack) {
-      used.add(snack.id);
-      const [ingResp, stepResp] = await Promise.all([
-        supabase.from('ingredients').select('item, sort_order').eq('recipe_id', snack.id),
-        supabase.from('steps').select('instruction, step_number').eq('recipe_id', snack.id),
-      ]);
-      meals.push(ownerRecipeToMealInPlan(snack, 'snack', ingResp.data ?? [], stepResp.data ?? []));
-    }
+    if (!snack) break; // ran out of snacks that fit — stop trying
+
+    used.add(snack.id);
+    const [ingResp, stepResp] = await Promise.all([
+      supabase.from('ingredients').select('item, sort_order').eq('recipe_id', snack.id),
+      supabase.from('steps').select('instruction, step_number').eq('recipe_id', snack.id),
+    ]);
+    meals.push(ownerRecipeToMealInPlan(snack, 'snack', ingResp.data ?? [], stepResp.data ?? []));
   }
 
   const finalCal = meals.reduce((s, m) => s + (m.calories ?? 0), 0);
