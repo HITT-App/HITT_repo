@@ -158,6 +158,15 @@ interface JarvisModeProps {
     workoutTitle: string;
     durationMin: number;
     calories: number;
+    // Enriched fields — used by the share-card generator to pick the right
+    // template (activityType → activity key + curve) and populate metrics.
+    // All optional so existing dispatchers that haven't been updated still
+    // work; the card falls back to Duration / Avg HR / Calories on the
+    // generic 'cardio' template when activityType is missing.
+    activityType?: string;
+    distanceKm?: number;
+    avgHR?: number;
+    startedAt?: string;
     pbs?: Array<{ kind: 'duration' | 'calories' | 'streak'; label: string; value: number; previousBest: number }>;
   } | null;
 }
@@ -1151,7 +1160,9 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
               <Button
                 size="sm"
                 className="flex-1 bg-primary text-primary-foreground text-xs h-9"
-                onClick={() => {
+                onClick={async () => {
+                  // Cancel the pending PB reminder notification for this workout
+                  // (if there is one) — user is acting on it right now.
                   const storedId = sessionStorage.getItem(`pb_notif_${sharePromptDetail.workoutId}`);
                   if (storedId) {
                     import('@/lib/notify').then(({ cancelPBShareReminder }) => {
@@ -1159,7 +1170,48 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                     });
                     sessionStorage.removeItem(`pb_notif_${sharePromptDetail.workoutId}`);
                   }
-                  handleClose();
+
+                  try {
+                    const { generateActivityShareCardBlob } = await import('@/lib/generate-activity-share-card');
+                    const blob = await generateActivityShareCardBlob({
+                      data: {
+                        // Fall back to workoutTitle for the activityType hint —
+                        // resolveActivityKey handles "jogging", "cycling", etc.
+                        activityType: sharePromptDetail.activityType ?? sharePromptDetail.workoutTitle,
+                        durationSeconds: sharePromptDetail.durationMin * 60,
+                        calories: sharePromptDetail.calories,
+                        distanceKm: sharePromptDetail.distanceKm,
+                        avgHR: sharePromptDetail.avgHR,
+                      },
+                      format: 'story',
+                      dateISO: sharePromptDetail.startedAt,
+                    });
+                    const activityLabel = (sharePromptDetail.activityType ?? sharePromptDetail.workoutTitle ?? 'workout')
+                      .toLowerCase().replace(/\s+/g, '-');
+                    const file = new File([blob], `hiit-${activityLabel}.png`, { type: 'image/png' });
+
+                    const shareData: ShareData = {
+                      title: sharePromptDetail.workoutTitle,
+                      text: `Just finished a ${sharePromptDetail.durationMin} min ${sharePromptDetail.workoutTitle} on HIIT`,
+                      files: [file],
+                    };
+                    if (navigator.share && navigator.canShare?.(shareData)) {
+                      await navigator.share(shareData);
+                    } else {
+                      // Fallback: download the PNG. Better than a dead button.
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url; a.download = file.name;
+                      document.body.appendChild(a); a.click(); a.remove();
+                      URL.revokeObjectURL(url);
+                    }
+                  } catch (err) {
+                    if ((err as Error)?.name !== 'AbortError') {
+                      console.error('[Jarvis share] Failed to generate/share card:', err);
+                    }
+                  } finally {
+                    handleClose();
+                  }
                 }}
               >
                 Share now

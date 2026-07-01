@@ -11,6 +11,11 @@ type SharePromptDetail = {
   workoutTitle: string;
   durationMin: number;
   calories: number;
+  // Optional enrichments used by the share-card generator (see JarvisMode).
+  activityType?: string;
+  distanceKm?: number;
+  avgHR?: number;
+  startedAt?: string;
   pbs?: Array<{ kind: 'duration' | 'calories' | 'streak'; label: string; value: number; previousBest: number }>;
 };
 

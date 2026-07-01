@@ -1,17 +1,68 @@
-import { useState, useRef, useCallback } from 'react';
-import { X, Square, Smartphone, Moon, ImageIcon } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { X, Square, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import html2canvas from 'html2canvas';
-import hiitLogo from '@/assets/hiit-watermark.png';
 
 import type { Json } from '@/integrations/supabase/types';
 import type { RoutePoint } from './ShareCardCanvas';
+import { ActivityShareCard } from './ActivityShareCard';
+import { generateActivityShareCardBlob } from '@/lib/generate-activity-share-card';
 
 export interface CompletionStat {
   label: string;
   value: string | number;
   unit?: string;
+}
+
+// Extract raw metric values from a formatted CompletionStat array. The new
+// share card needs raw seconds / km / bpm, but callers pass pre-formatted
+// display strings — so we parse them back best-effort. Anything unparseable
+// falls through as undefined and the card renders "—" for that metric.
+function parseStatsForShareCard(stats: CompletionStat[]): {
+  durationSeconds?: number;
+  calories?: number;
+  distanceKm?: number;
+  avgHR?: number;
+  volumeKg?: number;
+  exerciseCount?: number;
+} {
+  const out: ReturnType<typeof parseStatsForShareCard> = {};
+  for (const s of stats) {
+    const label = s.label.toLowerCase();
+    const raw = String(s.value).trim();
+    if (/duration|time/.test(label)) {
+      // "1 hr 30 min 20 sec" | "24 min" | "5:23" | "1:02:30"
+      let sec = 0;
+      const h = raw.match(/(\d+)\s*(?:hr|hour|h)/i); if (h) sec += parseInt(h[1], 10) * 3600;
+      const m = raw.match(/(\d+)\s*(?:min|m)\b/i);   if (m) sec += parseInt(m[1], 10) * 60;
+      const s2 = raw.match(/(\d+)\s*(?:sec|s)\b/i);  if (s2) sec += parseInt(s2[1], 10);
+      if (sec === 0 && /^\d+:\d+/.test(raw)) {
+        const parts = raw.split(':').map((p) => parseInt(p, 10));
+        if (parts.length === 3) sec = parts[0] * 3600 + parts[1] * 60 + parts[2];
+        else if (parts.length === 2) sec = parts[0] * 60 + parts[1];
+      }
+      if (sec > 0) out.durationSeconds = sec;
+    } else if (/calor|kcal/.test(label)) {
+      const n = parseFloat(raw.replace(/[,\s]/g, ''));
+      if (Number.isFinite(n)) out.calories = n;
+    } else if (/distance/.test(label)) {
+      const n = parseFloat(raw);
+      if (Number.isFinite(n)) {
+        // Assume metres if unit is 'm' (swim), km otherwise.
+        out.distanceKm = (s.unit ?? '').toLowerCase() === 'm' ? n / 1000 : n;
+      }
+    } else if (/hr|heart/.test(label)) {
+      const n = parseFloat(raw);
+      if (Number.isFinite(n)) out.avgHR = n;
+    } else if (/volume/.test(label)) {
+      const n = parseFloat(raw.replace(/[,\s]/g, ''));
+      if (Number.isFinite(n)) out.volumeKg = n;
+    } else if (/exercis/.test(label)) {
+      const n = parseFloat(raw);
+      if (Number.isFinite(n)) out.exerciseCount = n;
+    }
+  }
+  return out;
 }
 
 interface CompletionSummaryProps {
@@ -316,80 +367,65 @@ export function CompletionSummary({
   onDone,
 }: CompletionSummaryProps) {
   const [format, setFormat]       = useState<'square' | 'story'>('square');
-  const [cardStyle, setCardStyle] = useState<CardStyle>('dark');
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
-  const captureRef  = useRef<HTMLDivElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const dragStartY  = useRef<number | null>(null);
 
-  const sport      = detectSport(activityType);
   const heroMetrics = getHeroMetrics(activityType, stats);
   const square     = format === 'square';
-  const photo      = cardStyle === 'photo';
   const BASE_W = 1080, BASE_H = square ? 1080 : 1920;
   const previewW = Math.min(window.innerWidth * 0.85, 380);
   const scale    = previewW / BASE_W;
   const previewH = BASE_H * scale;
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setPhotoDataUrl(ev.target?.result as string);
-    reader.readAsDataURL(file);
+  // Assemble ActivityShareData once — used by both the preview and the
+  // eventual share/save. Any missing raw values fall back to '—' in the card.
+  const parsed = parseStatsForShareCard(stats);
+  const shareData: React.ComponentProps<typeof ActivityShareCard>['data'] = {
+    activityType: activityType ?? 'workout',
+    durationSeconds: parsed.durationSeconds ?? 0,
+    calories: parsed.calories ?? null,
+    distanceKm: parsed.distanceKm ?? null,
+    avgHR: parsed.avgHR ?? null,
+    volumeKg: parsed.volumeKg ?? null,
+    exerciseCount: parsed.exerciseCount ?? null,
   };
 
   const handleShare = useCallback(async () => {
-    if (isSharing || !captureRef.current) return;
+    if (isSharing) return;
     setIsSharing(true);
-    const el = captureRef.current;
+    const sport = detectSport(activityType);
     try {
-      el.style.transform = 'none';
-      el.style.width  = `${BASE_W}px`;
-      el.style.height = `${BASE_H}px`;
-
-      // Transparent export when photo-style with no photo picked
-      const bgColor = (photo && !photoDataUrl) ? null : C.bg;
-
-      const canvas = await html2canvas(el, {
-        width: BASE_W, height: BASE_H, scale: 1,
-        useCORS: true, backgroundColor: bgColor, logging: false,
+      const blob = await generateActivityShareCardBlob({
+        data: shareData,
+        format,
       });
-
-      el.style.transform = '';
-      el.style.width  = '';
-      el.style.height = '';
-
-      canvas.toBlob(async (blob) => {
-        if (!blob) { toast.error('Could not create image'); setIsSharing(false); return; }
-        const file = new File([blob], `hiit-${activityType || 'workout'}.png`, { type: 'image/png' });
-        const shareText = buildShareText(sport, activityTitle, heroMetrics);
-        try {
-          if (navigator.canShare?.({ files: [file] })) {
-            await navigator.share({ files: [file], title: activityTitle, text: shareText });
-          } else if (navigator.share) {
-            await navigator.share({ title: activityTitle, text: shareText });
-          } else {
-            const a = document.createElement('a');
-            a.href = canvas.toDataURL('image/png');
-            a.download = `hiit-${activityType || 'workout'}.png`;
-            a.click();
-          }
-        } catch (shareErr) {
-          if ((shareErr as Error)?.name !== 'AbortError') toast.error('Could not share');
+      const file = new File([blob], `hiit-${activityType || 'workout'}.png`, { type: 'image/png' });
+      const shareText = buildShareText(sport, activityTitle, heroMetrics);
+      try {
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], title: activityTitle, text: shareText });
+        } else if (navigator.share) {
+          await navigator.share({ title: activityTitle, text: shareText });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
         }
-        onDone();
-      }, 'image/png');
+      } catch (shareErr) {
+        if ((shareErr as Error)?.name !== 'AbortError') toast.error('Could not share');
+      }
+      onDone();
     } catch {
-      el.style.transform = '';
-      el.style.width  = '';
-      el.style.height = '';
       toast.error('Failed to prepare image');
     } finally {
       setIsSharing(false);
     }
-  }, [activityTitle, activityType, sport, heroMetrics, isSharing, BASE_W, BASE_H, photo, photoDataUrl, onDone]);
+  }, [activityTitle, activityType, heroMetrics, isSharing, shareData, format, onDone]);
 
   return (
     <div
@@ -415,25 +451,10 @@ export function CompletionSummary({
         <div style={{ width: 38 }} />
       </div>
 
-      {/* Controls row — style + format toggles */}
+      {/* Controls row — format toggle only. The old style/photo toggles
+          retired with the design refresh; every share now uses the single
+          HIIT template. */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '8px 16px 4px', flexWrap: 'wrap' }}>
-        {/* Style toggle */}
-        <div style={{ display: 'flex', gap: 2, padding: 3, background: C.panel, border: `1px solid ${C.line}`, borderRadius: 999 }}>
-          <ControlSeg
-            active={cardStyle === 'dark'}
-            onClick={() => setCardStyle('dark')}
-            label="Dark"
-            icon={<Moon size={15} color={cardStyle === 'dark' ? C.cream : C.dim} strokeWidth={2.1} />}
-          />
-          <ControlSeg
-            active={cardStyle === 'photo'}
-            onClick={() => setCardStyle('photo')}
-            label="Photo"
-            icon={<ImageIcon size={15} color={cardStyle === 'photo' ? C.cream : C.dim} strokeWidth={2.1} />}
-          />
-        </div>
-
-        {/* Format toggle */}
         <div style={{ display: 'flex', gap: 2, padding: 3, background: C.panel, border: `1px solid ${C.line}`, borderRadius: 999 }}>
           <ControlSeg
             active={square}
@@ -450,64 +471,20 @@ export function CompletionSummary({
         </div>
       </div>
 
-      {/* Photo picker — only in photo mode */}
-      {photo && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 16px 2px' }}>
-          <button
-            onClick={() => photoInputRef.current?.click()}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7, height: 34, padding: '0 16px', borderRadius: 10,
-              border: `1px solid ${C.line}`, cursor: 'pointer', background: C.panel,
-              fontFamily: FONT_UI, fontSize: 13, fontWeight: 600, color: C.dim,
-              WebkitTapHighlightColor: 'transparent',
-            }}
-          >
-            <ImageIcon size={14} color={C.dim} strokeWidth={2} />
-            {photoDataUrl ? 'Change photo' : 'Add your photo'}
-          </button>
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handlePhotoChange}
-          />
-        </div>
-      )}
-
-      {/* Preview */}
+      {/* Preview — same source (ActivityShareCard) as what handleShare
+          eventually snapshots, so what the user sees IS what they share. */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 0, gap: 10, padding: '6px 0' }}>
         <div style={{
           width: previewW, height: previewH, borderRadius: 20, overflow: 'hidden', position: 'relative',
           boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
           transition: 'width 0.35s cubic-bezier(.4,0,.2,1), height 0.35s cubic-bezier(.4,0,.2,1)',
         }}>
-          {/* Checkerboard hint — only in photo-mode with no photo, behind the capture div */}
-          {photo && !photoDataUrl && (
-            <div style={{
-              position: 'absolute', inset: 0, pointerEvents: 'none',
-              backgroundImage: 'linear-gradient(45deg, rgba(80,80,80,0.18) 25%, transparent 25%, transparent 75%, rgba(80,80,80,0.18) 75%), linear-gradient(45deg, rgba(80,80,80,0.18) 25%, transparent 25%, transparent 75%, rgba(80,80,80,0.18) 75%)',
-              backgroundSize: '24px 24px', backgroundPosition: '0 0, 12px 12px',
-            }} />
-          )}
-          <div
-            ref={captureRef}
-            style={{ width: BASE_W, height: BASE_H, transform: `scale(${scale})`, transformOrigin: 'top left' }}
-          >
-            <Creative
-              format={format}
-              cardStyle={cardStyle}
-              photoDataUrl={photoDataUrl}
-              heroMetrics={heroMetrics}
-              sport={sport}
-              pbLabel={pbLabel}
-              pointsEarned={pointsEarned}
-            />
+          <div style={{ width: BASE_W, height: BASE_H, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+            <ActivityShareCard data={shareData} format={format} />
           </div>
         </div>
         <span style={{ fontSize: 12, color: '#6f6f6f', letterSpacing: '0.04em' }}>
           {square ? '1080 × 1080 · Feed post' : '1080 × 1920 · Story'}
-          {photo && !photoDataUrl ? ' · transparent PNG' : ''}
         </span>
       </div>
 

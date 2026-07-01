@@ -845,7 +845,16 @@ export default function WorkoutPlayer() {
         setTimeout(() => notifyUser(user.id, 'workout', 'Workout complete! 💪', `You finished ${workout.title}. Great work!`, '/home'), 3000)
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('hitt:open-jarvis-share', {
-            detail: { workoutId: workout.id, workoutTitle: workout.title, durationMin: workoutDurationMin, calories: workoutCalories, pbs },
+            detail: {
+              workoutId: workout.id,
+              workoutTitle: workout.title,
+              durationMin: workoutDurationMin,
+              calories: workoutCalories,
+              // Structured HIIT — force the hiit template (intervals curve).
+              activityType: 'hiit',
+              startedAt: new Date().toISOString(),
+              pbs,
+            },
           }))
         }, 8000)
       } catch (err) {

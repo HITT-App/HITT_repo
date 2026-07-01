@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { onWatchWorkoutEvent } from "@/plugins/WatchPlugin";
 import { Capacitor } from "@capacitor/core";
-import { generateTriathlonCard, type TriathlonShareLeg } from "@/components/workout/ShareCardCanvas";
+import { generateActivityShareCardBlob } from "@/lib/generate-activity-share-card";
+import type { TriathlonLegResult } from "@/plugins/WatchPlugin";
 
 let initialised = false;
 
@@ -26,6 +27,12 @@ export function initWatchEventHandler() {
           workoutTitle: event.workoutName ?? "Watch Workout",
           durationMin,
           calories: event.calories ?? 0,
+          // Watch workouts come through as structured HIIT — route to the
+          // hiit template so the card gets the intervals curve and the
+          // right metric set (Duration / Calories / Avg HR).
+          activityType: "hiit",
+          avgHR: event.averageHeartRate,
+          startedAt: new Date().toISOString(),
         },
       }));
       return;
@@ -61,18 +68,41 @@ export function initWatchEventHandler() {
   });
 }
 
-async function handleTriathlonShare(raceName: string, legs: TriathlonShareLeg[]) {
-  if (!legs.length) return;
-  const dataUrl = await generateTriathlonCard(raceName, legs);
-  const blob = await (await fetch(dataUrl)).blob();
-  const file = new File([blob], `${raceName.replace(/\s+/g, "-").toLowerCase()}-triathlon.png`, { type: "image/png" });
+function formatLegClock(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '—';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${m}:${String(s).padStart(2, '0')}`;
+}
 
+async function handleTriathlonShare(raceName: string, legs: TriathlonLegResult[]) {
+  if (!legs.length) return;
+
+  const legOf = (t: 'swim' | 'bike' | 'run') => legs.find(l => l.type === t);
   const totalSec = legs.reduce((s, l) => s + (l.elapsedSeconds ?? 0), 0);
-  const mins = Math.floor(totalSec / 60);
-  const secs = totalSec % 60;
-  const timeLabel = totalSec >= 3600
-    ? `${Math.floor(totalSec / 3600)}h ${Math.floor((totalSec % 3600) / 60)}m`
-    : `${mins}m ${String(secs).padStart(2, "0")}s`;
+
+  const blob = await generateActivityShareCardBlob({
+    data: {
+      activityType: 'triathlon',
+      durationSeconds: totalSec,
+      triathlonSplits: {
+        swim: legOf('swim') ? formatLegClock(legOf('swim')!.elapsedSeconds) : undefined,
+        bike: legOf('bike') ? formatLegClock(legOf('bike')!.elapsedSeconds) : undefined,
+        run:  legOf('run')  ? formatLegClock(legOf('run')!.elapsedSeconds)  : undefined,
+      },
+    },
+    format: 'story',
+  });
+
+  const file = new File(
+    [blob],
+    `${raceName.replace(/\s+/g, '-').toLowerCase()}-triathlon.png`,
+    { type: 'image/png' },
+  );
+  const timeLabel = formatLegClock(totalSec);
 
   const shareData: ShareData = {
     title: `${raceName} — ${timeLabel}`,
@@ -89,11 +119,13 @@ async function handleTriathlonShare(raceName: string, legs: TriathlonShareLeg[])
     // User cancelled or share failed — fall through to download
   }
 
-  // Fallback: download the PNG so the user has it locally
-  const a = document.createElement("a");
-  a.href = dataUrl;
+  // Fallback: save the PNG locally so the user still has it.
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
   a.download = file.name;
   document.body.appendChild(a);
   a.click();
   a.remove();
+  URL.revokeObjectURL(objectUrl);
 }

@@ -59,6 +59,11 @@ const ActivityHistory = () => {
           : "Workout",
         durationMin: Math.max(1, Math.round((log.duration_seconds || 0) / 60)),
         calories: log.calories_burned || 0,
+        // Enrichments consumed by the share-card generator.
+        activityType: log.activity_type ?? undefined,
+        distanceKm: log.distance_km ?? undefined,
+        avgHR: log.average_heart_rate ?? undefined,
+        startedAt: log.started_at ?? undefined,
       },
     }));
   };

@@ -130,6 +130,11 @@ export function maybePromptShareForNewActivity(inserted: InsertedActivity[]): vo
             workoutTitle: displayTitle(winner.activity_type),
             durationMin: Math.max(1, Math.round(winner.duration_seconds / 60)),
             calories: winner.calories_burned ?? 0,
+            activityType: winner.activity_type,
+            startedAt: winner.started_at,
+            // distanceKm / avgHR aren't on InsertedActivity today — they're
+            // populated in a follow-up sync. The card falls back to the
+            // shorter metric set gracefully when absent.
           },
         }));
       },

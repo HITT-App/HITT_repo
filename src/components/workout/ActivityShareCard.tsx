@@ -194,11 +194,15 @@ function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
       ];
     }
     case 'yoga': {
+      // Yoga uses the same three metrics as cardio (Duration / Avg HR / Calories)
+      // but its own `gentle` curve + "Yoga · Stretch" eyebrow keep it visually
+      // distinct. We don't record a yoga style, so the design's "Session" field
+      // is dropped.
       const dur = fmtDurationCompact(d.durationSeconds);
       return [
         { label: 'Duration', value: dur.value, unit: dur.unit },
-        { label: 'Session', value: d.sessionName ?? 'Freestyle' },
         { label: 'Avg HR', value: d.avgHR != null ? String(Math.round(d.avgHR)) : '—', unit: 'bpm' },
+        { label: 'Calories', value: fmtInt(d.calories ?? 0), unit: 'kcal' },
       ];
     }
   }
