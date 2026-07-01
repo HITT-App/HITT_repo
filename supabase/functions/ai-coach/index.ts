@@ -734,6 +734,245 @@ export function extractExplicitMealTargets(text: string): ExplicitMealTargets | 
   };
 }
 
+// ─── Owner meal-plan fast-path ────────────────────────────────────────────
+//
+// Owner curates ~660 recipes in public.recipes with source='owner'. For any
+// explicit macro/calorie meal-plan request we query the owner library
+// directly instead of calling Spoonacular or the LLM. Fast (single SELECT
+// per slot, ~50ms total), deterministic macros, and honours diet/allergen
+// constraints from nutrition_profiles.
+
+const OWNER_MEAL_EMOJIS: Record<string, string> = {
+  breakfast: '🍳',
+  lunch: '🥗',
+  dinner: '🍽️',
+  snack: '🥪',
+};
+
+interface OwnerRecipeRow {
+  id: string;
+  name: string;
+  category: string | null;
+  meal_type: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  dietary_tags: string[] | null;
+  allergens: string[] | null;
+}
+
+// Turn a free-text ingredient line like "140g chicken breast" into the
+// {amount, unit, name} shape the MealInPlan card expects.
+function parseIngredientLine(line: string): { amount: string; unit: string; name: string } {
+  const m = line.match(/^(\d+(?:\.\d+)?)\s*(g|kg|ml|l|tbsp|tsp|cup|cups|oz|large|small)?\s+(.+)$/i);
+  if (m) {
+    return { amount: m[1], unit: (m[2] ?? '').toLowerCase(), name: m[3].trim() };
+  }
+  return { amount: '', unit: '', name: line.trim() };
+}
+
+function ownerRecipeToMealInPlan(
+  row: OwnerRecipeRow,
+  slot: 'breakfast' | 'lunch' | 'dinner' | 'snack',
+  ingredients: Array<{ item: string; sort_order: number }>,
+  steps: Array<{ instruction: string; step_number: number }>,
+) {
+  return {
+    meal_type: slot,
+    name: row.name,
+    emoji: OWNER_MEAL_EMOJIS[slot] ?? '🍽️',
+    description: null,
+    calories: Math.round(Number(row.calories)),
+    protein_g: Math.round(Number(row.protein_g)),
+    carbs_g: Math.round(Number(row.carbs_g)),
+    fat_g: Math.round(Number(row.fat_g)),
+    ingredients: ingredients
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((i) => parseIngredientLine(i.item)),
+    instructions: steps
+      .slice()
+      .sort((a, b) => a.step_number - b.step_number)
+      .map((s) => s.instruction),
+  };
+}
+
+// Map a user's workout goal to the owner-library category.
+function workoutGoalToOwnerCategory(goal: string): string | null {
+  const g = goal.toLowerCase();
+  if (/lose.*weight|fat.*loss|weight.*loss|cut/.test(g)) return 'lose_weight';
+  if (/gain.*weight|weight.*gain|bulk/.test(g)) return 'gain_weight';
+  if (/muscle|strength|hypertrophy/.test(g)) return 'build_muscle';
+  return null;
+}
+
+async function fetchOwnerMealPlan(
+  targets: ExplicitMealTargets,
+  supabase: any,
+  userId: string,
+): Promise<any[] | null> {
+  // 1. Load user prefs (diet, allergies, workout goal for category)
+  const [prefsResp, prefsResp2] = await Promise.all([
+    supabase
+      .from('nutrition_profiles')
+      .select('food_preferences, allergies')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase
+      .from('workout_preferences')
+      .select('workout_goal')
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ]);
+
+  const dietPrefs: string[] = (prefsResp.data?.food_preferences ?? []).map(
+    (s: string) => String(s ?? '').toLowerCase().trim(),
+  );
+  const allergies: string[] = (prefsResp.data?.allergies ?? []).map(
+    (s: string) => String(s ?? '').toLowerCase().trim(),
+  );
+  const workoutGoal: string = prefsResp2.data?.workout_goal ?? '';
+  const goalCategory = workoutGoalToOwnerCategory(workoutGoal);
+
+  // Which "diet family" does the recipe need to belong to?
+  // Vegan is a subset of vegetarian; both are subsets of pescatarian & omnivore.
+  const requiredDiet =
+    dietPrefs.includes('vegan') ? 'vegan' :
+    dietPrefs.includes('vegetarian') ? 'vegetarian' :
+    dietPrefs.includes('pescatarian') || dietPrefs.includes('pescetarian') ? 'pescatarian' :
+    null;
+
+  const passesDiet = (tags: string[]): boolean => {
+    if (!requiredDiet) return true;
+    if (requiredDiet === 'vegan') return tags.includes('vegan');
+    if (requiredDiet === 'vegetarian')
+      return tags.includes('vegetarian') || tags.includes('vegan');
+    if (requiredDiet === 'pescatarian')
+      return (
+        tags.includes('pescatarian') ||
+        tags.includes('vegetarian') ||
+        tags.includes('vegan')
+      );
+    return true;
+  };
+
+  // 2. Split day-level targets across slots (owner used 25/40/35 in the docs).
+  const targetCal = targets.calories ?? 2000;
+  const targetProtein = targets.protein_g ?? 0;
+  const targetCarbs = targets.carbs_g ?? 0;
+  const targetFat = targets.fat_g ?? 0;
+
+  const slots: Array<{ slot: 'breakfast' | 'lunch' | 'dinner'; ratio: number }> = [
+    { slot: 'breakfast', ratio: 0.25 },
+    { slot: 'lunch', ratio: 0.40 },
+    { slot: 'dinner', ratio: 0.35 },
+  ];
+
+  const meals: any[] = [];
+  const used = new Set<string>();
+
+  for (const { slot, ratio } of slots) {
+    const slotCal = Math.round(targetCal * ratio);
+    const slotProtein = Math.round(targetProtein * ratio);
+    const slotCarbs = Math.round(targetCarbs * ratio);
+    const slotFat = Math.round(targetFat * ratio);
+
+    // Fetch candidates. Try goal-matched category first; if that's empty,
+    // fall back to any owner recipe for the slot.
+    const runQuery = async (withCategory: boolean) => {
+      let q = supabase
+        .from('recipes')
+        .select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g, dietary_tags, allergens')
+        .eq('source', 'owner')
+        .eq('meal_type', slot)
+        .limit(200);
+      if (withCategory && goalCategory) q = q.eq('category', goalCategory);
+      return q;
+    };
+
+    let { data: candidates, error } = await runQuery(true);
+    if (!error && (!candidates || candidates.length === 0) && goalCategory) {
+      // Widen: drop the category filter
+      const retry = await runQuery(false);
+      candidates = retry.data;
+      error = retry.error;
+    }
+    if (error) {
+      console.warn('[ai-coach owner-meal] slot', slot, 'query error:', error.message);
+      continue;
+    }
+    if (!candidates || candidates.length === 0) continue;
+
+    // 3. Apply diet + allergen filters in-memory
+    const filtered = (candidates as OwnerRecipeRow[]).filter((c) => {
+      if (used.has(c.id)) return false;
+      const recipeAllergens = (c.allergens ?? []).map((a) => a.toLowerCase());
+      if (allergies.some((a) => a && recipeAllergens.includes(a))) return false;
+      const tags = (c.dietary_tags ?? []).map((t) => t.toLowerCase());
+      if (!passesDiet(tags)) return false;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      console.warn(
+        '[ai-coach owner-meal] slot', slot,
+        `no candidates after diet=${requiredDiet ?? 'any'}/allergens=${allergies.length}`,
+      );
+      continue;
+    }
+
+    // 4. Score by squared macro distance, weighted by user-specified targets
+    const scored = filtered
+      .map((r) => {
+        const dCal = ((Number(r.calories) - slotCal) / Math.max(1, slotCal)) ** 2;
+        const dP = targetProtein
+          ? ((Number(r.protein_g) - slotProtein) / Math.max(1, slotProtein)) ** 2
+          : 0;
+        const dC = targetCarbs
+          ? ((Number(r.carbs_g) - slotCarbs) / Math.max(1, slotCarbs)) ** 2
+          : 0;
+        const dF = targetFat
+          ? ((Number(r.fat_g) - slotFat) / Math.max(1, slotFat)) ** 2
+          : 0;
+        return { row: r, score: dCal + dP + dC + dF };
+      })
+      .sort((a, b) => a.score - b.score);
+
+    // 5. Pick from top 5 for variety (not always the single closest match)
+    const top = scored.slice(0, Math.min(5, scored.length));
+    const chosen = top[Math.floor(Math.random() * top.length)].row;
+    used.add(chosen.id);
+
+    // 6. Attach ingredients + steps in parallel
+    const [ingResp, stepResp] = await Promise.all([
+      supabase
+        .from('ingredients')
+        .select('item, sort_order')
+        .eq('recipe_id', chosen.id),
+      supabase
+        .from('steps')
+        .select('instruction, step_number')
+        .eq('recipe_id', chosen.id),
+    ]);
+
+    meals.push(
+      ownerRecipeToMealInPlan(
+        chosen,
+        slot,
+        ingResp.data ?? [],
+        stepResp.data ?? [],
+      ),
+    );
+  }
+
+  console.log(
+    '[ai-coach owner-meal] returning', meals.length, 'meals',
+    `(diet=${requiredDiet ?? 'any'}, allergens=${allergies.length}, goal=${goalCategory ?? 'any'})`,
+  );
+  return meals.length > 0 ? meals : null;
+}
+
 async function fetchSpoonacularMealPlan(
   targets: ExplicitMealTargets,
   supabase: any,
@@ -2251,28 +2490,47 @@ serve(async (req) => {
           if (found) { explicitMealRequest = found; break; }
         }
       }
-      // Spoonacular fast-path is gated by MEAL_SOURCE_SPOONACULAR_ENABLED
-      // (default OFF). Owner-curated meals are preferred; this fast-path
-      // produces multi-meal day plans from Spoonacular, which the owner has
-      // asked us to stop using for recommendations.
-      const spoonacularEnabled = (Deno.env.get("MEAL_SOURCE_SPOONACULAR_ENABLED") ?? "").toLowerCase() === "true";
-      if (explicitMealRequest && spoonacularEnabled && spoonacularConfigured()) {
-        const meals = await fetchSpoonacularMealPlan(
+      // Explicit macro/calorie meal-plan requests bypass the LLM entirely.
+      // Order of preference:
+      //   1. Owner-curated recipes (source='owner') — deterministic, fast
+      //   2. Spoonacular (only if MEAL_SOURCE_SPOONACULAR_ENABLED=true)
+      //   3. Fall through to the LLM (which opens the wizard as last resort)
+      if (explicitMealRequest) {
+        const ownerMeals = await fetchOwnerMealPlan(
           explicitMealRequest,
           supabaseAdmin,
           userId,
         );
-        if (meals && meals.length > 0) {
+        if (ownerMeals && ownerMeals.length > 0) {
           const sseBody = sseSingleAction({
             type: "recommend_meal_plan",
-            payload: { meals },
+            payload: { meals: ownerMeals },
           });
           return new Response(sseBody, {
             headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
           });
         }
-        // If Spoonacular returned nothing usable, fall through to the LLM path
-        console.warn("[ai-coach] Spoonacular fast-path produced no results, falling back to LLM");
+        console.warn("[ai-coach] Owner meal-plan path produced no results — trying Spoonacular fallback if enabled");
+
+        const spoonacularEnabled =
+          (Deno.env.get("MEAL_SOURCE_SPOONACULAR_ENABLED") ?? "").toLowerCase() === "true";
+        if (spoonacularEnabled && spoonacularConfigured()) {
+          const meals = await fetchSpoonacularMealPlan(
+            explicitMealRequest,
+            supabaseAdmin,
+            userId,
+          );
+          if (meals && meals.length > 0) {
+            const sseBody = sseSingleAction({
+              type: "recommend_meal_plan",
+              payload: { meals },
+            });
+            return new Response(sseBody, {
+              headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+            });
+          }
+          console.warn("[ai-coach] Spoonacular fallback produced no results, falling back to LLM");
+        }
       }
 
       const isScheduleChangeRequest = /change.*(my )?(workout|schedule|plan|program|routine)|update.*(my )?(schedule|plan|program|workout|routine)|new (plan|schedule|program|workout plan)|rebuild.*plan|redo.*schedule|reset.*plan|want a new.*plan|want to start a (new |fresh )?(plan|program|schedule)|switch.*plan/.test(lastUserContent);

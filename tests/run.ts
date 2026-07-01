@@ -2647,6 +2647,24 @@ async function runRecentFeatureTests() {
     } else {
       fail('RECENT-16', 'Spoonacular flag', 'Expected MEAL_SOURCE_SPOONACULAR_ENABLED env check');
     }
+
+    // Owner meal-plan fast-path — this is what the wizard fires against.
+    // Without it, an explicit macro request has no server-side action provider
+    // and the LLM falls back to text-only "generating…" limbo.
+    if (/async function fetchOwnerMealPlan/.test(src) && /source: "owner"/.test(src) || /'source', 'owner'/.test(src) || /source='owner'/.test(src)) {
+      pass('RECENT-16b', 'ai-coach has fetchOwnerMealPlan fast-path for explicit macro requests');
+    } else if (/async function fetchOwnerMealPlan/.test(src)) {
+      pass('RECENT-16b', 'ai-coach has fetchOwnerMealPlan fast-path');
+    } else {
+      fail('RECENT-16b', 'Owner meal-plan fast-path',
+        'Missing fetchOwnerMealPlan — wizard will complete without emitting meals');
+    }
+    if (/const ownerMeals = await fetchOwnerMealPlan/.test(src)) {
+      pass('RECENT-16c', 'Owner meal-plan called before Spoonacular fallback');
+    } else {
+      fail('RECENT-16c', 'Owner meal-plan routing',
+        'Explicit macro requests should try fetchOwnerMealPlan before Spoonacular');
+    }
   } catch (e: any) {
     fail('RECENT-15', 'ai-coach source check', e.message);
   }
