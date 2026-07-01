@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-07-01] — Watch decline fallback, share icon on activity detail, avg HR on synced workouts
+
+- **Watch workouts land in HITT even when you decline "Send to iPhone"** — the previous behaviour filtered HITT Watch app workouts out of the HealthKit ingest on the assumption the Watch had already posted them directly. When you tapped "no" on the Watch prompt, the workout vanished. Now the HealthKit path acts as a proper fallback (fingerprint dedup collapses the both-paths case), so any Watch activity shows up in Activity History regardless of how you answer the Watch prompt
+- **Share button moved into each activity's detail screen** — Activity History rows are now clean scannable rows with no per-row Share icon. Tap into an activity to open its full breakdown; the classic iOS Share icon (square-with-arrow, not the Android three-dots) sits in the top-right of the header
+- **Post-workout Jarvis "Share now" now gives feedback if something goes wrong** — previously silent-closed if card generation or the share sheet failed. Now toasts a clear message on each failure mode and falls back to a text-only share if the webview can't attach the file
+- **Garmin (and other wearable) workouts now carry Avg HR into the share cards** — HealthKit sync pulls the average heart rate over each workout's window from your HR samples. HIIT / Cardio / Yoga cards now show a real number instead of "—" for Garmin-synced runs, cycles, walks, HIIT and cardio sessions
+
 ## [2026-07-01] — New HIIT-branded share cards + smarter meal planner
 
 - **Every activity now gets a HIIT-branded share card** — post-workout share images are redesigned end-to-end. White background, orange hex logo, HIIT wordmark + date eyebrow, three big metric blocks with clean orange labels underlined + dark values in Saira Condensed, and a signature orange curve at the bottom that changes per activity type: climb line for runs/bikes/hikes/triathlon, interval steps for HIIT and strength, sine waves for swim, EKG spikes for cardio, a gentle arc for yoga. Nine activity types covered (HIIT / Triathlon / Run / Bike / Swim / Strength / Cardio / Walk-Hike / Yoga); anything else falls back to the cardio template. Preview + shared PNG use the same source so what you see is what your friends see
