@@ -44,6 +44,7 @@ interface SyncPayload {
     duration_seconds: number;
     calories_burned?: number;
     distance_km?: number;
+    avg_heart_rate?: number;
     source_name?: string;
     device_name?: string;
   }>;
@@ -129,6 +130,7 @@ export async function syncHealthKitNow(): Promise<{ ok: boolean; sent?: number; 
       duration_seconds: w.durationSeconds,
       calories_burned: w.calories,
       distance_km: w.distanceKm,
+      avg_heart_rate: w.averageHeartRate,
       source_name: w.sourceName,
       device_name: w.deviceName,
     }));

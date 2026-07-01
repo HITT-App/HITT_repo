@@ -14,6 +14,10 @@ export interface HealthKitWorkout {
   isIndoor: boolean;
   calories?: number;
   distanceKm?: number;
+  // Average HR across the workout window, computed on the native side from
+  // HKQuantityTypeIdentifier.heartRate samples that fall inside the workout
+  // interval. Absent when no HR data covers the window (phone-only rigs).
+  averageHeartRate?: number;
   externalUUID?: string;
   deviceName?: string;
   deviceManufacturer?: string;

@@ -46,10 +46,55 @@ public class HealthKitReadPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve(["workouts": []])
                 return
             }
-            let workouts = (samples as? [HKWorkout] ?? []).map(Self.serialiseWorkout)
-            call.resolve(["workouts": workouts])
+            let workouts = (samples as? [HKWorkout] ?? [])
+            // Attach avg HR to each workout in parallel — one HKStatisticsQuery
+            // per workout, gated by DispatchGroup so we resolve the call only
+            // when they've all completed. HR samples within the workout's
+            // time window are averaged; if a workout has no HR data attached
+            // (indoor cycle on a phone-only rig, etc.) the field is omitted.
+            let group = DispatchGroup()
+            var results = Array<[String: Any]>(repeating: [:], count: workouts.count)
+            for (i, w) in workouts.enumerated() {
+                group.enter()
+                Self.averageHeartRate(for: w, healthStore: self.healthStore) { avg in
+                    var dict = Self.serialiseWorkout(w)
+                    if let avg = avg { dict["averageHeartRate"] = Int(avg.rounded()) }
+                    results[i] = dict
+                    group.leave()
+                }
+            }
+            group.notify(queue: .main) {
+                call.resolve(["workouts": results])
+            }
         }
         healthStore.execute(query)
+    }
+
+    /// Compute the average heart rate over a workout's date range from the
+    /// user's HKQuantityTypeIdentifier.heartRate samples. Returns nil when
+    /// no HR data covers the window (typical for phone-only workouts).
+    private static func averageHeartRate(
+        for workout: HKWorkout,
+        healthStore: HKHealthStore,
+        completion: @escaping (Double?) -> Void
+    ) {
+        guard let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) else {
+            completion(nil); return
+        }
+        let predicate = HKQuery.predicateForSamples(
+            withStart: workout.startDate,
+            end: workout.endDate,
+            options: [.strictStartDate, .strictEndDate]
+        )
+        let stats = HKStatisticsQuery(
+            quantityType: hrType,
+            quantitySamplePredicate: predicate,
+            options: [.discreteAverage]
+        ) { _, result, _ in
+            let bpm = result?.averageQuantity()?.doubleValue(for: HKUnit(from: "count/min"))
+            completion(bpm)
+        }
+        healthStore.execute(stats)
     }
 
     // MARK: - queryHeartRateAverages

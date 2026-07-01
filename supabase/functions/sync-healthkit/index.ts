@@ -16,6 +16,7 @@ interface WorkoutIn {
   duration_seconds: number;
   calories_burned?: number;
   distance_km?: number;
+  avg_heart_rate?: number;
   source_name?: string;
   device_name?: string;
 }
@@ -84,6 +85,7 @@ serve(async (req) => {
         duration_seconds: w.duration_seconds,
         calories_burned: w.calories_burned ?? null,
         distance_km: w.distance_km ?? null,
+        avg_heart_rate: w.avg_heart_rate ?? null,
         source_platform: w.source_platform,
         source_platform_id: w.source_platform_id,
       }));
