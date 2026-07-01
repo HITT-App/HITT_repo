@@ -921,21 +921,44 @@ async function fetchOwnerMealPlan(
     }
     if (!candidates || candidates.length === 0) return null;
 
-    const filtered = (candidates as OwnerRecipeRow[]).filter((c) => {
+    const baseFilter = (c: OwnerRecipeRow): boolean => {
       if (used.has(c.id)) return false;
       const recipeAllergens = (c.allergens ?? []).map((a) => a.toLowerCase());
       if (allergies.some((a) => a && recipeAllergens.includes(a))) return false;
       const tags = (c.dietary_tags ?? []).map((t) => t.toLowerCase());
       if (!passesDiet(tags)) return false;
       return true;
-    });
-    if (filtered.length === 0) {
+    };
+
+    const base = (candidates as OwnerRecipeRow[]).filter(baseFilter);
+    if (base.length === 0) {
       console.warn(
         '[ai-coach owner-meal]', slot,
         `no candidates after diet=${requiredDiet ?? 'any'}/allergens=${allergies.length}`,
       );
       return null;
     }
+
+    // Hard-filter ceiling macros before scoring. Widen the tolerance in stages
+    // if the tight pool collapses to fewer than 5 candidates (any less and the
+    // pick becomes deterministic across sessions).
+    const applyCeilings = (tolerance: number): OwnerRecipeRow[] => {
+      const carbLimit = targetCarbs ? slotCarbs * tolerance : Infinity;
+      const fatLimit = targetFat ? slotFat * tolerance : Infinity;
+      return base.filter((c) =>
+        Number(c.carbs_g) <= carbLimit && Number(c.fat_g) <= fatLimit,
+      );
+    };
+
+    let filtered = applyCeilings(1.2);
+    if (filtered.length < 5) filtered = applyCeilings(1.6);
+    if (filtered.length < 3) filtered = applyCeilings(2.5);
+    if (filtered.length < 1) filtered = base; // give up ceiling — better a meal than none
+    console.log(
+      '[ai-coach owner-meal]', slot,
+      `pool ${base.length}→${filtered.length}`,
+      `carb≤${targetCarbs ? Math.round(slotCarbs * 1.2) : '∞'}g`,
+    );
 
     // Direction-aware scoring — treat each macro the way users actually mean
     // it when they type the number:
@@ -971,7 +994,9 @@ async function fetchOwnerMealPlan(
           ? Math.max(0, rF - slotFat) ** 2 / Math.max(1, slotFat ** 2)
           : 0;
 
-        return { row: r, score: 2 * dCal + proteinFloor + carbsCeiling + fatCeiling };
+        // Ceiling breaches weighted heavily so, even inside the widened pool,
+        // the pick is the lowest-overshoot option.
+        return { row: r, score: 2 * dCal + proteinFloor + 3 * carbsCeiling + 3 * fatCeiling };
       })
       .sort((a, b) => a.score - b.score);
 
