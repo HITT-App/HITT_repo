@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-07-01] — Owner meal library, poll voting, user blocking, modify-schedule fix
+
+- **Jarvis now pulls meal recommendations from the owner's curated library** — 660 recipes across Lose Weight / Gain Weight / Build Muscle / Recovery (Pre/Post-Workout), each with explicit allergens, diet tag (Omnivore / Pescatarian / Vegetarian / Vegan), macros, ingredients and step-by-step method. Spoonacular is now gated behind a feature flag (OFF by default) so recommendations come exclusively from the owner data
+- **Community polls are votable** — the option buttons in a poll post were rendered but never actually did anything. Now tap an option to vote, with optimistic UI (bar fills instantly, percentage appears), your selection highlighted, and duplicate votes silently blocked at the database. Server-side trigger keeps the visible vote counts in sync
+- **Block user from the community feed** — the Blocked Users list in Settings existed but there was no way to add anyone to it. The post 3-dot menu on other users' posts now shows "Block user" with a confirmation dialog. Blocking hides that user's posts and comments across the feed
+- **Modify-schedule flow no longer shows "0 sessions" + AbortError** — the LLM gateway's 55-second timeout was clipping 4-week plan generation and surfacing the raw `AbortError` under a misleading "0 sessions" heading. Timeout bumped to 110s, unmount cancels in-flight requests cleanly, and the error state now shows a proper "Try again" button instead of a blank empty state
+
 ## [2026-06-30] — Live Activity no longer crashes the app on iOS simulator
 
 - **Live Activities are now skipped entirely on the iOS Simulator** — Apple has a known iOS 26 simulator regression where widget extensions crash at startup with an XPC bundle-id fault, which took down the parent app. Now detected via a native `isSimulator` check and the Live Activity calls become silent no-ops on sim. Real devices unaffected — TestFlight users will continue to see the lock-screen workout card as before

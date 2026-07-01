@@ -2490,6 +2490,286 @@ async function runWatchAuditTests() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// SECTION 6 — RECENT FEATURES (poll voting, modify-schedule, blocking, meals)
+// ════════════════════════════════════════════════════════════════════════════
+
+async function runRecentFeatureTests() {
+  section('RECENT FEATURES (code audit)');
+
+  // ── Poll voting (commit b6d6eac) ──────────────────────────────────────────
+
+  try {
+    const src = readSrc('pages/CommunityFeed.tsx');
+    if (/onClick=\{[^}]*handleVote\(post,\s*idx\)/.test(src) && /e\.stopPropagation\(\)/.test(src)) {
+      pass('RECENT-01', 'CommunityFeed poll button wires handleVote with stopPropagation');
+    } else {
+      fail('RECENT-01', 'CommunityFeed poll button wires handleVote with stopPropagation',
+        'Expected onClick handler invoking handleVote(post, idx) with e.stopPropagation()');
+    }
+
+    if (/const handleVote\s*=\s*async\s*\(\s*post:\s*CommunityPost\s*,\s*optionIndex:\s*number\s*\)/.test(src)) {
+      pass('RECENT-02', 'handleVote handler defined with optimistic update');
+    } else {
+      fail('RECENT-02', 'handleVote handler defined', 'Could not find handleVote definition');
+    }
+
+    if (/setOptimisticPollCounts/.test(src) && /setPollVotes/.test(src)) {
+      pass('RECENT-03', 'Poll vote uses optimistic UI state (counts + selection)');
+    } else {
+      fail('RECENT-03', 'Poll vote optimistic state', 'Missing setOptimisticPollCounts or setPollVotes');
+    }
+  } catch (e: any) {
+    fail('RECENT-01', 'CommunityFeed source check', e.message);
+  }
+
+  try {
+    const src = readSrc('hooks/useCommunity.ts');
+    if (/const castVote\s*=\s*async\s*\(\s*postId:\s*string\s*,\s*optionIndex:\s*number/.test(src) &&
+        src.includes("'community_poll_votes'")) {
+      pass('RECENT-04', 'castVote mutation defined and inserts into community_poll_votes');
+    } else {
+      fail('RECENT-04', 'castVote mutation', 'Missing castVote or community_poll_votes insert');
+    }
+
+    if (/['"]23505['"]/.test(src)) {
+      pass('RECENT-05', 'castVote handles unique-violation (already voted)');
+    } else {
+      fail('RECENT-05', 'castVote duplicate-vote handling',
+        'Should catch Postgres 23505 unique_violation when user re-votes');
+    }
+  } catch (e: any) {
+    fail('RECENT-04', 'useCommunity source check', e.message);
+  }
+
+  // ── Modify-schedule timeout + error mapping (commit 562df27) ──────────────
+
+  try {
+    const src = readSrc('hooks/useOnboardingPlan.ts');
+    if (/function friendlyError/.test(src) && /aborted\|abort\|signal\|timeout/.test(src)) {
+      pass('RECENT-06', 'useOnboardingPlan maps AbortError to friendly copy');
+    } else {
+      fail('RECENT-06', 'Friendly error mapping',
+        'Expected friendlyError() helper recognising abort-shaped errors');
+    }
+
+    if (/abortRef\s*=\s*useRef<AbortController/.test(src) && /controller\.signal\.aborted/.test(src)) {
+      pass('RECENT-07', 'useOnboardingPlan cancels in-flight fetch on unmount');
+    } else {
+      fail('RECENT-07', 'AbortController wired into generatePlan',
+        'Expected useRef<AbortController> with aborted-signal silent-cancel branch');
+    }
+  } catch (e: any) {
+    fail('RECENT-06', 'useOnboardingPlan source check', e.message);
+  }
+
+  try {
+    const src = readSrc('components/coach/OnboardingFlow.tsx');
+    if (/error\s*\n?\s*\?\s*'We hit a snag/.test(src) && /Try again/.test(src)) {
+      pass('RECENT-08', 'OnboardingFlow review screen replaces "0 sessions" with friendly error + retry');
+    } else {
+      fail('RECENT-08', 'OnboardingFlow error UI',
+        'Expected error branch on review heading + "Try again" button');
+    }
+  } catch (e: any) {
+    fail('RECENT-08', 'OnboardingFlow source check', e.message);
+  }
+
+  try {
+    const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/generate-workout-plan/index.ts', 'utf-8');
+    if (/timeout_ms:\s*110_?000/.test(src)) {
+      pass('RECENT-09', 'generate-workout-plan extends LLM timeout to 110s');
+    } else {
+      fail('RECENT-09', 'generate-workout-plan timeout',
+        'Expected timeout_ms: 110_000 to outlast 4-week plan generation');
+    }
+  } catch (e: any) {
+    fail('RECENT-09', 'generate-workout-plan source check', e.message);
+  }
+
+  // ── User blocking (commit 1b1b75d) ────────────────────────────────────────
+
+  try {
+    const src = readSrc('pages/CommunityFeed.tsx');
+    if (/setPendingBlock\(\{[\s\S]{1,200}userId:\s*post\.user_id/.test(src)) {
+      pass('RECENT-10', 'CommunityFeed dropdown opens block confirmation with target user_id');
+    } else {
+      fail('RECENT-10', 'Block menu wiring',
+        'Expected setPendingBlock({ userId: post.user_id, ... }) in dropdown');
+    }
+
+    if (/Ban className="w-4 h-4 mr-2"/.test(src) && /Block user/.test(src)) {
+      pass('RECENT-11', 'CommunityFeed dropdown shows "Block user" item with Ban icon');
+    } else {
+      fail('RECENT-11', 'Block menu item rendered', 'Missing Ban icon or "Block user" label');
+    }
+
+    if (/blockedUserIds\.has\(p\.user_id\)/.test(src)) {
+      pass('RECENT-12', 'CommunityFeed filters posts from blocked users');
+    } else {
+      fail('RECENT-12', 'Blocked posts filtered',
+        'Expected blockedUserIds.has(p.user_id) exclusion in filteredPosts');
+    }
+
+    if (/AlertDialog\s+open=\{!!pendingBlock\}/.test(src)) {
+      pass('RECENT-13', 'Block AlertDialog rendered, gated by pendingBlock state');
+    } else {
+      fail('RECENT-13', 'Block AlertDialog', 'AlertDialog open={!!pendingBlock} not found');
+    }
+  } catch (e: any) {
+    fail('RECENT-10', 'CommunityFeed source check', e.message);
+  }
+
+  try {
+    const src = readSrc('hooks/useCommunity.ts');
+    if (/community_blocks/.test(src) && /blockedIds\.has\(c\.user_id\)/.test(src)) {
+      pass('RECENT-14', 'useCommunityComments filters blocked users from comment thread');
+    } else {
+      fail('RECENT-14', 'Comment blocking filter',
+        'Expected community_blocks parallel fetch + blockedIds.has(c.user_id) filter');
+    }
+  } catch (e: any) {
+    fail('RECENT-14', 'useCommunity comments source check', e.message);
+  }
+
+  // ── Owner meal library + Jarvis preference (commit 429e58a) ───────────────
+
+  try {
+    const src = readFileSync('/Users/vanessa/hitt-app/supabase/functions/ai-coach/index.ts', 'utf-8');
+    if (/from\('recipes'\)[\s\S]{1,200}\.order\('source',\s*\{\s*ascending:\s*false\s*\}\)/.test(src)) {
+      pass('RECENT-15', 'ai-coach orders recipes catalogue by source DESC (owner first)');
+    } else {
+      fail('RECENT-15', 'ai-coach owner preference',
+        'Expected .order(\'source\', { ascending: false }) on recipes select');
+    }
+
+    if (/MEAL_SOURCE_SPOONACULAR_ENABLED/.test(src)) {
+      pass('RECENT-16', 'Spoonacular fast-path gated by MEAL_SOURCE_SPOONACULAR_ENABLED flag');
+    } else {
+      fail('RECENT-16', 'Spoonacular flag', 'Expected MEAL_SOURCE_SPOONACULAR_ENABLED env check');
+    }
+  } catch (e: any) {
+    fail('RECENT-15', 'ai-coach source check', e.message);
+  }
+
+  try {
+    const sqlSeed = '/Users/vanessa/hitt-app/supabase/migrations/20260702000001_seed_owner_meals.sql';
+    const seedSrc = readFileSync(sqlSeed, 'utf-8');
+    const recipeCount = (seedSrc.match(/INSERT INTO public\.recipes/g) || []).length;
+    if (recipeCount >= 600) {
+      pass('RECENT-17', `Owner meal seed migration contains ${recipeCount} recipe inserts (≥600 expected)`);
+    } else {
+      fail('RECENT-17', 'Owner meal seed size',
+        `Found ${recipeCount} recipe inserts — expected ~660 (165 × 4 categories)`);
+    }
+  } catch (e: any) {
+    fail('RECENT-17', 'Owner meal seed migration check', e.message);
+  }
+
+  // ── DB tests (auth required) ──────────────────────────────────────────────
+
+  section('RECENT FEATURES (database)');
+
+  if (!authToken || !supabase) {
+    for (const id of ['RECENT-DB-01','RECENT-DB-02','RECENT-DB-03','RECENT-DB-04','RECENT-DB-05']) {
+      skip(id, 'Recent-feature DB test', 'No auth token');
+    }
+    return;
+  }
+
+  // RECENT-DB-01: recipes.source column readable, 'owner' rows present
+  {
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('id, source')
+      .eq('source', 'owner')
+      .limit(5);
+    if (!error && data && data.length > 0) {
+      pass('RECENT-DB-01', `recipes.source column present with ${data.length}+ owner rows`);
+    } else {
+      fail('RECENT-DB-01', 'recipes.source column',
+        error?.message ?? 'No owner-source recipes returned — seed may have failed');
+    }
+  }
+
+  // RECENT-DB-02: full owner library count is ~660
+  {
+    const { count, error } = await supabase
+      .from('recipes')
+      .select('id', { count: 'exact', head: true })
+      .eq('source', 'owner');
+    if (!error && count !== null && count >= 600) {
+      pass('RECENT-DB-02', `Owner meal library has ${count} recipes (≥600 expected)`);
+    } else {
+      fail('RECENT-DB-02', 'Owner meal library count',
+        `Count was ${count ?? 'null'} — expected ~660`);
+    }
+  }
+
+  // RECENT-DB-03: decimal macros survive (proves NUMERIC widening worked)
+  {
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('protein_g, carbs_g, fat_g')
+      .eq('source', 'owner')
+      .limit(50);
+    if (error) {
+      fail('RECENT-DB-03', 'Owner macros decimal', error.message);
+    } else {
+      const hasDecimal = (data || []).some(r =>
+        Number(r.protein_g) % 1 !== 0 ||
+        Number(r.carbs_g)   % 1 !== 0 ||
+        Number(r.fat_g)     % 1 !== 0
+      );
+      if (hasDecimal) {
+        pass('RECENT-DB-03', 'Owner macros stored with decimals (NUMERIC(5,1))');
+      } else {
+        fail('RECENT-DB-03', 'Owner macros decimal',
+          'No decimal macros in first 50 owner rows — INT truncation may have occurred');
+      }
+    }
+  }
+
+  // RECENT-DB-04: a sample owner recipe has ingredients + steps
+  {
+    const { data: sample } = await supabase
+      .from('recipes')
+      .select('id, name')
+      .eq('source', 'owner')
+      .limit(1)
+      .maybeSingle();
+    if (!sample) {
+      fail('RECENT-DB-04', 'Owner recipe has ingredients + steps', 'No owner recipe found to sample');
+    } else {
+      const [{ count: ingCount }, { count: stepCount }] = await Promise.all([
+        supabase.from('ingredients').select('id', { count: 'exact', head: true }).eq('recipe_id', sample.id),
+        supabase.from('steps').select('id', { count: 'exact', head: true }).eq('recipe_id', sample.id),
+      ]);
+      if ((ingCount ?? 0) > 0 && (stepCount ?? 0) > 0) {
+        pass('RECENT-DB-04', `Owner recipe "${sample.name.slice(0, 40)}…" has ${ingCount} ingredients, ${stepCount} steps`);
+      } else {
+        fail('RECENT-DB-04', 'Owner recipe ingredients/steps',
+          `ingredients=${ingCount}, steps=${stepCount} — expected both > 0`);
+      }
+    }
+  }
+
+  // RECENT-DB-05: community_blocks table queryable (block hook depends on it)
+  {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('community_blocks')
+      .select('id')
+      .eq('blocker_id', user!.id)
+      .limit(1);
+    if (!error) {
+      pass('RECENT-DB-05', 'community_blocks table queryable under RLS');
+    } else {
+      fail('RECENT-DB-05', 'community_blocks query', error.message);
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // MAIN
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -2513,6 +2793,7 @@ async function main() {
   await runWorkoutPlanTests();
   await runDatabaseTests();
   await runWatchAuditTests();
+  await runRecentFeatureTests();
 
   // ── Summary ───────────────────────────────────────────────────────────────
 
