@@ -835,6 +835,14 @@ async function fetchOwnerMealPlan(
   const workoutGoal: string = prefsResp2.data?.workout_goal ?? '';
   const goalCategory = workoutGoalToOwnerCategory(workoutGoal);
 
+  // For explicit macro requests, the numbers ARE the constraint. Filtering by
+  // goal category shrinks the search space so much that the library's max
+  // per-slot calories may not reach the target — e.g. a lose_weight user
+  // asking for 1800 kcal is capped at ~1450 kcal because the lose_weight
+  // library's largest lunch is ~500 kcal. Widen to all owner categories and
+  // let the macro-fit scorer do the work.
+  const useCategoryFilter = false;
+
   // Which "diet family" does the recipe need to belong to?
   // Vegan is a subset of vegetarian; both are subsets of pescatarian & omnivore.
   const requiredDiet =
@@ -872,39 +880,47 @@ async function fetchOwnerMealPlan(
   const meals: any[] = [];
   const used = new Set<string>();
 
-  for (const { slot, ratio } of slots) {
-    const slotCal = Math.round(targetCal * ratio);
-    const slotProtein = Math.round(targetProtein * ratio);
-    const slotCarbs = Math.round(targetCarbs * ratio);
-    const slotFat = Math.round(targetFat * ratio);
+  // Rolling budget — after each pick, distribute the leftover target across
+  // the remaining slots weighted by their ratios. This means an underdelivery
+  // in one slot is picked up by later slots instead of being lost.
+  let remainingCal = targetCal;
+  let remainingProtein = targetProtein;
+  let remainingCarbs = targetCarbs;
+  let remainingFat = targetFat;
+  let remainingRatio = 1;
 
-    // Fetch candidates. Try goal-matched category first; if that's empty,
-    // fall back to any owner recipe for the slot.
+  const pickBestForSlot = async (
+    slot: 'breakfast' | 'lunch' | 'dinner' | 'snack',
+    slotCal: number,
+    slotProtein: number,
+    slotCarbs: number,
+    slotFat: number,
+  ): Promise<OwnerRecipeRow | null> => {
+    // Preferred: filter by goal category if it exists. Widen when useCategoryFilter is off
+    // OR when the strict query returns nothing.
     const runQuery = async (withCategory: boolean) => {
       let q = supabase
         .from('recipes')
         .select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g, dietary_tags, allergens')
         .eq('source', 'owner')
         .eq('meal_type', slot)
-        .limit(200);
+        .limit(300);
       if (withCategory && goalCategory) q = q.eq('category', goalCategory);
       return q;
     };
 
-    let { data: candidates, error } = await runQuery(true);
-    if (!error && (!candidates || candidates.length === 0) && goalCategory) {
-      // Widen: drop the category filter
+    let { data: candidates, error } = await runQuery(useCategoryFilter);
+    if (!error && (!candidates || candidates.length === 0) && useCategoryFilter) {
       const retry = await runQuery(false);
       candidates = retry.data;
       error = retry.error;
     }
     if (error) {
-      console.warn('[ai-coach owner-meal] slot', slot, 'query error:', error.message);
-      continue;
+      console.warn('[ai-coach owner-meal]', slot, 'query error:', error.message);
+      return null;
     }
-    if (!candidates || candidates.length === 0) continue;
+    if (!candidates || candidates.length === 0) return null;
 
-    // 3. Apply diet + allergen filters in-memory
     const filtered = (candidates as OwnerRecipeRow[]).filter((c) => {
       if (used.has(c.id)) return false;
       const recipeAllergens = (c.allergens ?? []).map((a) => a.toLowerCase());
@@ -913,16 +929,17 @@ async function fetchOwnerMealPlan(
       if (!passesDiet(tags)) return false;
       return true;
     });
-
     if (filtered.length === 0) {
       console.warn(
-        '[ai-coach owner-meal] slot', slot,
+        '[ai-coach owner-meal]', slot,
         `no candidates after diet=${requiredDiet ?? 'any'}/allergens=${allergies.length}`,
       );
-      continue;
+      return null;
     }
 
-    // 4. Score by squared macro distance, weighted by user-specified targets
+    // Calorie is the primary target the user cares about — weight it 2×
+    // heavier than macros so we don't drift to a low-cal pick just because it
+    // nailed the protein number.
     const scored = filtered
       .map((r) => {
         const dCal = ((Number(r.calories) - slotCal) / Math.max(1, slotCal)) ** 2;
@@ -935,39 +952,82 @@ async function fetchOwnerMealPlan(
         const dF = targetFat
           ? ((Number(r.fat_g) - slotFat) / Math.max(1, slotFat)) ** 2
           : 0;
-        return { row: r, score: dCal + dP + dC + dF };
+        return { row: r, score: 2 * dCal + dP + dC + dF };
       })
       .sort((a, b) => a.score - b.score);
 
-    // 5. Pick from top 5 for variety (not always the single closest match)
-    const top = scored.slice(0, Math.min(5, scored.length));
+    // Pick from top 3 — narrower than before so we don't average away toward
+    // the middle of the pool when the pool spans a wide macro range.
+    const top = scored.slice(0, Math.min(3, scored.length));
     const chosen = top[Math.floor(Math.random() * top.length)].row;
-    used.add(chosen.id);
-
-    // 6. Attach ingredients + steps in parallel
-    const [ingResp, stepResp] = await Promise.all([
-      supabase
-        .from('ingredients')
-        .select('item, sort_order')
-        .eq('recipe_id', chosen.id),
-      supabase
-        .from('steps')
-        .select('instruction, step_number')
-        .eq('recipe_id', chosen.id),
-    ]);
-
-    meals.push(
-      ownerRecipeToMealInPlan(
-        chosen,
-        slot,
-        ingResp.data ?? [],
-        stepResp.data ?? [],
-      ),
+    console.log(
+      '[ai-coach owner-meal]', slot,
+      `target=${slotCal}kcal/${slotProtein}p pool=${filtered.length}`,
+      `pick=${chosen.name.slice(0, 40)}… (${chosen.calories}kcal/${chosen.protein_g}p)`,
     );
+    return chosen;
+  };
+
+  for (const { slot, ratio } of slots) {
+    // Rebase from remaining budget so underdeliveries carry forward.
+    const share = ratio / remainingRatio;
+    const slotCal = Math.max(120, Math.round(remainingCal * share));
+    const slotProtein = Math.round(remainingProtein * share);
+    const slotCarbs = Math.round(remainingCarbs * share);
+    const slotFat = Math.round(remainingFat * share);
+
+    const chosen = await pickBestForSlot(slot, slotCal, slotProtein, slotCarbs, slotFat);
+    if (!chosen) {
+      // Slot missed — the remaining slots still get their share of the
+      // untouched budget. Just carry on.
+      remainingRatio -= ratio;
+      continue;
+    }
+    used.add(chosen.id);
+    remainingCal -= Number(chosen.calories);
+    remainingProtein -= Number(chosen.protein_g);
+    remainingCarbs -= Number(chosen.carbs_g);
+    remainingFat -= Number(chosen.fat_g);
+    remainingRatio -= ratio;
+
+    const [ingResp, stepResp] = await Promise.all([
+      supabase.from('ingredients').select('item, sort_order').eq('recipe_id', chosen.id),
+      supabase.from('steps').select('instruction, step_number').eq('recipe_id', chosen.id),
+    ]);
+    meals.push(ownerRecipeToMealInPlan(chosen, slot, ingResp.data ?? [], stepResp.data ?? []));
   }
 
+  // If total is still >15% short of the calorie target after 3 meals, add a
+  // snack to close the gap. Owner curated 165 snacks specifically for this.
+  const totalCal = meals.reduce((sum, m) => sum + (m.calories ?? 0), 0);
+  const shortfall = targetCal - totalCal;
+  if (shortfall > targetCal * 0.15) {
+    console.log('[ai-coach owner-meal] calorie shortfall', shortfall, 'kcal — adding snack');
+    const totalP = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
+    const totalC = meals.reduce((s, m) => s + (m.carbs_g ?? 0), 0);
+    const totalF = meals.reduce((s, m) => s + (m.fat_g ?? 0), 0);
+    const snack = await pickBestForSlot(
+      'snack',
+      shortfall,
+      Math.max(0, targetProtein - totalP),
+      Math.max(0, targetCarbs - totalC),
+      Math.max(0, targetFat - totalF),
+    );
+    if (snack) {
+      used.add(snack.id);
+      const [ingResp, stepResp] = await Promise.all([
+        supabase.from('ingredients').select('item, sort_order').eq('recipe_id', snack.id),
+        supabase.from('steps').select('instruction, step_number').eq('recipe_id', snack.id),
+      ]);
+      meals.push(ownerRecipeToMealInPlan(snack, 'snack', ingResp.data ?? [], stepResp.data ?? []));
+    }
+  }
+
+  const finalCal = meals.reduce((s, m) => s + (m.calories ?? 0), 0);
+  const finalP = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
   console.log(
-    '[ai-coach owner-meal] returning', meals.length, 'meals',
+    '[ai-coach owner-meal] returning', meals.length, 'meals —',
+    `target ${targetCal}kcal/${targetProtein}p, delivered ${finalCal}kcal/${finalP}p`,
     `(diet=${requiredDiet ?? 'any'}, allergens=${allergies.length}, goal=${goalCategory ?? 'any'})`,
   );
   return meals.length > 0 ? meals : null;
