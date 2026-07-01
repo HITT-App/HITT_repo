@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-07-01] — Weight tracking in the gym, meals browser redesign, Garmin delayed-write catch
+
+- **Gym timer now records the weight you're lifting** — reps-mode exercises show a compact Load control below the set-of-set indicator; tap −/+ to change the weight in 2.5 kg steps. Weight per set is stored, and on finish the app rolls up total training volume (Σ weight × reps). The Strength share card promotes Volume into the top slot when there's any weight recorded — showing "Volume · 12,850 kg" instead of "Duration"
+- **Meals browser feels like a browsable library instead of a wall of results** — the "All" tab used to dump every recipe alphabetically, which meant the top 40+ meals all started "Asian-inspired…". It now shuffles recipes on load and shows curated horizontal shelves (Breakfast, High-protein picks, Low-carb, Under 400 kcal, Vegetarian, Lunch, Dinner, Snacks) as the landing state. New meal-type + diet chip carousel across the top; filter sheet expanded to meal type / diet / protein source / calorie band, each with a clear button
+- **Recipe detail sheet now dismisses on swipe down** — was silently broken because the internal ScrollArea was swallowing the vertical-drag touchmove events the sheet uses for the swipe gesture
+- **Garmin activities that take a while to reach Apple Health now still get picked up** — the HealthKit sync used to filter workouts by their start time and advance its lastSyncAt to "now" after each successful sync. Garmin can take 5–30 minutes to write a completed workout into Apple Health, so a phone that had synced before the workout arrived would permanently miss it. Sync now always looks back at least 7 days regardless; fingerprint dedup absorbs any re-hits with no visible cost
+
 ## [2026-07-01] — Watch decline fallback, share icon on activity detail, avg HR on synced workouts
 
 - **Watch workouts land in HITT even when you decline "Send to iPhone"** — the previous behaviour filtered HITT Watch app workouts out of the HealthKit ingest on the assumption the Watch had already posted them directly. When you tapped "no" on the Watch prompt, the workout vanished. Now the HealthKit path acts as a proper fallback (fingerprint dedup collapses the both-paths case), so any Watch activity shows up in Activity History regardless of how you answer the Watch prompt
