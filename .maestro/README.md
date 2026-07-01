@@ -9,15 +9,17 @@ Both Maestro and OpenJDK are **already installed** in this machine's
 Homebrew + `~/.maestro`. New terminals need this once on PATH:
 
 ```bash
-# Add to ~/.zshrc if not already there
-export PATH="/opt/homebrew/opt/openjdk/bin:$HOME/.maestro/bin:$PATH"
+# Add to ~/.zshrc if not already there — MUST be openjdk@17 (Maestro 2.x
+# doesn't support JDK 22+; JDK 26's stricter runtime blocks the XCTest
+# helper install with "iOS driver not ready in time")
+export PATH="/opt/homebrew/opt/openjdk@17/bin:$HOME/.maestro/bin:$PATH"
 ```
 
 For a fresh machine:
 
 ```bash
 curl -fsSL "https://get.maestro.mobile.dev" | bash
-brew install openjdk
+brew install openjdk@17
 ```
 
 ## Running the flows
@@ -58,15 +60,20 @@ If the flow fails on a `tapOn` step, Maestro saves a screenshot to
 |---|---|---|
 | `finish-activity.yaml`        | Tap "Ready?" → tap Finish → completion screen renders within 3s (regression guard for the Finish bug fixed on 2026-06-29) | App open on ActivityLive pre-start screen |
 | `connected-devices.yaml`      | Page renders + Sync button responds | App open on Connected Devices page |
-| `launch-card-activity.yaml`   | ActivityLive pre-start still has Ready? button + GPS pill (catches launch-card layout regressions) | App open on ActivityLive pre-start screen |
+| `launch-card-activity.yaml`   | ActivityLive pre-start still has Ready? button (catches launch-card layout regressions) | App open on ActivityLive pre-start screen |
 | `launch-card-workout.yaml`    | WorkoutPlayer ReadyScreen still has Start workout button + "The plan" section | App open on a scheduled HIIT workout's ReadyScreen |
 | `launch-card-gym.yaml`        | GymTimer ReadyScreen still has Start workout button | App open on a gym/AI workout's ReadyScreen |
 
-Both flows are **anchored** — they start from a known screen rather than
+All flows are **anchored** — they start from a known screen rather than
 navigating there. Reason: the home-page navigation paths use icon-only
 buttons whose accessibility labels vary by Capacitor version, so selectors
-written blindly tend to drift. Use Maestro Studio (below) to extend either
+written blindly tend to drift. Use Maestro Studio (below) to extend a
 flow with the navigation prefix when you want full E2E coverage.
+
+Also note: `launchApp` uses `stopApp: false` so Maestro attaches to the
+currently-running app rather than relaunching (which would wipe navigation
+state). Text matchers with pipe `|` alternation don't reliably work — use
+separate `assertVisible` steps or `runFlow.when.notVisible` gating instead.
 
 ## Extending flows interactively
 

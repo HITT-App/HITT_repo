@@ -22,17 +22,37 @@ Always use the Discord reply tool: `mcp__plugin_discord_discord__reply` with `ch
 src/
   components/coach/JarvisMode.tsx     # AI coach full-screen overlay — the central feature
   components/coach/VoiceController.tsx # wake word + opens JarvisMode
-  components/workout/ShareCardCanvas.ts # all 6 share card generators
+  components/workout/ShareCardCanvas.ts # 7 share card generators (incl. triathlon)
+  components/wearable/WearableLaunchCard.tsx  # vendor-aware launch UI (all 4 activity types)
   pages/                              # one file per screen
+  hooks/usePrimaryWearable.ts         # React Query + localStorage-cached wearable detection
   lib/native-gps.ts                   # Capacitor GPS abstraction
   lib/gps-filter.ts                   # Kalman filter for GPS smoothing
+  lib/wearable-detection.ts           # pure getPrimaryWearable(supabase, userId) function
+  lib/wearable-launch-copy.ts         # activity × wearable copy matrix
+  lib/healthkit-sync.ts               # foreground HealthKit → Supabase syncer
+  lib/live-activity.ts                # Live Activity wrapper (skips on iOS Simulator)
+  plugins/HealthKitReadPlugin.ts      # native HealthKit read bridge
+  plugins/WatchPlugin.ts              # iPhone ↔ Watch bridge + isSimulator helper
 supabase/functions/
   ai-coach/          # streams responses, reads markers from AI output
   generate-workout-plan/  # AI picks workouts from library; returns { items: [...] }
   elevenlabs-tts/    # text-to-speech
+  log-watch-workout/ # Watch direct WCSession path → activity_logs
+  sync-healthkit/    # HealthKit aggregator → activity_logs / health_metrics / sleep_logs
+  _shared/activity-upsert.ts  # shared upsert helper with 2-layer dedupe (see below)
 ios/App/
-  App/               # iPhone Capacitor host
-  HIITWatch Watch App/  # watchOS companion
+  App/                          # iPhone Capacitor host + native plugins
+    HealthKitReadPlugin.swift   # workouts / HR / steps / sleep reads
+    WatchPlugin.swift           # mirroring + isSimulator + Watch bridge
+  HIITWatch Watch App/          # watchOS companion (SwiftUI)
+  HIITLiveActivity/             # Lock Screen + Dynamic Island widget extension
+tests/
+  run.ts                            # main audit runner (~119 tests)
+  test-wearable-detection.ts        # pure unit tests for getPrimaryWearable (mocked supabase)
+  test-wearable-launch-copy.ts      # unit tests for activity × wearable copy matrix
+  test-wearable-endpoints.ts        # live smoke tests for log-watch-workout + sync-healthkit
+.maestro/                       # UI automation flows (see Maestro section below)
 ```
 
 ## Jarvis — action markers
@@ -71,6 +91,25 @@ Native browser scroll is better for Capacitor on iOS.
 
 Pages confirmed with sticky headers: WorkoutDetail, WorkoutSchedule, ChatSettings, HealthMetrics,
 NutritionDashboard, WorkoutLibrary, Profile, BodyScan.
+
+## Live Activity widget extension
+
+**Location:** `ios/App/HIITLiveActivity/`. Runs as a separate `HIITLiveActivityExtension.appex`
+process, shows the Lock Screen + Dynamic Island card during active workouts. The main app uses
+`src/lib/live-activity.ts` — a wrapper around the third-party `capacitor-live-activity` plugin.
+
+**Info.plist must be explicit — same rule as the Watch app.** The extension target uses
+`GENERATE_INFOPLIST_FILE = NO` + a self-contained `HIITLiveActivity/Info.plist` with
+`CFBundleIdentifier`, `CFBundleExecutable`, `CFBundleName`, `CFBundleVersion`, `CFBundlePackageType = XPC!`,
+and the `NSExtension` dict. **Don't set `GENERATE_INFOPLIST_FILE = YES` alongside an explicit
+INFOPLIST_FILE** — you get a Frankenstein plist where required keys can end up unset, and iOS crashes
+the extension at startup with `xpc_connection_copy_bundle_id` fault, taking the parent app with it.
+
+**iOS Simulator quirk — Live Activities are skipped on sim.** iOS 26 sim has an unrelated widget
+extension XPC regression that crashes the extension regardless of plist correctness. `LiveActivity.start()`
+calls `isIOSSimulator()` (from `plugins/WatchPlugin.ts`, backed by a native `#if targetEnvironment(simulator)`
+check) and returns null on sim. Real-device TestFlight builds unaffected. **If you're testing Live
+Activity UX, you must use a real iPhone, not the sim.**
 
 ## Apple Watch
 
@@ -122,6 +161,38 @@ if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
 
 `generate-workout-plan` returns `{ items: [...] }` (not `plan_items`). Each item: `{ day_index, workout_id, sequence_in_day }`.
 
+**Shared activity upsert** — `supabase/functions/_shared/activity-upsert.ts`. Both `log-watch-workout`
+(Watch direct path) and `sync-healthkit` (aggregator) route through `upsertActivities(admin, rows)`.
+Two dedupe layers: `(user_id, source_platform, source_platform_id)` for same-source, and a
+`fingerprint_hash` (sha256 of `user_id|activity_type|round(epoch/60)|round(duration/30)`) for
+cross-source. Fingerprint catches the same real-world workout arriving via Watch WCSession AND via
+HealthKit → Garmin bundle-id — collapses to one row. When editing either function, keep the fingerprint
+computation identical or dedupe breaks.
+
+## Multi-wearable — HealthKit aggregator + vendor-aware launch
+
+**Detection.** `src/lib/wearable-detection.ts` exports `getPrimaryWearable(supabase, userId)` which
+queries `activity_logs` (last 30 days), ranks by `source_platform`, and returns one of
+`apple_watch | garmin | fitbit | whoop | oura | phone_only`. Apple Watch wins ties; non-Apple vendor
+overrides only with strictly more workouts AND ≥2 in the window. `hitt_phone` and `healthkit_other`
+never win — they're the fallback signals. `usePrimaryWearable` hook caches via React Query (1h stale)
+and localStorage (7 days) so the UI doesn't flicker between variants.
+
+**Launch UI.** `WearableLaunchCard` component (`src/components/wearable/`) is rendered above the
+universal Start button on 4 pages: `ActivityLive` (`gps`), `WorkoutPlayer` (`structured`),
+`GymTimer` (`gym`), `Triathlon` (`triathlon`). Copy matrix lives in `src/lib/wearable-launch-copy.ts`
+— pure function, unit-testable. Apple Watch users see a tappable button; Garmin/Fitbit/Whoop/Oura
+see vendor-specific instructions; `phone_only` renders `null` (clean UI, universal button below is
+the action).
+
+**HealthKit sync.** `sync-healthkit` edge function ingests via `src/lib/healthkit-sync.ts` on
+foreground / auth-change. Bundle-id maps to `source_platform` (e.g. `com.garmin.connect.mobile → garmin`).
+Our own Watch bundle is skipped (WCSession direct path is authoritative for those).
+
+**Adding a new activity type or vendor** — see the audit tests in `tests/run.ts`. New `activityType`
+value needs an entry in `wearable-launch-copy.ts` MATRIX (WD-11 audit catches missing keys). New
+vendor needs an entry in `bundleIdToSourcePlatform()` + `FRIENDLY` map + `WearableLaunchCard`'s copy.
+
 ## iOS audio (Capacitor / WKWebView)
 
 iOS WKWebView blocks `audio.play()` unless called within a user gesture window OR the audio
@@ -171,9 +242,42 @@ AI insight reads "42 sec" not "00:42" (which it misreads as 42 minutes).
 
 ## Automated tests
 
+Three layers:
+
+**1. Source-file audit suite** (`tests/run.ts` — ~119 tests, ~17 pre-existing failures unrelated to
+current work). Enforces structural contracts by regex-grepping source files. Groups:
+- **NF-01..04** — Primary CTA UI feedback contract. Async click handlers must flip a
+  screen-transition setter (or show a loading state) *before* the first `await`. Fails loudly if
+  someone reintroduces the pattern that caused the "Finish button does nothing" bug on 2026-06-29.
+- **WD-01..16** — Wearable detection + launch card contracts. Ensures `getPrimaryWearable` still
+  exports all 6 `PrimaryWearable` values, `usePrimaryWearable` sets `staleTime ≥ 1h`, each activity
+  page renders `<WearableLaunchCard>` with the correct `activityType` prop, phone-only variant is
+  suppressed for all activity types, matrix has non-empty copy for every (activity × vendor) combo.
+- **SCH-01..03** — Schedule page action wiring. Guards the up-next delete affordance and the
+  `?reschedule=<id>` deep link.
+- **WA-*, CA-*, AI-*, MP-*, WP-*** — historical categories covering Watch launch, share cards, AI
+  coach markers, meal plans, workout plans.
+
+**2. Pure unit tests** (mocked-dependency, no auth):
+- `tests/test-wearable-detection.ts` — 11 cases for `getPrimaryWearable` decision rules
+- `tests/test-wearable-launch-copy.ts` — 32 cases for the activity × wearable copy matrix
+
+**3. Live smoke tests** (require TEST_EMAIL + TEST_PASSWORD):
+- `tests/test-wearable-endpoints.ts` — 15 checks against `log-watch-workout` + `sync-healthkit`
+  covering auth gating, single-source dedupe, cross-source fingerprint dedupe
+
 ```bash
-npx tsx tests/run.ts                                           # code audit only (no creds needed)
-TEST_EMAIL=x TEST_PASSWORD=y npx tsx tests/run.ts              # full suite including API + DB
+npx tsx tests/run.ts                                            # ~119 tests, ~17 pre-existing fails
+npx tsx tests/test-wearable-detection.ts                        # 11 unit tests
+npx tsx tests/test-wearable-launch-copy.ts                      # 32 unit tests
+TEST_EMAIL=x TEST_PASSWORD=y npx tsx tests/test-wearable-endpoints.ts  # 15 smoke tests
 ```
 
-20 code audit tests always pass. 19 additional tests require auth.
+**4. Maestro UI flows** (`.maestro/` — anchored flows, need iPhone Simulator + app installed).
+Assert visible elements survive refactors. Prereqs: `brew install openjdk@17` + Maestro CLI.
+```bash
+maestro test .maestro                                # runs all flows
+maestro test .maestro/finish-activity.yaml           # single flow
+```
+Flows in `.maestro/README.md`. See "Maestro tips" note: use `stopApp: false` inside `launchApp:`
+to attach to the running app instead of relaunching (which wipes navigation state).
