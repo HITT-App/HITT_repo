@@ -64,12 +64,15 @@ async function writeLastSyncISO(iso: string): Promise<void> {
   await Preferences.set({ key: LAST_SYNC_KEY, value: iso });
 }
 
-function shouldSkipForDedupe(w: HealthKitWorkout): boolean {
-  // The HIITWatch Watch App already POSTs directly via WCSession with richer
-  // metadata (intervals, structured workout linkage). Skip the HealthKit copy.
-  const bundle = (w.sourceBundleId ?? "").toLowerCase();
-  return bundle.includes("com.hiitfitness.app.watchkitapp");
-}
+// NOTE: we used to filter out HealthKit workouts from the HITT Watch app
+// bundle here on the assumption WCSession had already brought them over.
+// That was wrong — when the user declines the Watch's "Send to iPhone"
+// prompt, WCSession never fires and the workout vanishes.
+//
+// The fingerprint_hash in _shared/activity-upsert.ts already collapses the
+// same real-world workout arriving via BOTH WCSession and HealthKit into a
+// single row, so removing this filter is safe and covers the decline case
+// as an automatic fallback.
 
 let initialised = false;
 
@@ -117,7 +120,6 @@ export async function syncHealthKitNow(): Promise<{ ok: boolean; sent?: number; 
   ]);
 
   const workouts = workoutsResp.workouts
-    .filter(w => !shouldSkipForDedupe(w))
     .map(w => ({
       source_platform: bundleIdToSourcePlatform(w.sourceBundleId),
       source_platform_id: w.externalUUID ?? w.uuid,

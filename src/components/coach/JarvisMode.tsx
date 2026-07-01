@@ -1171,9 +1171,11 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                     sessionStorage.removeItem(`pb_notif_${sharePromptDetail.workoutId}`);
                   }
 
+                  const { toast } = await import('sonner');
+                  let blob: Blob | null = null;
                   try {
                     const { generateActivityShareCardBlob } = await import('@/lib/generate-activity-share-card');
-                    const blob = await generateActivityShareCardBlob({
+                    blob = await generateActivityShareCardBlob({
                       data: {
                         // Fall back to workoutTitle for the activityType hint —
                         // resolveActivityKey handles "jogging", "cycling", etc.
@@ -1186,28 +1188,43 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                       format: 'story',
                       dateISO: sharePromptDetail.startedAt,
                     });
-                    const activityLabel = (sharePromptDetail.activityType ?? sharePromptDetail.workoutTitle ?? 'workout')
-                      .toLowerCase().replace(/\s+/g, '-');
-                    const file = new File([blob], `hiit-${activityLabel}.png`, { type: 'image/png' });
+                  } catch (err) {
+                    console.error('[Jarvis share] card generation failed:', err);
+                    toast.error('Could not create share image — try again in a moment.');
+                    handleClose();
+                    return;
+                  }
 
-                    const shareData: ShareData = {
-                      title: sharePromptDetail.workoutTitle,
-                      text: `Just finished a ${sharePromptDetail.durationMin} min ${sharePromptDetail.workoutTitle} on HIIT`,
-                      files: [file],
-                    };
-                    if (navigator.share && navigator.canShare?.(shareData)) {
+                  const activityLabel = (sharePromptDetail.activityType ?? sharePromptDetail.workoutTitle ?? 'workout')
+                    .toLowerCase().replace(/\s+/g, '-');
+                  const file = new File([blob], `hiit-${activityLabel}.png`, { type: 'image/png' });
+                  const shareData: ShareData = {
+                    title: sharePromptDetail.workoutTitle,
+                    text: `Just finished a ${sharePromptDetail.durationMin} min ${sharePromptDetail.workoutTitle} on HIIT`,
+                    files: [file],
+                  };
+
+                  try {
+                    // Prefer file share; if the webview rejects the file (some Capacitor
+                    // builds are picky), degrade to text-only share so the sheet still
+                    // opens. Last-ditch fallback is a download.
+                    if (navigator.share && navigator.canShare?.({ files: [file] })) {
                       await navigator.share(shareData);
+                    } else if (navigator.share) {
+                      await navigator.share({ title: shareData.title, text: shareData.text });
+                      toast.message('Image saved to your camera roll — attach it in the share sheet.');
                     } else {
-                      // Fallback: download the PNG. Better than a dead button.
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
                       a.href = url; a.download = file.name;
                       document.body.appendChild(a); a.click(); a.remove();
                       URL.revokeObjectURL(url);
+                      toast.success('Share image downloaded');
                     }
                   } catch (err) {
                     if ((err as Error)?.name !== 'AbortError') {
-                      console.error('[Jarvis share] Failed to generate/share card:', err);
+                      console.error('[Jarvis share] navigator.share failed:', err);
+                      toast.error('Could not open the share sheet — try again in a moment.');
                     }
                   } finally {
                     handleClose();

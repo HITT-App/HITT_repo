@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Clock, Ruler, Heart, Zap, MapPin, FileText, Calendar } from "lucide-react";
+import { ArrowLeft, Flame, Clock, Ruler, Heart, Zap, MapPin, FileText, Calendar, Share } from "lucide-react";
+import { toast } from "sonner";
+import { generateActivityShareCardBlob } from "@/lib/generate-activity-share-card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getSportConfig } from "@/lib/sports";
@@ -93,6 +95,51 @@ const ActivityDetail = () => {
   const [log, setLog] = useState<ActivityLog | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShare = async () => {
+    if (!log || isSharing) return;
+    setIsSharing(true);
+    const name = fmtActivityType(log.activity_type);
+    try {
+      const blob = await generateActivityShareCardBlob({
+        data: {
+          activityType: log.activity_type,
+          durationSeconds: log.duration_seconds ?? 0,
+          calories: log.calories_burned ?? null,
+          distanceKm: log.distance_km ?? null,
+          avgHR: log.avg_heart_rate ?? null,
+        },
+        format: 'story',
+        dateISO: log.started_at ?? undefined,
+      });
+      const fileName = `hiit-${(log.activity_type ?? 'workout').replace(/\s+/g, '-')}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+      const shareData: ShareData = {
+        title: name,
+        text: `Just finished ${name} on HIIT`,
+        files: [file],
+      };
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+      } else if (navigator.share) {
+        await navigator.share({ title: name, text: shareData.text });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        console.error('[ActivityDetail] share failed:', err);
+        toast.error('Could not create share image — try again in a moment.');
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   useEffect(() => {
     if (!user || !id) return;
@@ -155,6 +202,20 @@ const ActivityDetail = () => {
             +{log.score_impact} pts
           </div>
         )}
+        <button
+          onClick={handleShare}
+          disabled={isSharing}
+          aria-label="Share activity"
+          style={{
+            width: 38, height: 38, borderRadius: 99,
+            border: `1px solid ${C.line}`, background: C.card,
+            cursor: isSharing ? 'default' : 'pointer', opacity: isSharing ? 0.5 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <Share size={17} color={C.fg} strokeWidth={2.1} />
+        </button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>

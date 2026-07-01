@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, Search, Filter, ChevronRight, Share2, Sparkles } from "lucide-react";
+import { ArrowLeft, Calendar, Search, Filter, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,24 +49,9 @@ const ActivityHistory = () => {
   const isNewSinceLastVisit = (startedAt: string) =>
     lastShareCheckMs > 0 && new Date(startedAt).getTime() > lastShareCheckMs;
 
-  const handleShare = (e: React.MouseEvent, log: any) => {
-    e.stopPropagation();
-    window.dispatchEvent(new CustomEvent("hitt:open-jarvis-share", {
-      detail: {
-        workoutId: log.id,
-        workoutTitle: log.activity_type
-          ? log.activity_type.charAt(0).toUpperCase() + log.activity_type.slice(1).replace("-", " ")
-          : "Workout",
-        durationMin: Math.max(1, Math.round((log.duration_seconds || 0) / 60)),
-        calories: log.calories_burned || 0,
-        // Enrichments consumed by the share-card generator.
-        activityType: log.activity_type ?? undefined,
-        distanceKm: log.distance_km ?? undefined,
-        avgHR: log.average_heart_rate ?? undefined,
-        startedAt: log.started_at ?? undefined,
-      },
-    }));
-  };
+  // Share now lives on the ActivityDetail page (tap → 'Share' in the header).
+  // Keeping the row action set to just navigate keeps this list feeling like
+  // a scannable overview rather than a tap-magnet.
 
   // Group logs by date
   const groupedLogs = logs.reduce((acc, log) => {
@@ -191,15 +176,6 @@ const ActivityHistory = () => {
                                   </div>
                                   <div className="text-primary">+{log.score_impact} score</div>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
-                                  onClick={(e) => handleShare(e, log)}
-                                  aria-label="Share activity"
-                                >
-                                  <Share2 className="w-4 h-4" />
-                                </Button>
                                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
                               </div>
                             </Card>
