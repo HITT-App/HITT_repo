@@ -1,0 +1,8 @@
+# Build artifacts
+*.iq
+*.prg
+
+# Signing keys — must NEVER land in git
+*.pem
+*.key
+*.der
