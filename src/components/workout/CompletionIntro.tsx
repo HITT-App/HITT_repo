@@ -9,12 +9,13 @@
 //     : <CompletionSummary ... />}
 
 import { useEffect, useRef } from "react";
-import heroVideo from "@/assets/hiit-hero.mp4";
+// Pre-clipped 8–11s window of the home hero video, played at 1.5× → 2s beat.
+import heroVideo from "@/assets/hiit-hero-clip.mp4";
 
 interface CompletionIntroProps {
-  /** How long to show the intro before firing onComplete (ms). Default 2000. */
+  /** How long to show the intro before firing onComplete (ms). Default 2000 (3s clip @ 1.5×). */
   durationMs?: number;
-  /** Playback speed multiplier. 1.0 matches the home hero; 3.0 is a fast, punchy beat. */
+  /** Playback speed multiplier. 1.5 gives a punchy but readable beat. */
   playbackRate?: number;
   /** Called when the intro is done and the parent should show the next screen. */
   onComplete: () => void;
@@ -22,7 +23,7 @@ interface CompletionIntroProps {
 
 export function CompletionIntro({
   durationMs = 2000,
-  playbackRate = 3.0,
+  playbackRate = 1.5,
   onComplete,
 }: CompletionIntroProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
