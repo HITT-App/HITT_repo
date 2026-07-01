@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { CompletionSummary } from "@/components/workout/CompletionSummary";
+import { CompletionIntro } from "@/components/workout/CompletionIntro";
 import { Analytics } from "@/lib/analytics";
 import { getSportConfig } from "@/lib/sports";
 import { App as CapApp } from "@capacitor/app";
@@ -124,6 +125,7 @@ const ActivityLive = () => {
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [introDone, setIntroDone] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
 
@@ -620,6 +622,11 @@ const ActivityLive = () => {
       </AlertDialogContent>
     </AlertDialog>
   ) : null;
+
+  // ========== COMPLETED — HITT-hero intro animation before share screen ==========
+  if (showCompleted && !introDone) {
+    return <CompletionIntro onComplete={() => setIntroDone(true)} />;
+  }
 
   // ========== COMPLETED SCREEN ==========
   if (showCompleted) {

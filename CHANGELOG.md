@@ -1,5 +1,9 @@
 # HITT App Changelog
 
+## [2026-07-01] — HITT-hero animation flashes between Finish and share screen
+
+- **New celebratory beat when you finish a GPS activity** — tapping Finish now plays a 2-second HITT-hero animation (the same line-around-the-logo motion from the home screen, at 3× speed) before the share workout screen appears. Small marker of accomplishment; keeps the transition feeling less abrupt
+
 ## [2026-07-01] — Owner meal library, poll voting, user blocking, modify-schedule fix
 
 - **Jarvis now pulls meal recommendations from the owner's curated library** — 660 recipes across Lose Weight / Gain Weight / Build Muscle / Recovery (Pre/Post-Workout), each with explicit allergens, diet tag (Omnivore / Pescatarian / Vegetarian / Vegan), macros, ingredients and step-by-step method. Spoonacular is now gated behind a feature flag (OFF by default) so recommendations come exclusively from the owner data
