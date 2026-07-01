@@ -24,4 +24,7 @@
   <!-- Save prompt -->
   <string id="SavePrompt">Save this workout?</string>
 
+  <!-- Post-save confirmation flash -->
+  <string id="Saved">Saved</string>
+
 </strings>

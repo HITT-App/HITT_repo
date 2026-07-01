@@ -1,0 +1,220 @@
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 5; @symbol_importdef<0> = [Toybox,5,7,13]; @symbol_importdef<1> = [WatchUi,5,14,21]; ]
+import Toybox.WatchUi;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 6; @symbol_importdef<0> = [Toybox,6,7,13]; @symbol_importdef<1> = [ActivityRecording,6,14,31]; ]
+import Toybox.ActivityRecording;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 7; @symbol_importdef<0> = [Toybox,7,7,13]; @symbol_importdef<1> = [Application,7,14,25]; ]
+import Toybox.Application;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 8; @symbol_importdef<0> = [Toybox,8,7,13]; @symbol_importdef<1> = [Lang,8,14,18]; ]
+import Toybox.Lang;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 10; @symbol_classdef = [SportMenuDelegate,10,6,23]; @symbol_extends<0> = [WatchUi,10,32,39]; @symbol_extends<1> = [Menu2InputDelegate,10,40,58]; ]
+class SportMenuDelegate extends WatchUi.Menu2InputDelegate {
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 10; ]
+    <init> {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 10; ]
+    static
+    <init> {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 12; @symbol_functiondef = [initialize,12,13,23]; ]
+    function initialize() as Void {
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_12_26_14_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 13 8 ]
+        symbol [ Menu2InputDelegate %tmp.2 13 8 26 ];
+        %tmp.2 = getv ? :Menu2InputDelegate;
+        symbol [ initialize %tmp.3 13 27 37 ];
+        %tmp.3 = getv function %tmp.2 :initialize;
+        invoke %tmp.2 %tmp.3();
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_12_26_14_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 16; @symbol_functiondef = [onSelect,16,13,21]; @symbol_param<0> = [item,16,22,26]; @symbol_param<0>_type<0> = [WatchUi,16,30,37]; @symbol_param<0>_type<1> = [MenuItem,16,38,46]; ]
+    function onSelect(item as WatchUi.MenuItem) as Void {
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_16_56_52_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 17 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_16_56_52_4_start" "_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_16_56_52_4_stop" ]
+        %sport.1 = local;
+        symbol [ sport %sport.1 17 12 17 ];
+        symbol [ ActivityRecording %tmp.1 17 20 37 ];
+        %tmp.1 = getm $.Toybox.ActivityRecording;
+        symbol [ SPORT_GENERIC %tmp.2 17 38 51 ];
+        %tmp.2 = getv %tmp.1 :SPORT_GENERIC;
+        lputv %sport.1 %tmp.2;
+        symbol [ sport %sport.1 17 12 17 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 18 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_16_56_52_4_start" "_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_16_56_52_4_stop" ]
+        %subSport.2 = local;
+        symbol [ subSport %subSport.2 18 12 20 ];
+        symbol [ ActivityRecording %tmp.3 18 23 40 ];
+        %tmp.3 = getm $.Toybox.ActivityRecording;
+        symbol [ SUB_SPORT_GENERIC %tmp.4 18 41 58 ];
+        %tmp.4 = getv %tmp.3 :SUB_SPORT_GENERIC;
+        lputv %subSport.2 %tmp.4;
+        symbol [ subSport %subSport.2 18 12 20 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 19 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_16_56_52_4_start" "_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_16_56_52_4_stop" ]
+        %name.3 = local;
+        symbol [ name %name.3 19 12 16 ];
+        %tmp.5 = lgetv %item;
+        symbol [ item %tmp.5 19 19 23 ];
+        symbol [ getLabel %tmp.6 19 24 32 ];
+        %tmp.6 = getv function %tmp.5 :getLabel;
+        %tmp.7 = invoke %tmp.5 %tmp.6();
+        lputv %name.3 %tmp.7;
+        symbol [ name %name.3 19 12 16 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 24 8 ]
+        %tmp.8 = lgetv %item;
+        symbol [ item %tmp.8 24 16 20 ];
+        symbol [ getId %tmp.9 24 21 26 ];
+        %tmp.9 = getv function %tmp.8 :getId;
+        %tmp.10 = invoke %tmp.8 %tmp.9();
+        push %tmp.10;
+        switch %tmp.10 @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtEnd;
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtBegin:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 25 12 ]
+        %tmp.11 = dup %tmp.10;
+        %tmp.13 = const :run;
+        symbol [ run %tmp.13 25 18 21 const ];
+        %tmp.14 = getv function %tmp.11 :equals;
+        %tmp.15 = invoke %tmp.11 %tmp.14 (%tmp.13);
+        bt %tmp.15 @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_25_12_27_21_switchCase;
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 28 12 ]
+        %tmp.16 = dup %tmp.10;
+        %tmp.18 = const :walk;
+        symbol [ walk %tmp.18 28 18 22 const ];
+        %tmp.19 = getv function %tmp.16 :equals;
+        %tmp.20 = invoke %tmp.16 %tmp.19 (%tmp.18);
+        bt %tmp.20 @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_28_12_30_21_switchCase;
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 31 12 ]
+        %tmp.21 = dup %tmp.10;
+        %tmp.23 = const :bike;
+        symbol [ bike %tmp.23 31 18 22 const ];
+        %tmp.24 = getv function %tmp.21 :equals;
+        %tmp.25 = invoke %tmp.21 %tmp.24 (%tmp.23);
+        bt %tmp.25 @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_31_12_33_21_switchCase;
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 34 12 ]
+        %tmp.26 = dup %tmp.10;
+        %tmp.28 = const :swim;
+        symbol [ swim %tmp.28 34 18 22 const ];
+        %tmp.29 = getv function %tmp.26 :equals;
+        %tmp.30 = invoke %tmp.26 %tmp.29 (%tmp.28);
+        bt %tmp.30 @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_34_12_36_21_switchCase;
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 37 12 ]
+        %tmp.31 = dup %tmp.10;
+        %tmp.33 = const :strength;
+        symbol [ strength %tmp.33 37 18 26 const ];
+        %tmp.34 = getv function %tmp.31 :equals;
+        %tmp.35 = invoke %tmp.31 %tmp.34 (%tmp.33);
+        bt %tmp.35 @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_37_12_40_21_switchCase;
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 41 12 ]
+        %tmp.36 = dup %tmp.10;
+        %tmp.38 = const :hiit;
+        symbol [ hiit %tmp.38 41 18 22 const ];
+        %tmp.39 = getv function %tmp.36 :equals;
+        %tmp.40 = invoke %tmp.36 %tmp.39 (%tmp.38);
+        bt %tmp.40 @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_41_12_44_21_switchCase;
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtDefault:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_defaultCodeBegin;
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_25_12_27_21_switchCase:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 26 16 ]
+        symbol [ ActivityRecording %tmp.41 26 24 41 ];
+        %tmp.41 = getm $.Toybox.ActivityRecording;
+        symbol [ SPORT_RUNNING %tmp.42 26 42 55 ];
+        %tmp.42 = getv %tmp.41 :SPORT_RUNNING;
+        lputv %sport.1 %tmp.42;
+        symbol [ sport %sport.1 26 16 21 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 27 16 ]
+        goto break @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtEnd;
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_28_12_30_21_switchCase:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 29 16 ]
+        symbol [ ActivityRecording %tmp.43 29 24 41 ];
+        %tmp.43 = getm $.Toybox.ActivityRecording;
+        symbol [ SPORT_WALKING %tmp.44 29 42 55 ];
+        %tmp.44 = getv %tmp.43 :SPORT_WALKING;
+        lputv %sport.1 %tmp.44;
+        symbol [ sport %sport.1 29 16 21 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 30 16 ]
+        goto break @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtEnd;
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_31_12_33_21_switchCase:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 32 16 ]
+        symbol [ ActivityRecording %tmp.45 32 24 41 ];
+        %tmp.45 = getm $.Toybox.ActivityRecording;
+        symbol [ SPORT_CYCLING %tmp.46 32 42 55 ];
+        %tmp.46 = getv %tmp.45 :SPORT_CYCLING;
+        lputv %sport.1 %tmp.46;
+        symbol [ sport %sport.1 32 16 21 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 33 16 ]
+        goto break @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtEnd;
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_34_12_36_21_switchCase:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 35 16 ]
+        symbol [ ActivityRecording %tmp.47 35 24 41 ];
+        %tmp.47 = getm $.Toybox.ActivityRecording;
+        symbol [ SPORT_SWIMMING %tmp.48 35 42 56 ];
+        %tmp.48 = getv %tmp.47 :SPORT_SWIMMING;
+        lputv %sport.1 %tmp.48;
+        symbol [ sport %sport.1 35 16 21 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 36 16 ]
+        goto break @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtEnd;
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_37_12_40_21_switchCase:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 38 16 ]
+        symbol [ ActivityRecording %tmp.49 38 24 41 ];
+        %tmp.49 = getm $.Toybox.ActivityRecording;
+        symbol [ SPORT_TRAINING %tmp.50 38 42 56 ];
+        %tmp.50 = getv %tmp.49 :SPORT_TRAINING;
+        lputv %sport.1 %tmp.50;
+        symbol [ sport %sport.1 38 16 21 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 39 16 ]
+        symbol [ ActivityRecording %tmp.51 39 27 44 ];
+        %tmp.51 = getm $.Toybox.ActivityRecording;
+        symbol [ SUB_SPORT_STRENGTH_TRAINING %tmp.52 39 45 72 ];
+        %tmp.52 = getv %tmp.51 :SUB_SPORT_STRENGTH_TRAINING;
+        lputv %subSport.2 %tmp.52;
+        symbol [ subSport %subSport.2 39 16 24 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 40 16 ]
+        goto break @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtEnd;
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_41_12_44_21_switchCase:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 42 16 ]
+        symbol [ ActivityRecording %tmp.53 42 24 41 ];
+        %tmp.53 = getm $.Toybox.ActivityRecording;
+        symbol [ SPORT_TRAINING %tmp.54 42 42 56 ];
+        %tmp.54 = getv %tmp.53 :SPORT_TRAINING;
+        lputv %sport.1 %tmp.54;
+        symbol [ sport %sport.1 42 16 21 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 43 16 ]
+        symbol [ ActivityRecording %tmp.55 43 27 44 ];
+        %tmp.55 = getm $.Toybox.ActivityRecording;
+        symbol [ SUB_SPORT_CARDIO_TRAINING %tmp.56 43 45 70 ];
+        %tmp.56 = getv %tmp.55 :SUB_SPORT_CARDIO_TRAINING;
+        lputv %subSport.2 %tmp.56;
+        symbol [ subSport %subSport.2 43 16 24 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 44 16 ]
+        goto break @_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtEnd;
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_defaultCodeBegin:
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_24_8_45_8_switchStmtEnd:
+        pop;
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" 47 8 ]
+        symbol [ WatchUi %tmp.57 47 8 15 ];
+        %tmp.57 = getm $.Toybox.WatchUi;
+        symbol [ pushView %tmp.58 47 16 24 ];
+        %tmp.58 = getv function %tmp.57 :pushView;
+        symbol [ RecordingView %tmp.62 48 16 29 ];
+        %tmp.62 = getv ? :RecordingView;
+        %tmp.63 = lgetv %sport.1;
+        symbol [ sport %tmp.63 48 30 35 ];
+        %tmp.64 = lgetv %subSport.2;
+        symbol [ subSport %tmp.64 48 37 45 ];
+        %tmp.65 = lgetv %name.3;
+        symbol [ name %tmp.65 48 47 51 ];
+        %tmp.59 = newc %tmp.62 (%tmp.63, %tmp.64, %tmp.65);
+        symbol [ RecordingDelegate %tmp.69 49 16 33 ];
+        %tmp.69 = getv ? :RecordingDelegate;
+        %tmp.66 = newc %tmp.69 ();
+        symbol [ WatchUi %tmp.70 50 12 19 ];
+        %tmp.70 = getm $.Toybox.WatchUi;
+        symbol [ SLIDE_LEFT %tmp.71 50 20 30 ];
+        %tmp.71 = getv %tmp.70 :SLIDE_LEFT;
+        invoke %tmp.57 %tmp.58(%tmp.59, %tmp.66, %tmp.71);
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuDelegate_mc_16_56_52_4_stop:
+    }
+}
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc"; @line = 5; ]
+<init> {
+}

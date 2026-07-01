@@ -53,12 +53,17 @@ class SaveConfirmDelegate extends WatchUi.ConfirmationDelegate {
 
     function onResponse(response as WatchUi.Confirm) as Boolean {
         if (response == WatchUi.CONFIRM_YES) {
-            mRecordingView.saveAndExit();
+            // RecordingView switches to its "Saved" flash (HITT logo +
+            // "Saved" text) and auto-pops itself back to the sport picker
+            // after ~1.8s. Don't pop here — the confirmation dialog auto-pops
+            // when we return true, and we want the recording view to remain
+            // visible so the flash can render.
+            mRecordingView.saveAndShowFinished();
         } else {
             mRecordingView.discardAndExit();
+            // No flash for a discard — pop straight back to the picker.
+            WatchUi.popView(WatchUi.SLIDE_RIGHT);
         }
-        // Pop the RecordingView so the user lands back on the sport picker.
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
         return true;
     }
 }

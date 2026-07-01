@@ -1,0 +1,367 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<debugInfo>
+    <manifest filename="/Users/vanessa/hitt-garmin/garmin/manifest.xml"/>
+    <pcToLineNum>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="1" lineNum="10" parent="globals/SportMenuDelegate" pc="268435460" symbol="&lt;init&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc" id="2" lineNum="14" parent="globals/HittApp" pc="268435472" symbol="&lt;init&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="3" lineNum="45" parent="globals/SaveConfirmDelegate" pc="268435484" symbol="&lt;init&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/gen/006-B4315-00/source/Rez.mcgen" id="4" lineNum="7" parent="globals/Rez" pc="268435496" symbol="&lt;init&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="5" lineNum="17" parent="globals/RecordingDelegate" pc="268435516" symbol="&lt;init&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" id="6" lineNum="9" parent="globals/SportMenuView" pc="268435528" symbol="&lt;init&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="7" lineNum="21" parent="globals/RecordingView" pc="268435540" symbol="&lt;init&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="8" lineNum="12" parent="globals/SportMenuDelegate" pc="268435552" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="8" lineNum="13" parent="globals/SportMenuDelegate" pc="268435554" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="16" parent="globals/SportMenuDelegate" pc="268435567" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="17" parent="globals/SportMenuDelegate" pc="268435570" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="18" parent="globals/SportMenuDelegate" pc="268435573" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="19" parent="globals/SportMenuDelegate" pc="268435576" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="24" parent="globals/SportMenuDelegate" pc="268435585" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="25" parent="globals/SportMenuDelegate" pc="268435592" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="28" parent="globals/SportMenuDelegate" pc="268435611" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="31" parent="globals/SportMenuDelegate" pc="268435630" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="34" parent="globals/SportMenuDelegate" pc="268435649" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="37" parent="globals/SportMenuDelegate" pc="268435668" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="41" parent="globals/SportMenuDelegate" pc="268435687" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="26" parent="globals/SportMenuDelegate" pc="268435709" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="27" parent="globals/SportMenuDelegate" pc="268435713" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="29" parent="globals/SportMenuDelegate" pc="268435716" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="30" parent="globals/SportMenuDelegate" pc="268435720" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="32" parent="globals/SportMenuDelegate" pc="268435723" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="33" parent="globals/SportMenuDelegate" pc="268435727" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="35" parent="globals/SportMenuDelegate" pc="268435730" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="36" parent="globals/SportMenuDelegate" pc="268435734" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="38" parent="globals/SportMenuDelegate" pc="268435737" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="39" parent="globals/SportMenuDelegate" pc="268435741" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="40" parent="globals/SportMenuDelegate" pc="268435745" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="42" parent="globals/SportMenuDelegate" pc="268435748" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="43" parent="globals/SportMenuDelegate" pc="268435752" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="44" parent="globals/SportMenuDelegate" pc="268435756" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuDelegate.mc" id="9" lineNum="47" parent="globals/SportMenuDelegate" pc="268435760" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc" id="10" lineNum="21" parent="globals/HittApp" pc="268435818" symbol="onStart"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc" id="11" lineNum="30" parent="globals/HittApp" pc="268435821" symbol="getInitialView"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc" id="11" lineNum="31" parent="globals/HittApp" pc="268435823" symbol="getInitialView"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc" id="12" lineNum="16" parent="globals/HittApp" pc="268435870" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc" id="12" lineNum="17" parent="globals/HittApp" pc="268435872" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc" id="13" lineNum="24" parent="globals/HittApp" pc="268435885" symbol="onStop"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="14" lineNum="54" parent="globals/SaveConfirmDelegate" pc="268435888" symbol="onResponse"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="14" lineNum="55" parent="globals/SaveConfirmDelegate" pc="268435890" symbol="onResponse"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="14" lineNum="56" parent="globals/SaveConfirmDelegate" pc="268435898" symbol="onResponse"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="14" lineNum="58" parent="globals/SaveConfirmDelegate" pc="268435913" symbol="onResponse"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="14" lineNum="61" parent="globals/SaveConfirmDelegate" pc="268435925" symbol="onResponse"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="14" lineNum="62" parent="globals/SaveConfirmDelegate" pc="268435940" symbol="onResponse"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="15" lineNum="49" parent="globals/SaveConfirmDelegate" pc="268435942" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="15" lineNum="50" parent="globals/SaveConfirmDelegate" pc="268435944" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="15" lineNum="51" parent="globals/SaveConfirmDelegate" pc="268435956" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="16" lineNum="31" parent="globals/RecordingDelegate" pc="268435966" symbol="onBack"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="16" lineNum="32" parent="globals/RecordingDelegate" pc="268435969" symbol="onBack"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="16" lineNum="33" parent="globals/RecordingDelegate" pc="268435983" symbol="onBack"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="16" lineNum="34" parent="globals/RecordingDelegate" pc="268435994" symbol="onBack"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="16" lineNum="37" parent="globals/RecordingDelegate" pc="268436049" symbol="onBack"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="16" lineNum="41" parent="globals/RecordingDelegate" pc="268436088" symbol="onBack"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="17" lineNum="19" parent="globals/RecordingDelegate" pc="268436090" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="17" lineNum="20" parent="globals/RecordingDelegate" pc="268436092" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="18" lineNum="23" parent="globals/RecordingDelegate" pc="268436105" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="18" lineNum="24" parent="globals/RecordingDelegate" pc="268436108" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="18" lineNum="25" parent="globals/RecordingDelegate" pc="268436122" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="18" lineNum="26" parent="globals/RecordingDelegate" pc="268436133" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingDelegate.mc" id="18" lineNum="28" parent="globals/RecordingDelegate" pc="268436145" symbol="onSelect"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" id="19" lineNum="11" parent="globals/SportMenuView" pc="268436147" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" id="19" lineNum="12" parent="globals/SportMenuView" pc="268436149" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" id="19" lineNum="14" parent="globals/SportMenuView" pc="268436205" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" id="19" lineNum="17" parent="globals/SportMenuView" pc="268436275" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" id="19" lineNum="20" parent="globals/SportMenuView" pc="268436345" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" id="19" lineNum="23" parent="globals/SportMenuView" pc="268436415" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" id="19" lineNum="26" parent="globals/SportMenuView" pc="268436485" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" id="19" lineNum="29" parent="globals/SportMenuView" pc="268436555" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="20" lineNum="40" parent="globals/RecordingView" pc="268436626" symbol="onShow"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="20" lineNum="42" parent="globals/RecordingView" pc="268436629" symbol="onShow"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="20" lineNum="47" parent="globals/RecordingView" pc="268436669" symbol="onShow"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="20" lineNum="48" parent="globals/RecordingView" pc="268436690" symbol="onShow"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="20" lineNum="49" parent="globals/RecordingView" pc="268436702" symbol="onShow"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="20" lineNum="53" parent="globals/RecordingView" pc="268436719" symbol="onShow"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="20" lineNum="54" parent="globals/RecordingView" pc="268436748" symbol="onShow"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="21" lineNum="64" parent="globals/RecordingView" pc="268436780" symbol="onTick"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="21" lineNum="65" parent="globals/RecordingView" pc="268436782" symbol="onTick"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="21" lineNum="66" parent="globals/RecordingView" pc="268436791" symbol="onTick"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="22" lineNum="125" parent="globals/RecordingView" pc="268436806" symbol="saveAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="22" lineNum="126" parent="globals/RecordingView" pc="268436808" symbol="saveAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="22" lineNum="126" parent="globals/RecordingView" pc="268436817" symbol="saveAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="22" lineNum="127" parent="globals/RecordingView" pc="268436821" symbol="saveAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="22" lineNum="128" parent="globals/RecordingView" pc="268436830" symbol="saveAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="22" lineNum="130" parent="globals/RecordingView" pc="268436845" symbol="saveAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="22" lineNum="131" parent="globals/RecordingView" pc="268436857" symbol="saveAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="109" parent="globals/RecordingView" pc="268436866" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="110" parent="globals/RecordingView" pc="268436868" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="110" parent="globals/RecordingView" pc="268436877" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="111" parent="globals/RecordingView" pc="268436881" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="112" parent="globals/RecordingView" pc="268436889" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="113" parent="globals/RecordingView" pc="268436901" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="114" parent="globals/RecordingView" pc="268436918" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="116" parent="globals/RecordingView" pc="268436929" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="117" parent="globals/RecordingView" pc="268436941" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="118" parent="globals/RecordingView" pc="268436970" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="119" parent="globals/RecordingView" pc="268436978" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="23" lineNum="121" parent="globals/RecordingView" pc="268436986" symbol="togglePause"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="93" parent="globals/RecordingView" pc="268436998" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="94" parent="globals/RecordingView" pc="268437001" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="95" parent="globals/RecordingView" pc="268437008" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="96" parent="globals/RecordingView" pc="268437027" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="98" parent="globals/RecordingView" pc="268437051" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="99" parent="globals/RecordingView" pc="268437059" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="100" parent="globals/RecordingView" pc="268437067" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="101" parent="globals/RecordingView" pc="268437077" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="102" parent="globals/RecordingView" pc="268437084" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="103" parent="globals/RecordingView" pc="268437091" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="24" lineNum="105" parent="globals/RecordingView" pc="268437151" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="25" lineNum="135" parent="globals/RecordingView" pc="268437187" symbol="discardAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="25" lineNum="136" parent="globals/RecordingView" pc="268437189" symbol="discardAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="25" lineNum="136" parent="globals/RecordingView" pc="268437198" symbol="discardAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="25" lineNum="137" parent="globals/RecordingView" pc="268437202" symbol="discardAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="25" lineNum="138" parent="globals/RecordingView" pc="268437211" symbol="discardAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="25" lineNum="140" parent="globals/RecordingView" pc="268437226" symbol="discardAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="25" lineNum="141" parent="globals/RecordingView" pc="268437238" symbol="discardAndExit"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="26" lineNum="33" parent="globals/RecordingView" pc="268437247" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="26" lineNum="34" parent="globals/RecordingView" pc="268437249" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="26" lineNum="35" parent="globals/RecordingView" pc="268437261" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="26" lineNum="36" parent="globals/RecordingView" pc="268437270" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="26" lineNum="37" parent="globals/RecordingView" pc="268437279" symbol="initialize"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="27" lineNum="57" parent="globals/RecordingView" pc="268437289" symbol="onHide"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="27" lineNum="58" parent="globals/RecordingView" pc="268437291" symbol="onHide"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="27" lineNum="59" parent="globals/RecordingView" pc="268437300" symbol="onHide"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="27" lineNum="60" parent="globals/RecordingView" pc="268437312" symbol="onHide"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="70" parent="globals/RecordingView" pc="268437324" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="71" parent="globals/RecordingView" pc="268437327" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="72" parent="globals/RecordingView" pc="268437343" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="74" parent="globals/RecordingView" pc="268437351" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="75" parent="globals/RecordingView" pc="268437360" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="76" parent="globals/RecordingView" pc="268437369" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="77" parent="globals/RecordingView" pc="268437376" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="79" parent="globals/RecordingView" pc="268437383" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="82" parent="globals/RecordingView" pc="268437409" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="85" parent="globals/RecordingView" pc="268437436" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="86" parent="globals/RecordingView" pc="268437444" symbol="onUpdate"/>
+        <entry filename="/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" id="28" lineNum="87" parent="globals/RecordingView" pc="268437461" symbol="onUpdate"/>
+    </pcToLineNum>
+    <symbolTable>
+        <entry id="8388639" module="true" symbol="Graphics"/>
+        <entry id="8388632" method="true" symbol="&lt;init&gt;"/>
+        <entry id="8388638" module="true" symbol="ActivityRecording"/>
+        <entry field="true" id="8388890" symbol="sport"/>
+        <entry id="39" symbol="swim"/>
+        <entry id="37" symbol="walk"/>
+        <entry field="true" id="16" symbol="&lt;globals/RecordingView/&lt;&gt;mPaused&gt;"/>
+        <entry id="40" symbol="strength"/>
+        <entry field="true" id="8388611" module="true" symbol="Toybox"/>
+        <entry id="8389108" method="true" symbol="onResponse"/>
+        <entry field="true" id="26" symbol="AppName"/>
+        <entry id="6" object="true" symbol="RecordingDelegate"/>
+        <entry id="7" object="true" symbol="RecordingView"/>
+        <entry id="4" module="true" symbol="globals/Rez/Strings"/>
+        <entry field="true" id="27" symbol="MenuTitle"/>
+        <entry id="8388648" module="true" symbol="WatchUi"/>
+        <entry id="8389081" method="true" symbol="onBack"/>
+        <entry id="2" module="true" symbol="globals/Rez"/>
+        <entry field="true" id="29" symbol="SavePrompt"/>
+        <entry field="true" id="33" symbol="SportStrength"/>
+        <entry id="8389124" method="true" symbol="onUpdate"/>
+        <entry id="8388771" module="true" object="true" symbol="Drawables"/>
+        <entry id="10" object="true" symbol="SportMenuView"/>
+        <entry field="true" id="30" symbol="SportBike"/>
+        <entry field="true" id="31" symbol="SportHIIT"/>
+        <entry id="8" object="true" symbol="SaveConfirmDelegate"/>
+        <entry id="23" method="true" symbol="saveAndExit"/>
+        <entry field="true" id="28" symbol="Paused"/>
+        <entry field="true" id="21" symbol="&lt;globals/RecordingView/&lt;&gt;mTimer&gt;"/>
+        <entry id="3" module="true" symbol="globals/Rez/Drawables"/>
+        <entry id="36" symbol="run"/>
+        <entry field="true" id="11" symbol="&lt;globals/SaveConfirmDelegate/&lt;&gt;mRecordingView&gt;"/>
+        <entry field="true" id="15" symbol="&lt;globals/RecordingView/&lt;&gt;mName&gt;"/>
+        <entry field="true" id="17" symbol="&lt;globals/RecordingView/&lt;&gt;mSession&gt;"/>
+        <entry id="5" object="true" symbol="HittApp"/>
+        <entry id="12" method="true" symbol="discardAndExit"/>
+        <entry id="8388644" module="true" symbol="System"/>
+        <entry field="true" id="19" symbol="&lt;globals/RecordingView/&lt;&gt;mStartMs&gt;"/>
+        <entry id="8389619" method="true" symbol="onSelect"/>
+        <entry id="8388769" module="true" object="true" symbol="Rez"/>
+        <entry field="true" id="20" symbol="&lt;globals/RecordingView/&lt;&gt;mSubSport&gt;"/>
+        <entry id="41" symbol="hiit"/>
+        <entry id="8388640" module="true" symbol="Lang"/>
+        <entry field="true" id="25" symbol="LauncherIcon"/>
+        <entry id="8388610" symbol="statics"/>
+        <entry id="8389123" method="true" symbol="onShow"/>
+        <entry id="8389350" module="true" symbol="globals"/>
+        <entry id="8388770" module="true" object="true" symbol="Strings"/>
+        <entry id="38" symbol="bike"/>
+        <entry id="22" method="true" symbol="onTick"/>
+        <entry id="8388702" method="true" symbol="initialize"/>
+        <entry id="8389279" method="true" symbol="onStart"/>
+        <entry field="true" id="34" symbol="SportSwim"/>
+        <entry field="true" id="8388891" symbol="subSport"/>
+        <entry field="true" id="8388892" symbol="name"/>
+        <entry field="true" id="35" symbol="SportWalk"/>
+        <entry field="true" id="32" symbol="SportRun"/>
+        <entry id="9" object="true" symbol="SportMenuDelegate"/>
+        <entry id="8389280" method="true" symbol="getInitialView"/>
+        <entry id="8389281" method="true" symbol="onStop"/>
+        <entry field="true" id="14" symbol="&lt;globals/RecordingView/&lt;&gt;mAccumulatedMs&gt;"/>
+        <entry id="13" method="true" symbol="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;"/>
+        <entry field="true" id="18" symbol="&lt;globals/RecordingView/&lt;&gt;mSport&gt;"/>
+        <entry id="8388646" module="true" object="true" symbol="Timer"/>
+        <entry id="8389125" method="true" symbol="onHide"/>
+        <entry id="24" method="true" symbol="togglePause"/>
+        <entry id="8388635" module="true" symbol="Application"/>
+        <entry field="true" id="8389642" symbol="title"/>
+    </symbolTable>
+    <localVars>
+        <entry arg="true" endPc="268435817" name="item" stackId="1" startPc="268435567"/>
+        <entry endPc="268435816" name="sport" stackId="2" startPc="268435570"/>
+        <entry endPc="268435816" name="subSport" stackId="3" startPc="268435570"/>
+        <entry endPc="268435816" name="name" stackId="4" startPc="268435570"/>
+        <entry arg="true" endPc="268435941" name="response" stackId="1" startPc="268435888"/>
+        <entry arg="true" endPc="268435965" name="view" stackId="1" startPc="268435942"/>
+        <entry endPc="268436089" name="view" stackId="1" startPc="268435969"/>
+        <entry endPc="268436084" name="prompt" stackId="2" startPc="268435994"/>
+        <entry endPc="268436146" name="view" stackId="1" startPc="268436108"/>
+        <entry endPc="268436778" name="opts" stackId="1" startPc="268436629"/>
+        <entry endPc="268437186" name="totalMs" stackId="1" startPc="268437001"/>
+        <entry endPc="268437186" name="totalSec" stackId="2" startPc="268437001"/>
+        <entry endPc="268437186" name="hours" stackId="3" startPc="268437001"/>
+        <entry endPc="268437186" name="minutes" stackId="4" startPc="268437001"/>
+        <entry endPc="268437186" name="seconds" stackId="5" startPc="268437001"/>
+        <entry arg="true" endPc="268437288" name="sport" stackId="1" startPc="268437247"/>
+        <entry arg="true" endPc="268437288" name="subSport" stackId="2" startPc="268437247"/>
+        <entry arg="true" endPc="268437288" name="name" stackId="3" startPc="268437247"/>
+        <entry arg="true" endPc="268437516" name="dc" stackId="1" startPc="268437324"/>
+        <entry endPc="268437515" name="w" stackId="2" startPc="268437327"/>
+        <entry endPc="268437515" name="h" stackId="3" startPc="268437327"/>
+        <entry endPc="268437515" name="centerX" stackId="4" startPc="268437327"/>
+        <entry endPc="268437515" name="centerY" stackId="5" startPc="268437327"/>
+    </localVars>
+    <deviceInfo deviceVersion="3cbcff5b61d759a7585c5fa7606e74c0bd5dfa74" partNumber="006-B4315-00"/>
+    <annotations>
+        <annotationEntry annotation="initialized" class="Drawables" module="globals/Rez" symbol="LauncherIcon"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="SavePrompt"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="Paused"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="SportRun"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="SportSwim"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="SportHIIT"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="SportStrength"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="SportBike"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="SportWalk"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="AppName"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="MenuTitle"/>
+    </annotations>
+    <dataEntryOffsetMappings>
+        <dataEntry label="globals" offset="49" parentId="" symbolId="globals" type="module"/>
+        <dataEntry label="globals/SportMenuDelegate" offset="143" parentId="globals" symbolId="SportMenuDelegate" type="class"/>
+        <dataEntry label="globals/HittApp" offset="196" parentId="globals" symbolId="HittApp" type="class"/>
+        <dataEntry label="globals/SaveConfirmDelegate" offset="267" parentId="globals" symbolId="SaveConfirmDelegate" type="class"/>
+        <dataEntry label="globals/Rez" offset="329" parentId="globals" symbolId="Rez" type="module"/>
+        <dataEntry label="globals/RecordingDelegate" offset="373" parentId="globals" symbolId="RecordingDelegate" type="class"/>
+        <dataEntry label="globals/SportMenuView" offset="435" parentId="globals" symbolId="SportMenuView" type="class"/>
+        <dataEntry label="globals/RecordingView" offset="479" parentId="globals" symbolId="RecordingView" type="class"/>
+        <dataEntry label="globals/Rez/Drawables" offset="667" parentId="Rez" symbolId="Drawables" type="module"/>
+        <dataEntry label="globals/Rez/Strings" offset="702" parentId="Rez" symbolId="Strings" type="module"/>
+    </dataEntryOffsetMappings>
+    <functions>
+        <functionEntry accessMode="public" endPc="268435471" name="&lt;init&gt;" parent="SportMenuDelegate" startPc="268435460">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435483" name="&lt;init&gt;" parent="HittApp" startPc="268435472">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435495" name="&lt;init&gt;" parent="SaveConfirmDelegate" startPc="268435484">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435515" name="&lt;init&gt;" parent="Rez" startPc="268435496">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435527" name="&lt;init&gt;" parent="RecordingDelegate" startPc="268435516">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435539" name="&lt;init&gt;" parent="SportMenuView" startPc="268435528">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435551" name="&lt;init&gt;" parent="RecordingView" startPc="268435540">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435566" name="initialize" parent="SportMenuDelegate" startPc="268435552">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435817" name="onSelect" parent="SportMenuDelegate" startPc="268435567">
+            <param id="item"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435820" name="onStart" parent="HittApp" startPc="268435818">
+            <param id="state"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435869" name="getInitialView" parent="HittApp" startPc="268435821">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435884" name="initialize" parent="HittApp" startPc="268435870">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435887" name="onStop" parent="HittApp" startPc="268435885">
+            <param id="state"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435941" name="onResponse" parent="SaveConfirmDelegate" startPc="268435888">
+            <param id="response"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435965" name="initialize" parent="SaveConfirmDelegate" startPc="268435942">
+            <param id="view"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" name="&lt;init&gt;" parent="Drawables">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" name="&lt;init&gt;" parent="Strings">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436089" name="onBack" parent="RecordingDelegate" startPc="268435966">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436104" name="initialize" parent="RecordingDelegate" startPc="268436090">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436146" name="onSelect" parent="RecordingDelegate" startPc="268436105">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436625" name="initialize" parent="SportMenuView" startPc="268436147">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436779" name="onShow" parent="RecordingView" startPc="268436626">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436805" name="onTick" parent="RecordingView" startPc="268436780">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436865" name="saveAndExit" parent="RecordingView" startPc="268436806">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436997" name="togglePause" parent="RecordingView" startPc="268436866">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="private" endPc="268437186" name="&lt;globals/RecordingView/&lt;&gt;formatElapsed&gt;" parent="RecordingView" startPc="268436998">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437246" name="discardAndExit" parent="RecordingView" startPc="268437187">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437288" name="initialize" parent="RecordingView" startPc="268437247">
+            <param id="sport"/>
+            <param id="subSport"/>
+            <param id="name"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437323" name="onHide" parent="RecordingView" startPc="268437289">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437516" name="onUpdate" parent="RecordingView" startPc="268437324">
+            <param id="dc"/>
+            <documentation/>
+        </functionEntry>
+    </functions>
+</debugInfo>

@@ -1,0 +1,693 @@
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 13; @symbol_importdef<0> = [Toybox,13,7,13]; @symbol_importdef<1> = [WatchUi,13,14,21]; ]
+import Toybox.WatchUi;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 14; @symbol_importdef<0> = [Toybox,14,7,13]; @symbol_importdef<1> = [ActivityRecording,14,14,31]; ]
+import Toybox.ActivityRecording;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 15; @symbol_importdef<0> = [Toybox,15,7,13]; @symbol_importdef<1> = [Graphics,15,14,22]; ]
+import Toybox.Graphics;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 16; @symbol_importdef<0> = [Toybox,16,7,13]; @symbol_importdef<1> = [System,16,14,20]; ]
+import Toybox.System;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 17; @symbol_importdef<0> = [Toybox,17,7,13]; @symbol_importdef<1> = [Timer,17,14,19]; ]
+import Toybox.Timer;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 18; @symbol_importdef<0> = [Toybox,18,7,13]; @symbol_importdef<1> = [Application,18,14,25]; ]
+import Toybox.Application;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 19; @symbol_importdef<0> = [Toybox,19,7,13]; @symbol_importdef<1> = [Lang,19,14,18]; ]
+import Toybox.Lang;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 21; @symbol_classdef = [RecordingView,21,6,19]; @symbol_extends<0> = [WatchUi,21,28,35]; @symbol_extends<1> = [View,21,36,40]; ]
+class RecordingView extends WatchUi.View {
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 21; ]
+    <init> {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 21; ]
+    static
+    <init> {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 23; @position = 16; @symbol_vardef = [mSession,23,16,24]; @symbol_type<0> = [ActivityRecording,23,28,45]; @symbol_type<1> = [Session,23,46,53]; ]
+    private
+    var mSession as ActivityRecording.Session or Null;
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 24; @position = 16; @symbol_vardef = [mSport,24,16,22]; @symbol_type<0> = [ActivityRecording,24,26,43]; @symbol_type<1> = [Sport,24,44,49]; ]
+    private
+    var mSport as ActivityRecording.Sport;
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 25; @position = 16; @symbol_vardef = [mSubSport,25,16,25]; @symbol_type<0> = [ActivityRecording,25,29,46]; @symbol_type<1> = [SubSport,25,47,55]; ]
+    private
+    var mSubSport as ActivityRecording.SubSport;
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 26; @position = 16; @symbol_vardef = [mName,26,16,21]; @symbol_type<0> = [String,26,25,31]; ]
+    private
+    var mName as String;
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 28; @position = 16; @symbol_vardef = [mTimer,28,16,22]; @symbol_type<0> = [Timer,28,26,31]; @symbol_type<1> = [Timer,28,32,37]; ]
+    private
+    var mTimer as Timer.Timer or Null;
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 29; @position = 16; @symbol_vardef = [mStartMs,29,16,24]; @symbol_type<0> = [Number,29,28,34]; ]
+    private
+    var mStartMs as Number = 0;
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 30; @position = 16; @symbol_vardef = [mAccumulatedMs,30,16,30]; @symbol_type<0> = [Number,30,34,40]; ]
+    private
+    var mAccumulatedMs as Number = 0;
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 31; @position = 16; @symbol_vardef = [mPaused,31,16,23]; @symbol_type<0> = [Boolean,31,27,34]; ]
+    private
+    var mPaused as Boolean = false;
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 33; @symbol_functiondef = [initialize,33,13,23]; @symbol_param<0> = [sport,33,24,29]; @symbol_param<0>_type<0> = [ActivityRecording,33,33,50]; @symbol_param<0>_type<1> = [Sport,33,51,56]; @symbol_param<1> = [subSport,33,58,66]; @symbol_param<1>_type<0> = [ActivityRecording,33,70,87]; @symbol_param<1>_type<1> = [SubSport,33,88,96]; @symbol_param<2> = [name,33,98,102]; @symbol_param<2>_type<0> = [String,33,106,112]; ]
+    function initialize(sport as ActivityRecording.Sport, subSport as ActivityRecording.SubSport, name as String) as Void {
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_33_114_38_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 34 8 ]
+        symbol [ View %tmp.2 34 8 12 ];
+        %tmp.2 = getv ? :View;
+        symbol [ initialize %tmp.3 34 13 23 ];
+        %tmp.3 = getv function %tmp.2 :initialize;
+        invoke %tmp.2 %tmp.3();
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 35 8 ]
+        %tmp.4 = lgetv %sport;
+        symbol [ sport %tmp.4 35 17 22 ];
+        symbol [ mSport ? 35 8 14 ];
+        putv self :mSport %tmp.4;
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 36 8 ]
+        %tmp.5 = lgetv %subSport;
+        symbol [ subSport %tmp.5 36 20 28 ];
+        symbol [ mSubSport ? 36 8 17 ];
+        putv self :mSubSport %tmp.5;
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 37 8 ]
+        %tmp.6 = lgetv %name;
+        symbol [ name %tmp.6 37 16 20 ];
+        symbol [ mName ? 37 8 13 ];
+        putv self :mName %tmp.6;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_33_114_38_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 40; @symbol_functiondef = [onShow,40,13,19]; ]
+    function onShow() as Void {
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_40_30_55_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 42 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_40_30_55_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_40_30_55_4_stop" ]
+        %opts.1 = local;
+        symbol [ opts %opts.1 42 12 16 ];
+        %tmp.1 = newd 3;
+        %tmp.3 = const :sport;
+        symbol [ sport %tmp.3 43 13 18 const ];
+        symbol [ mSport %tmp.5 43 22 28 ];
+        %tmp.5 = getv ? :mSport;
+        %tmp.6 = dup %tmp.1;
+        %tmp.7 = aputv %tmp.6 %tmp.3 %tmp.5;
+        %tmp.9 = const :subSport;
+        symbol [ subSport %tmp.9 44 13 21 const ];
+        symbol [ mSubSport %tmp.11 44 25 34 ];
+        %tmp.11 = getv ? :mSubSport;
+        %tmp.12 = dup %tmp.7;
+        %tmp.13 = aputv %tmp.12 %tmp.9 %tmp.11;
+        %tmp.15 = const :name;
+        symbol [ name %tmp.15 45 13 17 const ];
+        symbol [ mName %tmp.17 45 21 26 ];
+        %tmp.17 = getv ? :mName;
+        %tmp.18 = dup %tmp.13;
+        %tmp.19 = aputv %tmp.18 %tmp.15 %tmp.17;
+        lputv %opts.1 %tmp.19;
+        symbol [ opts %opts.1 42 12 16 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 47 8 ]
+        symbol [ ActivityRecording %tmp.20 47 19 36 ];
+        %tmp.20 = getm $.Toybox.ActivityRecording;
+        symbol [ createSession %tmp.21 47 37 50 ];
+        %tmp.21 = getv function %tmp.20 :createSession;
+        %tmp.22 = lgetv %opts.1;
+        symbol [ opts %tmp.22 47 51 55 ];
+        %tmp.23 = invoke %tmp.20 %tmp.21(%tmp.22);
+        symbol [ mSession ? 47 8 16 ];
+        putv self :mSession %tmp.23;
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 48 8 ]
+        symbol [ mSession %tmp.25 48 8 16 ];
+        %tmp.25 = getv ? :mSession;
+        symbol [ start %tmp.26 48 17 22 ];
+        %tmp.26 = getv function %tmp.25 :start;
+        invoke %tmp.25 %tmp.26();
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 49 8 ]
+        symbol [ System %tmp.27 49 19 25 ];
+        %tmp.27 = getm $.Toybox.System;
+        symbol [ getTimer %tmp.28 49 26 34 ];
+        %tmp.28 = getv function %tmp.27 :getTimer;
+        %tmp.29 = invoke %tmp.27 %tmp.28();
+        symbol [ mStartMs ? 49 8 16 ];
+        putv self :mStartMs %tmp.29;
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 53 8 ]
+        symbol [ Timer %tmp.32 53 21 26 ];
+        %tmp.32 = getm $.Toybox.Timer;
+        symbol [ Timer %tmp.33 53 27 32 ];
+        %tmp.33 = getv function ? %tmp.32 :Timer;
+        %tmp.30 = newc %tmp.33 ();
+        symbol [ mTimer ? 53 8 14 ];
+        putv self :mTimer %tmp.30;
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 54 8 ]
+        symbol [ mTimer %tmp.35 54 8 14 ];
+        %tmp.35 = getv ? :mTimer;
+        symbol [ start %tmp.36 54 15 20 ];
+        %tmp.36 = getv function %tmp.35 :start;
+        %tmp.37 = self;
+        symbol [ method %tmp.38 54 21 27 ];
+        %tmp.38 = getv function %tmp.37 :method;
+        %tmp.40 = const :onTick;
+        symbol [ onTick %tmp.40 54 29 35 const ];
+        %tmp.41 = invoke %tmp.37 %tmp.38(%tmp.40);
+        %tmp.42 = 1000;
+        %tmp.43 = true;
+        invoke %tmp.35 %tmp.36(%tmp.41, %tmp.42, %tmp.43);
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_40_30_55_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 57; @symbol_functiondef = [onHide,57,13,19]; ]
+    function onHide() as Void {
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_57_30_62_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 58 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_58_8_61_8_if_stmt:
+        symbol [ mTimer %tmp.2 58 12 18 ];
+        %tmp.2 = getv ? :mTimer;
+        %tmp.3 = null;
+        %tmp.4 = ne %tmp.2 %tmp.3;
+        bf %tmp.4 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_58_8_61_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_58_8_61_8_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_58_28_61_8_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 59 12 ]
+        symbol [ mTimer %tmp.6 59 12 18 ];
+        %tmp.6 = getv ? :mTimer;
+        %tmp.7 = as %tmp.6 { (!Null) };
+        symbol [ stop %tmp.8 59 19 23 ];
+        %tmp.8 = getv function %tmp.7 :stop;
+        invoke %tmp.7 %tmp.8();
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 60 12 ]
+        %tmp.9 = null;
+        symbol [ mTimer ? 60 12 18 ];
+        putv self :mTimer %tmp.9;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_58_28_61_8_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_58_8_61_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_58_8_61_8_if_end:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_57_30_62_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 64; @symbol_functiondef = [onTick,64,13,19]; ]
+    function onTick() as Void {
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_64_30_68_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 65 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_65_8_67_8_if_stmt:
+        symbol [ mPaused %tmp.2 65 13 20 ];
+        %tmp.2 = getv ? :mPaused;
+        %tmp.3 = not %tmp.2;
+        bf %tmp.3 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_65_8_67_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_65_8_67_8_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_65_22_67_8_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 66 12 ]
+        symbol [ WatchUi %tmp.4 66 12 19 ];
+        %tmp.4 = getm $.Toybox.WatchUi;
+        symbol [ requestUpdate %tmp.5 66 20 33 ];
+        %tmp.5 = getv function %tmp.4 :requestUpdate;
+        invoke %tmp.4 %tmp.5();
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_65_22_67_8_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_65_8_67_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_65_8_67_8_if_end:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_64_30_68_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 70; @symbol_functiondef = [onUpdate,70,13,21]; @symbol_param<0> = [dc,70,22,24]; @symbol_param<0>_type<0> = [Graphics,70,28,36]; @symbol_param<0>_type<1> = [Dc,70,37,39]; ]
+    function onUpdate(dc as Graphics.Dc) as Void {
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 71 8 ]
+        %tmp.1 = lgetv %dc;
+        symbol [ dc %tmp.1 71 8 10 ];
+        symbol [ setColor %tmp.2 71 11 19 ];
+        %tmp.2 = getv function %tmp.1 :setColor;
+        symbol [ Graphics %tmp.3 71 20 28 ];
+        %tmp.3 = getm $.Toybox.Graphics;
+        symbol [ COLOR_WHITE %tmp.4 71 29 40 ];
+        %tmp.4 = getv %tmp.3 :COLOR_WHITE;
+        symbol [ Graphics %tmp.5 71 42 50 ];
+        %tmp.5 = getm $.Toybox.Graphics;
+        symbol [ COLOR_BLACK %tmp.6 71 51 62 ];
+        %tmp.6 = getv %tmp.5 :COLOR_BLACK;
+        invoke %tmp.1 %tmp.2(%tmp.4, %tmp.6);
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 72 8 ]
+        %tmp.7 = lgetv %dc;
+        symbol [ dc %tmp.7 72 8 10 ];
+        symbol [ clear %tmp.8 72 11 16 ];
+        %tmp.8 = getv function %tmp.7 :clear;
+        invoke %tmp.7 %tmp.8();
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 74 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_stop" ]
+        %w.1 = local;
+        symbol [ w %w.1 74 12 13 ];
+        %tmp.9 = lgetv %dc;
+        symbol [ dc %tmp.9 74 16 18 ];
+        symbol [ getWidth %tmp.10 74 19 27 ];
+        %tmp.10 = getv function %tmp.9 :getWidth;
+        %tmp.11 = invoke %tmp.9 %tmp.10();
+        lputv %w.1 %tmp.11;
+        symbol [ w %w.1 74 12 13 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 75 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_stop" ]
+        %h.2 = local;
+        symbol [ h %h.2 75 12 13 ];
+        %tmp.12 = lgetv %dc;
+        symbol [ dc %tmp.12 75 16 18 ];
+        symbol [ getHeight %tmp.13 75 19 28 ];
+        %tmp.13 = getv function %tmp.12 :getHeight;
+        %tmp.14 = invoke %tmp.12 %tmp.13();
+        lputv %h.2 %tmp.14;
+        symbol [ h %h.2 75 12 13 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 76 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_stop" ]
+        %centerX.3 = local;
+        symbol [ centerX %centerX.3 76 12 19 ];
+        %tmp.15 = lgetv %w.1;
+        symbol [ w %tmp.15 76 22 23 ];
+        %tmp.16 = 2;
+        %tmp.17 = div %tmp.15 %tmp.16;
+        lputv %centerX.3 %tmp.17;
+        symbol [ centerX %centerX.3 76 12 19 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 77 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_stop" ]
+        %centerY.4 = local;
+        symbol [ centerY %centerY.4 77 12 19 ];
+        %tmp.18 = lgetv %h.2;
+        symbol [ h %tmp.18 77 22 23 ];
+        %tmp.19 = 2;
+        %tmp.20 = div %tmp.18 %tmp.19;
+        lputv %centerY.4 %tmp.20;
+        symbol [ centerY %centerY.4 77 12 19 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 79 8 ]
+        %tmp.21 = lgetv %dc;
+        symbol [ dc %tmp.21 79 8 10 ];
+        symbol [ drawText %tmp.22 79 11 19 ];
+        %tmp.22 = getv function %tmp.21 :drawText;
+        %tmp.23 = lgetv %centerX.3;
+        symbol [ centerX %tmp.23 79 20 27 ];
+        %tmp.24 = lgetv %centerY.4;
+        symbol [ centerY %tmp.24 79 29 36 ];
+        %tmp.25 = 40;
+        %tmp.26 = sub %tmp.24 %tmp.25;
+        symbol [ Graphics %tmp.27 79 43 51 ];
+        %tmp.27 = getm $.Toybox.Graphics;
+        symbol [ FONT_SMALL %tmp.28 79 52 62 ];
+        %tmp.28 = getv %tmp.27 :FONT_SMALL;
+        symbol [ mName %tmp.30 79 64 69 ];
+        %tmp.30 = getv ? :mName;
+        symbol [ Graphics %tmp.31 80 12 20 ];
+        %tmp.31 = getm $.Toybox.Graphics;
+        symbol [ TEXT_JUSTIFY_CENTER %tmp.32 80 21 40 ];
+        %tmp.32 = getv %tmp.31 :TEXT_JUSTIFY_CENTER;
+        invoke %tmp.21 %tmp.22(%tmp.23, %tmp.26, %tmp.28, %tmp.30, %tmp.32);
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 82 8 ]
+        %tmp.33 = lgetv %dc;
+        symbol [ dc %tmp.33 82 8 10 ];
+        symbol [ drawText %tmp.34 82 11 19 ];
+        %tmp.34 = getv function %tmp.33 :drawText;
+        %tmp.35 = lgetv %centerX.3;
+        symbol [ centerX %tmp.35 82 20 27 ];
+        %tmp.36 = lgetv %centerY.4;
+        symbol [ centerY %tmp.36 82 29 36 ];
+        %tmp.37 = 15;
+        %tmp.38 = sub %tmp.36 %tmp.37;
+        symbol [ Graphics %tmp.39 82 43 51 ];
+        %tmp.39 = getm $.Toybox.Graphics;
+        symbol [ FONT_NUMBER_MEDIUM %tmp.40 82 52 70 ];
+        %tmp.40 = getv %tmp.39 :FONT_NUMBER_MEDIUM;
+        %tmp.41 = self;
+        symbol [ formatElapsed %tmp.42 82 72 85 ];
+        %tmp.42 = getv function %tmp.41 :formatElapsed;
+        %tmp.43 = invoke %tmp.41 %tmp.42();
+        symbol [ Graphics %tmp.44 83 12 20 ];
+        %tmp.44 = getm $.Toybox.Graphics;
+        symbol [ TEXT_JUSTIFY_CENTER %tmp.45 83 21 40 ];
+        %tmp.45 = getv %tmp.44 :TEXT_JUSTIFY_CENTER;
+        invoke %tmp.33 %tmp.34(%tmp.35, %tmp.38, %tmp.40, %tmp.43, %tmp.45);
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 85 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_85_8_90_8_if_stmt:
+        symbol [ mPaused %tmp.47 85 12 19 ];
+        %tmp.47 = getv ? :mPaused;
+        bf %tmp.47 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_85_8_90_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_85_8_90_8_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_85_21_90_8_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 86 12 ]
+        %tmp.48 = lgetv %dc;
+        symbol [ dc %tmp.48 86 12 14 ];
+        symbol [ setColor %tmp.49 86 15 23 ];
+        %tmp.49 = getv function %tmp.48 :setColor;
+        symbol [ Graphics %tmp.50 86 24 32 ];
+        %tmp.50 = getm $.Toybox.Graphics;
+        symbol [ COLOR_ORANGE %tmp.51 86 33 45 ];
+        %tmp.51 = getv %tmp.50 :COLOR_ORANGE;
+        symbol [ Graphics %tmp.52 86 47 55 ];
+        %tmp.52 = getm $.Toybox.Graphics;
+        symbol [ COLOR_TRANSPARENT %tmp.53 86 56 73 ];
+        %tmp.53 = getv %tmp.52 :COLOR_TRANSPARENT;
+        invoke %tmp.48 %tmp.49(%tmp.51, %tmp.53);
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 87 12 ]
+        %tmp.54 = lgetv %dc;
+        symbol [ dc %tmp.54 87 12 14 ];
+        symbol [ drawText %tmp.55 87 15 23 ];
+        %tmp.55 = getv function %tmp.54 :drawText;
+        %tmp.56 = lgetv %centerX.3;
+        symbol [ centerX %tmp.56 87 24 31 ];
+        %tmp.57 = lgetv %centerY.4;
+        symbol [ centerY %tmp.57 87 33 40 ];
+        %tmp.58 = 30;
+        %tmp.59 = add %tmp.57 %tmp.58;
+        symbol [ Graphics %tmp.60 87 47 55 ];
+        %tmp.60 = getm $.Toybox.Graphics;
+        symbol [ FONT_SMALL %tmp.61 87 56 66 ];
+        %tmp.61 = getv %tmp.60 :FONT_SMALL;
+        symbol [ Application %tmp.62 88 16 27 ];
+        %tmp.62 = getm $.Toybox.Application;
+        symbol [ loadResource %tmp.63 88 28 40 ];
+        %tmp.63 = getv function %tmp.62 :loadResource;
+        symbol [ Rez %tmp.65 88 41 44 ];
+        %tmp.65 = getv ? :Rez;
+        symbol [ Strings %tmp.66 88 45 52 ];
+        %tmp.66 = getv %tmp.65 :Strings;
+        symbol [ Paused %tmp.67 88 53 59 ];
+        %tmp.67 = getv %tmp.66 :Paused;
+        %tmp.68 = invoke %tmp.62 %tmp.63(%tmp.67);
+        symbol [ Graphics %tmp.69 89 16 24 ];
+        %tmp.69 = getm $.Toybox.Graphics;
+        symbol [ TEXT_JUSTIFY_CENTER %tmp.70 89 25 44 ];
+        %tmp.70 = getv %tmp.69 :TEXT_JUSTIFY_CENTER;
+        invoke %tmp.54 %tmp.55(%tmp.56, %tmp.59, %tmp.61, %tmp.68, %tmp.70);
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_85_21_90_8_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_85_8_90_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_85_8_90_8_if_end:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_70_49_91_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 93; @symbol_functiondef = [formatElapsed,93,21,34]; @symbol_return<0> = [String,93,40,46]; ]
+    private
+    function formatElapsed() as String {
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 94 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_stop" ]
+        %totalMs.1 = local;
+        symbol [ totalMs %totalMs.1 94 12 19 ];
+        symbol [ mAccumulatedMs %tmp.2 94 22 36 ];
+        %tmp.2 = getv ? :mAccumulatedMs;
+        lputv %totalMs.1 %tmp.2;
+        symbol [ totalMs %totalMs.1 94 12 19 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 95 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_8_97_8_if_stmt:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_12_95_35_begin:
+        symbol [ mPaused %tmp.4 95 13 20 ];
+        %tmp.4 = getv ? :mPaused;
+        %tmp.5 = not %tmp.4;
+        bf %tmp.5 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_8_97_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_24_95_35_true:
+        symbol [ mStartMs %tmp.7 95 24 32 ];
+        %tmp.7 = getv ? :mStartMs;
+        %tmp.8 = 0;
+        %tmp.9 = gt %tmp.7 %tmp.8;
+        push %tmp.9;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_24_95_35_end:
+        %tmp.10 = phi [%tmp.5 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_12_95_35_begin] [%tmp.9 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_24_95_35_true] [%tmp.10 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_24_95_35_end];
+        bf %tmp.10 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_8_97_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_8_97_8_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_38_97_8_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 96 12 ]
+        %tmp.11 = lgetv %totalMs.1;
+        symbol [ totalMs %tmp.11 96 12 19 ];
+        symbol [ System %tmp.12 96 23 29 ];
+        %tmp.12 = getm $.Toybox.System;
+        symbol [ getTimer %tmp.13 96 30 38 ];
+        %tmp.13 = getv function %tmp.12 :getTimer;
+        %tmp.14 = invoke %tmp.12 %tmp.13();
+        symbol [ mStartMs %tmp.16 96 43 51 ];
+        %tmp.16 = getv ? :mStartMs;
+        %tmp.17 = sub %tmp.14 %tmp.16;
+        %tmp.18 = add %tmp.11 %tmp.17;
+        lputv %totalMs.1 %tmp.18;
+        symbol [ totalMs %totalMs.1 96 12 19 ];
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_38_97_8_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_8_97_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_95_8_97_8_if_end:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 98 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_stop" ]
+        %totalSec.2 = local;
+        symbol [ totalSec %totalSec.2 98 12 20 ];
+        %tmp.19 = lgetv %totalMs.1;
+        symbol [ totalMs %tmp.19 98 23 30 ];
+        %tmp.20 = 1000;
+        %tmp.21 = div %tmp.19 %tmp.20;
+        lputv %totalSec.2 %tmp.21;
+        symbol [ totalSec %totalSec.2 98 12 20 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 99 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_stop" ]
+        %hours.3 = local;
+        symbol [ hours %hours.3 99 12 17 ];
+        %tmp.22 = lgetv %totalSec.2;
+        symbol [ totalSec %tmp.22 99 20 28 ];
+        %tmp.23 = 3600;
+        %tmp.24 = div %tmp.22 %tmp.23;
+        lputv %hours.3 %tmp.24;
+        symbol [ hours %hours.3 99 12 17 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 100 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_stop" ]
+        %minutes.4 = local;
+        symbol [ minutes %minutes.4 100 12 19 ];
+        %tmp.25 = lgetv %totalSec.2;
+        symbol [ totalSec %tmp.25 100 23 31 ];
+        %tmp.26 = 60;
+        %tmp.27 = div %tmp.25 %tmp.26;
+        %tmp.28 = 60;
+        %tmp.29 = mod %tmp.27 %tmp.28;
+        lputv %minutes.4 %tmp.29;
+        symbol [ minutes %minutes.4 100 12 19 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 101 8 ]
+        [ "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_start" "_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_stop" ]
+        %seconds.5 = local;
+        symbol [ seconds %seconds.5 101 12 19 ];
+        %tmp.30 = lgetv %totalSec.2;
+        symbol [ totalSec %tmp.30 101 22 30 ];
+        %tmp.31 = 60;
+        %tmp.32 = mod %tmp.30 %tmp.31;
+        lputv %seconds.5 %tmp.32;
+        symbol [ seconds %seconds.5 101 12 19 ];
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 102 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_102_8_104_8_if_stmt:
+        %tmp.33 = lgetv %hours.3;
+        symbol [ hours %tmp.33 102 12 17 ];
+        %tmp.34 = 0;
+        %tmp.35 = gt %tmp.33 %tmp.34;
+        bf %tmp.35 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_102_8_104_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_102_8_104_8_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_102_23_104_8_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 103 12 ]
+        %tmp.36 = lgetv %hours.3;
+        symbol [ hours %tmp.36 103 19 24 ];
+        symbol [ format %tmp.37 103 25 31 ];
+        %tmp.37 = getv function %tmp.36 :format;
+        %tmp.38 = "%d";
+        %tmp.39 = invoke %tmp.36 %tmp.37(%tmp.38);
+        %tmp.40 = ":";
+        %tmp.41 = add %tmp.39 %tmp.40;
+        %tmp.42 = lgetv %minutes.4;
+        symbol [ minutes %tmp.42 103 46 53 ];
+        symbol [ format %tmp.43 103 54 60 ];
+        %tmp.43 = getv function %tmp.42 :format;
+        %tmp.44 = "%02d";
+        %tmp.45 = invoke %tmp.42 %tmp.43(%tmp.44);
+        %tmp.46 = add %tmp.41 %tmp.45;
+        %tmp.47 = ":";
+        %tmp.48 = add %tmp.46 %tmp.47;
+        %tmp.49 = lgetv %seconds.5;
+        symbol [ seconds %tmp.49 103 77 84 ];
+        symbol [ format %tmp.50 103 85 91 ];
+        %tmp.50 = getv function %tmp.49 :format;
+        %tmp.51 = "%02d";
+        %tmp.52 = invoke %tmp.49 %tmp.50(%tmp.51);
+        %tmp.53 = add %tmp.48 %tmp.52;
+        ret %tmp.53;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_102_23_104_8_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_102_8_104_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_102_8_104_8_if_end:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 105 8 ]
+        %tmp.54 = lgetv %minutes.4;
+        symbol [ minutes %tmp.54 105 15 22 ];
+        symbol [ format %tmp.55 105 23 29 ];
+        %tmp.55 = getv function %tmp.54 :format;
+        %tmp.56 = "%d";
+        %tmp.57 = invoke %tmp.54 %tmp.55(%tmp.56);
+        %tmp.58 = ":";
+        %tmp.59 = add %tmp.57 %tmp.58;
+        %tmp.60 = lgetv %seconds.5;
+        symbol [ seconds %tmp.60 105 44 51 ];
+        symbol [ format %tmp.61 105 52 58 ];
+        %tmp.61 = getv function %tmp.60 :format;
+        %tmp.62 = "%02d";
+        %tmp.63 = invoke %tmp.60 %tmp.61(%tmp.62);
+        %tmp.64 = add %tmp.59 %tmp.63;
+        ret %tmp.64;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_93_47_106_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 109; @symbol_functiondef = [togglePause,109,13,24]; ]
+    function togglePause() as Void {
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_109_35_122_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 110 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_110_8_110_40_if_stmt:
+        symbol [ mSession %tmp.2 110 12 20 ];
+        %tmp.2 = getv ? :mSession;
+        %tmp.3 = null;
+        %tmp.4 = eq %tmp.2 %tmp.3;
+        bf %tmp.4 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_110_8_110_40_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_110_8_110_40_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_110_30_110_40_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 110 32 ]
+        ret ?;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_110_30_110_40_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_110_8_110_40_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_110_8_110_40_if_end:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 111 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_111_8_120_8_if_stmt:
+        symbol [ mPaused %tmp.6 111 12 19 ];
+        %tmp.6 = getv ? :mPaused;
+        bf %tmp.6 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_111_8_120_8_if_else_false;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_111_8_120_8_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_111_21_115_8_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 112 12 ]
+        symbol [ mSession %tmp.8 112 12 20 ];
+        %tmp.8 = getv ? :mSession;
+        symbol [ start %tmp.9 112 21 26 ];
+        %tmp.9 = getv function %tmp.8 :start;
+        invoke %tmp.8 %tmp.9();
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 113 12 ]
+        symbol [ System %tmp.10 113 23 29 ];
+        %tmp.10 = getm $.Toybox.System;
+        symbol [ getTimer %tmp.11 113 30 38 ];
+        %tmp.11 = getv function %tmp.10 :getTimer;
+        %tmp.12 = invoke %tmp.10 %tmp.11();
+        symbol [ mStartMs ? 113 12 20 ];
+        putv self :mStartMs %tmp.12;
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 114 12 ]
+        %tmp.13 = false;
+        symbol [ mPaused ? 114 12 19 ];
+        putv self :mPaused %tmp.13;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_111_21_115_8_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_111_8_120_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_111_8_120_8_if_else_false:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_115_15_120_8_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 116 12 ]
+        symbol [ mSession %tmp.15 116 12 20 ];
+        %tmp.15 = getv ? :mSession;
+        symbol [ stop %tmp.16 116 21 25 ];
+        %tmp.16 = getv function %tmp.15 :stop;
+        invoke %tmp.15 %tmp.16();
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 117 12 ]
+        symbol [ mAccumulatedMs %tmp.17 117 12 26 ];
+        %tmp.17 = getv self :mAccumulatedMs;
+        symbol [ System %tmp.18 117 30 36 ];
+        %tmp.18 = getm $.Toybox.System;
+        symbol [ getTimer %tmp.19 117 37 45 ];
+        %tmp.19 = getv function %tmp.18 :getTimer;
+        %tmp.20 = invoke %tmp.18 %tmp.19();
+        symbol [ mStartMs %tmp.22 117 50 58 ];
+        %tmp.22 = getv ? :mStartMs;
+        %tmp.23 = sub %tmp.20 %tmp.22;
+        %tmp.24 = add %tmp.17 %tmp.23;
+        symbol [ mAccumulatedMs ? 117 12 26 ];
+        putv self :mAccumulatedMs dup %tmp.24;
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 118 12 ]
+        %tmp.25 = 0;
+        symbol [ mStartMs ? 118 12 20 ];
+        putv self :mStartMs %tmp.25;
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 119 12 ]
+        %tmp.26 = true;
+        symbol [ mPaused ? 119 12 19 ];
+        putv self :mPaused %tmp.26;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_115_15_120_8_stop:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_111_8_120_8_if_end:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 121 8 ]
+        symbol [ WatchUi %tmp.27 121 8 15 ];
+        %tmp.27 = getm $.Toybox.WatchUi;
+        symbol [ requestUpdate %tmp.28 121 16 29 ];
+        %tmp.28 = getv function %tmp.27 :requestUpdate;
+        invoke %tmp.27 %tmp.28();
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_109_35_122_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 125; @symbol_functiondef = [saveAndExit,125,13,24]; ]
+    function saveAndExit() as Void {
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_125_35_132_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 126 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_126_8_126_40_if_stmt:
+        symbol [ mSession %tmp.2 126 12 20 ];
+        %tmp.2 = getv ? :mSession;
+        %tmp.3 = null;
+        %tmp.4 = eq %tmp.2 %tmp.3;
+        bf %tmp.4 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_126_8_126_40_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_126_8_126_40_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_126_30_126_40_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 126 32 ]
+        ret ?;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_126_30_126_40_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_126_8_126_40_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_126_8_126_40_if_end:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 127 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_127_8_129_8_if_stmt:
+        symbol [ mPaused %tmp.6 127 13 20 ];
+        %tmp.6 = getv ? :mPaused;
+        %tmp.7 = not %tmp.6;
+        bf %tmp.7 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_127_8_129_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_127_8_129_8_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_127_22_129_8_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 128 12 ]
+        symbol [ mSession %tmp.9 128 12 20 ];
+        %tmp.9 = getv ? :mSession;
+        symbol [ stop %tmp.10 128 21 25 ];
+        %tmp.10 = getv function %tmp.9 :stop;
+        invoke %tmp.9 %tmp.10();
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_127_22_129_8_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_127_8_129_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_127_8_129_8_if_end:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 130 8 ]
+        symbol [ mSession %tmp.12 130 8 16 ];
+        %tmp.12 = getv ? :mSession;
+        symbol [ save %tmp.13 130 17 21 ];
+        %tmp.13 = getv function %tmp.12 :save;
+        invoke %tmp.12 %tmp.13();
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 131 8 ]
+        %tmp.14 = null;
+        symbol [ mSession ? 131 8 16 ];
+        putv self :mSession %tmp.14;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_125_35_132_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 135; @symbol_functiondef = [discardAndExit,135,13,27]; ]
+    function discardAndExit() as Void {
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_135_38_142_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 136 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_136_8_136_40_if_stmt:
+        symbol [ mSession %tmp.2 136 12 20 ];
+        %tmp.2 = getv ? :mSession;
+        %tmp.3 = null;
+        %tmp.4 = eq %tmp.2 %tmp.3;
+        bf %tmp.4 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_136_8_136_40_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_136_8_136_40_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_136_30_136_40_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 136 32 ]
+        ret ?;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_136_30_136_40_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_136_8_136_40_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_136_8_136_40_if_end:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 137 8 ]
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_137_8_139_8_if_stmt:
+        symbol [ mPaused %tmp.6 137 13 20 ];
+        %tmp.6 = getv ? :mPaused;
+        %tmp.7 = not %tmp.6;
+        bf %tmp.7 @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_137_8_139_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_137_8_139_8_if_true:
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_137_22_139_8_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 138 12 ]
+        symbol [ mSession %tmp.9 138 12 20 ];
+        %tmp.9 = getv ? :mSession;
+        symbol [ stop %tmp.10 138 21 25 ];
+        %tmp.10 = getv function %tmp.9 :stop;
+        invoke %tmp.9 %tmp.10();
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_137_22_139_8_stop:
+        goto @_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_137_8_139_8_if_end;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_137_8_139_8_if_end:
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 140 8 ]
+        symbol [ mSession %tmp.12 140 8 16 ];
+        %tmp.12 = getv ? :mSession;
+        symbol [ discard %tmp.13 140 17 24 ];
+        %tmp.13 = getv function %tmp.12 :discard;
+        invoke %tmp.12 %tmp.13();
+[ "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc" 141 8 ]
+        %tmp.14 = null;
+        symbol [ mSession ? 141 8 16 ];
+        putv self :mSession %tmp.14;
+_Users_vanessa_hitt_garmin_garmin_source_RecordingView_mc_135_38_142_4_stop:
+    }
+}
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/RecordingView.mc"; @line = 13; ]
+<init> {
+}

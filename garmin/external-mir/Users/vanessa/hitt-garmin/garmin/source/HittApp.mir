@@ -1,0 +1,54 @@
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 10; @symbol_importdef<0> = [Toybox,10,7,13]; @symbol_importdef<1> = [Application,10,14,25]; ]
+import Toybox.Application;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 11; @symbol_importdef<0> = [Toybox,11,7,13]; @symbol_importdef<1> = [WatchUi,11,14,21]; ]
+import Toybox.WatchUi;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 12; @symbol_importdef<0> = [Toybox,12,7,13]; @symbol_importdef<1> = [Lang,12,14,18]; ]
+import Toybox.Lang;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 14; @symbol_classdef = [HittApp,14,6,13]; @symbol_extends<0> = [Application,14,22,33]; @symbol_extends<1> = [AppBase,14,34,41]; ]
+class HittApp extends Application.AppBase {
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 14; ]
+    <init> {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 14; ]
+    static
+    <init> {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 16; @symbol_functiondef = [initialize,16,13,23]; ]
+    function initialize() as Void {
+_Users_vanessa_hitt_garmin_garmin_source_HittApp_mc_16_26_18_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc" 17 8 ]
+        symbol [ AppBase %tmp.2 17 8 15 ];
+        %tmp.2 = getv ? :AppBase;
+        symbol [ initialize %tmp.3 17 16 26 ];
+        %tmp.3 = getv function %tmp.2 :initialize;
+        invoke %tmp.2 %tmp.3();
+_Users_vanessa_hitt_garmin_garmin_source_HittApp_mc_16_26_18_4_stop:
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 21; @symbol_functiondef = [onStart,21,13,20]; @symbol_param<0> = [state,21,21,26]; @symbol_param<0>_type<0> = [Dictionary,21,30,40]; ]
+    function onStart(state as Dictionary or Null) as Void {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 24; @symbol_functiondef = [onStop,24,13,19]; @symbol_param<0> = [state,24,20,25]; @symbol_param<0>_type<0> = [Dictionary,24,29,39]; ]
+    function onStop(state as Dictionary or Null) as Void {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 30; @symbol_functiondef = [getInitialView,30,13,27]; @symbol_return<0> = [Views,30,34,39]; @symbol_return<1> = [Views,30,45,50]; @symbol_return<2> = [InputDelegates,30,52,66]; ]
+    function getInitialView() as [Views] or [Views, InputDelegates] {
+_Users_vanessa_hitt_garmin_garmin_source_HittApp_mc_30_68_32_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc" 31 8 ]
+        %tmp.1 = newa 2;
+        symbol [ SportMenuView %tmp.5 31 21 34 ];
+        %tmp.5 = getv ? :SportMenuView;
+        %tmp.2 = newc %tmp.5 ();
+        %tmp.6 = dup %tmp.1;
+        %tmp.7 = aputv %tmp.6 0 %tmp.2;
+        symbol [ SportMenuDelegate %tmp.11 31 42 59 ];
+        %tmp.11 = getv ? :SportMenuDelegate;
+        %tmp.8 = newc %tmp.11 ();
+        %tmp.12 = dup %tmp.7;
+        %tmp.13 = aputv %tmp.12 1 %tmp.8;
+        ret %tmp.13;
+_Users_vanessa_hitt_garmin_garmin_source_HittApp_mc_30_68_32_4_stop:
+    }
+}
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/HittApp.mc"; @line = 10; ]
+<init> {
+}

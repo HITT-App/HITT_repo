@@ -1,0 +1,196 @@
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc"; @line = 5; @symbol_importdef<0> = [Toybox,5,7,13]; @symbol_importdef<1> = [WatchUi,5,14,21]; ]
+import Toybox.WatchUi;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc"; @line = 6; @symbol_importdef<0> = [Toybox,6,7,13]; @symbol_importdef<1> = [Application,6,14,25]; ]
+import Toybox.Application;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc"; @line = 7; @symbol_importdef<0> = [Toybox,7,7,13]; @symbol_importdef<1> = [Lang,7,14,18]; ]
+import Toybox.Lang;
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc"; @line = 9; @symbol_classdef = [SportMenuView,9,6,19]; @symbol_extends<0> = [WatchUi,9,28,35]; @symbol_extends<1> = [Menu2,9,36,41]; ]
+class SportMenuView extends WatchUi.Menu2 {
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc"; @line = 9; ]
+    <init> {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc"; @line = 9; ]
+    static
+    <init> {
+    }
+    [ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc"; @line = 11; @symbol_functiondef = [initialize,11,13,23]; ]
+    function initialize() as Void {
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuView_mc_11_26_32_4_start:
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" 12 8 ]
+        symbol [ Menu2 %tmp.2 12 8 13 ];
+        %tmp.2 = getv ? :Menu2;
+        symbol [ initialize %tmp.3 12 14 24 ];
+        %tmp.3 = getv function %tmp.2 :initialize;
+        %tmp.4 = newd 1;
+        %tmp.6 = const :title;
+        symbol [ title %tmp.6 12 28 33 const ];
+        symbol [ Application %tmp.7 12 37 48 ];
+        %tmp.7 = getm $.Toybox.Application;
+        symbol [ loadResource %tmp.8 12 49 61 ];
+        %tmp.8 = getv function %tmp.7 :loadResource;
+        symbol [ Rez %tmp.10 12 62 65 ];
+        %tmp.10 = getv ? :Rez;
+        symbol [ Strings %tmp.11 12 66 73 ];
+        %tmp.11 = getv %tmp.10 :Strings;
+        symbol [ MenuTitle %tmp.12 12 74 83 ];
+        %tmp.12 = getv %tmp.11 :MenuTitle;
+        %tmp.13 = invoke %tmp.7 %tmp.8(%tmp.12);
+        %tmp.14 = dup %tmp.4;
+        %tmp.15 = aputv %tmp.14 %tmp.6 %tmp.13;
+        invoke %tmp.2 %tmp.3(%tmp.15);
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" 14 8 ]
+        %tmp.16 = self;
+        symbol [ addItem %tmp.17 14 8 15 ];
+        %tmp.17 = getv function %tmp.16 :addItem;
+        symbol [ WatchUi %tmp.20 14 20 27 ];
+        %tmp.20 = getm $.Toybox.WatchUi;
+        symbol [ MenuItem %tmp.21 14 28 36 ];
+        %tmp.21 = getv function ? %tmp.20 :MenuItem;
+        symbol [ Application %tmp.22 15 12 23 ];
+        %tmp.22 = getm $.Toybox.Application;
+        symbol [ loadResource %tmp.23 15 24 36 ];
+        %tmp.23 = getv function %tmp.22 :loadResource;
+        symbol [ Rez %tmp.25 15 37 40 ];
+        %tmp.25 = getv ? :Rez;
+        symbol [ Strings %tmp.26 15 41 48 ];
+        %tmp.26 = getv %tmp.25 :Strings;
+        symbol [ SportRun %tmp.27 15 49 57 ];
+        %tmp.27 = getv %tmp.26 :SportRun;
+        %tmp.28 = invoke %tmp.22 %tmp.23(%tmp.27);
+        %tmp.29 = null;
+        %tmp.31 = const :run;
+        symbol [ run %tmp.31 16 19 22 const ];
+        %tmp.32 = newd 0;
+        %tmp.18 = newc %tmp.21 (%tmp.28, %tmp.29, %tmp.31, %tmp.32);
+        invoke %tmp.16 %tmp.17(%tmp.18);
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" 17 8 ]
+        %tmp.33 = self;
+        symbol [ addItem %tmp.34 17 8 15 ];
+        %tmp.34 = getv function %tmp.33 :addItem;
+        symbol [ WatchUi %tmp.37 17 20 27 ];
+        %tmp.37 = getm $.Toybox.WatchUi;
+        symbol [ MenuItem %tmp.38 17 28 36 ];
+        %tmp.38 = getv function ? %tmp.37 :MenuItem;
+        symbol [ Application %tmp.39 18 12 23 ];
+        %tmp.39 = getm $.Toybox.Application;
+        symbol [ loadResource %tmp.40 18 24 36 ];
+        %tmp.40 = getv function %tmp.39 :loadResource;
+        symbol [ Rez %tmp.42 18 37 40 ];
+        %tmp.42 = getv ? :Rez;
+        symbol [ Strings %tmp.43 18 41 48 ];
+        %tmp.43 = getv %tmp.42 :Strings;
+        symbol [ SportWalk %tmp.44 18 49 58 ];
+        %tmp.44 = getv %tmp.43 :SportWalk;
+        %tmp.45 = invoke %tmp.39 %tmp.40(%tmp.44);
+        %tmp.46 = null;
+        %tmp.48 = const :walk;
+        symbol [ walk %tmp.48 19 19 23 const ];
+        %tmp.49 = newd 0;
+        %tmp.35 = newc %tmp.38 (%tmp.45, %tmp.46, %tmp.48, %tmp.49);
+        invoke %tmp.33 %tmp.34(%tmp.35);
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" 20 8 ]
+        %tmp.50 = self;
+        symbol [ addItem %tmp.51 20 8 15 ];
+        %tmp.51 = getv function %tmp.50 :addItem;
+        symbol [ WatchUi %tmp.54 20 20 27 ];
+        %tmp.54 = getm $.Toybox.WatchUi;
+        symbol [ MenuItem %tmp.55 20 28 36 ];
+        %tmp.55 = getv function ? %tmp.54 :MenuItem;
+        symbol [ Application %tmp.56 21 12 23 ];
+        %tmp.56 = getm $.Toybox.Application;
+        symbol [ loadResource %tmp.57 21 24 36 ];
+        %tmp.57 = getv function %tmp.56 :loadResource;
+        symbol [ Rez %tmp.59 21 37 40 ];
+        %tmp.59 = getv ? :Rez;
+        symbol [ Strings %tmp.60 21 41 48 ];
+        %tmp.60 = getv %tmp.59 :Strings;
+        symbol [ SportBike %tmp.61 21 49 58 ];
+        %tmp.61 = getv %tmp.60 :SportBike;
+        %tmp.62 = invoke %tmp.56 %tmp.57(%tmp.61);
+        %tmp.63 = null;
+        %tmp.65 = const :bike;
+        symbol [ bike %tmp.65 22 19 23 const ];
+        %tmp.66 = newd 0;
+        %tmp.52 = newc %tmp.55 (%tmp.62, %tmp.63, %tmp.65, %tmp.66);
+        invoke %tmp.50 %tmp.51(%tmp.52);
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" 23 8 ]
+        %tmp.67 = self;
+        symbol [ addItem %tmp.68 23 8 15 ];
+        %tmp.68 = getv function %tmp.67 :addItem;
+        symbol [ WatchUi %tmp.71 23 20 27 ];
+        %tmp.71 = getm $.Toybox.WatchUi;
+        symbol [ MenuItem %tmp.72 23 28 36 ];
+        %tmp.72 = getv function ? %tmp.71 :MenuItem;
+        symbol [ Application %tmp.73 24 12 23 ];
+        %tmp.73 = getm $.Toybox.Application;
+        symbol [ loadResource %tmp.74 24 24 36 ];
+        %tmp.74 = getv function %tmp.73 :loadResource;
+        symbol [ Rez %tmp.76 24 37 40 ];
+        %tmp.76 = getv ? :Rez;
+        symbol [ Strings %tmp.77 24 41 48 ];
+        %tmp.77 = getv %tmp.76 :Strings;
+        symbol [ SportSwim %tmp.78 24 49 58 ];
+        %tmp.78 = getv %tmp.77 :SportSwim;
+        %tmp.79 = invoke %tmp.73 %tmp.74(%tmp.78);
+        %tmp.80 = null;
+        %tmp.82 = const :swim;
+        symbol [ swim %tmp.82 25 19 23 const ];
+        %tmp.83 = newd 0;
+        %tmp.69 = newc %tmp.72 (%tmp.79, %tmp.80, %tmp.82, %tmp.83);
+        invoke %tmp.67 %tmp.68(%tmp.69);
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" 26 8 ]
+        %tmp.84 = self;
+        symbol [ addItem %tmp.85 26 8 15 ];
+        %tmp.85 = getv function %tmp.84 :addItem;
+        symbol [ WatchUi %tmp.88 26 20 27 ];
+        %tmp.88 = getm $.Toybox.WatchUi;
+        symbol [ MenuItem %tmp.89 26 28 36 ];
+        %tmp.89 = getv function ? %tmp.88 :MenuItem;
+        symbol [ Application %tmp.90 27 12 23 ];
+        %tmp.90 = getm $.Toybox.Application;
+        symbol [ loadResource %tmp.91 27 24 36 ];
+        %tmp.91 = getv function %tmp.90 :loadResource;
+        symbol [ Rez %tmp.93 27 37 40 ];
+        %tmp.93 = getv ? :Rez;
+        symbol [ Strings %tmp.94 27 41 48 ];
+        %tmp.94 = getv %tmp.93 :Strings;
+        symbol [ SportStrength %tmp.95 27 49 62 ];
+        %tmp.95 = getv %tmp.94 :SportStrength;
+        %tmp.96 = invoke %tmp.90 %tmp.91(%tmp.95);
+        %tmp.97 = null;
+        %tmp.99 = const :strength;
+        symbol [ strength %tmp.99 28 19 27 const ];
+        %tmp.100 = newd 0;
+        %tmp.86 = newc %tmp.89 (%tmp.96, %tmp.97, %tmp.99, %tmp.100);
+        invoke %tmp.84 %tmp.85(%tmp.86);
+[ "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc" 29 8 ]
+        %tmp.101 = self;
+        symbol [ addItem %tmp.102 29 8 15 ];
+        %tmp.102 = getv function %tmp.101 :addItem;
+        symbol [ WatchUi %tmp.105 29 20 27 ];
+        %tmp.105 = getm $.Toybox.WatchUi;
+        symbol [ MenuItem %tmp.106 29 28 36 ];
+        %tmp.106 = getv function ? %tmp.105 :MenuItem;
+        symbol [ Application %tmp.107 30 12 23 ];
+        %tmp.107 = getm $.Toybox.Application;
+        symbol [ loadResource %tmp.108 30 24 36 ];
+        %tmp.108 = getv function %tmp.107 :loadResource;
+        symbol [ Rez %tmp.110 30 37 40 ];
+        %tmp.110 = getv ? :Rez;
+        symbol [ Strings %tmp.111 30 41 48 ];
+        %tmp.111 = getv %tmp.110 :Strings;
+        symbol [ SportHIIT %tmp.112 30 49 58 ];
+        %tmp.112 = getv %tmp.111 :SportHIIT;
+        %tmp.113 = invoke %tmp.107 %tmp.108(%tmp.112);
+        %tmp.114 = null;
+        %tmp.116 = const :hiit;
+        symbol [ hiit %tmp.116 31 19 23 const ];
+        %tmp.117 = newd 0;
+        %tmp.103 = newc %tmp.106 (%tmp.113, %tmp.114, %tmp.116, %tmp.117);
+        invoke %tmp.101 %tmp.102(%tmp.103);
+_Users_vanessa_hitt_garmin_garmin_source_SportMenuView_mc_11_26_32_4_stop:
+    }
+}
+[ @file = "/Users/vanessa/hitt-garmin/garmin/source/SportMenuView.mc"; @line = 5; ]
+<init> {
+}
