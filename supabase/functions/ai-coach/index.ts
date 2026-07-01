@@ -833,15 +833,29 @@ async function fetchOwnerMealPlan(
     (s: string) => String(s ?? '').toLowerCase().trim(),
   );
   const workoutGoal: string = prefsResp2.data?.workout_goal ?? '';
-  const goalCategory = workoutGoalToOwnerCategory(workoutGoal);
+  const inferredCategory = workoutGoalToOwnerCategory(workoutGoal);
 
-  // For explicit macro requests, the numbers ARE the constraint. Filtering by
-  // goal category shrinks the search space so much that the library's max
-  // per-slot calories may not reach the target — e.g. a lose_weight user
-  // asking for 1800 kcal is capped at ~1450 kcal because the lose_weight
-  // library's largest lunch is ~500 kcal. Widen to all owner categories and
-  // let the macro-fit scorer do the work.
-  const useCategoryFilter = false;
+  // Detect low-carb / keto intent from the macro request itself. If carbs make
+  // up less than ~25% of the calorie target, the balanced library can't hit
+  // the request (its lunches/dinners median 40–50g carbs) — but the keto
+  // library was designed for exactly this case (median 6–12g carbs per meal).
+  const targetCalForRatio = targets.calories ?? 2000;
+  const targetCarbsForRatio = targets.carbs_g;
+  const carbFraction =
+    targetCarbsForRatio && targetCalForRatio
+      ? (targetCarbsForRatio * 4) / targetCalForRatio
+      : null;
+  const isLowCarbIntent = carbFraction !== null && carbFraction < 0.25;
+
+  // Category resolution:
+  //   • Explicit low-carb intent  → keto (hard filter, ~165 keto recipes)
+  //   • Otherwise                 → no filter (all 660 balanced recipes)
+  //
+  // Workout-goal category is intentionally NOT used here — see the earlier
+  // fix, it shrinks the search space so much that day-level calorie targets
+  // become unreachable.
+  const goalCategory = isLowCarbIntent ? 'keto' : inferredCategory;
+  const useCategoryFilter = isLowCarbIntent;
 
   // Which "diet family" does the recipe need to belong to?
   // Vegan is a subset of vegetarian; both are subsets of pescatarian & omnivore.
