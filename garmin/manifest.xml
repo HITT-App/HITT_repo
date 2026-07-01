@@ -3,9 +3,10 @@
 
   HITT Connect IQ — app manifest
 
-  Generated at scaffold time. The `application` UUID below is a placeholder
-  — replace with the UUID reserved when the Connect IQ Store developer
-  account is approved (TAPI-02). DO NOT publish with the placeholder UUID.
+  The `application id` UUID is HITT's permanent app identity in the Connect
+  IQ Store. Generated once (2026-07-01) — never change it. If it changes,
+  Garmin treats future uploads as a different app and existing users can't
+  install updates.
 
   Target SDK floor: 4.0.0 (devices released 2022+). See README.md.
 
@@ -14,7 +15,7 @@
 
   <iq:application
     entry="HittApp"
-    id="00000000-0000-0000-0000-000000000000"
+    id="93d5f6cd-0cb7-4dca-aae4-90762c9d0728"
     launcherIcon="@Drawables.LauncherIcon"
     minSdkVersion="4.0.0"
     name="@Strings.AppName"
@@ -34,15 +35,14 @@
       <iq:product id="fr955"/>
       <iq:product id="fr965"/>
 
-      <!-- Fenix / Epix -->
+      <!-- Fenix / Epix (Fenix 8 not yet in SDK 9.2.0 device catalogue — add
+           when Garmin publishes a device profile, likely SDK 9.3+) -->
       <iq:product id="fenix7"/>
       <iq:product id="fenix7pro"/>
       <iq:product id="fenix7s"/>
       <iq:product id="fenix7spro"/>
       <iq:product id="fenix7x"/>
       <iq:product id="fenix7xpro"/>
-      <iq:product id="fenix8"/>
-      <iq:product id="fenix8s"/>
       <iq:product id="epix2"/>
       <iq:product id="epix2pro42mm"/>
       <iq:product id="epix2pro47mm"/>
@@ -60,11 +60,11 @@
       <iq:product id="edge1040"/>
       <iq:product id="edge1050"/>
 
-      <!-- Instinct -->
+      <!-- Instinct (Instinct 3 has device-specific IDs — instinct3amoled45mm
+           etc. — add later; keeping v0.1.0 tight to the Instinct 2 family) -->
       <iq:product id="instinct2"/>
       <iq:product id="instinct2s"/>
       <iq:product id="instinct2x"/>
-      <iq:product id="instinct3"/>
     </iq:products>
 
     <iq:permissions>
