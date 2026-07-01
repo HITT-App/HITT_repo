@@ -7,9 +7,9 @@
 - **Jarvis meal plan now includes a keto library and gets the numbers right** — added 165 owner-curated keto recipes (breakfast / lunch / dinner / snack, all 4–22g carbs) plus a 30-recipe vegetarian + dairy-free keto extension pack so users on restrictive diets can actually hit low-carb targets. When your macros suggest keto (carbs under 25% of calorie target), Jarvis routes to the keto library automatically. Plan totals should now land within 5% of your calorie target with protein floors met and carb ceilings respected — the picker got significantly smarter about respecting ceiling/floor semantics per macro
 - **Spoonacular meal suggestions retired for good** — gated behind a feature flag (OFF by default). All meal recommendations now come from the owner-curated library
 
-## [2026-07-01] — HITT-hero animation flashes between Finish and share screen
+## [2026-07-01] — HITT-hero animation now plays after every workout
 
-- **New celebratory beat when you finish a GPS activity** — tapping Finish now plays a 2-second HITT-hero animation (the same line-around-the-logo motion from the home screen, at 3× speed) before the share workout screen appears. Small marker of accomplishment; keeps the transition feeling less abrupt
+- **The 2-second HITT-hero flash between finish and share now plays after every workout** — moved into the shared CompletionSummary component so GPS activities, structured HIIT workouts, gym timer sessions, and triathlons all get the same celebratory beat before the share screen. Previously only wired into the GPS finish flow
 
 ## [2026-07-01] — Owner meal library, poll voting, user blocking, modify-schedule fix
 

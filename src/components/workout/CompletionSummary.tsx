@@ -7,6 +7,7 @@ import type { Json } from '@/integrations/supabase/types';
 import type { RoutePoint } from './ShareCardCanvas';
 import { ActivityShareCard } from './ActivityShareCard';
 import { generateActivityShareCardBlob } from '@/lib/generate-activity-share-card';
+import { CompletionIntro } from './CompletionIntro';
 
 export interface CompletionStat {
   label: string;
@@ -368,7 +369,15 @@ export function CompletionSummary({
 }: CompletionSummaryProps) {
   const [format, setFormat]       = useState<'square' | 'story'>('square');
   const [isSharing, setIsSharing] = useState(false);
+  // Play the HITT-hero celebratory flash on first mount, then reveal the
+  // share screen. Callers get this behaviour automatically — no per-page
+  // wiring needed.
+  const [introDone, setIntroDone] = useState(false);
   const dragStartY  = useRef<number | null>(null);
+
+  if (!introDone) {
+    return <CompletionIntro onComplete={() => setIntroDone(true)} />;
+  }
 
   const heroMetrics = getHeroMetrics(activityType, stats);
   const square     = format === 'square';
