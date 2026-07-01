@@ -106,12 +106,24 @@ class RecordingView extends WatchUi.View {
         dc.drawText(cx, cy, timerFont, formatElapsed(),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
 
-        // Paused — below the timer with the same gap.
+        // Paused — HITT-orange rounded pill below the timer with the same gap.
         if (mPaused) {
+            var pausedText = Application.loadResource(Rez.Strings.Paused) as String;
             var pausedY = cy + (timerH / 2) + gap + (smallH / 2);
+            var textW = dc.getTextWidthInPixels(pausedText, smallFont);
+            var padX = 14;
+            var padY = 6;
+            var pillW = textW + padX * 2;
+            var pillH = smallH + padY * 2;
+            var pillX = cx - pillW / 2;
+            var pillY = pausedY - pillH / 2;
+            var radius = pillH / 2;
+
             dc.setColor(HITT_ORANGE, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, pausedY, smallFont,
-                Application.loadResource(Rez.Strings.Paused) as String,
+            dc.fillRoundedRectangle(pillX, pillY, pillW, pillH, radius);
+
+            dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, pausedY, smallFont, pausedText,
                 Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         }
     }
