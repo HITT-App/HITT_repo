@@ -895,6 +895,12 @@ async function fetchOwnerMealPlan(
     slotProtein: number,
     slotCarbs: number,
     slotFat: number,
+    // Absolute upper bounds — no candidate above these ever makes it in, no
+    // matter how empty the pool gets. Set separately from the slot target so
+    // the ceiling filter has a stable reference even when the rolling budget
+    // has driven slotCarbs to zero. When null, no hard cap is applied.
+    hardMaxCarbs: number | null = null,
+    hardMaxFat: number | null = null,
   ): Promise<OwnerRecipeRow | null> => {
     // Preferred: filter by goal category if it exists. Widen when useCategoryFilter is off
     // OR when the strict query returns nothing.
@@ -940,11 +946,15 @@ async function fetchOwnerMealPlan(
     }
 
     // Hard-filter ceiling macros before scoring. Widen the tolerance in stages
-    // if the tight pool collapses to fewer than 5 candidates (any less and the
-    // pick becomes deterministic across sessions).
+    // if the tight pool shrinks below 5, but never above the absolute hard cap.
+    // If nothing fits, RETURN NULL (skip this slot) — do NOT fall back to the
+    // unbounded pool, because doing so blows the day-total ceiling every time
+    // the rolling budget has been eaten up by earlier slots.
     const applyCeilings = (tolerance: number): OwnerRecipeRow[] => {
-      const carbLimit = targetCarbs ? slotCarbs * tolerance : Infinity;
-      const fatLimit = targetFat ? slotFat * tolerance : Infinity;
+      const rawCarb = targetCarbs ? slotCarbs * tolerance : Infinity;
+      const rawFat = targetFat ? slotFat * tolerance : Infinity;
+      const carbLimit = hardMaxCarbs != null ? Math.min(rawCarb, hardMaxCarbs) : rawCarb;
+      const fatLimit = hardMaxFat != null ? Math.min(rawFat, hardMaxFat) : rawFat;
       return base.filter((c) =>
         Number(c.carbs_g) <= carbLimit && Number(c.fat_g) <= fatLimit,
       );
@@ -953,11 +963,17 @@ async function fetchOwnerMealPlan(
     let filtered = applyCeilings(1.2);
     if (filtered.length < 5) filtered = applyCeilings(1.6);
     if (filtered.length < 3) filtered = applyCeilings(2.5);
-    if (filtered.length < 1) filtered = base; // give up ceiling — better a meal than none
+    if (filtered.length < 1) {
+      console.warn(
+        '[ai-coach owner-meal]', slot,
+        `nothing fits carb≤${hardMaxCarbs ?? Math.round((targetCarbs ? slotCarbs : Infinity) * 2.5)}g — skipping`,
+      );
+      return null;
+    }
     console.log(
       '[ai-coach owner-meal]', slot,
       `pool ${base.length}→${filtered.length}`,
-      `carb≤${targetCarbs ? Math.round(slotCarbs * 1.2) : '∞'}g`,
+      `carbCap=${hardMaxCarbs ?? '—'}g/${Math.round((targetCarbs ? slotCarbs : Infinity) * 1.2)}g`,
     );
 
     // Direction-aware scoring — treat each macro the way users actually mean
@@ -1020,7 +1036,17 @@ async function fetchOwnerMealPlan(
     const slotCarbs = Math.round(remainingCarbs * share);
     const slotFat = Math.round(remainingFat * share);
 
-    const chosen = await pickBestForSlot(slot, slotCal, slotProtein, slotCarbs, slotFat);
+    // Absolute cap = whatever's left of the day-total, with a tiny grace so we
+    // don't reject on rounding. Guarantees the total never blows the ceiling
+    // by more than ~10% even if the pool is tight and the scorer picks near
+    // the top of its allowed range.
+    const hardMaxCarbs = targetCarbs
+      ? Math.max(slotCarbs, Math.max(0, remainingCarbs) + Math.round(targetCarbs * 0.10))
+      : null;
+    const hardMaxFat = targetFat
+      ? Math.max(slotFat, Math.max(0, remainingFat) + Math.round(targetFat * 0.10))
+      : null;
+    const chosen = await pickBestForSlot(slot, slotCal, slotProtein, slotCarbs, slotFat, hardMaxCarbs, hardMaxFat);
     if (!chosen) {
       // Slot missed — the remaining slots still get their share of the
       // untouched budget. Just carry on.
@@ -1055,12 +1081,18 @@ async function fetchOwnerMealPlan(
     console.log(
       '[ai-coach owner-meal] shortfall', shortfall, 'kcal — adding snack (pass', padAttempts + 1, ')',
     );
+    // Snacks must not blow the daily ceiling. Absolute cap = whatever's left
+    // of the day's carb budget (small positive number = tight snacks only).
+    const snackCarbCap = targetCarbs ? Math.max(0, targetCarbs - totalC) : null;
+    const snackFatCap = targetFat ? Math.max(0, targetFat - totalF) : null;
     const snack = await pickBestForSlot(
       'snack',
       shortfall,
       Math.max(0, targetProtein - totalP),
       Math.max(0, targetCarbs - totalC),
       Math.max(0, targetFat - totalF),
+      snackCarbCap,
+      snackFatCap,
     );
     if (!snack) break; // ran out of snacks that fit — stop trying
 
