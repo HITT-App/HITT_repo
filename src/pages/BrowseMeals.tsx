@@ -1,15 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Search, Filter, Grid, List, Flame, Plus, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, Filter, Grid, List, Flame, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -29,6 +26,7 @@ type Meal = {
   fat_g: number | null;
   image_url: string | null;
   allergens: string[] | null;
+  dietary_tags: string[] | null;
   veg_swap: string | null;
   vegan_swap: string | null;
   ingredients: Ingredient[] | null;
@@ -37,337 +35,308 @@ type Meal = {
   cook_time_minutes: number | null;
 };
 
-const CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'breakfast', label: 'Breakfast' },
-  { id: 'lunch', label: 'Lunch' },
-  { id: 'dinner', label: 'Dinner' },
-  { id: 'snack', label: 'Snack' },
+// ── Filter vocabularies ─────────────────────────────────────────────────────
+
+const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+type MealType = typeof MEAL_TYPES[number];
+
+const DIETS = [
+  { id: 'vegan', label: 'Vegan', emoji: '🌱' },
+  { id: 'vegetarian', label: 'Vegetarian', emoji: '🥬' },
+  { id: 'pescatarian', label: 'Pescatarian', emoji: '🐟' },
+  { id: 'keto', label: 'Keto', emoji: '🥑' },
+  { id: 'gluten-free', label: 'Gluten-free', emoji: '🌾' },
+] as const;
+type DietId = typeof DIETS[number]['id'];
+
+// Protein source is inferred from the recipe name (owner names them clearly:
+// "…Chicken Breast with…", "…Firm Tofu with…", etc.).
+const PROTEIN_SOURCES: Array<{ id: string; label: string; patterns: RegExp }> = [
+  { id: 'chicken',  label: 'Chicken',    patterns: /chicken/i },
+  { id: 'beef',     label: 'Beef',       patterns: /beef|steak|mince/i },
+  { id: 'lamb',     label: 'Lamb',       patterns: /lamb/i },
+  { id: 'pork',     label: 'Pork',       patterns: /pork|bacon/i },
+  { id: 'turkey',   label: 'Turkey',     patterns: /turkey/i },
+  { id: 'fish',     label: 'Fish',       patterns: /salmon|cod|mackerel|tuna|prawn|shrimp|fish/i },
+  { id: 'eggs',     label: 'Eggs',       patterns: /egg/i },
+  { id: 'dairy',    label: 'Dairy',      patterns: /yogurt|yoghurt|cottage cheese|paneer/i },
+  { id: 'tofu',     label: 'Tofu',       patterns: /tofu|tempeh/i },
+  { id: 'plant',    label: 'Plant',      patterns: /lentil|chickpea|black bean|quorn|edamame/i },
 ];
+
+const CAL_BANDS = [
+  { id: 'any',    label: 'Any',      test: (c: number | null) => true },
+  { id: 'low',    label: '<300',     test: (c: number | null) => (c ?? 0) < 300 },
+  { id: 'mid',    label: '300–500',  test: (c: number | null) => (c ?? 0) >= 300 && (c ?? 0) < 500 },
+  { id: 'high',   label: '500–700',  test: (c: number | null) => (c ?? 0) >= 500 && (c ?? 0) < 700 },
+  { id: 'plus',   label: '700+',     test: (c: number | null) => (c ?? 0) >= 700 },
+] as const;
+
+// Deterministic shuffle using a session-scoped seed so pagination stays
+// stable but the first impression on a fresh mount isn't alphabetical.
+function shuffled<T>(arr: T[]): T[] {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function detectProteinSource(name: string): string | null {
+  for (const p of PROTEIN_SOURCES) if (p.patterns.test(name)) return p.id;
+  return null;
+}
+
+// ── Component ───────────────────────────────────────────────────────────────
 
 export default function BrowseMeals() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const [meals, setMeals] = useState<Meal[]>([]);
-  const [filteredMeals, setFilteredMeals] = useState<Meal[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [mealType, setMealType] = useState<MealType | 'all'>('all');
+  const [diet, setDiet] = useState<DietId | null>(null);
+  const [protein, setProtein] = useState<string | null>(null);
+  const [calBand, setCalBand] = useState<typeof CAL_BANDS[number]['id']>('any');
   const [viewMode, setViewMode] = useState<'card' | 'grid'>('card');
   const [showFilters, setShowFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRecipe, setSelectedRecipe] = useState<Meal | null>(null);
 
-  // Filter state
-  const [maxCalories, setMaxCalories] = useState(1000);
-  const [minProtein, setMinProtein] = useState(0);
-
   useEffect(() => {
-    fetchMeals();
+    (async () => {
+      setIsLoading(true);
+      const { data } = await supabase.from('recipes').select('*');
+      // Shuffle on load so the first impression isn't a wall of one
+      // cuisine family (owner names ~40% of recipes "Asian-inspired…"
+      // and an alphabetical sort surfaces them all first).
+      if (data) setMeals(shuffled(data as Meal[]));
+      setIsLoading(false);
+    })();
   }, []);
 
-  useEffect(() => {
-    filterMeals();
-  }, [meals, searchQuery, selectedCategory, maxCalories, minProtein]);
+  const anyFilterActive = mealType !== 'all' || diet !== null || protein !== null || calBand !== 'any' || searchQuery.length > 0;
+  const activeFilterCount = [mealType !== 'all', diet !== null, protein !== null, calBand !== 'any'].filter(Boolean).length;
 
-  const fetchMeals = async () => {
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from('recipes')
-      .select('*')
-      .order('name');
+  // Apply all filters
+  const filteredMeals = useMemo(() => {
+    return meals.filter((meal) => {
+      if (mealType !== 'all' && meal.meal_type !== mealType) return false;
+      if (diet) {
+        const tags = (meal.dietary_tags ?? []).map((t) => t.toLowerCase());
+        if (diet === 'gluten-free') {
+          // Not stored as a dietary tag on legacy rows; treat presence of
+          // 'gluten' in allergens as the negative signal.
+          const alg = (meal.allergens ?? []).map((a) => a.toLowerCase());
+          if (alg.includes('gluten') && !tags.includes('gluten-free')) return false;
+        } else if (diet === 'keto') {
+          // Keto category was seeded specifically. Fall back to <20g carbs
+          // for legacy recipes not stamped with the keto category/tag.
+          if (meal.category !== 'keto' && (meal.carbs_g ?? 100) > 20) return false;
+        } else {
+          if (!tags.includes(diet)) return false;
+        }
+      }
+      if (protein) {
+        const p = detectProteinSource(meal.name);
+        if (p !== protein) return false;
+      }
+      const band = CAL_BANDS.find((b) => b.id === calBand)!;
+      if (!band.test(meal.calories)) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!meal.name.toLowerCase().includes(q) && !meal.description?.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [meals, mealType, diet, protein, calBand, searchQuery]);
 
-    if (data) {
-      setMeals(data as Meal[]);
-    }
-    setIsLoading(false);
-  };
+  // Curated shelves for the empty-filter landing state.
+  const shelves = useMemo(() => {
+    if (anyFilterActive) return [];
+    const pick = (test: (m: Meal) => boolean, limit = 8) =>
+      meals.filter(test).slice(0, limit);
+    return [
+      { key: 'breakfast', title: 'Breakfast', items: pick(m => m.meal_type === 'breakfast') },
+      { key: 'highp', title: 'High-protein picks', items: pick(m => (m.protein_g ?? 0) >= 30) },
+      { key: 'lowc', title: 'Low-carb', items: pick(m => (m.carbs_g ?? 100) < 20) },
+      { key: 'quick', title: 'Under 400 kcal', items: pick(m => (m.calories ?? 999) < 400) },
+      { key: 'veg', title: 'Vegetarian', items: pick(m => (m.dietary_tags ?? []).includes('vegetarian') || (m.dietary_tags ?? []).includes('vegan')) },
+      { key: 'lunch', title: 'Lunch', items: pick(m => m.meal_type === 'lunch') },
+      { key: 'dinner', title: 'Dinner', items: pick(m => m.meal_type === 'dinner') },
+      { key: 'snack', title: 'Snacks', items: pick(m => m.meal_type === 'snack') },
+    ].filter(s => s.items.length > 0);
+  }, [meals, anyFilterActive]);
 
-  const filterMeals = () => {
-    let result = [...meals];
-
-    // Search filter
-    if (searchQuery) {
-      result = result.filter(meal =>
-        meal.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        meal.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Category filter (uses meal_type)
-    if (selectedCategory !== 'all') {
-      result = result.filter(meal => meal.meal_type === selectedCategory);
-    }
-
-    // Calorie filter
-    result = result.filter(meal => (meal.calories || 0) <= maxCalories);
-
-    // Protein filter
-    result = result.filter(meal => (meal.protein_g || 0) >= minProtein);
-
-    setFilteredMeals(result);
-  };
-
-  const clearFilters = () => {
-    setMaxCalories(1000);
-    setMinProtein(0);
+  const clearAllFilters = () => {
+    setMealType('all'); setDiet(null); setProtein(null); setCalBand('any'); setSearchQuery('');
     setShowFilters(false);
   };
-
-  const activeFiltersCount = [
-    maxCalories < 1000,
-    minProtein > 0,
-  ].filter(Boolean).length;
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="shrink-0 bg-background border-b border-border/60">
-        <div className="flex items-center gap-3 px-4 py-4">
+      <header
+        className="shrink-0 sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/60"
+        style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 12px)' }}
+      >
+        <div className="flex items-center gap-3 px-4 pb-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-semibold flex-1">Browse Meals</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setViewMode(viewMode === 'card' ? 'grid' : 'card')}
-          >
+          <Button variant="ghost" size="icon" onClick={() => setViewMode(viewMode === 'card' ? 'grid' : 'card')}>
             {viewMode === 'card' ? <Grid className="w-5 h-5" /> : <List className="w-5 h-5" />}
           </Button>
         </div>
 
-        {/* Search & Filter */}
-        <div className="px-4 pb-4 flex gap-2">
+        {/* Search + filter button */}
+        <div className="px-4 pb-3 flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search for a meal..."
+              placeholder="Search meals…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setShowFilters(true)}
-            className="relative"
-          >
+          <Button variant="outline" size="icon" onClick={() => setShowFilters(true)} className="relative">
             <Filter className="w-4 h-4" />
-            {activeFiltersCount > 0 && (
+            {activeFilterCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
-                {activeFiltersCount}
+                {activeFilterCount}
               </span>
             )}
           </Button>
         </div>
+
+        {/* Meal-type chip carousel */}
+        <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide">
+          <button
+            key="all"
+            onClick={() => { setMealType('all'); }}
+            className={cn(
+              'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition-colors',
+              mealType === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border/60 text-foreground',
+            )}
+          >
+            All
+          </button>
+          {MEAL_TYPES.map((t) => (
+            <button
+              key={t}
+              onClick={() => setMealType(t)}
+              className={cn(
+                'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition-colors capitalize',
+                mealType === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border/60 text-foreground',
+              )}
+            >
+              {t}
+            </button>
+          ))}
+          {DIETS.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => setDiet(diet === d.id ? null : d.id)}
+              className={cn(
+                'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition-colors',
+                diet === d.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border/60 text-foreground',
+              )}
+            >
+              <span className="mr-1">{d.emoji}</span>{d.label}
+            </button>
+          ))}
+        </div>
       </header>
 
+      {/* Content — native scroll so pull-to-dismiss on the sheet works */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-6 pb-28">
-          {/* Category Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {CATEGORIES.map((cat) => (
-              <Button
-                key={cat.id}
-                variant={selectedCategory === cat.id ? 'default' : 'outline'}
-                size="sm"
-                className="rounded-full whitespace-nowrap"
-                onClick={() => setSelectedCategory(cat.id)}
-              >
-                {cat.label}
-              </Button>
-            ))}
-          </div>
-
-          {/* Results */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold">
-                {selectedCategory === 'all' ? 'All Meals' : CATEGORIES.find(c => c.id === selectedCategory)?.label} ({filteredMeals.length})
-              </h2>
+        <div className="p-4 pb-28">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-20 bg-secondary/50 animate-pulse rounded-xl" />
+              ))}
             </div>
-
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-20 bg-secondary animate-pulse rounded-xl" />
-                ))}
-              </div>
-            ) : filteredMeals.length === 0 ? (
-              <Card className="border-border/50">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">No meals found matching your criteria</p>
-                  <Button variant="link" className="text-primary mt-2" onClick={clearFilters}>
-                    Clear filters
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : viewMode === 'card' ? (
-              <div className="space-y-3">
-                {filteredMeals.map((meal) => (
-                  <Card
-                    key={meal.id}
-                    className="border-border/50 overflow-hidden cursor-pointer"
-                    onClick={() => setSelectedRecipe(meal)}
-                  >
-                    <CardContent className="p-3 flex gap-3">
-                      <div className="w-16 h-16 rounded-xl bg-secondary flex-shrink-0 overflow-hidden">
-                        {meal.image_url ? (
-                          <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-2xl">
-                            {meal.emoji || <Flame className="w-6 h-6 text-primary/30" />}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold truncate">{meal.name}</h3>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Flame className="w-3 h-3 text-primary" />
-                            {meal.calories}kcal
-                          </span>
-                          {meal.protein_g != null && (
-                            <span>· {meal.protein_g}g protein</span>
-                          )}
-                        </div>
-                      </div>
-                      <Button size="icon" variant="ghost" className="flex-shrink-0">
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {filteredMeals.map((meal) => (
-                  <Card
-                    key={meal.id}
-                    className="border-border/50 overflow-hidden cursor-pointer"
-                    onClick={() => setSelectedRecipe(meal)}
-                  >
-                    <div className="aspect-square bg-secondary relative">
-                      {meal.image_url ? (
-                        <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-4xl">
-                          {meal.emoji || <Flame className="w-8 h-8 text-primary/30" />}
-                        </div>
-                      )}
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="absolute bottom-2 right-2 w-8 h-8 rounded-full"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <CardContent className="p-2">
-                      <h3 className="font-medium text-sm truncate">{meal.name}</h3>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Flame className="w-3 h-3 text-primary" />
-                        <span>{meal.calories}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </section>
+          ) : anyFilterActive ? (
+            // Flat filtered list
+            <FilteredResults
+              meals={filteredMeals}
+              viewMode={viewMode}
+              onSelect={setSelectedRecipe}
+              onClear={clearAllFilters}
+            />
+          ) : (
+            // Curated landing — horizontal shelves
+            <div className="space-y-6">
+              {shelves.map((shelf) => (
+                <Shelf key={shelf.key} title={shelf.title} items={shelf.items} onSelect={setSelectedRecipe} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Filter Sheet */}
+      {/* Filter sheet */}
       <Sheet open={showFilters} onOpenChange={setShowFilters}>
-        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl">
-          <SheetHeader className="text-left mb-6">
-            <SheetTitle>Filter Meal Results</SheetTitle>
-            <p className="text-sm text-muted-foreground">Quickly find and analyze your meal data.</p>
+        <SheetContent side="bottom" className="max-h-[85vh] rounded-t-3xl overflow-y-auto">
+          <SheetHeader className="text-left mb-4">
+            <SheetTitle>Filters</SheetTitle>
           </SheetHeader>
+          <div className="space-y-5">
+            <FilterGroup title="Meal type" onClear={() => setMealType('all')} hasValue={mealType !== 'all'}>
+              {(['all', ...MEAL_TYPES] as const).map((t) => (
+                <FilterChip key={t} active={mealType === t} onClick={() => setMealType(t)}>
+                  {t === 'all' ? 'Any' : t.charAt(0).toUpperCase() + t.slice(1)}
+                </FilterChip>
+              ))}
+            </FilterGroup>
 
-          <div className="space-y-6">
-            {/* Meal Type */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Filter by meal type</label>
-              <div className="flex gap-2 flex-wrap">
-                {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => (
-                  <Badge
-                    key={type}
-                    variant="outline"
-                    className={cn(
-                      "cursor-pointer",
-                      selectedCategory === type.toLowerCase() && "bg-primary text-primary-foreground"
-                    )}
-                    onClick={() => setSelectedCategory(
-                      selectedCategory === type.toLowerCase() ? 'all' : type.toLowerCase()
-                    )}
-                  >
-                    {type}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            <FilterGroup title="Diet" onClear={() => setDiet(null)} hasValue={diet !== null}>
+              {DIETS.map((d) => (
+                <FilterChip key={d.id} active={diet === d.id} onClick={() => setDiet(diet === d.id ? null : d.id)}>
+                  <span className="mr-1">{d.emoji}</span>{d.label}
+                </FilterChip>
+              ))}
+            </FilterGroup>
 
-            {/* Protein Filter */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Filter by Protein</label>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground w-12">{minProtein}g</span>
-                <Slider
-                  value={[minProtein]}
-                  onValueChange={([v]) => setMinProtein(v)}
-                  max={100}
-                  step={5}
-                  className="flex-1"
-                />
-              </div>
-            </div>
+            <FilterGroup title="Protein source" onClear={() => setProtein(null)} hasValue={protein !== null}>
+              {PROTEIN_SOURCES.map((p) => (
+                <FilterChip key={p.id} active={protein === p.id} onClick={() => setProtein(protein === p.id ? null : p.id)}>
+                  {p.label}
+                </FilterChip>
+              ))}
+            </FilterGroup>
 
-            {/* Calorie Filter */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Filter by Calorie</label>
-              <Select value={maxCalories.toString()} onValueChange={(v) => setMaxCalories(parseInt(v))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="200">100 - 200kcal</SelectItem>
-                  <SelectItem value="400">200 - 400kcal</SelectItem>
-                  <SelectItem value="600">400 - 600kcal</SelectItem>
-                  <SelectItem value="1000">600+ kcal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <FilterGroup title="Calories" onClear={() => setCalBand('any')} hasValue={calBand !== 'any'}>
+              {CAL_BANDS.map((b) => (
+                <FilterChip key={b.id} active={calBand === b.id} onClick={() => setCalBand(b.id)}>
+                  {b.label}
+                </FilterChip>
+              ))}
+            </FilterGroup>
           </div>
 
-          <div className="absolute bottom-6 left-6 right-6">
-            <Button
-              className="w-full h-12 rounded-2xl gap-2"
-              onClick={() => setShowFilters(false)}
-            >
-              Show Results ({filteredMeals.length}) <Filter className="w-4 h-4" />
-            </Button>
+          <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-3 bg-background border-t border-border/60 mt-6 flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={clearAllFilters}>Clear all</Button>
+            <Button className="flex-1" onClick={() => setShowFilters(false)}>Show {filteredMeals.length}</Button>
           </div>
         </SheetContent>
       </Sheet>
 
-      {/* Recipe Detail Sheet */}
+      {/* Recipe detail sheet — native scroll so swipe-down dismiss works */}
       <Sheet open={!!selectedRecipe} onOpenChange={(o) => !o && setSelectedRecipe(null)}>
         <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 overflow-hidden">
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-y-auto">
             {selectedRecipe && (
               <div>
                 {/* Image */}
                 <div className="h-48 bg-secondary w-full overflow-hidden">
                   {selectedRecipe.image_url ? (
-                    <img
-                      src={selectedRecipe.image_url}
-                      alt={selectedRecipe.name}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={selectedRecipe.image_url} alt={selectedRecipe.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-6xl">
                       {selectedRecipe.emoji || <Flame className="w-16 h-16 text-primary/30" />}
@@ -383,7 +352,6 @@ export default function BrowseMeals() {
                     <p className="text-sm text-muted-foreground">{selectedRecipe.description}</p>
                   )}
 
-                  {/* Macro row */}
                   <div className="flex gap-2 flex-wrap">
                     {selectedRecipe.calories != null && (
                       <div className="flex items-center gap-1 bg-secondary rounded-full px-3 py-1 text-xs font-medium">
@@ -409,7 +377,6 @@ export default function BrowseMeals() {
                         <TabsTrigger value="swaps" className="flex-1">Swaps</TabsTrigger>
                       )}
                     </TabsList>
-
                     <TabsContent value="ingredients" className="mt-3 space-y-2">
                       {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 ? (
                         selectedRecipe.ingredients.map((ing, i) => (
@@ -429,7 +396,6 @@ export default function BrowseMeals() {
                         </div>
                       )}
                     </TabsContent>
-
                     <TabsContent value="instructions" className="mt-3 space-y-3">
                       {selectedRecipe.instructions && selectedRecipe.instructions.length > 0 ? (
                         selectedRecipe.instructions.map((inst, i) => (
@@ -444,7 +410,6 @@ export default function BrowseMeals() {
                         <p className="text-sm text-muted-foreground text-center py-4">Instructions coming soon</p>
                       )}
                     </TabsContent>
-
                     {(selectedRecipe.veg_swap || selectedRecipe.vegan_swap) && (
                       <TabsContent value="swaps" className="mt-3 space-y-3">
                         {selectedRecipe.veg_swap && (
@@ -463,8 +428,7 @@ export default function BrowseMeals() {
                     )}
                   </Tabs>
 
-                  {/* Log buttons */}
-                  <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="grid grid-cols-2 gap-3 pt-2 pb-4">
                     <Button
                       variant="outline"
                       className="h-12 rounded-2xl text-sm"
@@ -482,9 +446,138 @@ export default function BrowseMeals() {
                 </div>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </SheetContent>
       </Sheet>
     </div>
+  );
+}
+
+// ── Building blocks ─────────────────────────────────────────────────────────
+
+function Shelf({ title, items, onSelect }: { title: string; items: Meal[]; onSelect: (m: Meal) => void }) {
+  return (
+    <section>
+      <h2 className="font-semibold mb-2 px-1">{title}</h2>
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+        {items.map((meal) => (
+          <button
+            key={meal.id}
+            onClick={() => onSelect(meal)}
+            className="shrink-0 w-40 text-left rounded-2xl border border-border/60 bg-card overflow-hidden active:bg-secondary/40 transition-colors touch-manipulation"
+          >
+            <div className="aspect-square bg-secondary relative">
+              {meal.image_url ? (
+                <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl">{meal.emoji || '🍽️'}</div>
+              )}
+            </div>
+            <div className="p-2">
+              <p className="text-sm font-medium leading-tight line-clamp-2">{meal.name}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                <Flame className="w-3 h-3 inline text-primary" /> {meal.calories} · {meal.protein_g}g P
+              </p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FilteredResults({
+  meals, viewMode, onSelect, onClear,
+}: {
+  meals: Meal[]; viewMode: 'card' | 'grid';
+  onSelect: (m: Meal) => void; onClear: () => void;
+}) {
+  if (meals.length === 0) {
+    return (
+      <Card className="border-border/50">
+        <CardContent className="p-8 text-center">
+          <p className="text-muted-foreground">No meals match those filters.</p>
+          <Button variant="link" className="text-primary mt-2" onClick={onClear}>Clear filters</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  return (
+    <>
+      <p className="text-sm text-muted-foreground mb-3">{meals.length} meal{meals.length === 1 ? '' : 's'}</p>
+      {viewMode === 'card' ? (
+        <div className="space-y-3">
+          {meals.map((meal) => (
+            <Card key={meal.id} className="border-border/50 overflow-hidden cursor-pointer" onClick={() => onSelect(meal)}>
+              <CardContent className="p-3 flex gap-3">
+                <div className="w-16 h-16 rounded-xl bg-secondary flex-shrink-0 overflow-hidden">
+                  {meal.image_url
+                    ? <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-2xl">{meal.emoji || <Flame className="w-6 h-6 text-primary/30" />}</div>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold truncate">{meal.name}</h3>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-primary" />{meal.calories}kcal</span>
+                    {meal.protein_g != null && <span>· {meal.protein_g}g protein</span>}
+                  </div>
+                </div>
+                <Button size="icon" variant="ghost" className="flex-shrink-0">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {meals.map((meal) => (
+            <Card key={meal.id} className="border-border/50 overflow-hidden cursor-pointer" onClick={() => onSelect(meal)}>
+              <div className="aspect-square bg-secondary relative">
+                {meal.image_url
+                  ? <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-4xl">{meal.emoji || <Flame className="w-8 h-8 text-primary/30" />}</div>}
+              </div>
+              <CardContent className="p-2">
+                <h3 className="font-medium text-sm truncate">{meal.name}</h3>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Flame className="w-3 h-3 text-primary" /><span>{meal.calories}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function FilterGroup({ title, children, onClear, hasValue }: { title: string; children: React.ReactNode; onClear: () => void; hasValue: boolean }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium">{title}</span>
+        {hasValue && (
+          <button onClick={onClear} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+            Clear <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'px-3 py-1.5 rounded-full text-sm border transition-colors',
+        active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border/60 text-foreground',
+      )}
+    >
+      {children}
+    </button>
   );
 }
