@@ -1149,6 +1149,21 @@ async function fetchOwnerMealPlan(
     );
     if (!snack) break; // ran out of snacks that fit — stop trying
 
+    // Don't add a snack that would push us further from the target than
+    // where we already are. If the shortfall is 200 kcal and the best
+    // available snack is 350, adding it puts us 150 over — worse than
+    // 200 under.
+    const snackCal = Number(snack.calories);
+    const distanceAfter = Math.abs(shortfall - snackCal);
+    if (distanceAfter > shortfall) {
+      console.log(
+        '[ai-coach owner-meal] skipping snack — would overshoot by',
+        Math.round(snackCal - shortfall), 'kcal vs current undershoot of',
+        Math.round(shortfall),
+      );
+      break;
+    }
+
     used.add(snack.id);
     const [ingResp, stepResp] = await Promise.all([
       supabase.from('ingredients').select('item, sort_order').eq('recipe_id', snack.id),
