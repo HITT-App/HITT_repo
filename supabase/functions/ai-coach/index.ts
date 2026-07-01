@@ -1092,13 +1092,13 @@ async function fetchOwnerMealPlan(
     meals.push(ownerRecipeToMealInPlan(chosen, slot, ingResp.data ?? [], stepResp.data ?? []));
   }
 
-  // Keep adding snacks until we're within 10% of the calorie target or we've
-  // padded 3 times (any more starts looking silly). Owner curated 165 snacks
-  // specifically for this backfill.
-  for (let padAttempts = 0; padAttempts < 3; padAttempts++) {
+  // Keep adding snacks until we're within 5% of the calorie target (~90 kcal
+  // on a 1800 request) or we've padded 5 times. Keto snacks cap at ~446 kcal
+  // each so a single snack can't close a 500+ kcal gap — need multiple passes.
+  for (let padAttempts = 0; padAttempts < 5; padAttempts++) {
     const totalCal = meals.reduce((sum, m) => sum + (m.calories ?? 0), 0);
     const shortfall = targetCal - totalCal;
-    if (shortfall <= targetCal * 0.10) break;
+    if (shortfall <= targetCal * 0.05) break;
 
     const totalP = meals.reduce((s, m) => s + (m.protein_g ?? 0), 0);
     const totalC = meals.reduce((s, m) => s + (m.carbs_g ?? 0), 0);
@@ -1106,10 +1106,21 @@ async function fetchOwnerMealPlan(
     console.log(
       '[ai-coach owner-meal] shortfall', shortfall, 'kcal — adding snack (pass', padAttempts + 1, ')',
     );
-    // Snacks must not blow the daily ceiling. Absolute cap = whatever's left
-    // of the day's carb budget (small positive number = tight snacks only).
-    const snackCarbCap = targetCarbs ? Math.max(0, targetCarbs - totalC) : null;
-    const snackFatCap = targetFat ? Math.max(0, targetFat - totalF) : null;
+    // Snack carb cap = remaining daily budget PLUS a grace of max(10g, 15%
+    // of target). Without the grace, a tight-remaining budget (e.g. 3g left)
+    // shrinks the snack pool below 5 candidates once diet/allergen filters
+    // apply, and pickBestForSlot returns null — snack pad exits without ever
+    // adding anything. The score still prefers the lowest-carb snacks, so
+    // this doesn't blow the day ceiling in practice.
+    const carbGrace = targetCarbs
+      ? Math.max(10, Math.round(targetCarbs * 0.15))
+      : 0;
+    const snackCarbCap = targetCarbs
+      ? Math.max(0, targetCarbs - totalC) + carbGrace
+      : null;
+    const snackFatCap = targetFat
+      ? Math.max(0, targetFat - totalF) + Math.max(10, Math.round(targetFat * 0.15))
+      : null;
     const snack = await pickBestForSlot(
       'snack',
       shortfall,
