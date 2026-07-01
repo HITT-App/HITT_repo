@@ -36,6 +36,7 @@ interface ActivityLog {
   score_impact: number | null;
   status: string | null;
   source_platform: string | null;
+  total_volume_kg: number | null;
 }
 
 function fmtDuration(secs: number): string {
@@ -109,6 +110,7 @@ const ActivityDetail = () => {
           calories: log.calories_burned ?? null,
           distanceKm: log.distance_km ?? null,
           avgHR: log.avg_heart_rate ?? null,
+          volumeKg: log.total_volume_kg ?? null,
         },
         format: 'story',
         dateISO: log.started_at ?? undefined,
@@ -145,7 +147,7 @@ const ActivityDetail = () => {
     if (!user || !id) return;
     supabase
       .from('activity_logs')
-      .select('id, activity_type, started_at, ended_at, duration_seconds, distance_km, calories_burned, avg_heart_rate, intensity_level, route_start_address, route_end_address, notes, score_impact, status, source_platform')
+      .select('id, activity_type, started_at, ended_at, duration_seconds, distance_km, calories_burned, avg_heart_rate, intensity_level, route_start_address, route_end_address, notes, score_impact, status, source_platform, total_volume_kg')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()

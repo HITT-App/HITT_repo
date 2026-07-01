@@ -374,11 +374,38 @@ function GetReadyScreen({ exercise, idx, total, onBegin, onBack, onList }: {
   )
 }
 
-function ActiveScreen({ exercise, idx, total, setNum, playing, timeLeft, cuesOpen, onToggleCues, onBack, onList, onPrev, onToggle, onNext, onCompleteSet, onHoldFinish }: {
+function WeightInput({ kg, onChange }: { kg: number; onChange: (kg: number) => void }) {
+  // Increment matches the smallest realistic plate step. Long-press for x4
+  // is a v2 idea — keep the tap-to-change hitbox tight so users don't
+  // accidentally alter the weight while adjusting.
+  const step = (delta: number) => onChange(Math.max(0, Math.round((kg + delta) * 2) / 2));
+  const btn = {
+    width: 40, height: 40, borderRadius: 20,
+    border: `1px solid ${WP.line}`, background: WP.surface, color: WP.fg,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    WebkitTapHighlightColor: 'transparent',
+  } as const;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: WP.surface, border: `1px solid ${WP.line}`, borderRadius: 14, padding: '8px 12px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: WP.dim, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Load</span>
+        <span style={{ fontSize: 22, fontWeight: 800, color: WP.fg, fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>{kg} <span style={{ fontSize: 13, fontWeight: 700, color: WP.dim }}>kg</span></span>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button style={btn} onClick={() => step(-2.5)} aria-label="Decrease weight"><Minus size={18} /></button>
+        <button style={btn} onClick={() => step(+2.5)} aria-label="Increase weight"><Plus size={18} /></button>
+      </div>
+    </div>
+  );
+}
+
+function ActiveScreen({ exercise, idx, total, setNum, playing, timeLeft, cuesOpen, onToggleCues, onBack, onList, onPrev, onToggle, onNext, onCompleteSet, onHoldFinish, weightKg, onWeightChange }: {
   exercise: ExerciseSnapshot; idx: number; total: number; setNum: number; playing: boolean
   timeLeft: number; cuesOpen: boolean; onToggleCues: () => void
   onBack: () => void; onList: () => void; onPrev: () => void; onToggle: () => void; onNext: () => void
   onCompleteSet: () => void; onHoldFinish: () => void
+  // Undefined for time-mode exercises where load doesn't apply (plank, holds).
+  weightKg?: number; onWeightChange?: (kg: number) => void
 }) {
   const mode = exMode(exercise)
   const cues = exCues(exercise)
@@ -425,6 +452,11 @@ function ActiveScreen({ exercise, idx, total, setNum, playing, timeLeft, cuesOpe
                 <SetDots total={exercise.sets || 1} done={setNum} />
                 <span style={{ fontSize: 13, color: WP.dim, fontWeight: 600 }}>Set {Math.min(setNum + 1, exercise.sets || 1)} of {exercise.sets || 1}</span>
               </div>
+              {weightKg !== undefined && onWeightChange && (
+                <div style={{ marginTop: 14 }}>
+                  <WeightInput kg={weightKg} onChange={onWeightChange} />
+                </div>
+              )}
               <div style={{ fontSize: 32, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: WP.fg, marginTop: 14, letterSpacing: '-.01em' }}>{fmt(setTimer)}</div>
               <div style={{ fontSize: 12, color: WP.dim, fontWeight: 600, marginTop: 2 }}>elapsed this set</div>
             </>
@@ -632,6 +664,12 @@ const GymTimer = () => {
   const [view, setView] = useState<WPView>('ready')
   const [idx, setIdx] = useState(0)
   const [setNum, setSetNum] = useState(0)
+  // Weight tracking per exercise. `weightsLogged[exIdx]` is an array of
+  // completed-set weights in kg; `currentWeights[exIdx]` is the value the
+  // user currently sees in the input (prefills from the previous set's
+  // weight or the exercise default). Total volume = Σ weight × reps.
+  const [weightsLogged, setWeightsLogged] = useState<Record<number, number[]>>({})
+  const [currentWeights, setCurrentWeights] = useState<Record<number, number>>({})
   const [playing, setPlaying] = useState(true)
   const [timeLeft, setTimeLeft] = useState(0)
   const [restLeft, setRestLeft] = useState(REST_SECS)
@@ -752,6 +790,15 @@ const GymTimer = () => {
   }
 
   const completeSet = () => {
+    // Log the current weight for this set (reps-mode only; time-mode
+    // exercises like plank don't carry a load value).
+    if (exMode(currentEx!) === 'reps') {
+      const w = currentWeights[idx] ?? 0
+      setWeightsLogged(prev => ({
+        ...prev,
+        [idx]: [...(prev[idx] ?? []), w],
+      }))
+    }
     if (setNum + 1 >= (currentEx?.sets || 1)) {
       goNext()
     } else {
@@ -820,11 +867,20 @@ const GymTimer = () => {
             .eq("id", scheduledId)
         }
       } else {
+        // Roll up Σ weight × reps across every logged set. Only populated for
+        // AI/strength gym sessions; other flows will just log 0 → null.
+        const totalVolumeKg = Object.entries(weightsLogged).reduce((sum, [exIdx, weights]) => {
+          const ex = exercises[Number(exIdx)];
+          const reps = ex?.reps ?? 0;
+          if (!reps) return sum;
+          return sum + weights.reduce((a, w) => a + w * reps, 0);
+        }, 0);
         await logActivity.mutateAsync({
           activity_type: activityType,
           duration_seconds: elapsed,
           calories_burned: finalCalories,
           notes: counter > 0 ? `${counter} ${counterLabel.toLowerCase()} completed` : undefined,
+          total_volume_kg: totalVolumeKg > 0 ? totalVolumeKg : undefined,
         })
       }
 
@@ -855,10 +911,22 @@ const GymTimer = () => {
 
     if (showCompleted) {
       const workoutDurationMin = Math.floor(totalElapsed / 60)
+      // Same volume roll-up as in finishActivity — kept inline because
+      // completionStats needs it too for the share card, and the state may
+      // still be mounting when finishActivity's callback runs.
+      const totalVolumeKg = Object.entries(weightsLogged).reduce((sum, [exIdx, weights]) => {
+        const ex = exercises[Number(exIdx)];
+        const reps = ex?.reps ?? 0;
+        if (!reps) return sum;
+        return sum + weights.reduce((a, w) => a + w * reps, 0);
+      }, 0)
       const completionStats = [
-        { label: 'Duration', value: workoutDurationMin, unit: 'min' },
-        { label: 'Calories', value: calories, unit: 'kcal' },
+        // Volume takes the middle slot when we actually logged any lift; the
+        // Strength share card promotes it over Duration when present, so the
+        // top line reads "Volume · Exercises · Calories".
+        ...(totalVolumeKg > 0 ? [{ label: 'Volume', value: Math.round(totalVolumeKg).toLocaleString('en-GB'), unit: 'kg' }] : [{ label: 'Duration', value: workoutDurationMin, unit: 'min' }]),
         { label: 'Exercises', value: exercises.length },
+        { label: 'Calories', value: calories, unit: 'kcal' },
       ]
       return (
         <CompletionSummary
@@ -910,6 +978,8 @@ const GymTimer = () => {
             onNext={goNext}
             onCompleteSet={completeSet}
             onHoldFinish={goNext}
+            weightKg={exMode(currentEx) === 'reps' ? (currentWeights[idx] ?? 20) : undefined}
+            onWeightChange={(kg) => setCurrentWeights(prev => ({ ...prev, [idx]: kg }))}
           />
         )}
 

@@ -230,6 +230,9 @@ export const useActivity = () => {
       calories_burned?: number;
       intensity_level?: number;
       notes?: string;
+      // Strength/gym sessions: sum of (weight × reps) across every completed set.
+      // Used by the Strength share card and the ActivityDetail volume readout.
+      total_volume_kg?: number;
     }) => {
       const { data: inserted, error } = await supabase
         .from("activity_logs")
