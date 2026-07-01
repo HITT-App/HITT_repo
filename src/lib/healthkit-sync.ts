@@ -53,12 +53,28 @@ interface SyncPayload {
   sleep: Array<HealthKitSleepNight & { source_platform: string }>;
 }
 
+// Minimum lookback — we always sample the last N days regardless of the
+// stored lastSyncAt. Third-party wearables (especially Garmin) can take
+// tens of minutes to write a workout to HealthKit AFTER the workout's
+// actual startDate. Our sample predicate filters by startDate, so a
+// tight lastSyncAt window can permanently miss a delayed-write workout.
+// Fingerprint dedupe in _shared/activity-upsert.ts absorbs any re-samples.
+const MIN_LOOKBACK_DAYS = 7;
+
 async function readLastSyncISO(): Promise<string> {
   const { value } = await Preferences.get({ key: LAST_SYNC_KEY });
-  if (value) return value;
-  const fallback = new Date();
-  fallback.setDate(fallback.getDate() - DEFAULT_LOOKBACK_DAYS);
-  return fallback.toISOString();
+  const minBoundary = new Date();
+  minBoundary.setDate(minBoundary.getDate() - MIN_LOOKBACK_DAYS);
+  if (!value) {
+    // First run — go back the full default window.
+    const fallback = new Date();
+    fallback.setDate(fallback.getDate() - DEFAULT_LOOKBACK_DAYS);
+    return fallback.toISOString();
+  }
+  // Return the OLDER of (stored lastSyncAt, now - MIN_LOOKBACK_DAYS) so we
+  // always re-scan the recent window. Dedupe drops the re-hits cheaply.
+  const stored = new Date(value);
+  return stored < minBoundary ? stored.toISOString() : minBoundary.toISOString();
 }
 
 async function writeLastSyncISO(iso: string): Promise<void> {
