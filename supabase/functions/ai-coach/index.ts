@@ -1030,10 +1030,21 @@ async function fetchOwnerMealPlan(
       })
       .sort((a, b) => a.score - b.score);
 
-    // Pick from top 3 — narrower than before so we don't average away toward
-    // the middle of the pool when the pool spans a wide macro range.
-    const top = scored.slice(0, Math.min(3, scored.length));
-    const chosen = top[Math.floor(Math.random() * top.length)].row;
+    // Weighted-random pick from the top 5. Weight = 1 / (score + ε) so a
+    // top-1 that's dramatically better than the rest is picked ~always,
+    // while a tight cluster gets genuine variety. Uniform top-K random was
+    // pulling calorie totals down to the library median because "3rd best"
+    // was 500 kcal worse than "1st best" but chose equally often.
+    const top = scored.slice(0, Math.min(5, scored.length));
+    const weights = top.map((t) => 1 / (t.score + 0.001));
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    let r = Math.random() * totalWeight;
+    let pickIdx = 0;
+    for (let i = 0; i < weights.length; i++) {
+      r -= weights[i];
+      if (r <= 0) { pickIdx = i; break; }
+    }
+    const chosen = top[pickIdx].row;
     console.log(
       '[ai-coach owner-meal]', slot,
       `target=${slotCal}kcal/${slotProtein}p pool=${filtered.length}`,
