@@ -1,30 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-
   HITT Connect IQ — user-facing strings (English).
 
-  Strings get added story-by-story as Monkey C views land. Today's set
-  covers only the bare minimum the scaffold references (the app name).
-
+  MVP (v0.1.0): sport picker + native activity recording. The BLE-paired
+  flow (CIQ-02..07 per SPEC_garmin_connect_iq.md) adds more strings later.
 -->
 <strings>
 
   <string id="AppName">HITT</string>
 
-  <!-- Strings for later stories. Commented out until referenced from source. -->
-  <!--
-  <string id="SignInTitle">Sign in with HITT</string>
-  <string id="SignInBody">Open HITT on your phone and enter this code.</string>
-  <string id="SignInWaiting">Waiting for confirmation…</string>
-  <string id="SignInError">Couldn't sign in. Try again.</string>
-  <string id="TodayNoWorkout">No workout scheduled today.</string>
-  <string id="StartButton">Start</string>
-  <string id="PauseButton">Pause</string>
-  <string id="ResumeButton">Resume</string>
-  <string id="StopButton">Stop</string>
-  <string id="SaveButton">Save</string>
-  <string id="DiscardButton">Discard</string>
-  <string id="ResumeRecovered">Resume previous workout?</string>
-  -->
+  <!-- Sport picker -->
+  <string id="MenuTitle">Choose sport</string>
+  <string id="SportRun">Run</string>
+  <string id="SportWalk">Walk</string>
+  <string id="SportBike">Bike</string>
+  <string id="SportSwim">Swim</string>
+  <string id="SportStrength">Strength</string>
+  <string id="SportHIIT">HIIT</string>
+
+  <!-- Recording -->
+  <string id="Paused">PAUSED</string>
+
+  <!-- Save prompt -->
+  <string id="SavePrompt">Save this workout?</string>
 
 </strings>

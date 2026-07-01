@@ -1,52 +1,82 @@
 # HITT — Garmin Connect IQ App
 
-The Monkey C source for the HITT Garmin watch app. See `~/hitt-app/docs/specs/SPEC_garmin_connect_iq.md` for the full delivery spec.
+The Monkey C source for the HITT Garmin watch app.
 
-## Status
+**v0.1.0 scope (uploadable MVP):** sport picker → native Garmin activity
+recording → save to Garmin Connect. The recorded activity syncs from Garmin
+Connect to Apple Health, which the HITT iPhone app already picks up via its
+multi-wearable HealthKit aggregator. So the user round-trip works with zero
+BLE / OAuth code in this version.
 
-**Pre-development scaffold.** Files in this directory are the project skeleton — manifest, build targets, theme tokens — laid down so that work can start the day the Connect IQ SDK is installed on the dev machine.
+**Later (per `docs/specs/SPEC_garmin_connect_iq.md` §9 — Connect IQ-only
+architecture):** pair-code Bluetooth login (CIQ-02), receive scheduled HITT
+workouts on the watch (CIQ-03..07), HITT-branded HIIT interval engine,
+triathlon multi-sport with HITT plan overlay, live in-workout data mirror
+back to the HITT iPhone app.
 
-This directory does **not** yet compile. The Connect IQ SDK (https://developer.garmin.com/connect-iq/) must be installed locally and a developer account approved (see TAPI-02 in the delivery spec) before any Monkey C builds will run.
+## To ship v0.1.0
+
+Read **`BUILD.md`** — step-by-step from "SDK not installed" to
+"signed `.iq` file ready to upload." The Connect IQ Store's "Upload App"
+step requires that binary.
+
+Two things need to be done before that guide's final step (the actual
+`monkeyc` build):
+
+1. Replace the placeholder UUID in `manifest.xml` with the one Garmin
+   reserved in the store dashboard.
+2. Install the Connect IQ SDK Manager and generate a developer key.
 
 ## Layout
 
 ```
 garmin/
-├── README.md                  This file
-├── manifest.xml               App metadata + target devices (TAPI-02 inputs)
-├── monkey.jungle              Build targets and resource scoping
-├── source/                    Monkey C source code (.mc) — empty until CIQ-02 lands
+├── README.md                          This file
+├── BUILD.md                           Owner build guide (SDK install → .iq upload)
+├── manifest.xml                       App metadata + supported devices
+├── monkey.jungle                      Build config (source paths, resource scoping)
+├── source/
+│   ├── HittApp.mc                     AppBase entry point
+│   ├── SportMenuView.mc               Sport picker (Menu2 with 6 items)
+│   ├── SportMenuDelegate.mc           Menu selection → creates recording session
+│   ├── RecordingView.mc               Live recording screen (elapsed timer)
+│   └── RecordingDelegate.mc           START/STOP + BACK → save confirmation
 ├── resources/
-│   ├── strings/strings.xml    User-facing strings (en) — empty until CIQ-04
-│   ├── menus/                 Menu definitions — empty until CIQ-04
-│   ├── images/                App icons (PNG, 80×80 to 36×36)
-│   └── drawables/
-│       └── colors.xml         HITT theme tokens
+│   ├── strings/strings.xml            User-facing strings (English)
+│   ├── drawables/
+│   │   ├── drawables.xml              Drawable manifest (launcher icon binding)
+│   │   ├── launcher_icon.png          80×80 app icon (downscaled HITT logo)
+│   │   └── colors.xml                 HITT theme tokens (for future use)
+│   └── images/                        Reserved for future artwork
+└── (resources-launcher/ not needed for v0.1 — using resources/drawables)
 ```
 
-## Target devices (Connect IQ SDK 4.x floor)
+## Supported devices
 
-Set in `manifest.xml`. Devices released 2022 or later — picks up ~70% of actively-worn modern Garmins with a manageable test matrix (~12 representative models).
+Set in `manifest.xml`. Devices released 2022+ (Connect IQ SDK 4.x floor).
+Covers ~70% of actively-worn modern Garmins with a manageable test matrix.
 
-- Forerunner 165 / 255 / 265 / 265s / 955 / 965
-- Fenix 7 / 7 Pro / 8 / 8s
-- Epix 2 / Epix Pro
-- Venu 3 / 3s / Sq 2
-- Edge 540 / 840 / 1040 / 1050
-- Instinct 2 / 2s / 3
+- **Forerunner** 165 / 255 / 265 / 265s / 955 / 965
+- **Fenix** 7 / 7 Pro / 8 / 8s
+- **Epix** 2 / Epix Pro
+- **Venu** 3 / 3s / Sq 2
+- **Edge** 540 / 840 / 1040 / 1050
+- **Instinct** 2 / 2s / 3
 
-(Older devices may be added post-launch based on demand.)
+Older devices may be added post-launch based on demand.
 
-## What's NOT in this scaffold yet
+## The upgrade path — where the BLE-paired features live
 
-- Any actual Monkey C source (`.mc` files) — lands with CIQ-02 (auth) onwards
-- App icon PNGs — needs design pass before final submission
-- CI build step — pending Connect IQ SDK installed on a build agent
+The Connect IQ-only architecture pivot (`docs/specs/SPEC_garmin_connect_iq.md`
+§9, 2026-06-30) means everything beyond v0.1.0 goes over Bluetooth LE between
+the HITT iPhone app and this Connect IQ app.
 
-## Next stories that touch this directory
+- **CIQ-14** — Capacitor plugin wrapping `ConnectIQ.xcframework` on the iPhone
+  side. Discovers Garmin devices, negotiates a paired session.
+- **CIQ-02 (revised)** — pair-code login: user types a 6-digit code from the
+  watch into the iPhone app. Handshake completes over BLE, watch stores an
+  opaque HITT auth token in `Storage.setValue()`.
+- **CIQ-03..07** — receive scheduled workouts, HIIT interval engine, triathlon
+  multi-sport with per-leg targets, live data mirror.
 
-- **CIQ-02** Device-pair code login. First story to land Monkey C in `source/`.
-- **CIQ-03** Persistent storage layer.
-- **CIQ-04** Activity recording start/pause/lap/stop.
-
-See `~/hitt-app/docs/specs/SPEC_garmin_connect_iq.md` for full story breakdown.
+None of that is in v0.1.0. Ship this first, add BLE later.
