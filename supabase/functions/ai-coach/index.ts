@@ -950,7 +950,24 @@ async function fetchOwnerMealPlan(
       return true;
     };
 
-    const base = (candidates as OwnerRecipeRow[]).filter(baseFilter);
+    let base = (candidates as OwnerRecipeRow[]).filter(baseFilter);
+
+    // Second-tier fallback: if the category-filtered pool has 0 candidates
+    // AFTER diet + allergens (common for vegan or nut-allergic users hitting
+    // the cheese-heavy keto library), retry across ALL owner categories.
+    // The extra carbs get penalised by the scoring layer so we still prefer
+    // low-carb picks, but at least we have SOMETHING to score.
+    if (base.length === 0 && useCategoryFilter) {
+      const retry = await runQuery(false);
+      if (retry.data && retry.data.length > 0) {
+        base = (retry.data as OwnerRecipeRow[]).filter(baseFilter);
+        console.log(
+          '[ai-coach owner-meal]', slot,
+          `keto pool empty after diet/allergen filter — widened to all categories (${base.length} candidates)`,
+        );
+      }
+    }
+
     if (base.length === 0) {
       console.warn(
         '[ai-coach owner-meal]', slot,
