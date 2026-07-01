@@ -32,6 +32,7 @@ initHealthKitSync();
 
 // Critical pages loaded eagerly
 import Index from "./pages/Index";
+import ActivityShareCardsPreview from "./pages/ActivityShareCardsPreview";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
 import NotFound from "./pages/NotFound";
@@ -183,6 +184,7 @@ const App = () => (
           <AppLayout>
           <Suspense fallback={<PageLoader />}>
           <Routes>
+            <Route path="/_preview/share-cards" element={<ActivityShareCardsPreview />} />
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
