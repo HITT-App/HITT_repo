@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-07-01] — New HIIT-branded share cards + smarter meal planner
+
+- **Every activity now gets a HIIT-branded share card** — post-workout share images are redesigned end-to-end. White background, orange hex logo, HIIT wordmark + date eyebrow, three big metric blocks with clean orange labels underlined + dark values in Saira Condensed, and a signature orange curve at the bottom that changes per activity type: climb line for runs/bikes/hikes/triathlon, interval steps for HIIT and strength, sine waves for swim, EKG spikes for cardio, a gentle arc for yoga. Nine activity types covered (HIIT / Triathlon / Run / Bike / Swim / Strength / Cardio / Walk-Hike / Yoga); anything else falls back to the cardio template. Preview + shared PNG use the same source so what you see is what your friends see
+- **Every share entry point now uses the new design** — post-workout screens, Jarvis "Share now" nudge, Activity History row-level share button, Watch triathlon completion, auto-share prompt after wearable sync
+- **Jarvis meal plan now includes a keto library and gets the numbers right** — added 165 owner-curated keto recipes (breakfast / lunch / dinner / snack, all 4–22g carbs) plus a 30-recipe vegetarian + dairy-free keto extension pack so users on restrictive diets can actually hit low-carb targets. When your macros suggest keto (carbs under 25% of calorie target), Jarvis routes to the keto library automatically. Plan totals should now land within 5% of your calorie target with protein floors met and carb ceilings respected — the picker got significantly smarter about respecting ceiling/floor semantics per macro
+- **Spoonacular meal suggestions retired for good** — gated behind a feature flag (OFF by default). All meal recommendations now come from the owner-curated library
+
 ## [2026-07-01] — HITT-hero animation flashes between Finish and share screen
 
 - **New celebratory beat when you finish a GPS activity** — tapping Finish now plays a 2-second HITT-hero animation (the same line-around-the-logo motion from the home screen, at 3× speed) before the share workout screen appears. Small marker of accomplishment; keeps the transition feeling less abrupt
