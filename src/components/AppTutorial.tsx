@@ -230,14 +230,38 @@ export const AppTutorial = ({ onComplete }: { onComplete: () => void }) => {
       const el = document.querySelector(`[data-tutorial="${s.id}"]`);
       if (!el) { setRect(null); return; }
 
+      // Resolve the safe-area-inset-top in real pixels. Reading the CSS
+      // variable directly gives back the literal `env(...)` string (not a
+      // resolved value), so parseFloat returns NaN. Probe via a hidden
+      // fixed element that actually applies `env(safe-area-inset-top)` as
+      // its height — the browser resolves env() at layout time, so
+      // offsetHeight is the true pixel value (54pt on notched iPhones,
+      // ~44pt on Dynamic Island models, 0 elsewhere).
+      const probe = document.createElement("div");
+      probe.style.position = "fixed";
+      probe.style.top = "0";
+      probe.style.left = "0";
+      probe.style.width = "0";
+      probe.style.height = "env(safe-area-inset-top, 0px)";
+      probe.style.pointerEvents = "none";
+      probe.style.visibility = "hidden";
+      document.body.appendChild(probe);
+      const safeTop = probe.offsetHeight;
+      probe.remove();
+      // 24px breathing room below the pill so the highlighted card + its
+      // orange outline both sit clear of the dynamic island.
+      const topGap = safeTop + 24;
+
       if (isInFixedContext(el)) {
         // Fixed elements (nav, FAB, HIIT logo button) are always in viewport;
         // scroll page back to top so the surrounding UI looks natural
         window.scrollTo({ top: 0, behavior: "instant" });
       } else {
-        // Non-fixed: scroll so the element's top edge sits near the top of the viewport
+        // Non-fixed: scroll so the element's top edge sits clear of the
+        // safe-area inset (dynamic island + generous breathing room),
+        // instead of right up against the top of the viewport.
         const absTop = el.getBoundingClientRect().top + window.scrollY;
-        window.scrollTo({ top: Math.max(0, absTop - 8), behavior: "instant" });
+        window.scrollTo({ top: Math.max(0, absTop - topGap), behavior: "instant" });
       }
 
       const r = el.getBoundingClientRect();

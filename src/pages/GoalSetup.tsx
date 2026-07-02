@@ -358,47 +358,52 @@ export default function GoalSetup() {
           </>
         )}
 
-        {/* Step 5 — body scan prompt. Header + footer are both hidden on
-            this step, so the outer content wrapper's `py-6` alone doesn't
-            clear the iPhone dynamic island / notch. Apply the safe-area
-            insets explicitly so the icon + heading never duck under the
-            pill, regardless of device or content height. */}
-        {step === 5 && (
-          <div
-            className="flex flex-col items-center justify-center min-h-full space-y-8 text-center"
-            style={{
-              paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 48px)',
-              paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 32px)',
-            }}
-          >
-            <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center">
-              <ScanFace className="w-10 h-10 text-primary" />
-            </div>
-            <div className="space-y-3 px-2">
-              <h1 className="text-2xl font-bold tracking-tight">One more thing</h1>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                A quick body scan lets the AI see your muscle development and body composition — so your workouts are calibrated to <em>your</em> physique, not a generic template.
-              </p>
-              <p className="text-xs text-muted-foreground/70">Takes about 60 seconds. You can always do it later from your profile.</p>
-            </div>
-            <div className="w-full space-y-3 px-2">
-              <Button
-                className="w-full h-12 rounded-xl font-semibold"
-                onClick={() => navigate('/body-scan', { state: { returnTo: '/schedule-setup' } })}
-              >
-                <ScanFace className="w-4 h-4 mr-2" />
-                Scan my body
-              </Button>
-              <button
-                className="w-full h-11 text-sm text-muted-foreground font-medium active:opacity-70 transition-opacity touch-manipulation"
-                onClick={() => navigate('/schedule-setup')}
-              >
-                Skip for now, build my plan
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Step 5 — body scan prompt.
+          Renders as an absolute-positioned overlay ABOVE the scrollable
+          content wrapper. Previously it lived inside that wrapper with
+          `min-h-full` + `justify-center`, but Safari/WKWebView doesn't
+          resolve percentage heights reliably inside `flex-1 overflow-y-auto`
+          — so `justify-center` was a no-op and everything piled at the
+          top. Using absolute inset-0 gives us a real viewport-sized box
+          and true vertical centering. */}
+      {step === 5 && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-8 text-center bg-background z-10"
+          style={{
+            padding: '24px',
+            paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 24px)',
+            paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 24px)',
+          }}
+        >
+          <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center">
+            <ScanFace className="w-10 h-10 text-primary" />
+          </div>
+          <div className="space-y-3 px-2 max-w-sm">
+            <h1 className="text-2xl font-bold tracking-tight">One more thing</h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              A quick body scan lets the AI see your muscle development and body composition — so your workouts are calibrated to <em>your</em> physique, not a generic template.
+            </p>
+            <p className="text-xs text-muted-foreground/70">Takes about 60 seconds. You can always do it later from your profile.</p>
+          </div>
+          <div className="w-full max-w-sm space-y-3 px-2">
+            <Button
+              className="w-full h-12 rounded-xl font-semibold"
+              onClick={() => navigate('/body-scan', { state: { returnTo: '/schedule-setup' } })}
+            >
+              <ScanFace className="w-4 h-4 mr-2" />
+              Scan my body
+            </Button>
+            <button
+              className="w-full h-11 text-sm text-muted-foreground font-medium active:opacity-70 transition-opacity touch-manipulation"
+              onClick={() => navigate('/schedule-setup')}
+            >
+              Skip for now, build my plan
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Footer — hidden on body scan prompt step */}
       {step < 5 && (

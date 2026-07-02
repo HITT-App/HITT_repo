@@ -72,6 +72,16 @@ const Index = () => {
 
 
   useEffect(() => {
+    // Dev backdoor: `?tour=1` forces the tutorial straight away, skipping
+    // the daily Welcome overlay and ignoring the "already seen" flag. Lets
+    // us reproduce the tutorial without wiping storage every time.
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tour") === "1") {
+        setShowTutorial(true);
+        return;
+      }
+    }
     if (user && !sessionStorage.getItem("hiit_welcomed")) {
       setShowWelcome(true);
     }

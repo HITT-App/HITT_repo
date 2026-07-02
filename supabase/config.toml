@@ -11,3 +11,14 @@ verify_jwt = false
 
 [functions.analyze-body]
 verify_jwt = false
+
+# Garmin CIQ direct-push endpoints — called from the watch, which has no
+# Supabase user session. Auth is done inside each function:
+#   redeem-garmin-pairing        — code IS the auth (hash lookup in DB)
+#   push-garmin-watch-workout    — HMAC-signed watch JWT (see _shared/garmin-jwt.ts)
+
+[functions.redeem-garmin-pairing]
+verify_jwt = false
+
+[functions.push-garmin-watch-workout]
+verify_jwt = false
