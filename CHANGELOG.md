@@ -1,5 +1,39 @@
 # HITT App Changelog
 
+## [2026-07-02] — Garmin v0.2.5: HTTP requests actually reach the server
+
+- **Pairing and workout push now work on real devices** — casey's pair attempts were silently dropped by his watch before ever reaching the server. Root cause: our HTTP payloads set `"Content-Type" => "application/json"` as a plain string. Some Garmin firmwares only recognise the internal `Communications.REQUEST_CONTENT_TYPE_JSON` constant, and reject the request locally when they see the string — no callback fires, no request goes out, watch just shows "Pair failed" with no route to diagnose. Now uses the constant everywhere, matching Garmin's documented pattern
+
+## [2026-07-02] — Garmin v0.2.4: show exact HTTP response code on pair failure
+
+- **Pair-failure messages now include the response code** — e.g. "Bad code (403)", "Server 500", "No net -104" — so we can diagnose stuck pairings without having to attach to Supabase logs. Casey's build kept showing a generic "Pair failed" that could mean anything from a real server bug to BLE being disconnected; the new build surfaces exactly which is happening
+
+## [2026-07-02] — Garmin v0.2.3: fix stuck-pairing state + silent-fail push
+
+- **New "Reset pairing" menu item at the bottom of the sport picker** — appears in place of "Pair with iPhone" whenever the watch has a stored pairing token. Tapping it clears the token and pending push queue, then the sport picker rebuilds with the "Pair with iPhone" entry visible again — so users whose pairing was revoked from the phone (Settings → Unpair) can re-pair on the watch without uninstalling
+- **Post-workout push never crashes the watch app** — casey saw an IQ error dialog after finishing a workout because `Communications.makeWebRequest` can throw synchronously (permission denied at install, malformed payload, etc.) and the exception bubbled up out of the save flow. Now wrapped in try/catch so any push failure is silent — the Fit-file path via Garmin Connect → Apple Health still catches the workout
+
+## [2026-07-02] — Garmin v0.2.2: HITT flash moved to between Save-Yes and "Saved"
+
+- **The HITT-logo brand flash now runs after you pick Save on the confirmation, not before** — pressing BACK now goes straight to the "Save this workout?" prompt (as Garmin's stock apps do); the branded 700 ms flash lands between picking Yes and the "Saved" screen. Reads much more naturally as "recording → saved". The notification-during-workout crash fix from v0.2.1 is still in
+
+## [2026-07-02] — Garmin v0.2.1: fix crash when notification interrupts a workout
+
+- **Dismissing a notification during a workout no longer errors** — Garmin fires `onShow` again on every return from being covered (notification, glance, system prompt). v0.2.0's `onShow` unconditionally created a new `ActivityRecording.Session`, and Garmin threw an "already active" error the moment the user swiped the notification away. Session creation is now guarded so it only fires on first show. Also fixes the "Saved" flash freezing on-screen and the stop-flash never advancing to the save prompt if a notification hit during either
+
+## [2026-07-01] — Garmin v0.1.5: hold-STOP to end workout
+
+- **Holding the STOP button now ends the workout, matching Garmin muscle memory** — v0.1.4 only responded to a short BACK press to open the save prompt. Owner (and most Garmin users) instinctively hold STOP to end an activity because that's the stock-app convention on fenix / forerunner / Venu. Wired the same "HITT flash → Save prompt" flow to the `onMenu` handler, which is what the OS routes long-press STOP to on those device families. BACK still works the same way for Instinct users and anyone who prefers it
+
+## [2026-07-01] — Garmin v0.1.4: stop-flash reliability + Saved-flash BACK fix
+
+- **Stop-flash now shows on all target devices** — v0.1.3's flash was invisible on some watches because the PNG was 8-bit RGB (no alpha) at 200 × 200, which the smaller-screen Instinct family and older MIP-display devices decoded as null. Re-encoded to 8-bit RGBA at 140 × 140 (matches the launcher-icon format) so every device in the manifest can load it. As a safety net, the flash now paints a full-screen HITT-orange background with a large "HITT" wordmark if the bitmap ever fails to load — so the transition is always visible even on future hardware
+- **Fixed IQ error when pressing BACK to leave after saving a workout** — the delegate was swallowing the BACK press during the 1.8 s "Saved" flash, which combined with a stale one-shot Timer reference could trip a NoNextViewException on some devices. BACK during the Saved flash now pops the recording view cleanly back to the sport picker, and the stop-flash timer is no longer stopped from inside its own callback
+
+## [2026-07-01] — Garmin v0.1.3: branded stop-flash transition
+
+- **Garmin watch app now shows a HITT-logo flash between Stop and the Save prompt** — pressing BACK to end a recording used to jump straight into the Yes/No save dialog. It now plays a 700 ms full-screen HITT-"H" logo flash first (same still frame the phone's post-workout intro is clipped from), then the save prompt appears. Makes the stop-to-save transition feel branded and gives the user a beat to register that the workout has ended. Nothing else changed on the watch — PAUSED pill, Saved flash, sport picker and 37-device coverage all as they were in v0.1.2
+
 ## [2026-07-01] — Owner meal library, poll voting, user blocking, modify-schedule fix
 
 - **Jarvis now pulls meal recommendations from the owner's curated library** — 660 recipes across Lose Weight / Gain Weight / Build Muscle / Recovery (Pre/Post-Workout), each with explicit allergens, diet tag (Omnivore / Pescatarian / Vegetarian / Vegan), macros, ingredients and step-by-step method. Spoonacular is now gated behind a feature flag (OFF by default) so recommendations come exclusively from the owner data

@@ -1,10 +1,16 @@
 // Input handling during a recording session.
 //
-//   Physical START/STOP button (or on-screen SELECT on touch devices)
+//   Short-press START/STOP (or on-screen SELECT on touch devices)
 //     → toggle pause
 //
-//   BACK button
-//     → open save/discard confirmation (Garmin convention)
+//   BACK button, MENU button, OR hold START/STOP
+//     → HITT stop-flash, then save/discard confirmation
+//
+// Garmin users have different muscle memory across watch families: some hold
+// STOP (which the OS routes to onMenu on fenix / forerunner / Venu), some
+// press BACK (Instinct / stock-app convention), some press MENU directly.
+// Wiring onBack + onMenu to the same handler catches all three so nobody
+// gets stuck ending a workout.
 //
 // The save confirmation itself is a native WatchUi.Confirmation dialog,
 // which handles the two-button "Yes / No" UI consistently across the
@@ -29,14 +35,24 @@ class RecordingDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onBack() as Boolean {
+        return triggerEndWorkout();
+    }
+
+    function onMenu() as Boolean {
+        return triggerEndWorkout();
+    }
+
+    private function triggerEndWorkout() as Boolean {
         var view = WatchUi.getCurrentView()[0];
         if (view instanceof RecordingView) {
-            var prompt = new WatchUi.Confirmation(
-                Application.loadResource(Rez.Strings.SavePrompt) as String
-            );
-            WatchUi.pushView(prompt,
-                new SaveConfirmDelegate(view as RecordingView),
-                WatchUi.SLIDE_IMMEDIATE);
+            var rv = view as RecordingView;
+            // Saved flash showing? Let the button pop cleanly to the sport
+            // picker instead of trying to open a save prompt for a session
+            // that's already saved. Otherwise: HITT flash + save prompt.
+            if (rv.isFinished()) {
+                return false;
+            }
+            rv.showSavePrompt();
         }
         return true;
     }

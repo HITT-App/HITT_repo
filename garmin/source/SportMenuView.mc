@@ -29,5 +29,21 @@ class SportMenuView extends WatchUi.Menu2 {
         addItem(new WatchUi.MenuItem(
             Application.loadResource(Rez.Strings.SportHIIT),
             null, :hiit, {}));
+
+        // Pair-with-phone entry point — offered at the bottom of the list
+        // when the watch doesn't have a JWT in Storage. Reset-pairing item
+        // shown INSTEAD when a JWT is already stored, so users who got
+        // stuck (server-side revoked but watch didn't know) can self-serve.
+        if (!PushClient.hasToken()) {
+            addItem(new WatchUi.MenuItem(
+                Application.loadResource(Rez.Strings.MenuPair),
+                Application.loadResource(Rez.Strings.MenuPairSub),
+                :pair, {}));
+        } else {
+            addItem(new WatchUi.MenuItem(
+                Application.loadResource(Rez.Strings.MenuReset),
+                Application.loadResource(Rez.Strings.MenuResetSub),
+                :reset_pairing, {}));
+        }
     }
 }

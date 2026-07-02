@@ -27,4 +27,13 @@
   <!-- Post-save confirmation flash -->
   <string id="Saved">Saved</string>
 
+  <!-- Pair with iPhone (visible only when unpaired) -->
+  <string id="MenuPair">Pair with iPhone</string>
+  <string id="MenuPairSub">Sends workouts straight to HITT</string>
+
+  <!-- Reset pairing (visible only when a JWT is stored — self-serve
+       recovery for users whose pairing was revoked server-side.) -->
+  <string id="MenuReset">Reset pairing</string>
+  <string id="MenuResetSub">Clears saved iPhone connection</string>
+
 </strings>

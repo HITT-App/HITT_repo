@@ -42,6 +42,33 @@ class SportMenuDelegate extends WatchUi.Menu2InputDelegate {
                 sport = ActivityRecording.SPORT_TRAINING;
                 subSport = ActivityRecording.SUB_SPORT_CARDIO_TRAINING;
                 break;
+            case :pair:
+                // Pair-with-phone flow. Doesn't start a session — pushes
+                // AuthPairingView and returns to the sport picker on
+                // completion (via popBack in AuthPairingView).
+                var pairView = new AuthPairingView();
+                WatchUi.pushView(
+                    pairView,
+                    new AuthPairingDelegate(pairView),
+                    WatchUi.SLIDE_LEFT
+                );
+                return;
+            case :reset_pairing:
+                // Self-serve recovery. Clear the stored JWT so next time
+                // the sport picker is rebuilt the "Pair with iPhone" entry
+                // reappears in place of this one. Also drop the pending
+                // queue so we don't push stale workouts under a new pairing.
+                PushClient.clearToken();
+                Application.Storage.deleteValue("hitt.pending");
+                // Force the menu to rebuild — pop this view and re-open
+                // the sport picker with fresh menu items.
+                WatchUi.popView(WatchUi.SLIDE_RIGHT);
+                WatchUi.pushView(
+                    new SportMenuView(),
+                    new SportMenuDelegate(),
+                    WatchUi.SLIDE_LEFT
+                );
+                return;
         }
 
         WatchUi.pushView(

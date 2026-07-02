@@ -16,6 +16,8 @@ import Toybox.WatchUi;
 import Toybox.ActivityRecording;
 import Toybox.Graphics;
 import Toybox.System;
+import Toybox.Time;
+import Toybox.Time.Gregorian;
 import Toybox.Timer;
 import Toybox.Application;
 import Toybox.Lang;
@@ -31,10 +33,13 @@ class RecordingView extends WatchUi.View {
 
     private var mTickTimer as Timer.Timer?;
     private var mFinishTimer as Timer.Timer?;
+    private var mStopFlashTimer as Timer.Timer?;
     private var mStartMs as Number = 0;
     private var mAccumulatedMs as Number = 0;
     private var mPaused as Boolean = false;
     private var mFinished as Boolean = false;
+    private var mStopFlash as Boolean = false;
+    private var mSessionStarted as Boolean = false;
 
     function initialize(sport as ActivityRecording.Sport, subSport as ActivityRecording.SubSport, name as String) {
         View.initialize();
@@ -43,18 +48,52 @@ class RecordingView extends WatchUi.View {
         mName = name;
     }
 
+    // onShow fires on FIRST show AND every time the view returns from being
+    // covered — most commonly when a system notification pops up over us
+    // and the user dismisses it. Two things matter:
+    //
+    //   1. Only create the ActivityRecording.Session once. Calling
+    //      createSession() twice throws (a session is already active), and
+    //      that's the source of the "notification dismiss → IQ error" bug.
+    //
+    //   2. Timers were stopped in onHide, so restart whichever ones the
+    //      current state needs. Otherwise the Saved-flash auto-dismiss
+    //      never fires, the stop-flash never advances to the save
+    //      dialog, and the timer that ticks the elapsed display freezes.
     function onShow() as Void {
-        var opts = {
-            :sport => mSport,
-            :subSport => mSubSport,
-            :name => mName
-        };
-        mSession = ActivityRecording.createSession(opts);
-        mSession.start();
-        mStartMs = System.getTimer();
+        if (!mSessionStarted) {
+            mSessionStarted = true;
+            var opts = {
+                :sport => mSport,
+                :subSport => mSubSport,
+                :name => mName
+            };
+            mSession = ActivityRecording.createSession(opts);
+            mSession.start();
+            mStartMs = System.getTimer();
+        }
 
-        mTickTimer = new Timer.Timer();
-        mTickTimer.start(method(:onTick), 1000, true);
+        // Elapsed-display tick — only while actively recording.
+        if (mTickTimer == null && !mFinished && !mStopFlash && !mPaused) {
+            mTickTimer = new Timer.Timer();
+            mTickTimer.start(method(:onTick), 1000, true);
+        }
+
+        // Saved-flash auto-dismiss — restart with the same 1.8s window if
+        // we were interrupted mid-flash. Slightly more time on screen than
+        // the original schedule is fine; too little would strand the user.
+        if (mFinished && mFinishTimer == null) {
+            mFinishTimer = new Timer.Timer();
+            mFinishTimer.start(method(:autoDismiss), 1800, false);
+        }
+
+        // Phase-1 brand flash (post-Save-Yes, pre-Saved-screen) — restart
+        // its timer if a notification interrupted it. Same 700ms; the
+        // callback advances into the Saved screen.
+        if (mStopFlash && mStopFlashTimer == null) {
+            mStopFlashTimer = new Timer.Timer();
+            mStopFlashTimer.start(method(:enterSavedScreen), 700, false);
+        }
     }
 
     function onHide() as Void {
@@ -66,10 +105,14 @@ class RecordingView extends WatchUi.View {
             mFinishTimer.stop();
             mFinishTimer = null;
         }
+        if (mStopFlashTimer != null) {
+            mStopFlashTimer.stop();
+            mStopFlashTimer = null;
+        }
     }
 
     function onTick() as Void {
-        if (!mPaused && !mFinished) {
+        if (!mPaused && !mFinished && !mStopFlash) {
             WatchUi.requestUpdate();
         }
     }
@@ -80,8 +123,36 @@ class RecordingView extends WatchUi.View {
 
         if (mFinished) {
             drawFinishedScreen(dc);
+        } else if (mStopFlash) {
+            drawStopFlash(dc);
         } else {
             drawRecordingScreen(dc);
+        }
+    }
+
+    // Full-screen HITT flash between the Stop press and the save/discard
+    // confirmation. Same source frame as the phone's CompletionIntro so the
+    // two apps feel like siblings.
+    //
+    // Belt-and-braces: paint the whole screen HITT-orange first, then centre
+    // the logo bitmap on top. If loadResource returns null on a device that
+    // can't decode the PNG (older Instinct, some MIP screens) we still get
+    // an unmistakable orange flash + "HITT" wordmark rather than a black
+    // frame that looks like the app hung.
+    private function drawStopFlash(dc as Graphics.Dc) as Void {
+        dc.setColor(HITT_ORANGE, HITT_ORANGE);
+        dc.clear();
+
+        var cx = dc.getWidth() / 2;
+        var cy = dc.getHeight() / 2;
+
+        var icon = Application.loadResource(Rez.Drawables.StopFlash) as WatchUi.BitmapResource?;
+        if (icon != null) {
+            dc.drawBitmap(cx - (icon.getWidth() / 2), cy - (icon.getHeight() / 2), icon);
+        } else {
+            dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, cy, Graphics.FONT_LARGE, "HITT",
+                Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         }
     }
 
@@ -172,6 +243,25 @@ class RecordingView extends WatchUi.View {
 
     // ── Called from RecordingDelegate ──────────────────────────────────
 
+    function isFinished() as Boolean {
+        return mFinished;
+    }
+
+    // Push the save/discard confirmation dialog immediately when the user
+    // presses BACK. The HITT branded flash now runs *after* Save is picked,
+    // between the confirmation and the "Saved" screen (see
+    // saveAndShowFinished below) — v0.1.4 originally had it before, but
+    // that got in the way of the natural stop→confirm rhythm.
+    function showSavePrompt() as Void {
+        if (mFinished) { return; }
+        var prompt = new WatchUi.Confirmation(
+            Application.loadResource(Rez.Strings.SavePrompt) as String
+        );
+        WatchUi.pushView(prompt,
+            new SaveConfirmDelegate(self),
+            WatchUi.SLIDE_IMMEDIATE);
+    }
+
     function togglePause() as Void {
         if (mSession == null || mFinished) { return; }
         if (mPaused) {
@@ -187,26 +277,95 @@ class RecordingView extends WatchUi.View {
         WatchUi.requestUpdate();
     }
 
-    // Called by SaveConfirmDelegate on "Yes". Saves the session then flips
-    // this view into "finished" state — the HITT-logo "Saved" flash renders
-    // for ~1.8s, then autoDismiss pops back to the sport picker.
+    // Called by SaveConfirmDelegate on "Yes". Two-phase transition:
+    //
+    //   Phase 1 (~700ms) — HITT-logo flash on orange background. Same
+    //   visual as the stop-flash we used to show before the confirmation.
+    //   Owner asked for the brand beat to land here instead, between
+    //   confirm and Saved, so the flash reads as "recording, saved".
+    //
+    //   Phase 2 (~1.8s) — "Saved" text + HITT logo + elapsed recap.
+    //   drawFinishedScreen renders this. autoDismiss pops the view.
+    //
+    // Also fires a non-blocking direct HTTP push to push-garmin-watch-workout
+    // via PushClient. Push failures are silent — the Fit-file path via
+    // Garmin Connect → Apple Health still catches this workout.
     function saveAndShowFinished() as Void {
+        var totalMs = mAccumulatedMs;
         if (mSession != null) {
+            if (!mPaused && mStartMs > 0) {
+                totalMs += System.getTimer() - mStartMs;
+            }
             if (!mPaused) {
                 mSession.stop();
             }
             mSession.save();
             mSession = null;
         }
-        mFinished = true;
         if (mTickTimer != null) {
             mTickTimer.stop();
             mTickTimer = null;
         }
+
+        // Phase 1: brand flash. drawStopFlash draws the orange background +
+        // HITT bitmap; we reuse mStopFlash so no new state / draw path.
+        mStopFlash = true;
+        WatchUi.requestUpdate();
+
+        // Fire-and-forget push right away — no reason to wait 700ms for
+        // network I/O to start.
+        //
+        // Wrapped in try/catch because Communications.makeWebRequest can
+        // throw synchronously — most commonly PermissionRequiredException
+        // if the user denied the Communications permission at install, or
+        // a stale-JWT edge case where the connection setup itself fails.
+        // Push failures MUST be silent from the user's perspective: the
+        // Fit-file path via Apple Health still catches this workout, and
+        // an uncaught exception here would surface the generic IQ error
+        // dialog that casey saw (2026-07-02).
+        try {
+            var durationSec = totalMs / 1000;
+            var now = Time.now();
+            var endedAt = formatIso(now);
+            var startedAt = formatIso(new Time.Moment(now.value() - durationSec));
+            PushClient.pushWorkout({
+                "workout_type"     => mName.toLower(),
+                "start_time"       => startedAt,
+                "end_time"         => endedAt,
+                "duration_seconds" => durationSec,
+            });
+        } catch (ex) {
+            System.println("[RecordingView] push failed silently: " + ex.getErrorMessage());
+        }
+
+        // After 700ms, drop into the "Saved" screen (Phase 2).
+        mStopFlashTimer = new Timer.Timer();
+        mStopFlashTimer.start(method(:enterSavedScreen), 700, false);
+    }
+
+    // Fired by mStopFlashTimer at the end of Phase 1. Flips into the
+    // "Saved" screen and starts the auto-dismiss timer.
+    function enterSavedScreen() as Void {
+        mStopFlash = false;
+        mStopFlashTimer = null;
+        mFinished = true;
         WatchUi.requestUpdate();
 
         mFinishTimer = new Timer.Timer();
         mFinishTimer.start(method(:autoDismiss), 1800, false);
+    }
+
+    // ISO-8601 UTC formatter, no fractional seconds. Garmin's built-in
+    // Time.Gregorian.info() returns local time by default; we force UTC
+    // via the FORMAT_SHORT + explicit format string.
+    private function formatIso(m as Time.Moment) as String {
+        var info = Time.Gregorian.utcInfo(m, Time.FORMAT_SHORT);
+        return info.year.format("%04d") + "-"
+             + info.month.format("%02d") + "-"
+             + info.day.format("%02d") + "T"
+             + info.hour.format("%02d") + ":"
+             + info.min.format("%02d") + ":"
+             + info.sec.format("%02d") + "Z";
     }
 
     function discardAndExit() as Void {

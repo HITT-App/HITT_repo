@@ -43,3 +43,14 @@ supabase_scripts/generated_seed.sql
 
 # Provisioning profiles — installed via double-click, do not commit
 *.mobileprovision
+
+# Garmin Connect IQ build artefacts. `.iq` is the store-uploadable package
+# (500+ KB per version, regenerated on every release build); `.prg` and
+# related debug files are intermediate. Sources are what live in git.
+*.iq
+*.prg
+*.prg.debug.xml
+
+# Private developer key for signing CIQ builds — never commit
+*.der
+hitt-connect-iq-developer.key
