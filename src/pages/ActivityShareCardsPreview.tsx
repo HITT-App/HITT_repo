@@ -16,7 +16,8 @@ const SAMPLES = [
   { key: 'swim',      raw: 'swimming',   props: { activityType: 'swimming',  durationSeconds: 1.6 * 108,        distanceKm: 1.6,  calories: 430 } },
   { key: 'strength',  raw: 'gym',        props: { activityType: 'gym',       durationSeconds: 55 * 60,          calories: 318, volumeKg: 12850, exerciseCount: 9 } },
   { key: 'cardio',    raw: 'aerobics',   props: { activityType: 'aerobics',  durationSeconds: 42 * 60,          calories: 498, avgHR: 144 } },
-  { key: 'walkhike',  raw: 'walking',    props: { activityType: 'walking',   durationSeconds: 2 * 3600 + 4 * 60, distanceKm: 9.2,  calories: 560 } },
+  { key: 'walk',      raw: 'walking',    props: { activityType: 'walking',   durationSeconds: 2 * 3600 + 4 * 60, distanceKm: 9.2,  calories: 560 } },
+  { key: 'hike',      raw: 'hiking',     props: { activityType: 'hiking',    durationSeconds: 3 * 3600 + 12 * 60, distanceKm: 14.2, calories: 890 } },
   { key: 'yoga',      raw: 'yoga',       props: { activityType: 'yoga',      durationSeconds: 32 * 60,          calories: 120, avgHR: 96, sessionName: 'Vinyasa' } },
   // Fallback verification — martial-arts and 'other' should both route to cardio.
   { key: 'martial-arts→cardio', raw: 'martial-arts', props: { activityType: 'martial-arts', durationSeconds: 45 * 60, calories: 520, avgHR: 155 } },

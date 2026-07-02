@@ -22,7 +22,7 @@ const T = {
 
 export type ActivityKey =
   | 'hiit' | 'triathlon' | 'run' | 'bike' | 'swim'
-  | 'strength' | 'cardio' | 'walkhike' | 'yoga';
+  | 'strength' | 'cardio' | 'walk' | 'hike' | 'yoga';
 
 type CurveType = 'climb' | 'intervals' | 'waves' | 'hr' | 'gentle';
 
@@ -36,7 +36,11 @@ const ACTIVITY_SPECS: Record<ActivityKey, { name: string; curve: CurveType }> = 
   swim:      { name: 'Swim',           curve: 'waves' },
   strength:  { name: 'Strength',       curve: 'intervals' },
   cardio:    { name: 'Cardio',         curve: 'hr' },
-  walkhike:  { name: 'Walk · Hike',    curve: 'climb' },
+  // Split — the design merged these but a "Walk · Hike" eyebrow on a
+  // plain walk read as wrong to real users. Both use the climb curve so
+  // still feel like siblings.
+  walk:      { name: 'Walk',           curve: 'climb' },
+  hike:      { name: 'Hike',           curve: 'climb' },
   yoga:      { name: 'Yoga · Stretch', curve: 'gentle' },
 };
 
@@ -51,7 +55,8 @@ export function resolveActivityKey(raw: string | null | undefined): ActivityKey 
   if (t === 'bike' || t === 'cycling' || t === 'cycle') return 'bike';
   if (t === 'swim' || t === 'swimming') return 'swim';
   if (t === 'strength' || t === 'gym' || t === 'weights' || t === 'weightlifting') return 'strength';
-  if (t === 'walking' || t === 'walk' || t === 'hiking' || t === 'hike') return 'walkhike';
+  if (t === 'walking' || t === 'walk') return 'walk';
+  if (t === 'hiking' || t === 'hike') return 'hike';
   if (t === 'yoga' || t === 'stretch' || t === 'stretching' || t === 'mobility') return 'yoga';
   // martial-arts, aerobics, "other", or any unrecognised input → cardio
   return 'cardio';
@@ -185,7 +190,8 @@ function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
         { label: 'Calories', value: fmtInt(d.calories ?? 0), unit: 'kcal' },
       ];
     }
-    case 'walkhike': {
+    case 'walk':
+    case 'hike': {
       const km = d.distanceKm ?? 0;
       return [
         { label: 'Distance', value: km ? km.toFixed(1) : '—', unit: 'km' },
@@ -253,6 +259,11 @@ function ActivityLine({ format, curve }: { format: 'story' | 'square'; curve: Cu
 // ── Layout building blocks ─────────────────────────────────────────────────
 
 function HexLogo({ size }: { size: number }) {
+  // No crossOrigin attribute — the image is served from capacitor://localhost/
+  // (same origin as the app), but forcing CORS mode on a response without
+  // CORS headers taints the image, which then makes html2canvas refuse to
+  // paint it. Result was a blank PNG. Leaving crossOrigin unset keeps the
+  // image untainted and drawable.
   return (
     <img
       src="/hiit-watermark.png"
@@ -260,7 +271,6 @@ function HexLogo({ size }: { size: number }) {
       width={size}
       height={size}
       style={{ display: 'block', objectFit: 'contain' }}
-      crossOrigin="anonymous"
     />
   );
 }

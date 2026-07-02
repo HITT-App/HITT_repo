@@ -357,6 +357,16 @@ export default function BrowseMeals() {
       {/* Recipe detail sheet — native scroll so swipe-down dismiss works */}
       <Sheet open={!!selectedRecipe} onOpenChange={(o) => !o && setSelectedRecipe(null)}>
         <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 overflow-hidden">
+          {/* Explicit close button — Radix's built-in outside-tap dismiss
+              doesn't always fire in the Capacitor WebView, and if a recipe
+              has no ingredients/instructions there's no other exit. */}
+          <button
+            onClick={() => setSelectedRecipe(null)}
+            aria-label="Close"
+            className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-black/60 backdrop-blur-sm text-white flex items-center justify-center touch-manipulation"
+          >
+            <X className="w-4 h-4" />
+          </button>
           <div className="h-full overflow-y-auto">
             {selectedRecipe && (
               <div>

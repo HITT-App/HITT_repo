@@ -104,6 +104,11 @@ async function renderCardToCanvas(opts: GenerateOptions): Promise<HTMLCanvasElem
     return await html2canvas(host, {
       width, height, scale: 1,
       useCORS: true,
+      // Allow tainted-canvas draws so images that arrive without CORS
+      // headers still render (Capacitor's local assets don't set them).
+      // Without this the hex logo silently skipped and the whole PNG
+      // came out blank on some builds.
+      allowTaint: true,
       // null background allows the transparency-under-photo variant to
       // preserve its own layered look. For the white variant the card
       // itself paints the background so this is still correct.
