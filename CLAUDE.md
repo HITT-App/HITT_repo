@@ -154,6 +154,14 @@ re-renders. Always use the `@State` + `onReceive(.notificationName)` + `onAppear
 All LLM calls go through `aiChatCompletion()` from `_shared/ai-client.ts` — never fetch the AI
 gateway directly. This allows provider switching (Gemini / OpenAI / Anthropic) via Supabase secrets.
 
+**Postgres reads with more than 1,000 rows — you MUST paginate.** PostgREST enforces a server-side
+`max-rows: 1000` cap on any single response, and it silently truncates. Passing `.range(0, 19999)`
+to bypass it doesn't work — the server still returns only the first 1,000 rows and the rest are
+dropped without an error. Symptom: subset of records rendering "coming soon" / "no data" for no
+apparent reason. Fix: loop `.range(from, from + 999)` in 1,000-row chunks until an empty response
+comes back. See `BrowseMeals.tsx`'s `drainTable()` for the pattern; it's what fixed the
+"~730 of 885 owner recipes showing no ingredients" bug on 2026-07-02.
+
 Quota check pattern:
 ```typescript
 const quota = await checkAIQuota(admin, user.id, { dailyCap: DEFAULT_QUOTAS.xxx, generationType: "xxx" });

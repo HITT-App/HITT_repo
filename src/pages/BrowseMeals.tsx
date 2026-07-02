@@ -112,23 +112,52 @@ export default function BrowseMeals() {
     (async () => {
       setIsLoading(true);
       // Pull recipes + ingredients + steps in parallel and attach client-side.
-      // 660 owner recipes × ~6 ingredients each = ~4000 rows; Supabase's
-      // default select() caps at 1000, which silently dropped whole recipes'
-      // worth of ingredients + steps past that limit. .range(0, 19999) lifts
-      // the cap generously — the payload is still small (plain text lines).
-      const [recipesRes, ingredientsRes, stepsRes] = await Promise.all([
+      //
+      // Supabase PostgREST enforces a SERVER-side max_rows cap (currently
+      // 1000) on any single response, regardless of the client-side .range().
+      // Asking for range(0, 19999) does NOT bypass this — the server just
+      // returns the first 1000 rows and the rest of the range is silently
+      // dropped. With ~5400 ingredient rows across ~885 recipes, that meant
+      // ~730 recipes rendered as "Ingredients coming soon" in the UI.
+      //
+      // Fix: paginate in 1000-row chunks per relation until we've drained
+      // the table. Two-three round trips per relation, tiny payload, no
+      // change to the attach logic below.
+      const drainTable = async <T extends { recipe_id: string }>(
+        table: 'ingredients' | 'steps',
+        cols: string,
+      ): Promise<T[]> => {
+        const all: T[] = [];
+        let from = 0;
+        const chunk = 1000;
+        while (true) {
+          const { data, error } = await supabase.from(table).select(cols).range(from, from + chunk - 1) as unknown as { data: T[] | null; error: unknown };
+          if (error || !data || data.length === 0) break;
+          all.push(...data);
+          if (data.length < chunk) break;
+          from += chunk;
+        }
+        return all;
+      };
+
+      // Note: recipes count (~885 at time of writing) is comfortably below
+      // the 1000 server cap so this single-shot read is fine for now. When
+      // it grows past 1000, wrap this in drainTable too.
+      const [recipesRes, ingredientsRows, stepsRows] = await Promise.all([
         supabase.from('recipes').select('*').range(0, 4999),
-        supabase.from('ingredients').select('recipe_id, item, sort_order').range(0, 19999),
-        supabase.from('steps').select('recipe_id, instruction, step_number').range(0, 19999),
+        drainTable<{ recipe_id: string; item: string; sort_order: number }>(
+          'ingredients', 'recipe_id, item, sort_order'),
+        drainTable<{ recipe_id: string; instruction: string; step_number: number }>(
+          'steps', 'recipe_id, instruction, step_number'),
       ]);
       const ingredientsByRecipe = new Map<string, Ingredient[]>();
-      for (const row of ingredientsRes.data ?? []) {
+      for (const row of ingredientsRows) {
         const list = ingredientsByRecipe.get(row.recipe_id) ?? [];
         list.push({ item: row.item, sort_order: row.sort_order });
         ingredientsByRecipe.set(row.recipe_id, list);
       }
       const stepsByRecipe = new Map<string, Instruction[]>();
-      for (const row of stepsRes.data ?? []) {
+      for (const row of stepsRows) {
         const list = stepsByRecipe.get(row.recipe_id) ?? [];
         list.push({ instruction: row.instruction, step_number: row.step_number });
         stepsByRecipe.set(row.recipe_id, list);
@@ -554,8 +583,11 @@ function FilteredResults({
                     : <div className="w-full h-full flex items-center justify-center text-2xl">{meal.emoji || <Flame className="w-6 h-6 text-primary/30" />}</div>}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{meal.name}</h3>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {/* Two-line clamp — recipe names like
+                      "Peri-peri Salmon Fillet with Broccoli Florets & Kale"
+                      truncate to unhelpful stubs on a single line. */}
+                  <h3 className="font-semibold text-sm leading-tight line-clamp-2">{meal.name}</h3>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                     <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-primary" />{meal.calories}kcal</span>
                     {meal.protein_g != null && <span>· {meal.protein_g}g protein</span>}
                   </div>
@@ -577,8 +609,8 @@ function FilteredResults({
                   : <div className="w-full h-full flex items-center justify-center text-4xl">{meal.emoji || <Flame className="w-8 h-8 text-primary/30" />}</div>}
               </div>
               <CardContent className="p-2">
-                <h3 className="font-medium text-sm truncate">{meal.name}</h3>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <h3 className="font-medium text-sm leading-tight line-clamp-2">{meal.name}</h3>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                   <Flame className="w-3 h-3 text-primary" /><span>{meal.calories}</span>
                 </div>
               </CardContent>

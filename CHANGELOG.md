@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-07-02] — Meals browser: missing ingredients fixed, longer names now wrap to two lines
+
+- **Ingredients and instructions now show for every recipe** — the meals browser used to render a "Ingredients coming soon" placeholder on roughly 730 of the 885 recipes in the library. Root cause: Supabase's PostgREST API enforces a server-side 1,000-row-per-response cap that overrides any `.range()` the client sends, and the meals fetch was asking for a single 20,000-row read of the `ingredients` and `steps` tables. Fix paginates in 1,000-row chunks until each table is drained, so every recipe now attaches its full ingredient + step list on load
+- **Longer recipe names wrap to two lines instead of truncating on one** — names like "Peri-peri Salmon Fillet with Broccoli Florets & Kale" and "Mexican-style Salmon Fillet with Rolled Oats & Kale" used to trail off after the first ~20 characters, so users had no idea what side / vegetable was on the plate before tapping. Both the list view and the 2-up grid now use a two-line clamp with an ellipsis on the third line
+
 ## [2026-07-02] — Paired Garmin watches list + Unpair button; Garmin CIQ v0.2.1 fixes notification crash
 
 - **Paired watches list in Settings → Connected Devices** — every Garmin watch paired with HITT (via the CIQ app) now shows as a row with when it was paired, when it last pushed a workout, and an **Unpair** button. Confirmation dialog before revoke, so a fat-finger tap doesn't unpair the wrong one. Row hides itself as soon as the user confirms — the watch discovers the revoke on its next workout push (server returns 401, watch silently clears its stored token, the "Pair with iPhone" menu reappears on the sport picker)
