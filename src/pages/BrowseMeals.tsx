@@ -10,8 +10,11 @@ import { ArrowLeft, Search, Filter, Grid, List, Flame, Plus, X } from 'lucide-re
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-type Ingredient = { name: string; amount: number; unit: string };
-type Instruction = { step: number; text: string };
+// Ingredients + steps come from the linked `ingredients` and `steps` tables,
+// joined client-side. Both are stored as free-text strings (e.g. "150g firm
+// tofu") — no need to parse them for display.
+type Ingredient = { item: string; sort_order: number };
+type Instruction = { instruction: string; step_number: number };
 
 type Meal = {
   id: string;
@@ -108,11 +111,35 @@ export default function BrowseMeals() {
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      const { data } = await supabase.from('recipes').select('*');
+      // Pull recipes + ingredients + steps in parallel and attach client-side.
+      // The linked tables are indexed by recipe_id so this is a single trip
+      // per table, not per-row.
+      const [recipesRes, ingredientsRes, stepsRes] = await Promise.all([
+        supabase.from('recipes').select('*'),
+        supabase.from('ingredients').select('recipe_id, item, sort_order'),
+        supabase.from('steps').select('recipe_id, instruction, step_number'),
+      ]);
+      const ingredientsByRecipe = new Map<string, Ingredient[]>();
+      for (const row of ingredientsRes.data ?? []) {
+        const list = ingredientsByRecipe.get(row.recipe_id) ?? [];
+        list.push({ item: row.item, sort_order: row.sort_order });
+        ingredientsByRecipe.set(row.recipe_id, list);
+      }
+      const stepsByRecipe = new Map<string, Instruction[]>();
+      for (const row of stepsRes.data ?? []) {
+        const list = stepsByRecipe.get(row.recipe_id) ?? [];
+        list.push({ instruction: row.instruction, step_number: row.step_number });
+        stepsByRecipe.set(row.recipe_id, list);
+      }
+      const enriched = (recipesRes.data ?? []).map(r => ({
+        ...r,
+        ingredients: (ingredientsByRecipe.get(r.id) ?? []).sort((a, b) => a.sort_order - b.sort_order),
+        instructions: (stepsByRecipe.get(r.id) ?? []).sort((a, b) => a.step_number - b.step_number),
+      } as Meal));
       // Shuffle on load so the first impression isn't a wall of one
       // cuisine family (owner names ~40% of recipes "Asian-inspired…"
       // and an alphabetical sort surfaces them all first).
-      if (data) setMeals(shuffled(data as Meal[]));
+      setMeals(shuffled(enriched));
       setIsLoading(false);
     })();
   }, []);
@@ -380,9 +407,8 @@ export default function BrowseMeals() {
                     <TabsContent value="ingredients" className="mt-3 space-y-2">
                       {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 ? (
                         selectedRecipe.ingredients.map((ing, i) => (
-                          <div key={i} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
-                            <span className="text-sm text-foreground capitalize">{ing.name}</span>
-                            <span className="text-sm text-muted-foreground font-medium">{ing.amount} {ing.unit}</span>
+                          <div key={i} className="py-2 border-b border-border/40 last:border-0">
+                            <span className="text-sm text-foreground">{ing.item}</span>
                           </div>
                         ))
                       ) : (
@@ -398,12 +424,12 @@ export default function BrowseMeals() {
                     </TabsContent>
                     <TabsContent value="instructions" className="mt-3 space-y-3">
                       {selectedRecipe.instructions && selectedRecipe.instructions.length > 0 ? (
-                        selectedRecipe.instructions.map((inst, i) => (
-                          <div key={i} className="flex gap-3">
+                        selectedRecipe.instructions.map((inst) => (
+                          <div key={inst.step_number} className="flex gap-3">
                             <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                              {inst.step}
+                              {inst.step_number}
                             </div>
-                            <p className="text-sm text-foreground leading-relaxed">{inst.text}</p>
+                            <p className="text-sm text-foreground leading-relaxed">{inst.instruction}</p>
                           </div>
                         ))
                       ) : (
