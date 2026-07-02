@@ -1,20 +1,19 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useActivity } from "@/hooks/useActivity";
 
+// /activity is a redirect stub — new users used to get gated through
+// `/activity-onboarding` before seeing anything, but the onboarding was
+// mostly a data-collection funnel whose outputs weren't actually driving
+// the score or dashboard. ActivityDashboard renders cleanly with sensible
+// defaults, so we send everyone straight there. Onboarding is still
+// reachable at /activity-onboarding if we ever want to surface it from
+// Settings.
 const ActivityTracker = () => {
   const navigate = useNavigate();
-  const { preferences, preferencesLoading } = useActivity();
 
   useEffect(() => {
-    if (!preferencesLoading) {
-      if (preferences?.onboarding_completed) {
-        navigate("/activity-dashboard", { replace: true });
-      } else {
-        navigate("/activity-onboarding", { replace: true });
-      }
-    }
-  }, [preferences, preferencesLoading, navigate]);
+    navigate("/activity-dashboard", { replace: true });
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">

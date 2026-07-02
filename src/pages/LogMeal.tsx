@@ -384,7 +384,15 @@ export default function LogMeal() {
               { icon: Sparkles, label: 'Describe', accent: true,  onClick: () => setDescribeOpen(true) },
               { icon: Camera,    label: 'Snap',     accent: false, onClick: () => navigate('/meal-scanner') },
               { icon: ScanBarcode, label: 'Barcode', accent: false, onClick: () => navigate('/barcode-scanner') },
-              { icon: Mic,       label: 'Voice',    accent: false, onClick: () => toast({ title: 'Coming soon', description: 'Voice logging is in the works!' }) },
+              { icon: Mic,       label: 'Voice',    accent: false, onClick: () => {
+                  // Voice-log flow reuses the Jarvis pipeline: the assistant's
+                  // `log_food` tool + LOG_FOOD marker already exist and write via
+                  // useAI.logFoodSilent. We just open Jarvis with a prompt that
+                  // primes it to listen for the food description.
+                  window.dispatchEvent(new CustomEvent('hitt:open-jarvis', {
+                    detail: { prefillMessage: "What did you just eat? Tell me the item and roughly how much — I'll estimate the calories and macros and log it for you." },
+                  }));
+                } },
             ].map(({ icon: Icon, label, accent, onClick }) => (
               <button
                 key={label}

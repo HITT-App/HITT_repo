@@ -123,21 +123,10 @@ export function maybePromptShareForNewActivity(inserted: InsertedActivity[]): vo
     duration: 10_000,
     action: {
       label: extra === 0 ? "Share" : "Share this",
-      onClick: () => {
-        window.dispatchEvent(new CustomEvent("hitt:open-jarvis-share", {
-          detail: {
-            workoutId: winner.id,
-            workoutTitle: displayTitle(winner.activity_type),
-            durationMin: Math.max(1, Math.round(winner.duration_seconds / 60)),
-            calories: winner.calories_burned ?? 0,
-            activityType: winner.activity_type,
-            startedAt: winner.started_at,
-            // distanceKm / avgHR aren't on InsertedActivity today — they're
-            // populated in a follow-up sync. The card falls back to the
-            // shorter metric set gracefully when absent.
-          },
-        }));
-      },
+      // Route straight into the per-activity share composer — same URL the
+      // Activity History list uses. The composer is the canonical share
+      // surface now, so we no longer detour through Jarvis for this flow.
+      onClick: () => { window.location.href = `/activity/${winner.id}`; },
     },
   });
 

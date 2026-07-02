@@ -256,7 +256,7 @@ export default function MealScanner() {
       recordActiveDay(supabase, user.id).catch(() => {})
       Analytics.mealLogged('scanner');
       toast({ title: 'Food logged!', description: `${selected.length} item(s) added to ${mealCategory}.` });
-      navigate('/nutrition');
+      navigate('/nutrition-dashboard');
     } catch {
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to add food' });
     } finally {

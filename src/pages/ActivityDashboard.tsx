@@ -32,23 +32,15 @@ const activityIcons: Record<string, string> = {
 const ActivityDashboard = () => {
   const navigate = useNavigate();
   const { profile } = useProfile();
-  const { 
-    preferences, 
-    preferencesLoading,
+  const {
     goals,
-    logs, 
+    logs,
     logsLoading,
     weeklyStats,
     activityScore,
     activityBreakdown,
     recommendations
   } = useActivity();
-
-  // Redirect to onboarding if not completed
-  if (!preferencesLoading && !preferences?.onboarding_completed) {
-    navigate("/activity-onboarding");
-    return null;
-  }
 
   const scoreColor = activityScore >= 70 ? "text-green-500" : activityScore >= 40 ? "text-primary" : "text-muted-foreground";
 
@@ -113,14 +105,11 @@ const ActivityDashboard = () => {
       <div className="p-4 space-y-6">
         {/* Activity Insight */}
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center mb-3">
             <h2 className="font-semibold flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
               Activity Insight
             </h2>
-            <Button variant="link" size="sm" className="text-primary p-0">
-              See All
-            </Button>
           </div>
           <Card className="p-4">
             <div className="flex items-center gap-4 mb-3">

@@ -1,6 +1,13 @@
 import "./lib/preview-bootstrap";
+import { installMicDebug } from "./lib/mic-debug";
 import * as Sentry from "@sentry/react";
 import { initAnalytics } from "./lib/analytics";
+
+// Wrap getUserMedia / SpeechRecognition / MediaRecorder before anything else
+// so every mic access from every component / plugin is counted. Read via
+// `window.__hittDebug.mic` in Safari Web Inspector on a device build.
+// Safe to fail — installMicDebug is instrumentation, not a required feature.
+try { installMicDebug(); } catch (e) { console.warn('[mic-debug] install failed', e); }
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";

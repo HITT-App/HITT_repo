@@ -32,6 +32,11 @@ const HIDDEN_NAV_ROUTES = [
   "/log-meal",
   "/hydration",
   "/meal-scanner",
+  // Per-activity share composer — the Share/Post buttons sit at the
+  // bottom of the sheet and were clipped by the nav bar. Trailing slash
+  // ensures we only match /activity/:id, NOT /activity-live,
+  // /activity-history, /activity-dashboard or /activity-onboarding.
+  "/activity/",
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {

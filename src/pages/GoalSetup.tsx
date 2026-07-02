@@ -358,9 +358,19 @@ export default function GoalSetup() {
           </>
         )}
 
-        {/* Step 5 — body scan prompt */}
+        {/* Step 5 — body scan prompt. Header + footer are both hidden on
+            this step, so the outer content wrapper's `py-6` alone doesn't
+            clear the iPhone dynamic island / notch. Apply the safe-area
+            insets explicitly so the icon + heading never duck under the
+            pill, regardless of device or content height. */}
         {step === 5 && (
-          <div className="flex flex-col items-center justify-center min-h-full py-12 space-y-8 text-center">
+          <div
+            className="flex flex-col items-center justify-center min-h-full space-y-8 text-center"
+            style={{
+              paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 48px)',
+              paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 32px)',
+            }}
+          >
             <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center">
               <ScanFace className="w-10 h-10 text-primary" />
             </div>

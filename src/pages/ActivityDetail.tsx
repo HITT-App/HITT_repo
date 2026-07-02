@@ -1,11 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Ruler, Heart, Zap, MapPin, FileText, Calendar, Share, Square, Smartphone, Moon, ImageIcon, ChevronDown, ChevronUp, Layers, Circle, CircleDot } from "lucide-react";
+import { ArrowLeft, Flame, Ruler, Heart, Zap, MapPin, FileText, Calendar, Share, Square, Smartphone, Moon, ImageIcon, ChevronDown, ChevronUp, Layers, Circle, CircleDot, Users, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { ActivityShareCard } from "@/components/workout/ActivityShareCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useImageUpload } from "@/hooks/useImageUpload";
+import { useCommunityActions } from "@/hooks/useCommunity";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { getSportConfig } from "@/lib/sports";
 import { format, isToday, isYesterday } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -127,6 +130,13 @@ const ActivityDetail = () => {
   const [cardBg, setCardBg] = useState<'white' | 'photo' | 'transparent'>('white');
   const [cardInk, setCardInk] = useState<'dark' | 'light'>('dark');
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  // Post-to-community caption sheet
+  const [captionOpen, setCaptionOpen] = useState(false);
+  const [caption, setCaption] = useState('');
+  const [posting, setPosting] = useState(false);
+  const { uploadImage } = useImageUpload();
+  const { createPost } = useCommunityActions();
+  const keyboardHeight = useKeyboardHeight();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   // Ref to the un-scaled 1080×1920 card wrapper inside the preview. handleShare
@@ -160,18 +170,13 @@ const ActivityDetail = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleShare = async () => {
-    if (!log || isSharing) return;
-    if (cardBg === 'photo' && !photoDataUrl) {
-      toast.error('Add a photo first');
-      return;
-    }
+  // Snapshot the on-screen preview to a PNG Blob at native 1080×1920 / 1080×1080.
+  // Returns null on failure — caller handles user-facing feedback.
+  const captureBlob = async (): Promise<Blob | null> => {
     if (!captureRef.current) {
       toast.error('Preview not ready — try again in a moment.');
-      return;
+      return null;
     }
-    setIsSharing(true);
-    const name = fmtActivityType(log.activity_type);
     const el = captureRef.current;
     const width = 1080;
     const height = cardFormat === 'square' ? 1080 : 1920;
@@ -181,18 +186,13 @@ const ActivityDetail = () => {
     const savedLeft = el.style.left;
     const savedZ = el.style.zIndex;
     try {
-      // Detach the element from the (clipped) preview container so
-      // html2canvas can walk the full 1080×1920 tree without the parent's
-      // overflow:hidden truncating it. position:fixed + off-screen offset
-      // keeps it visible to the layout engine (so it actually paints —
-      // fully-off-screen -99999px offsets skip paint on some WKWebView
-      // builds) while never showing on the visible page.
+      // Detach from the clipped preview container. See earlier comment for
+      // why we use position:fixed left:-99999px instead of top:-99999px.
       el.style.transform = 'none';
       el.style.position = 'fixed';
       el.style.top = '0px';
       el.style.left = '-99999px';
       el.style.zIndex = '-1';
-      // Two frames so the layout reflows before we snapshot.
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       const canvas = await html2canvas(el, {
         width, height, scale: 1,
@@ -203,9 +203,33 @@ const ActivityDetail = () => {
         backgroundColor: cardBg === 'white' ? '#ffffff' : null,
         logging: false,
       });
-      const blob = await new Promise<Blob>((resolve, reject) => {
+      return await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob null'))), 'image/png');
       });
+    } catch (err) {
+      console.error('[ActivityDetail] capture failed:', err);
+      toast.error('Could not create share image — try again in a moment.');
+      return null;
+    } finally {
+      el.style.transform = savedTransform;
+      el.style.position = savedPosition;
+      el.style.top = savedTop;
+      el.style.left = savedLeft;
+      el.style.zIndex = savedZ;
+    }
+  };
+
+  const handleShare = async () => {
+    if (!log || isSharing) return;
+    if (cardBg === 'photo' && !photoDataUrl) {
+      toast.error('Add a photo first');
+      return;
+    }
+    setIsSharing(true);
+    const name = fmtActivityType(log.activity_type);
+    try {
+      const blob = await captureBlob();
+      if (!blob) return;
       const fileName = `hiit-${(log.activity_type ?? 'workout').replace(/\s+/g, '-')}.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
       const shareData: ShareData = {
@@ -227,16 +251,63 @@ const ActivityDetail = () => {
     } catch (err) {
       if ((err as Error)?.name !== 'AbortError') {
         console.error('[ActivityDetail] share failed:', err);
-        toast.error('Could not create share image — try again in a moment.');
+        toast.error('Could not open the share sheet — try again in a moment.');
       }
     } finally {
-      // Restore every style we tweaked so the preview snaps back cleanly.
-      el.style.transform = savedTransform;
-      el.style.position = savedPosition;
-      el.style.top = savedTop;
-      el.style.left = savedLeft;
-      el.style.zIndex = savedZ;
       setIsSharing(false);
+    }
+  };
+
+  // Post to community feed — opens caption sheet first, snapshot + upload
+  // + insert happens on confirm.
+  const openCaptionSheet = () => {
+    if (!log) return;
+    if (cardBg === 'photo' && !photoDataUrl) {
+      toast.error('Add a photo first');
+      return;
+    }
+    // Prefill a sensible caption the user can edit or wipe.
+    const name = fmtActivityType(log.activity_type);
+    const mins = Math.max(1, Math.round((log.duration_seconds ?? 0) / 60));
+    setCaption(`Just finished a ${mins}-min ${name} 💪`);
+    setCaptionOpen(true);
+  };
+
+  const handlePost = async () => {
+    if (!log || posting) return;
+    setPosting(true);
+    try {
+      const blob = await captureBlob();
+      if (!blob) return;
+      const fileName = `hiit-${(log.activity_type ?? 'workout').replace(/\s+/g, '-')}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+      const imageUrl = await uploadImage(file, 'community-images');
+      if (!imageUrl) {
+        // uploadImage's own toast already fired; just bail.
+        return;
+      }
+      const created = await createPost({
+        content: caption.trim() || `Just finished ${fmtActivityType(log.activity_type)}`,
+        post_type: 'workout',
+        category: 'general',
+        tags: [log.activity_type ?? 'workout'],
+        image_url: imageUrl,
+        workout_data: {
+          type: log.activity_type ?? undefined,
+          duration: log.duration_seconds ? Math.round(log.duration_seconds / 60) : undefined,
+          calories: log.calories_burned ?? undefined,
+        },
+      });
+      if (created) {
+        setCaptionOpen(false);
+        toast.success('Posted to community');
+        navigate('/community');
+      }
+    } catch (err) {
+      console.error('[ActivityDetail] post failed:', err);
+      toast.error('Could not post — try again in a moment.');
+    } finally {
+      setPosting(false);
     }
   };
 
@@ -304,7 +375,10 @@ const ActivityDetail = () => {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        <div style={{ padding: '14px 16px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{
+          padding: '14px 16px calc(32px + var(--safe-area-inset-bottom, 0px))',
+          display: 'flex', flexDirection: 'column', gap: 14,
+        }}>
 
           {/* Controls row — format + background toggles */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -430,22 +504,39 @@ const ActivityDetail = () => {
             </span>
           </div>
 
-          {/* Share button */}
-          <button
-            onClick={handleShare}
-            disabled={isSharing}
-            style={{
-              width: '100%', height: 54, borderRadius: 16, border: 'none',
-              cursor: isSharing ? 'default' : 'pointer', marginTop: 4,
-              background: isSharing ? '#3a3a3a' : `linear-gradient(135deg, ${C.primary}, #ea580c)`,
-              color: '#1a0d04', fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              WebkitTapHighlightColor: 'transparent',
-            }}
-          >
-            <Share size={17} strokeWidth={2.2} />
-            {isSharing ? 'Preparing…' : 'Share'}
-          </button>
+          {/* Primary actions — Share (OS share sheet) + Post (community feed) */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            <button
+              onClick={handleShare}
+              disabled={isSharing || posting}
+              style={{
+                flex: 1, height: 54, borderRadius: 16, border: 'none',
+                cursor: (isSharing || posting) ? 'default' : 'pointer',
+                background: isSharing ? '#3a3a3a' : `linear-gradient(135deg, ${C.primary}, #ea580c)`,
+                color: '#1a0d04', fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <Share size={17} strokeWidth={2.2} />
+              {isSharing ? 'Preparing…' : 'Share'}
+            </button>
+            <button
+              onClick={openCaptionSheet}
+              disabled={isSharing || posting}
+              style={{
+                flex: 1, height: 54, borderRadius: 16, border: `1px solid ${C.line}`,
+                cursor: (isSharing || posting) ? 'default' : 'pointer',
+                background: C.card,
+                color: C.fg, fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <Users size={17} strokeWidth={2.2} />
+              Post
+            </button>
+          </div>
 
           {/* Expandable details — old ActivityDetail content lives here */}
           <button
@@ -581,6 +672,116 @@ const ActivityDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Caption sheet — post to community */}
+      {captionOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => !posting && setCaptionOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 60,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 520,
+              background: C.card, color: C.fg,
+              borderTopLeftRadius: 22, borderTopRightRadius: 22,
+              // When the iOS keyboard is up, lift the sheet by exactly its
+              // height so the textarea stays visible above it. When closed,
+              // fall back to the safe-area inset (home-indicator clearance).
+              // The bottom padding stays the same either way — the offset
+              // moves the whole sheet, not just the content.
+              padding: keyboardHeight > 0
+                ? '18px 18px 20px'
+                : '18px 18px calc(24px + var(--safe-area-inset-bottom, 0px))',
+              marginBottom: keyboardHeight > 0 ? keyboardHeight : 0,
+              transition: 'margin-bottom 220ms cubic-bezier(0.32, 0.72, 0, 1)',
+              boxShadow: '0 -12px 40px rgba(0,0,0,0.5)',
+            }}
+          >
+            <div style={{
+              width: 40, height: 4, borderRadius: 999, background: '#3a3a3a',
+              margin: '0 auto 14px',
+            }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>Post to community</div>
+              <button
+                onClick={() => !posting && setCaptionOpen(false)}
+                aria-label="Close"
+                disabled={posting}
+                style={{
+                  width: 32, height: 32, borderRadius: 16, border: 'none',
+                  background: '#2a2a2a', color: C.fg,
+                  display: 'grid', placeItems: 'center',
+                  cursor: posting ? 'default' : 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <X size={16} strokeWidth={2.2} />
+              </button>
+            </div>
+
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Say something about this workout…"
+              maxLength={500}
+              rows={4}
+              disabled={posting}
+              style={{
+                width: '100%', resize: 'none',
+                background: C.bg, color: C.fg, caretColor: C.primary,
+                border: `1px solid ${C.line}`, borderRadius: 14,
+                padding: '12px 14px',
+                fontSize: 15, lineHeight: 1.4,
+                fontFamily: 'inherit',
+                outline: 'none',
+                WebkitAppearance: 'none',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 4px 16px', fontSize: 12, color: C.dim2 }}>
+              <span>Share card attached</span>
+              <span>{caption.length}/500</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setCaptionOpen(false)}
+                disabled={posting}
+                style={{
+                  flex: 1, height: 50, borderRadius: 14,
+                  border: `1px solid ${C.line}`, background: 'transparent',
+                  color: C.fg, fontSize: 15, fontWeight: 600,
+                  cursor: posting ? 'default' : 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePost}
+                disabled={posting}
+                style={{
+                  flex: 1.6, height: 50, borderRadius: 14, border: 'none',
+                  background: posting ? '#3a3a3a' : `linear-gradient(135deg, ${C.primary}, #ea580c)`,
+                  color: '#1a0d04', fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  cursor: posting ? 'default' : 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                {posting ? <Loader2 size={17} className="animate-spin" /> : <Users size={17} strokeWidth={2.2} />}
+                {posting ? 'Posting…' : 'Post'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

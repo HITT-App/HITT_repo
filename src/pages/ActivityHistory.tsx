@@ -93,8 +93,12 @@ const ActivityHistory = () => {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background text-foreground">
-      {/* Header */}
-      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
+      {/* Header — pad-top respects the safe-area inset so it matches the
+          share composer header exactly (CLAUDE.md sticky-header rule). */}
+      <header
+        className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 pb-3"
+        style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 12px)' }}
+      >
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>

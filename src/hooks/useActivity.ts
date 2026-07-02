@@ -91,19 +91,28 @@ export const useActivity = () => {
     enabled: !!user?.id,
   });
 
-  // Calculate activity score (based on weekly progress)
+  // Calculate activity score (based on weekly progress).
+  // Users don't always set explicit goals — `activity_goals` is opt-in — so
+  // fall back to sensible defaults instead of returning 0 whenever the row
+  // is missing. Otherwise the score reads "0" for every new user regardless
+  // of how many activities they've actually logged this week.
   const calculateScore = () => {
-    if (!goals || weeklyLogs.length === 0) return 0;
+    if (weeklyLogs.length === 0) return 0;
+
+    const weeklyActivitiesGoal = goals?.weekly_activities || 5;
+    const weeklyCaloriesGoal = goals?.weekly_calories || 1500;
+    const weeklyDistanceGoal = Number(goals?.weekly_distance_km || 10);
+    const weeklyDurationGoal = goals?.weekly_duration_minutes || 150;
 
     const totalActivities = weeklyLogs.length;
     const totalCalories = weeklyLogs.reduce((sum, log) => sum + (log.calories_burned || 0), 0);
     const totalDistance = weeklyLogs.reduce((sum, log) => sum + Number(log.distance_km || 0), 0);
     const totalDuration = weeklyLogs.reduce((sum, log) => sum + (log.duration_seconds || 0) / 60, 0);
 
-    const activityScore = Math.min((totalActivities / (goals.weekly_activities || 5)) * 25, 25);
-    const calorieScore = Math.min((totalCalories / (goals.weekly_calories || 1500)) * 25, 25);
-    const distanceScore = Math.min((totalDistance / Number(goals.weekly_distance_km || 10)) * 25, 25);
-    const durationScore = Math.min((totalDuration / (goals.weekly_duration_minutes || 150)) * 25, 25);
+    const activityScore = Math.min((totalActivities / weeklyActivitiesGoal) * 25, 25);
+    const calorieScore = Math.min((totalCalories / weeklyCaloriesGoal) * 25, 25);
+    const distanceScore = Math.min((totalDistance / weeklyDistanceGoal) * 25, 25);
+    const durationScore = Math.min((totalDuration / weeklyDurationGoal) * 25, 25);
 
     return Math.round(activityScore + calorieScore + distanceScore + durationScore);
   };

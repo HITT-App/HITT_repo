@@ -215,6 +215,61 @@ async function runCodeAudit() {
     fail('CA-11', 'Jarvis normalises HIIT → "hit" before TTS', 'File not found');
   }
 
+  // ── WakeWordListener: generation counter + debug hook ────────────────────
+  // Guards against the "mic tinkles on loop after sign-out → sign-in" bug.
+  // Cause: rapid useEffect re-runs during auth transitions left zombie
+  // restart timers queued that fired later and spawned new SpeechRecognition
+  // instances forever. Fix: a generation counter that invalidates old
+  // closures. Also exposes window.__hittDebug.wakeWord for on-device
+  // inspection via Safari Web Inspector.
+
+  try {
+    const src = readSrc('components/coach/WakeWordListener.tsx');
+    const hasGeneration = src.includes('generationRef') && src.includes('isStale()');
+    const bumpsOnCleanup = /generationRef\.current \+= 1[\s\S]{0,300}return \(\) =>|return \(\) => \{[\s\S]{0,300}generationRef\.current \+= 1/.test(src);
+    const hasDebugHook = src.includes('__hittDebug') && src.includes('wakeWord');
+    const gatesRestart = src.includes('isStale()') && src.includes('scheduleRestart');
+    if (hasGeneration && bumpsOnCleanup && hasDebugHook && gatesRestart) {
+      pass('CA-54', 'WakeWordListener has generation counter + cleanup bump + debug hook');
+    } else {
+      fail('CA-54', 'WakeWordListener zombie-timer guard',
+        `Missing: ${[
+          !hasGeneration && 'generationRef / isStale()',
+          !bumpsOnCleanup && 'generation bump on cleanup',
+          !hasDebugHook && '__hittDebug.wakeWord',
+          !gatesRestart && 'isStale gate on scheduleRestart',
+        ].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('CA-54', 'WakeWordListener audit', 'File not found');
+  }
+
+  // ── mic-debug: global getUserMedia / SpeechRecognition / MediaRecorder wrap
+  // Complements CA-54 — catches any mic-touching component the wake word
+  // audit misses. Installed once at app startup from main.tsx.
+
+  try {
+    const modSrc = readSrc('lib/mic-debug.ts');
+    const mainSrc = readSrc('main.tsx');
+    const wrapsGum = /navigator\.mediaDevices[\s\S]{0,100}getUserMedia\s*=/.test(modSrc);
+    const wrapsSR = /window\.(?:webkit)?SpeechRecognition\s*=/.test(modSrc);
+    const installedFromMain = mainSrc.includes('installMicDebug()');
+    const exposesWindow = modSrc.includes('__hittDebug') && modSrc.includes('mic');
+    if (wrapsGum && wrapsSR && installedFromMain && exposesWindow) {
+      pass('CA-55', 'mic-debug wraps getUserMedia + SpeechRecognition and installs from main.tsx');
+    } else {
+      fail('CA-55', 'mic-debug installation',
+        `Missing: ${[
+          !wrapsGum && 'getUserMedia wrapper',
+          !wrapsSR && 'SpeechRecognition wrapper',
+          !installedFromMain && 'installMicDebug() in main.tsx',
+          !exposesWindow && '__hittDebug.mic',
+        ].filter(Boolean).join(', ')}`);
+    }
+  } catch {
+    fail('CA-55', 'mic-debug audit', 'lib/mic-debug.ts or main.tsx not found');
+  }
+
   // ── ShareCardCanvas: transparent + story generators (Build 70) ───────────
 
   try {

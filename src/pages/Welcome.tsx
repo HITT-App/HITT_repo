@@ -1,23 +1,24 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SplashScreen } from "@/components/SplashScreen";
-import { OnboardingScreen } from "@/components/OnboardingScreen";
+import { LaunchSplash } from "@/components/LaunchSplash";
 import { useAuth } from "@/hooks/useAuth";
 
 const Welcome = () => {
-  const [showSplash, setShowSplash] = useState(true);
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If user is already logged in, redirect to home
+    // Signed-in users skip the launch splash entirely.
     if (!loading && user) {
       navigate("/");
     }
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    // Check if onboarding was already completed
+    // Returning-but-signed-out users who've already been through the launch
+    // splash go straight to Auth — the "Free while we're new" pitch is a
+    // one-time hook, not something to shove in every session.
     const onboardingComplete = localStorage.getItem("hiit_onboarding_complete");
     if (onboardingComplete === "true") {
       navigate("/auth");
@@ -28,11 +29,7 @@ const Welcome = () => {
     return <SplashScreen onComplete={() => {}} variant="orange" />;
   }
 
-  if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} variant="orange" />;
-  }
-
-  return <OnboardingScreen />;
+  return <LaunchSplash />;
 };
 
 export default Welcome;
