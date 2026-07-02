@@ -10,8 +10,12 @@ import { ArrowLeft, Search, Filter, Grid, List, Flame, Plus, X } from 'lucide-re
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-type Ingredient = { name: string; amount: number; unit: string };
-type Instruction = { step: number; text: string };
+// Ingredients + steps live in child tables (public.ingredients / public.steps),
+// not as columns on `recipes`. We pull them via an embedded PostgREST select and
+// keep their native shape: an ingredient is a single free-text line
+// ("120g egg whites") and a step is a numbered instruction.
+type Ingredient = { item: string; sort_order: number };
+type Instruction = { step_number: number; instruction: string };
 
 type Meal = {
   id: string;
@@ -108,7 +112,13 @@ export default function BrowseMeals() {
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      const { data } = await supabase.from('recipes').select('*');
+      // Ingredients + instructions are stored in child tables, so `select('*')`
+      // on `recipes` alone returns none — every detail sheet then falls back to
+      // "coming soon". Embed the child rows (steps aliased to `instructions`)
+      // so the recipe carries its full content.
+      const { data } = await supabase
+        .from('recipes')
+        .select('*, ingredients(item, sort_order), instructions:steps(step_number, instruction)');
       // Shuffle on load so the first impression isn't a wall of one
       // cuisine family (owner names ~40% of recipes "Asian-inspired…"
       // and an alphabetical sort surfaces them all first).
@@ -379,12 +389,14 @@ export default function BrowseMeals() {
                     </TabsList>
                     <TabsContent value="ingredients" className="mt-3 space-y-2">
                       {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 ? (
-                        selectedRecipe.ingredients.map((ing, i) => (
-                          <div key={i} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
-                            <span className="text-sm text-foreground capitalize">{ing.name}</span>
-                            <span className="text-sm text-muted-foreground font-medium">{ing.amount} {ing.unit}</span>
-                          </div>
-                        ))
+                        [...selectedRecipe.ingredients]
+                          .sort((a, b) => a.sort_order - b.sort_order)
+                          .map((ing, i) => (
+                            <div key={i} className="flex items-start gap-2 py-2 border-b border-border/40 last:border-0">
+                              <span className="text-primary mt-0.5 leading-none">•</span>
+                              <span className="text-sm text-foreground">{ing.item}</span>
+                            </div>
+                          ))
                       ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">Ingredients coming soon</p>
                       )}
@@ -398,14 +410,16 @@ export default function BrowseMeals() {
                     </TabsContent>
                     <TabsContent value="instructions" className="mt-3 space-y-3">
                       {selectedRecipe.instructions && selectedRecipe.instructions.length > 0 ? (
-                        selectedRecipe.instructions.map((inst, i) => (
-                          <div key={i} className="flex gap-3">
-                            <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                              {inst.step}
+                        [...selectedRecipe.instructions]
+                          .sort((a, b) => a.step_number - b.step_number)
+                          .map((inst, i) => (
+                            <div key={i} className="flex gap-3">
+                              <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                                {inst.step_number}
+                              </div>
+                              <p className="text-sm text-foreground leading-relaxed">{inst.instruction}</p>
                             </div>
-                            <p className="text-sm text-foreground leading-relaxed">{inst.text}</p>
-                          </div>
-                        ))
+                          ))
                       ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">Instructions coming soon</p>
                       )}
