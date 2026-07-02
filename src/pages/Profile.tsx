@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Camera, Loader2, User, Target, Shield, Mic, Sun, Moon,
-  Pencil, Check, X, Calendar, Lock, Globe, Trash2, Bell, ChevronRight, Upload, Watch,
+  Pencil, Check, X, Calendar, Lock, Globe, Trash2, Bell, ChevronRight, Upload, Watch, Mail,
 } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 
@@ -585,6 +585,20 @@ export default function Profile() {
 
           {/* Legacy single-device sync — keep for "Sync Now" affordance */}
           <WatchSyncSection />
+
+          {/* Account — read-only email display so users know which
+              address they signed up with. Change flow is a follow-up. */}
+          {user?.email && (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-secondary">
+              <div className="flex items-center gap-2 min-w-0">
+                <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Signed in as</p>
+                  <p className="text-sm font-medium truncate">{user.email}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Password */}
           <PasswordChangeSection />

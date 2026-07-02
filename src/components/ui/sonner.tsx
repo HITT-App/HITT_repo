@@ -10,6 +10,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      // top-center: stops toasts landing in the header area / behind the
+      // dynamic island. closeButton adds an X on every toast so users
+      // can dismiss immediately; the default 4s auto-dismiss still fires
+      // if they don't tap it.
+      position="top-center"
+      closeButton
       toastOptions={{
         classNames: {
           toast:
@@ -17,6 +23,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
           description: "group-[.toast]:text-muted-foreground",
           actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          closeButton:
+            "group-[.toast]:bg-background group-[.toast]:text-foreground group-[.toast]:border-border",
         },
       }}
       {...props}

@@ -13,10 +13,16 @@ const ToastViewport = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Viewport
     ref={ref}
+    // Centre the shadcn toast stack horizontally on every viewport. The
+    // top-4 offset respects the iOS safe area; the fixed 420px cap keeps
+    // it a card, not a full-width banner. `pointer-events-none` on the
+    // viewport itself lets touches pass through to content behind
+    // untouched; each toast re-enables events for the dismiss button.
     className={cn(
-      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+      "fixed left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-full max-w-[420px] flex-col p-4 pointer-events-none",
       className,
     )}
+    style={{ top: 'calc(var(--safe-area-inset-top, 0px) + 12px)' }}
     {...props}
   />
 ));

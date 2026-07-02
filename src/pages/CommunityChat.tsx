@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Settings, Send, Paperclip, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -115,9 +115,6 @@ const CommunityChat = () => {
             <p className="text-xs text-muted-foreground">@{otherUserProfile.username}</p>
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={() => navigate("/chat-settings")}>
-          <Settings className="w-5 h-5" />
-        </Button>
       </header>
 
       {/* Messages */}

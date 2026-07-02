@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Settings, Heart, Send, Paperclip, Smile, Mic, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, Send, Paperclip, Smile, Mic, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -80,9 +80,9 @@ const PostComments = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="text-base font-semibold">All Comments</h1>
-        <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
-          <Settings className="w-5 h-5" />
-        </Button>
+        {/* Spacer so the title stays centred in the flex row now that
+            the trailing settings cog is gone. */}
+        <div className="w-10" />
       </header>
 
       {/* Comments List */}

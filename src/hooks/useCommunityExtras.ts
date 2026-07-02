@@ -23,6 +23,11 @@ export const useSearchUsers = (query: string) => {
         const { data, error } = await supabase
           .from('community_profiles')
           .select('*')
+          // Respect the profile privacy flag — private accounts must
+          // not be discoverable via search, even by exact-match on
+          // username. Users who tick the private toggle in Profile
+          // are trusting us to keep them out of every discovery path.
+          .eq('is_private', false)
           .or(`username.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
           .limit(20);
 
@@ -303,10 +308,14 @@ export const useBrowseUsers = () => {
       try {
         setLoading(true);
         
-        // Get users the current user is NOT following
+        // Get users the current user is NOT following.
+        // Private accounts are excluded from browse for the same reason
+        // they're excluded from search — the whole point of the toggle
+        // is that other users can't stumble across them.
         let query = supabase
           .from('community_profiles')
           .select('*')
+          .eq('is_private', false)
           .order('followers_count', { ascending: false })
           .limit(20);
 

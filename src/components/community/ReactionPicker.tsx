@@ -104,8 +104,11 @@ export const ReactionPicker = ({
         </PopoverContent>
       </Popover>
 
-      {/* Grouped reaction emojis */}
-      {topReactions.length > 0 && total > 0 && (
+      {/* Grouped reaction emojis — only when there are 2+ distinct
+          reaction types. With a single reaction type, the main button
+          already shows that emoji + count, so a solo strip beside it
+          just renders the same heart twice. */}
+      {topReactions.length > 1 && total > 0 && (
         <div className="flex items-center -ml-1">
           {topReactions.map(([type]) => (
             <span key={type} className="text-xs leading-none -ml-0.5">

@@ -845,6 +845,10 @@ export const useCommunityComments = (postId: string) => {
         .single();
 
       if (error) throw error;
+      // Refetch so the new row appears in the list immediately —
+      // previously the insert succeeded silently and the UI only
+      // caught up on the next component mount.
+      await fetchComments();
       return data;
     } catch (error) {
       console.error('Error adding comment:', error);

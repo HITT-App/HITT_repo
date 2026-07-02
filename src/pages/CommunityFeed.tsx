@@ -3,7 +3,7 @@ import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
-  Flame, Users, TrendingUp, Loader2, Share2, Sparkles,
+  Flame, Users, TrendingUp, Loader2, Sparkles,
   Send, Pencil, Trash2, EyeOff, Bell, Trophy, Ban,
 } from "lucide-react";
 import {
@@ -236,18 +236,6 @@ const CommunityFeed = () => {
   const handleDoubleTapLike = (post: CommunityPost) => {
     const currentIsLiked = optimisticLikes[post.id]?.is_liked ?? post.is_liked;
     if (!currentIsLiked) handleLike(post);
-  };
-
-  const handleShare = async (post: CommunityPost) => {
-    const url = `${window.location.origin}/community/post/${post.id}/comments`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Check out this post", url });
-      } catch { /* user cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copied", description: "Post link copied to clipboard" });
-    }
   };
 
   const getInitials = (name: string | null | undefined) => {
@@ -590,16 +578,21 @@ const CommunityFeed = () => {
                 </div>
               )}
 
-              {/* Media - Image */}
+              {/* Media - Image.
+                  Square frame + object-contain: square 1080×1080 share
+                  cards fill the frame perfectly, story-format 1080×1920
+                  cards fit with a slim horizontal letterbox (no top/
+                  bottom crop), and user photos fit end-to-end at their
+                  natural aspect. */}
               {post.image_url && (
                 <div
-                  className="relative mx-3.5 mb-2.5 rounded-xl overflow-hidden"
+                  className="relative mx-3.5 mb-2.5 rounded-xl overflow-hidden bg-secondary"
                   onDoubleClick={() => handleDoubleTapLike(post)}
                 >
                   <img
                     src={post.image_url}
                     alt=""
-                    className="w-full aspect-[4/3] object-cover"
+                    className="w-full aspect-square object-contain"
                     loading="lazy"
                   />
                   {isLikeAnimating && (
@@ -610,19 +603,28 @@ const CommunityFeed = () => {
                 </div>
               )}
 
-              {/* Workout card */}
+              {/* Workout card — only render when there's a real number
+                  to show. Composer posts from ActivityDetail attach
+                  workout_data for every workout share, but activities
+                  logged with 0-second duration + no calories (e.g.
+                  Watch-tap sessions with no HR data) would otherwise
+                  produce an ugly "Cycling 0" stub with no meaningful
+                  stat behind it. */}
               {post.post_type === "workout" && post.workout_data && (
+                (post.workout_data.duration ?? 0) > 0 ||
+                (post.workout_data.calories ?? 0) > 0
+              ) && (
                 <div className="mx-3.5 mb-2.5 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 p-3.5 border border-primary/10">
                   <div className="flex items-center gap-4">
                     {post.workout_data.type && (
                       <span className="text-xs font-semibold text-primary capitalize">{post.workout_data.type}</span>
                     )}
-                    {post.workout_data.duration && (
+                    {(post.workout_data.duration ?? 0) > 0 && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <span className="font-bold text-foreground">{post.workout_data.duration}</span> min
                       </div>
                     )}
-                    {post.workout_data.calories && (
+                    {(post.workout_data.calories ?? 0) > 0 && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <HEmoji name="streak" size={16} style={{verticalAlign:'middle'}}/> <span className="font-bold text-foreground">{post.workout_data.calories}</span> kcal
                       </div>
@@ -718,13 +720,6 @@ const CommunityFeed = () => {
                     <span className="text-xs font-semibold">{formatNumber(post.comments_count)}</span>
                   </button>
 
-                  {/* Share */}
-                  <button
-                    className="flex items-center px-2.5 py-2 rounded-full text-muted-foreground hover:bg-secondary/60 transition-all touch-manipulation"
-                    onClick={() => handleShare(post)}
-                  >
-                    <Share2 className="w-[18px] h-[18px]" />
-                  </button>
                 </div>
 
                 {/* Save */}

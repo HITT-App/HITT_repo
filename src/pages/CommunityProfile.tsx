@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, Settings, UserPlus, UserCheck, UserMinus, MessageSquare,
-  Calendar, Heart, Loader2, ImageIcon, Pencil,
+  Calendar, Heart, Loader2, ImageIcon, Pencil, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -39,8 +39,13 @@ const CommunityProfile = () => {
     if (profile) setIsFollowing(!!profile.is_following);
   }, [profile]);
 
+  // Private-account gate: if the target has ticked "Private" in their
+  // profile and the viewer isn't them, don't render their content.
+  // Matches the "not discoverable" contract we set in search + browse.
+  const isBlockedByPrivacy = !!profile?.is_private && !isOwnProfile;
+
   useEffect(() => {
-    if (!targetUserId) return;
+    if (!targetUserId || isBlockedByPrivacy) return;
     const fetchPosts = async () => {
       setPostsLoading(true);
       const { data } = await supabase
@@ -55,7 +60,7 @@ const CommunityProfile = () => {
       setPostsLoading(false);
     };
     fetchPosts();
-  }, [targetUserId]);
+  }, [targetUserId, isBlockedByPrivacy]);
 
   const handleFollow = async () => {
     if (!targetUserId) return;
@@ -84,6 +89,32 @@ const CommunityProfile = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Full-screen private-account gate. Renders instead of the profile
+  // when the target has ticked Private and the viewer isn't them.
+  if (isBlockedByPrivacy) {
+    return (
+      <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+        <header className="shrink-0 flex items-center gap-3 px-4"
+          style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 12px)', paddingBottom: 12 }}>
+          <button onClick={() => navigate(-1)} className="p-1 -ml-1">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-8 gap-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <Lock className="w-7 h-7 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">This profile is private</h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-xs">
+              The person you're looking for has kept their account private.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
