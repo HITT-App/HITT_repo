@@ -48,18 +48,7 @@ serve(async (req) => {
     };
     const code = String(body.code ?? "").trim();
 
-    // TEMP DIAGNOSTIC: log every attempt while we chase casey's stuck pair.
-    console.log("[redeem-garmin-pairing] attempt:", JSON.stringify({
-      raw_code: body.code,
-      trimmed_code: code,
-      code_len: code.length,
-      code_bytes: [...code].map(c => c.charCodeAt(0)),
-      device_label: body.device_label,
-      body_keys: Object.keys(body ?? {}),
-    }));
-
     if (!/^\d{6}$/.test(code)) {
-      console.log("[redeem-garmin-pairing] rejected: bad format");
       return new Response(JSON.stringify({ error: "Invalid code format" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -81,22 +70,10 @@ serve(async (req) => {
     const match = matches?.[0];
 
     if (!match) {
-      console.log("[redeem-garmin-pairing] no match found for hash:", codeHash);
-      // Show live-pairing count for the whole table so we can see if the
-      // phone-side create step is even landing rows.
-      const { count } = await admin
-        .from("garmin_pairings")
-        .select("id", { count: "exact", head: true })
-        .is("redeemed_at", null)
-        .is("revoked_at", null)
-        .gt("expires_at", nowISO);
-      console.log("[redeem-garmin-pairing] total live pairings in DB right now:", count);
       return new Response(JSON.stringify({ error: "Invalid or expired code" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    console.log("[redeem-garmin-pairing] MATCH found, user:", match.user_id, "attempts:", match.attempts);
 
     if (match.attempts >= MAX_ATTEMPTS) {
       return new Response(JSON.stringify({ error: "Too many attempts — request a new code" }), {

@@ -1,41 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
 import { Share2, X, Smartphone, Square, Loader2, ImagePlus, Trash2 } from 'lucide-react'
+import html2canvas from 'html2canvas'
+import { format as formatDate, startOfWeek, endOfWeek } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { renderWeeklyStats, type TemplateFormat } from '@/lib/shareTemplates'
+import {
+  WeeklyStatsShareCard,
+  type WeeklyStatsFormat,
+  type WeeklyStatsBg,
+  type WeeklyStatsData,
+} from '@/components/workout/WeeklyStatsShareCard'
 import { toast } from 'sonner'
-
-const DIMS: Record<TemplateFormat, { w: number; h: number }> = {
-  post:  { w: 1080, h: 1080 },
-  story: { w: 1080, h: 1920 },
-}
-
-function composite(bgUrl: string, overlayUrl: string, w: number, h: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas')
-    canvas.width = w
-    canvas.height = h
-    const ctx = canvas.getContext('2d')!
-
-    const bg = new Image()
-    bg.onload = () => {
-      // cover-crop background to fill canvas
-      const scale = Math.max(w / bg.width, h / bg.height)
-      const dx = (w - bg.width * scale) / 2
-      const dy = (h - bg.height * scale) / 2
-      ctx.drawImage(bg, dx, dy, bg.width * scale, bg.height * scale)
-
-      const overlay = new Image()
-      overlay.onload = () => {
-        ctx.drawImage(overlay, 0, 0, w, h)
-        resolve(canvas.toDataURL('image/png'))
-      }
-      overlay.onerror = reject
-      overlay.src = overlayUrl
-    }
-    bg.onerror = reject
-    bg.src = bgUrl
-  })
-}
 
 interface Props {
   workouts: number
@@ -45,43 +19,50 @@ interface Props {
   onClose: () => void
 }
 
+const DIMS: Record<WeeklyStatsFormat, { w: number; h: number }> = {
+  post: { w: 1080, h: 1080 },
+  story: { w: 1080, h: 1920 },
+}
+
+// Build the "24–30 JUN 2026" style range from the current week. Kept as its
+// own memo so the card's props are stable across renders.
+function buildWeekRange(): string {
+  const now = new Date()
+  const start = startOfWeek(now, { weekStartsOn: 1 })
+  const end = endOfWeek(now, { weekStartsOn: 1 })
+  const sameMonth = start.getMonth() === end.getMonth()
+  const monthCode = formatDate(end, 'MMM').toUpperCase()
+  const year = formatDate(end, 'yyyy')
+  if (sameMonth) {
+    return `${formatDate(start, 'd')}–${formatDate(end, 'd')} ${monthCode} ${year}`
+  }
+  return `${formatDate(start, 'd MMM').toUpperCase()} – ${formatDate(end, 'd MMM').toUpperCase()} ${year}`
+}
+
 export function WeeklyStatsShareSheet({ workouts, minutes, streak, calories, onClose }: Props) {
-  const [format, setFormat] = useState<TemplateFormat>('post')
-  const [overlayUrl, setOverlayUrl] = useState<string | null>(null)
+  const [format, setFormat] = useState<WeeklyStatsFormat>('post')
+  const [bgVariant, setBgVariant] = useState<WeeklyStatsBg>('white')
   const [bgPhotoUrl, setBgPhotoUrl] = useState<string | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const captureRef = useRef<HTMLDivElement>(null)
 
-  // Render transparent overlay whenever format or stats change
-  useEffect(() => {
-    let cancelled = false
-    setIsGenerating(true)
-    setOverlayUrl(null)
-    setPreviewUrl(null)
+  const dateRange = useMemo(() => buildWeekRange(), [])
 
-    renderWeeklyStats(format, {
-      workouts: workouts.toString(),
-      minutes: minutes.toString(),
-      streak: streak.toString(),
-      calories: calories.toLocaleString(),
-    })
-      .then(url => { if (!cancelled) { setOverlayUrl(url); setIsGenerating(false) } })
-      .catch(() => { if (!cancelled) setIsGenerating(false) })
+  const data: WeeklyStatsData = useMemo(() => ({
+    title: 'My Stats This Week',
+    dateRange,
+    metrics: [
+      { label: 'Workouts', value: workouts.toString() },
+      { label: 'Minutes', value: minutes.toString(), unit: 'min' },
+      { label: 'Calories', value: calories.toLocaleString(), unit: 'kcal' },
+      { label: 'Streak', value: streak.toString(), unit: streak === 1 ? 'wk' : 'wks' },
+    ],
+  }), [workouts, minutes, calories, streak, dateRange])
 
-    return () => { cancelled = true }
-  }, [format, workouts, minutes, streak, calories])
-
-  // Composite overlay + background whenever either changes
-  useEffect(() => {
-    if (!overlayUrl) { setPreviewUrl(null); return }
-    if (!bgPhotoUrl) { setPreviewUrl(overlayUrl); return }
-
-    const { w, h } = DIMS[format]
-    composite(bgPhotoUrl, overlayUrl, w, h)
-      .then(url => setPreviewUrl(url))
-      .catch(() => setPreviewUrl(overlayUrl))
-  }, [overlayUrl, bgPhotoUrl, format])
+  // A photo background means light ink is more legible on top — use the
+  // transparent card variant when a photo is set so the photo shows through.
+  const effectiveBg: WeeklyStatsBg = bgPhotoUrl ? 'transparent' : bgVariant
 
   const handlePhotoSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -94,21 +75,65 @@ export function WeeklyStatsShareSheet({ workouts, minutes, streak, calories, onC
     e.target.value = ''
   }, [])
 
+  const captureBlob = async (): Promise<Blob | null> => {
+    const node = captureRef.current
+    if (!node) return null
+
+    // Snapshot the off-screen 1080×H card at 1:1 pixel scale.
+    const canvas = await html2canvas(node, {
+      width: 1080,
+      height: DIMS[format].h,
+      scale: 1,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: bgPhotoUrl || effectiveBg === 'transparent' ? null : '#ffffff',
+      logging: false,
+    })
+
+    // Composite the background photo underneath if the user picked one.
+    if (bgPhotoUrl) {
+      const composite = document.createElement('canvas')
+      composite.width = DIMS[format].w
+      composite.height = DIMS[format].h
+      const ctx = composite.getContext('2d')!
+      const bg = new Image()
+      const bgLoaded = new Promise<void>((resolve, reject) => {
+        bg.onload = () => resolve()
+        bg.onerror = () => reject(new Error('bg load failed'))
+      })
+      bg.src = bgPhotoUrl
+      await bgLoaded
+      const scale = Math.max(composite.width / bg.width, composite.height / bg.height)
+      const dx = (composite.width - bg.width * scale) / 2
+      const dy = (composite.height - bg.height * scale) / 2
+      ctx.drawImage(bg, dx, dy, bg.width * scale, bg.height * scale)
+      ctx.drawImage(canvas, 0, 0)
+      return await new Promise<Blob | null>((resolve) => composite.toBlob((b) => resolve(b), 'image/png'))
+    }
+
+    return await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'))
+  }
+
   const handleShare = async () => {
-    if (!previewUrl) return
+    if (sharing) return
+    setSharing(true)
     try {
-      const blob = await (await fetch(previewUrl)).blob()
+      const blob = await captureBlob()
+      if (!blob) throw new Error('capture failed')
       const file = new File([blob], 'hitt-weekly-stats.png', { type: 'image/png' })
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] })
       } else {
-        await navigator.clipboard.writeText(previewUrl)
+        const url = URL.createObjectURL(blob)
+        await navigator.clipboard.writeText(url)
         toast.success('Image copied to clipboard')
       }
-    } catch { /* cancelled by user */ }
+    } catch {
+      /* cancelled by user */
+    } finally {
+      setSharing(false)
+    }
   }
-
-  const isReady = !!previewUrl && !isGenerating
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col justify-end">
@@ -132,7 +157,7 @@ export function WeeklyStatsShareSheet({ workouts, minutes, streak, calories, onC
 
         {/* Format toggle */}
         <div className="flex gap-1.5 p-1 rounded-xl bg-secondary">
-          {(['post', 'story'] as TemplateFormat[]).map(f => (
+          {(['post', 'story'] as WeeklyStatsFormat[]).map(f => (
             <button
               key={f}
               onClick={() => setFormat(f)}
@@ -147,29 +172,85 @@ export function WeeklyStatsShareSheet({ workouts, minutes, streak, calories, onC
           ))}
         </div>
 
-        {/* Preview — tap to add/change background */}
-        <div
-          className={cn(
-            'relative w-full overflow-hidden rounded-2xl bg-secondary flex items-center justify-center mx-auto cursor-pointer',
-            format === 'post' ? 'aspect-square max-h-72' : 'aspect-[9/16] max-h-72'
-          )}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {!isReady ? (
-            <Loader2 size={28} className="text-muted-foreground animate-spin" />
-          ) : (
-            <img src={previewUrl!} alt="Weekly stats preview" className="w-full h-full object-contain" />
-          )}
+        {/* Background variant toggle — only meaningful when there's no photo. */}
+        {!bgPhotoUrl && (
+          <div className="flex gap-1.5 p-1 rounded-xl bg-secondary">
+            {(['white', 'transparent'] as WeeklyStatsBg[]).map(v => (
+              <button
+                key={v}
+                onClick={() => setBgVariant(v)}
+                className={cn(
+                  'flex-1 py-2 rounded-lg text-xs font-semibold transition-colors',
+                  bgVariant === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
+                )}
+              >
+                {v === 'white' ? 'White' : 'Transparent'}
+              </button>
+            ))}
+          </div>
+        )}
 
-          {/* Add-photo hint when no background set */}
-          {isReady && !bgPhotoUrl && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1.5">
-                <ImagePlus size={13} className="text-white" />
-                <span className="text-white text-[11px] font-semibold">Add background photo</span>
+        {/* Preview — visible on-screen, scaled to fit. Container is sized
+            to the exact scaled-card dimensions and centred via mx-auto,
+            so the card fills the frame regardless of sheet width. */}
+        {(() => {
+          const previewH = 288
+          const previewW = format === 'post'
+            ? previewH
+            : Math.round(previewH * (1080 / DIMS[format].h))
+          const scale = previewH / DIMS[format].h
+          return (
+            <div
+              className="relative overflow-hidden rounded-2xl bg-secondary mx-auto cursor-pointer"
+              style={{ width: previewW, height: previewH }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {bgPhotoUrl && (
+                <img src={bgPhotoUrl} alt="Background" className="absolute inset-0 w-full h-full object-cover" />
+              )}
+              <div
+                style={{
+                  transform: `scale(${scale})`,
+                  transformOrigin: 'top left',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 1080,
+                  height: DIMS[format].h,
+                }}
+              >
+                <WeeklyStatsShareCard data={data} format={format} bg={effectiveBg} />
               </div>
+              {!bgPhotoUrl && (
+                <div className="absolute inset-x-0 bottom-3 flex items-center justify-center pointer-events-none">
+                  <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1.5">
+                    <ImagePlus size={13} className="text-white" />
+                    <span className="text-white text-[11px] font-semibold">Add background photo</span>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          )
+        })()}
+
+        {/* Off-screen 1:1 render source html2canvas snapshots from. Kept in a
+            zero-size clipping wrapper so it participates in layout (Safari
+            needs that to actually paint the tree) but stays invisible. */}
+        <div
+          aria-hidden
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            overflow: 'hidden',
+            pointerEvents: 'none',
+          }}
+        >
+          <div ref={captureRef} style={{ width: 1080, height: DIMS[format].h }}>
+            <WeeklyStatsShareCard data={data} format={format} bg={effectiveBg} />
+          </div>
         </div>
 
         {/* Remove background button */}
@@ -194,11 +275,11 @@ export function WeeklyStatsShareSheet({ workouts, minutes, streak, calories, onC
         {/* Share button */}
         <button
           onClick={handleShare}
-          disabled={!isReady}
+          disabled={sharing}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all touch-manipulation"
         >
-          <Share2 size={16} />
-          Share
+          {sharing ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
+          {sharing ? 'Preparing…' : 'Share'}
         </button>
       </div>
     </div>
