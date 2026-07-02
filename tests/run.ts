@@ -2788,6 +2788,336 @@ async function runRecentFeatureTests() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// GARMIN SYNC COACHING (source-file audit for the auto-detect + banner flow)
+// ════════════════════════════════════════════════════════════════════════════
+
+async function runGarminCoachingAuditTests() {
+  section('GARMIN SYNC COACHING (source file checks)');
+
+  const REPO = '/Users/vanessa/hitt-app';
+  const readRepo = (path: string) => readFileSync(`${REPO}/${path}`, 'utf-8');
+
+  // ── SYNC-01: native WearableDetectPlugin exists + registers `detect`
+  try {
+    const src = readRepo('ios/App/App/WearableDetectPlugin.swift');
+    const ok = src.includes('@objc(WearableDetectPlugin)')
+      && src.includes('CAPPluginMethod(name: "detect"')
+      && src.includes('canOpenURL(');
+    if (ok) {
+      pass('SYNC-01', 'WearableDetectPlugin.swift registers detect + calls canOpenURL');
+    } else {
+      fail('SYNC-01', 'WearableDetectPlugin.swift structure',
+        'Missing @objc decorator, detect method registration, or canOpenURL call');
+    }
+  } catch (e: any) {
+    fail('SYNC-01', 'WearableDetectPlugin.swift source', e.message);
+  }
+
+  // ── SYNC-02: Info.plist LSApplicationQueriesSchemes covers all 5 vendors
+  try {
+    const src = readRepo('ios/App/App/Info.plist');
+    const required = ['gcm-ios-6573', 'strava', 'fitbit', 'whoop', 'oura'];
+    const missing = required.filter(s => !src.includes(`<string>${s}</string>`));
+    const hasKey = src.includes('LSApplicationQueriesSchemes');
+    if (hasKey && missing.length === 0) {
+      pass('SYNC-02', 'Info.plist declares all 5 vendor URL schemes for canOpenURL probe');
+    } else {
+      fail('SYNC-02', 'Info.plist LSApplicationQueriesSchemes',
+        !hasKey ? 'LSApplicationQueriesSchemes key missing' : `Missing schemes: ${missing.join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('SYNC-02', 'Info.plist inspection', e.message);
+  }
+
+  // ── SYNC-03: TS plugin wrapper exports detectInstalledVendors with full shape
+  try {
+    const src = readRepo('src/plugins/WearableDetectPlugin.ts');
+    const requiredFields = ['garminInstalled', 'stravaInstalled', 'fitbitInstalled', 'whoopInstalled', 'ouraInstalled'];
+    const missing = requiredFields.filter(f => !src.includes(f));
+    const hasExport = src.includes('export async function detectInstalledVendors')
+      && src.includes('registerPlugin');
+    if (hasExport && missing.length === 0) {
+      pass('SYNC-03', 'WearableDetectPlugin.ts exports detectInstalledVendors with all 5 vendor fields');
+    } else {
+      fail('SYNC-03', 'WearableDetectPlugin.ts contract',
+        !hasExport ? 'detectInstalledVendors or registerPlugin missing' : `Missing fields: ${missing.join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('SYNC-03', 'WearableDetectPlugin.ts source', e.message);
+  }
+
+  // ── SYNC-04: migration adds the declared_wearable_* columns + constraint
+  try {
+    const migrationDir = `${REPO}/supabase/migrations`;
+    const migrationFiles = readdirSync(migrationDir);
+    const relevant = migrationFiles.find((f: string) => f.includes('workout_preferences_declared_wearable'));
+    if (!relevant) throw new Error('migration file not found');
+    const src = readFileSync(`${migrationDir}/${relevant}`, 'utf-8');
+    const cols = ['declared_wearable_vendor', 'declared_wearable_detected_at', 'declared_wearable_source', 'garmin_setup_reminder_state'];
+    const missing = cols.filter(c => !src.includes(c));
+    const hasCheck = src.includes('workout_preferences_declared_wearable_vendor_check');
+    if (missing.length === 0 && hasCheck) {
+      pass('SYNC-04', 'workout_preferences migration adds all 4 columns + vendor CHECK constraint');
+    } else {
+      fail('SYNC-04', 'workout_preferences migration',
+        `${missing.length ? 'Missing: ' + missing.join(', ') : ''} ${!hasCheck ? '(no CHECK constraint)' : ''}`);
+    }
+  } catch (e: any) {
+    fail('SYNC-04', 'declared_wearable migration', e.message);
+  }
+
+  // ── SYNC-05: auto-detect hook uses the plugin, is idempotent, and writes prefs
+  try {
+    const src = readRepo('src/hooks/useWearableAutoDetect.ts');
+    const usesPlugin = src.includes('detectInstalledVendors');
+    const idempotent = src.includes('hasRun');
+    const writesPrefs = /workout_preferences[\s\S]{0,200}upsert/.test(src)
+      && src.includes('declared_wearable_vendor')
+      && src.includes('declared_wearable_source');
+    if (usesPlugin && idempotent && writesPrefs) {
+      pass('SYNC-05', 'useWearableAutoDetect calls detectInstalledVendors, is idempotent, upserts workout_preferences');
+    } else {
+      fail('SYNC-05', 'useWearableAutoDetect contract',
+        `Missing: ${[!usesPlugin && 'plugin call', !idempotent && 'idempotency guard', !writesPrefs && 'prefs upsert'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('SYNC-05', 'useWearableAutoDetect source', e.message);
+  }
+
+  // ── SYNC-06: sync-status hook resolves tier client-side (no cron)
+  try {
+    const src = readRepo('src/hooks/useGarminSyncStatus.ts');
+    const clientSide = src.includes('activity_logs')
+      && src.includes('source_platform')
+      && src.includes('garmin');
+    const hasTierBoundaries = src.includes('>= 14') && src.includes('>= 7') && src.includes('>= 3');
+    const hasDismissal = src.includes('garmin_setup_reminder_state')
+      && src.includes('dismissCurrentTier');
+    if (clientSide && hasTierBoundaries && hasDismissal) {
+      pass('SYNC-06', 'useGarminSyncStatus computes tier client-side with 3/7/14 day boundaries + dismissal ledger');
+    } else {
+      fail('SYNC-06', 'useGarminSyncStatus contract',
+        `Missing: ${[!clientSide && 'client-side activity_logs query', !hasTierBoundaries && '3/7/14 boundaries', !hasDismissal && 'dismissal ledger'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('SYNC-06', 'useGarminSyncStatus source', e.message);
+  }
+
+  // ── SYNC-07: GarminSetupSheet triggers a HealthKit resync + has Garmin scheme deep link
+  try {
+    const src = readRepo('src/components/wearable/GarminSetupSheet.tsx');
+    const hasResync = src.includes('syncHealthKitNow');
+    const hasDeepLink = src.includes('gcm-ios-6573');
+    if (hasResync && hasDeepLink) {
+      pass('SYNC-07', 'GarminSetupSheet resyncs HealthKit + has Garmin Connect deep link');
+    } else {
+      fail('SYNC-07', 'GarminSetupSheet contract',
+        `Missing: ${[!hasResync && 'syncHealthKitNow', !hasDeepLink && 'gcm-ios-6573 scheme'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('SYNC-07', 'GarminSetupSheet source', e.message);
+  }
+
+  // ── SYNC-08: GarminSyncBanner reads tier from the hook + renders the sheet
+  try {
+    const src = readRepo('src/components/wearable/GarminSyncBanner.tsx');
+    const readsHook = src.includes('useGarminSyncStatus');
+    const rendersSheet = src.includes('GarminSetupSheet');
+    if (readsHook && rendersSheet) {
+      pass('SYNC-08', 'GarminSyncBanner reads useGarminSyncStatus + opens GarminSetupSheet');
+    } else {
+      fail('SYNC-08', 'GarminSyncBanner contract',
+        `Missing: ${[!readsHook && 'useGarminSyncStatus', !rendersSheet && 'GarminSetupSheet render'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('SYNC-08', 'GarminSyncBanner source', e.message);
+  }
+
+  // ── SYNC-09: auto-detect hook + banner wired into Index.tsx (home)
+  try {
+    const src = readRepo('src/pages/Index.tsx');
+    const wiresHook = src.includes('useWearableAutoDetect()');
+    const rendersBanner = src.includes('<GarminSyncBanner');
+    if (wiresHook && rendersBanner) {
+      pass('SYNC-09', 'Index.tsx wires useWearableAutoDetect + renders GarminSyncBanner');
+    } else {
+      fail('SYNC-09', 'Index.tsx wiring',
+        `Missing: ${[!wiresHook && 'useWearableAutoDetect()', !rendersBanner && '<GarminSyncBanner />'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('SYNC-09', 'Index.tsx inspection', e.message);
+  }
+
+  // ── SYNC-10: ConnectedDevices has always-reachable "Set up Garmin sync" affordance
+  try {
+    const src = readRepo('src/pages/ConnectedDevices.tsx');
+    const hasEntry = src.includes('Set up Garmin sync')
+      && src.includes('GarminSetupSheet');
+    if (hasEntry) {
+      pass('SYNC-10', 'ConnectedDevices exposes "Set up Garmin sync" entry to GarminSetupSheet');
+    } else {
+      fail('SYNC-10', 'ConnectedDevices entry point',
+        'Missing "Set up Garmin sync" button or GarminSetupSheet render');
+    }
+  } catch (e: any) {
+    fail('SYNC-10', 'ConnectedDevices inspection', e.message);
+  }
+
+  // ── SYNC-11: TS + Swift plugin schemes stay in sync (drift detector)
+  try {
+    const swift = readRepo('ios/App/App/WearableDetectPlugin.swift');
+    const plist = readRepo('ios/App/App/Info.plist');
+    const schemes = ['gcm-ios-6573', 'strava', 'fitbit', 'whoop', 'oura'];
+    const swiftMisses = schemes.filter(s => !swift.includes(`"${s}"`));
+    const plistMisses = schemes.filter(s => !plist.includes(`<string>${s}</string>`));
+    if (swiftMisses.length === 0 && plistMisses.length === 0) {
+      pass('SYNC-11', 'URL schemes are consistent across Swift plugin + Info.plist');
+    } else {
+      fail('SYNC-11', 'URL scheme drift',
+        `${swiftMisses.length ? 'Swift missing: ' + swiftMisses.join(', ') : ''} ${plistMisses.length ? 'Info.plist missing: ' + plistMisses.join(', ') : ''}`);
+    }
+  } catch (e: any) {
+    fail('SYNC-11', 'scheme consistency audit', e.message);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ACTIVITY DEDUPE (source-file audit for _shared/activity-types.ts + activity-upsert.ts)
+// ════════════════════════════════════════════════════════════════════════════
+
+async function runDedupeAuditTests() {
+  section('ACTIVITY DEDUPE (source file checks)');
+
+  const SUPA_SHARED = '/Users/vanessa/hitt-app/supabase/functions/_shared';
+  const readShared = (name: string) => readFileSync(`${SUPA_SHARED}/${name}`, 'utf-8');
+
+  // ── DEDUPE-01: activity-types.ts module exists and exports the canonical API
+  try {
+    const src = readShared('activity-types.ts');
+    const missing = [
+      'normaliseActivityType',
+      'sourcePriority',
+      'SOURCE_PRIORITY',
+      'FUZZY_MATCH_WINDOW_SECONDS',
+      'CanonicalActivityType',
+    ].filter(sym => !src.includes(sym));
+    if (missing.length === 0) {
+      pass('DEDUPE-01', 'activity-types.ts exports normaliser + priority + fuzzy-window constants');
+    } else {
+      fail('DEDUPE-01', 'activity-types.ts required exports', `Missing: ${missing.join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('DEDUPE-01', 'activity-types.ts source', e.message);
+  }
+
+  // ── DEDUPE-02: SOURCE_PRIORITY covers every documented vendor
+  try {
+    const src = readShared('activity-types.ts');
+    const required = ['hitt_watch', 'hitt_garmin_watch', 'apple_watch', 'garmin', 'fitbit', 'whoop', 'oura', 'hitt_phone'];
+    const missing = required.filter(s => !src.includes(`${s}:`));
+    if (missing.length === 0) {
+      pass('DEDUPE-02', 'SOURCE_PRIORITY covers every documented vendor');
+    } else {
+      fail('DEDUPE-02', 'SOURCE_PRIORITY coverage', `Missing: ${missing.join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('DEDUPE-02', 'SOURCE_PRIORITY inspection', e.message);
+  }
+
+  // ── DEDUPE-03: activity-upsert.ts imports the normaliser (no bypass path)
+  try {
+    const src = readShared('activity-upsert.ts');
+    const importsNormaliser = /from ["']\.\/activity-types(?:\.ts)?["']/.test(src)
+      && src.includes('normaliseActivityType')
+      && src.includes('sourcePriority');
+    if (importsNormaliser) {
+      pass('DEDUPE-03', 'activity-upsert imports normaliseActivityType + sourcePriority');
+    } else {
+      fail('DEDUPE-03', 'activity-upsert imports', 'Missing import from ./activity-types');
+    }
+  } catch (e: any) {
+    fail('DEDUPE-03', 'activity-upsert source', e.message);
+  }
+
+  // ── DEDUPE-04: fingerprint normalises activity_type before hashing
+  try {
+    const src = readShared('activity-upsert.ts');
+    // The fingerprint function body must call normaliseActivityType() so
+    // "run" and "running" from different paths hash to the same value.
+    const fpBody = src.match(/export async function activityFingerprint[\s\S]{0,600}/)?.[0] ?? '';
+    if (fpBody.includes('normaliseActivityType(')) {
+      pass('DEDUPE-04', 'activityFingerprint normalises activity_type before hashing');
+    } else {
+      fail('DEDUPE-04', 'activityFingerprint normalisation',
+        'normaliseActivityType() not called inside activityFingerprint() — fingerprint drift possible');
+    }
+  } catch (e: any) {
+    fail('DEDUPE-04', 'activityFingerprint inspection', e.message);
+  }
+
+  // ── DEDUPE-05: upsert widens the DB lookup by FUZZY_MATCH_WINDOW_SECONDS
+  try {
+    const src = readShared('activity-upsert.ts');
+    const usesFuzzy = src.includes('FUZZY_MATCH_WINDOW_SECONDS')
+      && /minStart|maxStart/.test(src)
+      && /gte\(["']started_at["']|lte\(["']started_at["']/.test(src);
+    if (usesFuzzy) {
+      pass('DEDUPE-05', 'upsertActivities widens DB lookup with FUZZY_MATCH_WINDOW_SECONDS');
+    } else {
+      fail('DEDUPE-05', 'fuzzy-window lookup',
+        'upsertActivities does not query activity_logs with a widened started_at window');
+    }
+  } catch (e: any) {
+    fail('DEDUPE-05', 'fuzzy-window audit', e.message);
+  }
+
+  // ── DEDUPE-06: winner-selection actually mutates the DB (not silent skip)
+  try {
+    const src = readShared('activity-upsert.ts');
+    const hasWinnerLogic = src.includes('sourcePriority(r.source_platform) > sourcePriority(match.source_platform)')
+      || (src.includes('sourcePriority') && src.includes('toUpgrade') && src.includes('.update('));
+    if (hasWinnerLogic) {
+      pass('DEDUPE-06', 'winner-selection upgrades existing rows when incoming source outranks');
+    } else {
+      fail('DEDUPE-06', 'winner-selection',
+        'No branch found that UPDATEs an existing row when incoming source_platform has higher priority');
+    }
+  } catch (e: any) {
+    fail('DEDUPE-06', 'winner-selection audit', e.message);
+  }
+
+  // ── DEDUPE-07: upsert result surfaces `upgraded` count for observability
+  try {
+    const src = readShared('activity-upsert.ts');
+    if (/interface UpsertResult[\s\S]{0,300}upgraded/.test(src)) {
+      pass('DEDUPE-07', 'UpsertResult exposes `upgraded` count');
+    } else {
+      fail('DEDUPE-07', 'UpsertResult observability',
+        '`upgraded` field missing from UpsertResult interface');
+    }
+  } catch (e: any) {
+    fail('DEDUPE-07', 'UpsertResult audit', e.message);
+  }
+
+  // ── DEDUPE-08: field-preservation — direct-push upgrade must not blank
+  //    richer HealthKit fields with nulls
+  try {
+    const src = readShared('activity-upsert.ts');
+    // Look for the guarded-merge idiom: `if (row.X != null) patch.X = row.X;`
+    const guardsCalories = /calories_burned\s*!=\s*null[\s\S]{0,100}patch\.calories_burned/.test(src);
+    const guardsHR = /avg_heart_rate\s*!=\s*null[\s\S]{0,100}patch\.avg_heart_rate/.test(src);
+    if (guardsCalories && guardsHR) {
+      pass('DEDUPE-08', 'upgrade patch preserves existing calories/HR when incoming is null');
+    } else {
+      fail('DEDUPE-08', 'upgrade field-preservation',
+        `Missing null-guard for: ${[!guardsCalories && 'calories_burned', !guardsHR && 'avg_heart_rate'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('DEDUPE-08', 'field-preservation audit', e.message);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // MAIN
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -2812,6 +3142,8 @@ async function main() {
   await runDatabaseTests();
   await runWatchAuditTests();
   await runRecentFeatureTests();
+  await runDedupeAuditTests();
+  await runGarminCoachingAuditTests();
 
   // ── Summary ───────────────────────────────────────────────────────────────
 

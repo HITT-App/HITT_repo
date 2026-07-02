@@ -1,13 +1,45 @@
-// Shared activity upsert used by both `log-watch-workout` (single row, Watch
-// direct path) and `sync-healthkit` (batch, HealthKit aggregator).
+// Shared activity upsert used by every ingest path:
+//   - log-watch-workout           (Watch → iPhone → server, WCSession)
+//   - sync-healthkit              (foreground HealthKit aggregator)
+//   - push-garmin-watch-workout   (Garmin CIQ app → server, direct HTTP)
 //
-// Two dedupe layers:
-//   1. (user_id, source_platform, source_platform_id) — same-source dedupe.
-//   2. (user_id, fingerprint_hash)                    — cross-source dedupe.
+// Three dedupe layers:
 //
-// The fingerprint is a sha256 of user_id|activity_type|round(epoch/60)|round(duration/30)
-// — coarse enough that a Garmin and Apple Watch row for the same workout
-// collide, fine enough that two distinct workouts in the same minute don't.
+//   1. Exact-key dedupe on (user_id, source_platform, source_platform_id)
+//      — the DB partial unique index catches identical re-sends from the
+//      same source.
+//
+//   2. Fingerprint dedupe on (user_id, fingerprint_hash) — SHA-256 of
+//      user_id | canonical_activity_type | floor(epoch/60) | floor(duration/30).
+//      Coarse enough that two vendors reporting the same real workout
+//      collide, fine enough that adjacent workouts don't.
+//
+//   3. Fuzzy-window dedupe: for each incoming row, we query the DB for
+//      any existing row with the same user_id + canonical activity_type
+//      whose start_time is within ±FUZZY_MATCH_WINDOW_SECONDS. This
+//      catches the boundary case where two sources put the same workout
+//      into adjacent minute-buckets (fingerprint layer misses it). Slower
+//      than pure fingerprint dedupe, but bounded — the query hits the
+//      partial index on (user_id, started_at).
+//
+// Winner selection: when a fuzzy match exists AND the incoming row's
+// source_platform has strictly higher priority (see activity-types.ts),
+// we UPDATE the existing row's source_platform / source_platform_id and
+// merge non-null fields. Otherwise the incoming row is skipped and the
+// existing row wins. This is how our direct-push CIQ path takes over from
+// a HealthKit-mediated garmin row once the watch pushes directly.
+//
+// Every activity_type value is normalised via normaliseActivityType()
+// BEFORE the fingerprint is computed — otherwise "run" and "running" from
+// different paths would hash to different fingerprints and dedupe fails
+// silently. Do not bypass the normaliser.
+
+import {
+  normaliseActivityType,
+  sourcePriority,
+  FUZZY_MATCH_WINDOW_SECONDS,
+  CanonicalActivityType,
+} from "./activity-types.ts";
 
 export interface ActivityRow {
   user_id: string;
@@ -18,20 +50,41 @@ export interface ActivityRow {
   calories_burned?: number | null;
   avg_heart_rate?: number | null;
   distance_km?: number | null;
-  source_platform: string;     // 'apple_watch' | 'garmin' | 'fitbit' | ...
-  source_platform_id: string;  // dedupe key within source
-  status?: string;             // defaults to 'completed'
+  source_platform: string;
+  source_platform_id: string;
+  status?: string;
 }
 
-export async function activityFingerprint(row: Pick<ActivityRow, 'user_id' | 'activity_type' | 'started_at' | 'duration_seconds'>): Promise<string> {
+interface StampedRow extends ActivityRow {
+  activity_type: CanonicalActivityType;
+  fingerprint_hash: string;
+  status: string;
+}
+
+interface ExistingRow {
+  id: string;
+  user_id: string;
+  activity_type: string;
+  started_at: string;
+  duration_seconds: number;
+  source_platform: string;
+  calories_burned: number | null;
+  avg_heart_rate: number | null;
+  distance_km: number | null;
+}
+
+export async function activityFingerprint(
+  row: Pick<ActivityRow, "user_id" | "activity_type" | "started_at" | "duration_seconds">
+): Promise<string> {
+  const canonical = normaliseActivityType(row.activity_type);
   const epochMin = Math.floor(new Date(row.started_at).getTime() / 1000 / 60);
   const durBucket = Math.floor((row.duration_seconds ?? 0) / 30);
-  const input = `${row.user_id}|${row.activity_type ?? ''}|${epochMin}|${durBucket}`;
+  const input = `${row.user_id}|${canonical}|${epochMin}|${durBucket}`;
   const buf = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest('SHA-256', buf);
+  const digest = await crypto.subtle.digest("SHA-256", buf);
   return Array.from(new Uint8Array(digest))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export interface InsertedSummary {
@@ -47,74 +100,140 @@ export interface InsertedSummary {
 export interface UpsertResult {
   inserted: number;
   skipped: number;
+  upgraded: number;             // rows where a lower-priority existing row was replaced
   insertedRows?: InsertedSummary[];
 }
 
-// Upsert one or many activities. Rows whose fingerprint already exists in the
-// DB are skipped silently — that's the cross-source dedupe path. Rows whose
-// (source_platform, source_platform_id) already exists are caught by the
-// per-source partial unique index via ON CONFLICT DO NOTHING.
-//
-// `admin` must be a service-role Supabase client (we trust the caller to have
-// verified the user_id matches the authenticated user).
 export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise<UpsertResult> {
-  if (!rows.length) return { inserted: 0, skipped: 0 };
+  if (!rows.length) return { inserted: 0, skipped: 0, upgraded: 0 };
 
-  // Compute fingerprints.
-  const stamped = await Promise.all(
+  // 1. Normalise activity_type + compute fingerprint.
+  const stamped: StampedRow[] = await Promise.all(
     rows.map(async r => ({
       ...r,
-      status: r.status ?? 'completed',
+      activity_type: normaliseActivityType(r.activity_type),
+      status: r.status ?? "completed",
       fingerprint_hash: await activityFingerprint(r),
     }))
   );
 
-  // Cross-source dedupe: pull any fingerprints that already exist for these
-  // users so we can drop them before insert. (Bulk insert with ON CONFLICT on
-  // two different unique indexes isn't supported in one statement.)
+  // 2. Pull EVERY existing row per user that could conflict — bounded by
+  //    the earliest incoming started_at minus the fuzzy window and the
+  //    latest incoming started_at plus the window. This one bulk read
+  //    covers all three dedupe layers below.
   const userIds = [...new Set(stamped.map(r => r.user_id))];
-  const fingerprints = stamped.map(r => r.fingerprint_hash);
-  const { data: existing } = await admin
-    .from('activity_logs')
-    .select('user_id, fingerprint_hash')
-    .in('user_id', userIds)
-    .in('fingerprint_hash', fingerprints);
+  const startTimes = stamped.map(r => new Date(r.started_at).getTime());
+  const minStart = new Date(Math.min(...startTimes) - FUZZY_MATCH_WINDOW_SECONDS * 1000).toISOString();
+  const maxStart = new Date(Math.max(...startTimes) + FUZZY_MATCH_WINDOW_SECONDS * 1000).toISOString();
 
-  const existingKeys = new Set(
-    (existing ?? []).map((e: any) => `${e.user_id}|${e.fingerprint_hash}`)
-  );
+  const { data: existingRaw } = await admin
+    .from("activity_logs")
+    .select("id, user_id, activity_type, started_at, duration_seconds, source_platform, calories_burned, avg_heart_rate, distance_km, fingerprint_hash")
+    .in("user_id", userIds)
+    .gte("started_at", minStart)
+    .lte("started_at", maxStart);
+  const existing: (ExistingRow & { fingerprint_hash: string })[] = existingRaw ?? [];
 
-  const fresh = stamped.filter(r => !existingKeys.has(`${r.user_id}|${r.fingerprint_hash}`));
-  const skipped = stamped.length - fresh.length;
+  // Index by user for fast lookup during per-row classification.
+  const existingByUser = new Map<string, typeof existing>();
+  for (const e of existing) {
+    const list = existingByUser.get(e.user_id) ?? [];
+    list.push(e);
+    existingByUser.set(e.user_id, list);
+  }
 
-  if (!fresh.length) return { inserted: 0, skipped };
+  const toInsert: StampedRow[] = [];
+  const toUpgrade: Array<{ existingId: string; row: StampedRow }> = [];
+  let skipped = 0;
 
-  // Same-source dedupe handled by the partial unique index — any conflict on
-  // (user_id, source_platform, source_platform_id) is silently dropped.
-  // Select the inserted rows so the caller can surface them (e.g. for the
-  // share-prompt feature) without a second query.
+  for (const r of stamped) {
+    const rStart = new Date(r.started_at).getTime();
+    const candidates = existingByUser.get(r.user_id) ?? [];
+
+    // Fingerprint match OR fuzzy window match on same canonical activity_type.
+    const match = candidates.find(e => {
+      if (e.fingerprint_hash === r.fingerprint_hash) return true;
+      if (normaliseActivityType(e.activity_type) !== r.activity_type) return false;
+      const drift = Math.abs(new Date(e.started_at).getTime() - rStart);
+      return drift <= FUZZY_MATCH_WINDOW_SECONDS * 1000;
+    });
+
+    if (!match) {
+      toInsert.push(r);
+      continue;
+    }
+
+    // A row is already in the DB for this workout. Winner-selection:
+    // upgrade only if the incoming source is strictly higher priority.
+    if (sourcePriority(r.source_platform) > sourcePriority(match.source_platform)) {
+      toUpgrade.push({ existingId: match.id, row: r });
+    } else {
+      skipped++;
+    }
+  }
+
+  // 3. Apply upgrades. Merge non-null incoming fields into the existing row
+  //    and swap the source_platform. `calories_burned`, `avg_heart_rate`,
+  //    `distance_km` from the incoming payload only overwrite if non-null
+  //    (we don't want a scant direct-push payload to blank out richer
+  //    HealthKit data).
+  let upgraded = 0;
+  for (const { existingId, row } of toUpgrade) {
+    const patch: Record<string, unknown> = {
+      source_platform: row.source_platform,
+      source_platform_id: row.source_platform_id,
+      activity_type: row.activity_type,
+      started_at: row.started_at,
+      duration_seconds: row.duration_seconds,
+      fingerprint_hash: row.fingerprint_hash,
+    };
+    if (row.ended_at !== undefined && row.ended_at !== null) patch.ended_at = row.ended_at;
+    if (row.calories_burned != null) patch.calories_burned = row.calories_burned;
+    if (row.avg_heart_rate != null) patch.avg_heart_rate = row.avg_heart_rate;
+    if (row.distance_km != null) patch.distance_km = row.distance_km;
+
+    const { error } = await admin
+      .from("activity_logs")
+      .update(patch)
+      .eq("id", existingId);
+    if (error) {
+      console.warn("[activity-upsert] upgrade skipped:", error.message);
+      skipped++;
+    } else {
+      upgraded++;
+    }
+  }
+
+  // 4. Insert fresh rows. Same-source dedupe still handled by the partial
+  //    unique index — any re-send from the same (source_platform,
+  //    source_platform_id) is silently dropped via ON CONFLICT DO NOTHING.
+  if (!toInsert.length) {
+    return { inserted: 0, skipped, upgraded };
+  }
+
   const { data: insertedData, error } = await admin
-    .from('activity_logs')
-    .upsert(fresh, {
-      onConflict: 'user_id, source_platform, source_platform_id',
+    .from("activity_logs")
+    .upsert(toInsert, {
+      onConflict: "user_id, source_platform, source_platform_id",
       ignoreDuplicates: true,
     })
-    .select('id, activity_type, started_at, ended_at, duration_seconds, calories_burned, source_platform');
+    .select("id, activity_type, started_at, ended_at, duration_seconds, calories_burned, source_platform");
 
   if (error) {
-    console.error('[activity-upsert] upsert error:', JSON.stringify({
+    console.error("[activity-upsert] insert error:", JSON.stringify({
       message: error.message,
       code: error.code,
       details: error.details,
       hint: error.hint,
     }));
-    throw new Error(`upsert failed: ${error.message ?? 'unknown'} (${error.code ?? '?'})`);
+    throw new Error(`upsert failed: ${error.message ?? "unknown"} (${error.code ?? "?"})`);
   }
 
-  const inserted = (insertedData ?? []) as InsertedSummary[];
+  const insertedRows = (insertedData ?? []) as InsertedSummary[];
   return {
-    inserted: inserted.length,
-    skipped: skipped + (fresh.length - inserted.length),
-    insertedRows: inserted,
+    inserted: insertedRows.length,
+    skipped: skipped + (toInsert.length - insertedRows.length),
+    upgraded,
+    insertedRows,
   };
 }

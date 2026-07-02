@@ -8,6 +8,7 @@ import { syncHealthKitNow } from "@/lib/healthkit-sync";
 import { Capacitor } from "@capacitor/core";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { GarminSetupSheet } from "@/components/wearable/GarminSetupSheet";
 
 // Multi-source view of every wearable that's putting data into the user's
 // activity_logs / health_metrics in the last 14 days. The HealthKit aggregator
@@ -114,6 +115,7 @@ export default function ConnectedDevices() {
   const { toast } = useToast();
   const [devices, setDevices] = useState<DeviceRow[] | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [garminSheetOpen, setGarminSheetOpen] = useState(false);
 
   const refresh = async () => {
     if (!user) return;
@@ -188,7 +190,22 @@ export default function ConnectedDevices() {
             </p>
           </>
         )}
+
+        {/* Reachable regardless of whether Garmin is currently detected —
+            for the multi-wearable user (Apple Watch primary + Garmin
+            secondary) whose primary signal outranks the Garmin detection. */}
+        <div className="pt-4 border-t border-border/60">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => setGarminSheetOpen(true)}
+          >
+            Set up Garmin sync
+          </Button>
+        </div>
       </main>
+
+      <GarminSetupSheet open={garminSheetOpen} onOpenChange={setGarminSheetOpen} />
     </div>
   );
 }

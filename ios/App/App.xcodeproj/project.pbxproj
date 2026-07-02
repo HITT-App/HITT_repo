@@ -24,6 +24,7 @@
 		BB000001000000000000AA04 /* WatchPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000AA03 /* WatchPlugin.swift */; };
 		BB000001000000000000AA06 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB000001000000000000AA05 /* WatchConnectivity.framework */; };
 		BB000001000000000000BB02 /* HealthWritePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000BB01 /* HealthWritePlugin.swift */; };
+		BB000001000000000000CC02 /* WearableDetectPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000CC01 /* WearableDetectPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +90,7 @@
 		BB000001000000000000AA03 /* WatchPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlugin.swift; sourceTree = "<group>"; };
 		BB000001000000000000AA05 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
 		BB000001000000000000BB01 /* HealthWritePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthWritePlugin.swift; sourceTree = "<group>"; };
+		BB000001000000000000CC01 /* WearableDetectPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WearableDetectPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -192,6 +194,7 @@
 				BB000001000000000000AA01 /* WatchBridge.swift */,
 				BB000001000000000000AA03 /* WatchPlugin.swift */,
 				BB000001000000000000BB01 /* HealthWritePlugin.swift */,
+				BB000001000000000000CC01 /* WearableDetectPlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -371,6 +374,7 @@
 				BB000001000000000000AA02 /* WatchBridge.swift in Sources */,
 				BB000001000000000000AA04 /* WatchPlugin.swift in Sources */,
 				BB000001000000000000BB02 /* HealthWritePlugin.swift in Sources */,
+				BB000001000000000000CC02 /* WearableDetectPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

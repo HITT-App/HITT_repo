@@ -35,8 +35,13 @@ import {
   HydrationSection,
 } from "@/components/home";
 import { MealsCarousel } from "@/components/MealsCarousel";
+import { GarminSyncBanner } from "@/components/wearable/GarminSyncBanner";
+import { useWearableAutoDetect } from "@/hooks/useWearableAutoDetect";
 
 const Index = () => {
+  // Auto-detect the user's wearable via URL-scheme probe on first mount,
+  // idempotent. Powers the GarminSyncBanner below + Settings copy elsewhere.
+  useWearableAutoDetect();
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [levelUpData, setLevelUpData] = useState<{
@@ -146,6 +151,7 @@ const Index = () => {
           <HomeHeader userName={displayName} score={hiitScore ?? undefined} scoreComponents={hiitComponents} avatarUrl={profile?.avatar_url} />
           <StatsGrid />
           <HealthSyncPrompt />
+          <GarminSyncBanner />
           <SmartDailyBriefing />
           <BodyScanCard />
           <ScheduleCard />

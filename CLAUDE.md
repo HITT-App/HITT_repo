@@ -40,7 +40,8 @@ supabase/functions/
   elevenlabs-tts/    # text-to-speech
   log-watch-workout/ # Watch direct WCSession path → activity_logs
   sync-healthkit/    # HealthKit aggregator → activity_logs / health_metrics / sleep_logs
-  _shared/activity-upsert.ts  # shared upsert helper with 2-layer dedupe (see below)
+  _shared/activity-upsert.ts  # shared upsert helper with 3-layer dedupe (see below)
+  _shared/activity-types.ts   # canonical activity_type enum + SOURCE_PRIORITY table
 ios/App/
   App/                          # iPhone Capacitor host + native plugins
     HealthKitReadPlugin.swift   # workouts / HR / steps / sleep reads
@@ -161,13 +162,39 @@ if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
 
 `generate-workout-plan` returns `{ items: [...] }` (not `plan_items`). Each item: `{ day_index, workout_id, sequence_in_day }`.
 
-**Shared activity upsert** — `supabase/functions/_shared/activity-upsert.ts`. Both `log-watch-workout`
-(Watch direct path) and `sync-healthkit` (aggregator) route through `upsertActivities(admin, rows)`.
-Two dedupe layers: `(user_id, source_platform, source_platform_id)` for same-source, and a
-`fingerprint_hash` (sha256 of `user_id|activity_type|round(epoch/60)|round(duration/30)`) for
-cross-source. Fingerprint catches the same real-world workout arriving via Watch WCSession AND via
-HealthKit → Garmin bundle-id — collapses to one row. When editing either function, keep the fingerprint
-computation identical or dedupe breaks.
+**Shared activity upsert** — `supabase/functions/_shared/activity-upsert.ts`. Every ingest path
+(`log-watch-workout`, `sync-healthkit`, `push-garmin-watch-workout`) routes through
+`upsertActivities(admin, rows)`. Three dedupe layers:
+
+1. **Exact-key** on `(user_id, source_platform, source_platform_id)` — catches identical re-sends
+   from the same source (partial unique index).
+2. **Fingerprint** on `(user_id, fingerprint_hash)` — sha256 of
+   `user_id | canonical_activity_type | floor(epoch/60) | floor(duration/30)`. Catches the same
+   real-world workout arriving via multiple sources when timestamps agree to the minute.
+3. **Fuzzy window** on `(user_id, canonical_activity_type, started_at ± 90s)` — catches the
+   boundary case where a 1-second clock skew between HealthKit and direct push drops the same
+   workout into adjacent minute-buckets. This layer requires an extra DB read per batch but is
+   bounded by the partial index on `(user_id, started_at)`.
+
+**Activity-type normalisation is mandatory.** Every write goes through
+`normaliseActivityType()` from `_shared/activity-types.ts` before the fingerprint is computed
+— otherwise "run" and "running" from different paths hash to different fingerprints and dedupe
+fails silently. The DEDUPE-04 audit in `tests/run.ts` catches attempts to bypass this.
+
+**Winner selection** — when a fuzzy match exists AND the incoming row's `source_platform` has
+strictly higher priority (see `SOURCE_PRIORITY` in `activity-types.ts`), the existing row is
+UPDATED with the incoming source_platform / source_platform_id and non-null fields are merged
+in (richer HealthKit data is never blanked by a scant direct-push payload). Otherwise the
+incoming row is skipped and the existing row wins. This is how our direct-push CIQ path takes
+over from a HealthKit-mediated `garmin` row once the watch pushes directly. `UpsertResult`
+exposes `{ inserted, skipped, upgraded, insertedRows }` so callers can observe the split.
+
+Ranking (higher wins): `hitt_watch` / `hitt_garmin_watch` (100) > `apple_watch` (80)
+> `garmin` / `fitbit` / `whoop` / `oura` / `polar` / `suunto` / `coros` / `wahoo` (60–70)
+> `apple_health_native` (40) > `hitt_phone` (20) > `healthkit_other` (5).
+
+When editing any ingest function, keep the fingerprint computation identical to the shared
+helper, and never write `activity_type` without normalising first.
 
 ## Multi-wearable — HealthKit aggregator + vendor-aware launch
 
@@ -192,6 +219,42 @@ Our own Watch bundle is skipped (WCSession direct path is authoritative for thos
 **Adding a new activity type or vendor** — see the audit tests in `tests/run.ts`. New `activityType`
 value needs an entry in `wearable-launch-copy.ts` MATRIX (WD-11 audit catches missing keys). New
 vendor needs an entry in `bundleIdToSourcePlatform()` + `FRIENDLY` map + `WearableLaunchCard`'s copy.
+
+## Wearable auto-detect + coaching flow
+
+Users don't have to declare which watch they use — the app infers it. Three signals, in order:
+
+1. **`getPrimaryWearable(supabase, userId)`** — if Apple Watch shows up in `activity_logs` (via the
+   HITT Watch app or Apple's own HealthKit source), we treat them as an Apple Watch user.
+2. **`WearableDetectPlugin` (native Swift, iOS-only)** — probes `UIApplication.canOpenURL()` for
+   `gcm-ios-6573`, `strava`, `fitbit`, `whoop`, `oura`. First hit wins. No user prompt required —
+   iOS just needs the schemes declared in `Info.plist` under `LSApplicationQueriesSchemes`.
+   **Adding a scheme requires four edits in lockstep**: `WearableDetectPlugin.swift` schemes array,
+   `Info.plist` LSApplicationQueriesSchemes, `WearableDetectPlugin.ts` result type, and
+   `SOURCE_PRIORITY` in `_shared/activity-types.ts`. The SYNC-11 audit catches Swift/Info.plist drift.
+3. **Fallback to `getPrimaryWearable`** if neither of the above resolved.
+
+Result gets written to `workout_preferences.declared_wearable_vendor` with a
+`declared_wearable_source` tag of `auto_url_scheme` / `user_declared` / `activity_log_inference`.
+`user_declared` beats everything and can only be overwritten by another `user_declared`. Other
+tags are re-evaluated after 90 days (`RE_EVAL_AFTER_MS` in `useWearableAutoDetect.ts`).
+
+**Coaching banner (`<GarminSyncBanner />`)** — shown on the home screen when
+`declared_wearable_vendor = 'garmin'` and no `source_platform='garmin'` row has landed for
+≥3 days. `useGarminSyncStatus` computes the tier client-side on every home mount from
+`activity_logs` — **no cron, no push notifications**. Tiers: `3d → tier 1` (soft nudge),
+`7d → tier 2` (escalated), `14d → tier 3` (offers to switch to phone GPS). Each tier is
+dismissible independently via `garmin_setup_reminder_state` JSON on `workout_preferences`.
+Dismissing tier 1 doesn't suppress tier 2 — the escalation always fires once per user.
+
+**`<GarminSetupSheet />`** — reused from the banner, from first-detect, and from
+Settings → Connected Devices → "Set up Garmin sync". Walks the user through Garmin Connect →
+More → Settings → Apple Health, deep-links via the `gcm-ios-6573://` scheme, and provides an
+"I've done it — check now" button that immediately fires `syncHealthKitNow()` for visible feedback.
+
+The Setup Sheet is reachable from ConnectedDevices regardless of what
+`getPrimaryWearable` says — that's for the multi-wearable user whose Apple Watch primary
+outranks their Garmin secondary. Never hide the affordance behind detection.
 
 ## iOS audio (Capacitor / WKWebView)
 
@@ -244,7 +307,7 @@ AI insight reads "42 sec" not "00:42" (which it misreads as 42 minutes).
 
 Three layers:
 
-**1. Source-file audit suite** (`tests/run.ts` — ~119 tests, ~17 pre-existing failures unrelated to
+**1. Source-file audit suite** (`tests/run.ts` — ~139 tests, ~18 pre-existing failures unrelated to
 current work). Enforces structural contracts by regex-grepping source files. Groups:
 - **NF-01..04** — Primary CTA UI feedback contract. Async click handlers must flip a
   screen-transition setter (or show a loading state) *before* the first `await`. Fails loudly if
@@ -255,10 +318,24 @@ current work). Enforces structural contracts by regex-grepping source files. Gro
   suppressed for all activity types, matrix has non-empty copy for every (activity × vendor) combo.
 - **SCH-01..03** — Schedule page action wiring. Guards the up-next delete affordance and the
   `?reschedule=<id>` deep link.
+- **DEDUPE-01..08** — Activity dedupe pipeline. Guards `_shared/activity-types.ts` exports,
+  `SOURCE_PRIORITY` coverage, that `activityFingerprint` normalises `activity_type` before
+  hashing, that the fuzzy ±90s window query exists, that winner-selection actually UPDATEs
+  the DB (not silent skip), and that field-preservation guards prevent scant direct-push
+  payloads from blanking richer HealthKit data.
+- **SYNC-01..11** — Garmin sync coaching flow. Guards the native `WearableDetectPlugin.swift`
+  registration, the `Info.plist` `LSApplicationQueriesSchemes` list, the TS wrapper's result
+  shape, the migration adding `declared_wearable_*` columns, the auto-detect hook's
+  idempotency + upsert, the `useGarminSyncStatus` client-side tier resolution, `GarminSetupSheet`
+  wiring HealthKit resync + Garmin Connect deep link, `GarminSyncBanner` reading the hook +
+  opening the sheet, wiring into `Index.tsx`, the always-reachable entry in `ConnectedDevices`,
+  and drift detection between the Swift plugin schemes and Info.plist declarations.
 - **WA-*, CA-*, AI-*, MP-*, WP-*** — historical categories covering Watch launch, share cards, AI
   coach markers, meal plans, workout plans.
 
 **2. Pure unit tests** (mocked-dependency, no auth):
+- `tests/test-activity-dedupe.ts` — 17 cases for the normaliser + fingerprint + upsert winner-selection
+- `tests/test-garmin-sync-tier.ts` — 8 cases for the 3/7/14 day tier resolver + dismissal ledger
 - `tests/test-wearable-detection.ts` — 11 cases for `getPrimaryWearable` decision rules
 - `tests/test-wearable-launch-copy.ts` — 32 cases for the activity × wearable copy matrix
 
@@ -267,7 +344,9 @@ current work). Enforces structural contracts by regex-grepping source files. Gro
   covering auth gating, single-source dedupe, cross-source fingerprint dedupe
 
 ```bash
-npx tsx tests/run.ts                                            # ~119 tests, ~17 pre-existing fails
+npx tsx tests/run.ts                                            # ~139 tests, ~18 pre-existing fails
+npx tsx tests/test-activity-dedupe.ts                           # 17 unit tests (dedupe pipeline)
+npx tsx tests/test-garmin-sync-tier.ts                          # 8 unit tests (3/7/14 day tier)
 npx tsx tests/test-wearable-detection.ts                        # 11 unit tests
 npx tsx tests/test-wearable-launch-copy.ts                      # 32 unit tests
 TEST_EMAIL=x TEST_PASSWORD=y npx tsx tests/test-wearable-endpoints.ts  # 15 smoke tests

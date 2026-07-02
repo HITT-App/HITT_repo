@@ -66,7 +66,7 @@ serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as SyncPayload;
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    let workoutResult: Awaited<ReturnType<typeof upsertActivities>> = { inserted: 0, skipped: 0, insertedRows: [] };
+    let workoutResult: Awaited<ReturnType<typeof upsertActivities>> = { inserted: 0, skipped: 0, upgraded: 0, insertedRows: [] };
     let hrInserted = 0;
     let stepsInserted = 0;
     let sleepInserted = 0;

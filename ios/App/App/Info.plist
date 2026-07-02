@@ -43,6 +43,19 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.healthcare-fitness</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<!-- Wearable auto-detect (WearableDetectPlugin). Adding a scheme here
+		     is what makes UIApplication.canOpenURL() actually return true
+		     when the vendor app is installed — iOS silently returns false
+		     for any scheme not declared here. Keep in sync with the schemes
+		     array in ios/App/App/WearableDetectPlugin.swift. -->
+		<string>gcm-ios-6573</string>
+		<string>strava</string>
+		<string>fitbit</string>
+		<string>whoop</string>
+		<string>oura</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
