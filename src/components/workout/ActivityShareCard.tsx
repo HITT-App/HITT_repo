@@ -291,7 +291,11 @@ const SZ_SQUARE = {
   splitGap: 8, splitGapX: 12, splitK: 22, splitV: 44, splitKW: 92, splitVW: 150,
 };
 
-function MetricBlock({ m, sz }: { m: Metric; sz: typeof SZ_STORY }) {
+function MetricBlock({ m, sz, onPhoto }: { m: Metric; sz: typeof SZ_STORY; onPhoto?: boolean }) {
+  // Value ink flips white on photo backgrounds. Label + unit stay orange
+  // (they'd disappear as white) but pick up a subtle shadow.
+  const valueColor = onPhoto ? '#ffffff' : T.ink;
+  const shadow = onPhoto ? '0 2px 12px rgba(0,0,0,0.55)' : 'none';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: sz.blockGap }}>
       <LabelRule size={sz.label}>{m.label}</LabelRule>
@@ -303,11 +307,13 @@ function MetricBlock({ m, sz }: { m: Metric; sz: typeof SZ_STORY }) {
                 fontFamily: T.cond, fontWeight: 600, fontSize: sz.splitK,
                 letterSpacing: '0.14em', textTransform: 'uppercase',
                 color: T.primary, width: sz.splitKW, textAlign: 'right', lineHeight: 1,
+                textShadow: shadow,
               }}>{r.k}</span>
               <span style={{
                 fontFamily: T.cond, fontWeight: 700, fontSize: sz.splitV,
-                letterSpacing: '-0.01em', color: T.ink,
+                letterSpacing: '-0.01em', color: valueColor,
                 width: sz.splitVW, textAlign: 'left', lineHeight: 0.9,
+                textShadow: shadow,
               }}>{r.v}</span>
             </div>
           ))}
@@ -316,13 +322,15 @@ function MetricBlock({ m, sz }: { m: Metric; sz: typeof SZ_STORY }) {
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
           <span style={{
             fontFamily: T.cond, fontWeight: 700, fontSize: sz.value,
-            letterSpacing: '-0.01em', color: T.ink, lineHeight: 0.82,
+            letterSpacing: '-0.01em', color: valueColor, lineHeight: 0.82,
+            textShadow: shadow,
           }}>{m.value}</span>
           {m.unit && (
             <span style={{
               fontFamily: T.cond, fontWeight: 600, fontSize: sz.unit,
               letterSpacing: '0.02em', textTransform: 'uppercase',
               color: T.primary, lineHeight: 1,
+              textShadow: shadow,
             }}>{m.unit}</span>
           )}
         </div>
@@ -331,17 +339,24 @@ function MetricBlock({ m, sz }: { m: Metric; sz: typeof SZ_STORY }) {
   );
 }
 
-function Eyebrow({ name, dateStr, f, gap }: { name: string; dateStr: string; f: number; gap: number }) {
+function Eyebrow({ name, dateStr, f, gap, onPhoto }: { name: string; dateStr: string; f: number; gap: number; onPhoto?: boolean }) {
+  // On a photo background the near-black ink disappears against a dark
+  // photo. Switch to white with a soft text-shadow — matches the value
+  // + label colour treatment below.
+  const nameColor = onPhoto ? '#ffffff' : T.ink;
+  const dateColor = onPhoto ? 'rgba(255,255,255,0.75)' : T.dim;
+  const shadow = onPhoto ? '0 2px 12px rgba(0,0,0,0.55)' : 'none';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap }}>
       <span style={{
         fontFamily: T.cond, fontWeight: 700, fontSize: f,
-        letterSpacing: '0.28em', textTransform: 'uppercase', color: T.ink,
+        letterSpacing: '0.28em', textTransform: 'uppercase',
+        color: nameColor, textShadow: shadow,
       }}>{name}</span>
       <span style={{ width: 6, height: 6, borderRadius: 999, background: T.primary }} />
       <span style={{
         fontFamily: T.cond, fontWeight: 600, fontSize: f,
-        letterSpacing: '0.24em', color: T.dim,
+        letterSpacing: '0.24em', color: dateColor, textShadow: shadow,
       }}>{dateStr}</span>
     </div>
   );
@@ -355,22 +370,50 @@ export interface ActivityShareCardProps {
   // Date shown in the eyebrow. Defaults to today. Pass the activity's
   // started_at so historical shares carry the correct stamp.
   dateISO?: string;
+  // Background style — 'white' is the clean brand card, 'photo' overlays
+  // the same design elements on a user-supplied photo with a scrim.
+  bg?: 'white' | 'photo';
+  // Data URL (or normal URL) of the photo to use when bg='photo'.
+  photoDataUrl?: string | null;
 }
 
-export function ActivityShareCard({ data, format = 'story', dateISO }: ActivityShareCardProps) {
+export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white', photoDataUrl }: ActivityShareCardProps) {
   const key = resolveActivityKey(data.activityType);
   const spec = ACTIVITY_SPECS[key];
   const metrics = buildMetrics(key, data);
   const dateStr = format(dateISO ? new Date(dateISO) : new Date(), 'dd MMM yyyy').toUpperCase();
   const isSquare = format === 'square';
   const H = isSquare ? 1080 : 1920;
+  const onPhoto = bg === 'photo';
+  // Background style. On photo mode we lay the photo as an absolute fill and
+  // stack a top→bottom scrim underneath the content for legibility, mirroring
+  // the treatment social apps use for text on photos.
+  const rootBg = onPhoto ? '#000000' : T.bg;
 
   return (
     <div style={{
       width: 1080, height: H, position: 'relative', overflow: 'hidden',
-      background: T.bg, boxSizing: 'border-box', fontFamily: T.cond,
+      background: rootBg, boxSizing: 'border-box', fontFamily: T.cond,
     }}>
-      {/* Signature activity curve */}
+      {onPhoto && photoDataUrl && (
+        <img
+          src={photoDataUrl}
+          alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          crossOrigin="anonymous"
+        />
+      )}
+      {onPhoto && (
+        // Vertical scrim — darker at the top and bottom, lighter in the
+        // middle so the logo band + the metric stack read cleanly. The
+        // photo still shows through in the middle third.
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.20) 30%, rgba(0,0,0,0.20) 70%, rgba(0,0,0,0.65) 100%)',
+        }} />
+      )}
+      {/* Signature activity curve — still drawn on both modes; the orange
+          reads over the scrim without help. */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         <ActivityLine format={format} curve={spec.curve} />
       </div>
@@ -383,13 +426,13 @@ export function ActivityShareCard({ data, format = 'story', dateISO }: ActivityS
         }}>
           <HexLogo size={128} />
           <div style={{ marginTop: 26 }}>
-            <Eyebrow name={spec.name} dateStr={dateStr} f={26} gap={16} />
+            <Eyebrow name={spec.name} dateStr={dateStr} f={26} gap={16} onPhoto={onPhoto} />
           </div>
           <div style={{
             marginTop: 76,
             display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 54,
           }}>
-            {metrics.map(m => <MetricBlock key={m.label} m={m} sz={SZ_SQUARE} />)}
+            {metrics.map(m => <MetricBlock key={m.label} m={m} sz={SZ_SQUARE} onPhoto={onPhoto} />)}
           </div>
         </div>
       ) : (
@@ -399,13 +442,13 @@ export function ActivityShareCard({ data, format = 'story', dateISO }: ActivityS
         }}>
           <HexLogo size={182} />
           <div style={{ marginTop: 34 }}>
-            <Eyebrow name={spec.name} dateStr={dateStr} f={30} gap={18} />
+            <Eyebrow name={spec.name} dateStr={dateStr} f={30} gap={18} onPhoto={onPhoto} />
           </div>
           <div style={{
             marginTop: 118,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 116,
           }}>
-            {metrics.map(m => <MetricBlock key={m.label} m={m} sz={SZ_STORY} />)}
+            {metrics.map(m => <MetricBlock key={m.label} m={m} sz={SZ_STORY} onPhoto={onPhoto} />)}
           </div>
         </div>
       )}
