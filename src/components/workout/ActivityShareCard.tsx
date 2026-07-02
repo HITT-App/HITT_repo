@@ -6,7 +6,7 @@
 // Rendered off-screen and snapshotted by `generate-share-card.ts` — never
 // mounted directly to visible UI.
 
-import { format } from 'date-fns';
+import { format as formatDate } from 'date-fns';
 
 // ── Theme ───────────────────────────────────────────────────────────────────
 
@@ -381,7 +381,7 @@ export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white
   const key = resolveActivityKey(data.activityType);
   const spec = ACTIVITY_SPECS[key];
   const metrics = buildMetrics(key, data);
-  const dateStr = format(dateISO ? new Date(dateISO) : new Date(), 'dd MMM yyyy').toUpperCase();
+  const dateStr = formatDate(dateISO ? new Date(dateISO) : new Date(), 'dd MMM yyyy').toUpperCase();
   const isSquare = format === 'square';
   const H = isSquare ? 1080 : 1920;
   const onPhoto = bg === 'photo';
