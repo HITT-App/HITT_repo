@@ -258,19 +258,19 @@ function ActivityLine({ format, curve }: { format: 'story' | 'square'; curve: Cu
 
 // ── Layout building blocks ─────────────────────────────────────────────────
 
-function HexLogo({ size }: { size: number }) {
-  // No crossOrigin attribute — the image is served from capacitor://localhost/
-  // (same origin as the app), but forcing CORS mode on a response without
-  // CORS headers taints the image, which then makes html2canvas refuse to
-  // paint it. Result was a blank PNG. Leaving crossOrigin unset keeps the
-  // image untainted and drawable.
+function HexLogo({ size, onPhoto }: { size: number; onPhoto?: boolean }) {
+  // Orange standalone H mark (v2). Reads as brand on white / transparent.
+  // On photo mode we need a soft drop-shadow so it doesn't fade into
+  // orange-heavy photos — a common failure mode for a monochrome mark on
+  // busy backgrounds.
+  const shadow = onPhoto ? 'drop-shadow(0 4px 18px rgba(0,0,0,0.55))' : 'none';
   return (
     <img
-      src="/hiit-watermark.png"
+      src="/hiit-logo-orange.png"
       alt="HIIT"
       width={size}
       height={size}
-      style={{ display: 'block', objectFit: 'contain' }}
+      style={{ display: 'block', objectFit: 'contain', filter: shadow }}
     />
   );
 }
@@ -301,11 +301,12 @@ const SZ_SQUARE = {
   splitGap: 8, splitGapX: 12, splitK: 22, splitV: 44, splitKW: 92, splitVW: 150,
 };
 
-function MetricBlock({ m, sz, onPhoto }: { m: Metric; sz: typeof SZ_STORY; onPhoto?: boolean }) {
-  // Value ink flips white on photo backgrounds. Label + unit stay orange
-  // (they'd disappear as white) but pick up a subtle shadow.
-  const valueColor = onPhoto ? '#ffffff' : T.ink;
-  const shadow = onPhoto ? '0 2px 12px rgba(0,0,0,0.55)' : 'none';
+function MetricBlock({ m, sz, light }: { m: Metric; sz: typeof SZ_STORY; light?: boolean }) {
+  // Value ink flips white when we're on a photo or on transparent + light
+  // ink. Label + unit stay orange (they'd disappear as white on a light
+  // background) but pick up a subtle shadow on top of dark backgrounds.
+  const valueColor = light ? '#ffffff' : T.ink;
+  const shadow = light ? '0 2px 12px rgba(0,0,0,0.55)' : 'none';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: sz.blockGap }}>
       <LabelRule size={sz.label}>{m.label}</LabelRule>
@@ -349,13 +350,12 @@ function MetricBlock({ m, sz, onPhoto }: { m: Metric; sz: typeof SZ_STORY; onPho
   );
 }
 
-function Eyebrow({ name, dateStr, f, gap, onPhoto }: { name: string; dateStr: string; f: number; gap: number; onPhoto?: boolean }) {
-  // On a photo background the near-black ink disappears against a dark
-  // photo. Switch to white with a soft text-shadow — matches the value
-  // + label colour treatment below.
-  const nameColor = onPhoto ? '#ffffff' : T.ink;
-  const dateColor = onPhoto ? 'rgba(255,255,255,0.75)' : T.dim;
-  const shadow = onPhoto ? '0 2px 12px rgba(0,0,0,0.55)' : 'none';
+function Eyebrow({ name, dateStr, f, gap, light }: { name: string; dateStr: string; f: number; gap: number; light?: boolean }) {
+  // Light ink flips to white with a soft text-shadow — used on photo
+  // backgrounds and on transparent with the ink=light preset.
+  const nameColor = light ? '#ffffff' : T.ink;
+  const dateColor = light ? 'rgba(255,255,255,0.75)' : T.dim;
+  const shadow = light ? '0 2px 12px rgba(0,0,0,0.55)' : 'none';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap }}>
       <span style={{
@@ -380,14 +380,21 @@ export interface ActivityShareCardProps {
   // Date shown in the eyebrow. Defaults to today. Pass the activity's
   // started_at so historical shares carry the correct stamp.
   dateISO?: string;
-  // Background style — 'white' is the clean brand card, 'photo' overlays
-  // the same design elements on a user-supplied photo with a scrim.
-  bg?: 'white' | 'photo';
+  // Background style —
+  //   • 'white'       — clean brand card (white fill)
+  //   • 'photo'       — same design overlaid on a user photo with a scrim
+  //   • 'transparent' — no bg fill, PNG comes out with alpha for stickers /
+  //                     pasting into other media. Ink colour flips via `ink`.
+  bg?: 'white' | 'photo' | 'transparent';
   // Data URL (or normal URL) of the photo to use when bg='photo'.
   photoDataUrl?: string | null;
+  // Only meaningful with bg='transparent'. 'dark' keeps the near-black
+  // value ink (for pasting on light backgrounds); 'light' flips values +
+  // eyebrow to white with a soft shadow (for dark backgrounds).
+  ink?: 'dark' | 'light';
 }
 
-export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white', photoDataUrl }: ActivityShareCardProps) {
+export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white', photoDataUrl, ink = 'dark' }: ActivityShareCardProps) {
   const key = resolveActivityKey(data.activityType);
   const spec = ACTIVITY_SPECS[key];
   const metrics = buildMetrics(key, data);
@@ -395,10 +402,16 @@ export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white
   const isSquare = format === 'square';
   const H = isSquare ? 1080 : 1920;
   const onPhoto = bg === 'photo';
+  const onTransparent = bg === 'transparent';
+  // Photo mode always flips value ink to white; transparent honours the
+  // explicit `ink` prop; white uses the default dark ink.
+  const useLightInk = onPhoto || (onTransparent && ink === 'light');
   // Background style. On photo mode we lay the photo as an absolute fill and
   // stack a top→bottom scrim underneath the content for legibility, mirroring
-  // the treatment social apps use for text on photos.
-  const rootBg = onPhoto ? '#000000' : T.bg;
+  // the treatment social apps use for text on photos. On transparent we set
+  // no fill at all — html2canvas is called with backgroundColor:null so the
+  // resulting PNG carries alpha.
+  const rootBg = onPhoto ? '#000000' : onTransparent ? 'transparent' : T.bg;
 
   return (
     <div style={{
@@ -434,15 +447,15 @@ export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white
           position: 'absolute', top: 92, left: 0, right: 0,
           display: 'flex', flexDirection: 'column', alignItems: 'center',
         }}>
-          <HexLogo size={128} />
+          <HexLogo size={128} onPhoto={onPhoto} />
           <div style={{ marginTop: 26 }}>
-            <Eyebrow name={spec.name} dateStr={dateStr} f={26} gap={16} onPhoto={onPhoto} />
+            <Eyebrow name={spec.name} dateStr={dateStr} f={26} gap={16} light={useLightInk} />
           </div>
           <div style={{
             marginTop: 76,
             display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 54,
           }}>
-            {metrics.map(m => <MetricBlock key={m.label} m={m} sz={SZ_SQUARE} onPhoto={onPhoto} />)}
+            {metrics.map(m => <MetricBlock key={m.label} m={m} sz={SZ_SQUARE} light={useLightInk} />)}
           </div>
         </div>
       ) : (
@@ -450,15 +463,15 @@ export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white
           position: 'absolute', top: 150, left: 0, right: 0,
           display: 'flex', flexDirection: 'column', alignItems: 'center',
         }}>
-          <HexLogo size={182} />
+          <HexLogo size={182} onPhoto={onPhoto} />
           <div style={{ marginTop: 34 }}>
-            <Eyebrow name={spec.name} dateStr={dateStr} f={30} gap={18} onPhoto={onPhoto} />
+            <Eyebrow name={spec.name} dateStr={dateStr} f={30} gap={18} light={useLightInk} />
           </div>
           <div style={{
             marginTop: 118,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 116,
           }}>
-            {metrics.map(m => <MetricBlock key={m.label} m={m} sz={SZ_STORY} onPhoto={onPhoto} />)}
+            {metrics.map(m => <MetricBlock key={m.label} m={m} sz={SZ_STORY} light={useLightInk} />)}
           </div>
         </div>
       )}

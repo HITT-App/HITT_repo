@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Ruler, Heart, Zap, MapPin, FileText, Calendar, Share, Square, Smartphone, Moon, ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Flame, Ruler, Heart, Zap, MapPin, FileText, Calendar, Share, Square, Smartphone, Moon, ImageIcon, ChevronDown, ChevronUp, Layers, Circle, CircleDot } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { ActivityShareCard } from "@/components/workout/ActivityShareCard";
@@ -124,7 +124,8 @@ const ActivityDetail = () => {
 
   // Composer state
   const [cardFormat, setCardFormat] = useState<'square' | 'story'>('square');
-  const [cardBg, setCardBg] = useState<'white' | 'photo'>('white');
+  const [cardBg, setCardBg] = useState<'white' | 'photo' | 'transparent'>('white');
+  const [cardInk, setCardInk] = useState<'dark' | 'light'>('dark');
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -197,7 +198,9 @@ const ActivityDetail = () => {
         width, height, scale: 1,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: cardBg === 'photo' ? null : '#ffffff',
+        // null → transparent PNG. Both 'photo' and 'transparent' variants
+        // need alpha in the output.
+        backgroundColor: cardBg === 'white' ? '#ffffff' : null,
         logging: false,
       });
       const blob = await new Promise<Blob>((resolve, reject) => {
@@ -332,8 +335,36 @@ const ActivityDetail = () => {
                 icon={<ImageIcon size={14} color={cardBg === 'photo' ? C.fg : C.dim} strokeWidth={2.1} />}
                 label="Photo"
               />
+              <Segment
+                active={cardBg === 'transparent'}
+                onClick={() => setCardBg('transparent')}
+                icon={<Layers size={14} color={cardBg === 'transparent' ? C.fg : C.dim} strokeWidth={2.1} />}
+                label="Clear"
+              />
             </div>
           </div>
+
+          {/* Ink toggle — only meaningful for transparent PNGs; user picks
+              light ink when they'll paste on a dark background, dark ink
+              for a light background. */}
+          {cardBg === 'transparent' && (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: 2, padding: 3, background: C.card, border: `1px solid ${C.line}`, borderRadius: 999 }}>
+                <Segment
+                  active={cardInk === 'dark'}
+                  onClick={() => setCardInk('dark')}
+                  icon={<CircleDot size={14} color={cardInk === 'dark' ? C.fg : C.dim} strokeWidth={2.1} />}
+                  label="Dark ink"
+                />
+                <Segment
+                  active={cardInk === 'light'}
+                  onClick={() => setCardInk('light')}
+                  icon={<Circle size={14} color={cardInk === 'light' ? C.fg : C.dim} strokeWidth={2.1} />}
+                  label="Light ink"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Photo picker — only when Photo is on */}
           {cardBg === 'photo' && (
@@ -366,8 +397,14 @@ const ActivityDetail = () => {
               width: previewW, height: previewH, borderRadius: 20, overflow: 'hidden', position: 'relative',
               boxShadow: '0 22px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
               transition: 'width .3s cubic-bezier(.4,0,.2,1), height .3s cubic-bezier(.4,0,.2,1)',
-              // If photo bg is selected but no photo picked, show a hint tile.
-              background: cardBg === 'photo' && !photoDataUrl
+              // Background for the preview *frame* (not the exported PNG).
+              // - Transparent mode: soft checkerboard so users can see the
+              //   card is see-through, and dark/light ink is visible.
+              // - Photo mode w/ no photo picked: dark stripe hint.
+              // - White mode: black behind so the white card pops.
+              background: cardBg === 'transparent'
+                ? 'repeating-conic-gradient(#242424 0 25%, #1a1a1a 0 50%) 50% / 24px 24px'
+                : cardBg === 'photo' && !photoDataUrl
                 ? 'repeating-linear-gradient(45deg, #1a1a1a 0 12px, #141414 12px 24px)'
                 : '#000',
             }}>
@@ -384,6 +421,7 @@ const ActivityDetail = () => {
                   dateISO={log.started_at ?? undefined}
                   bg={cardBg}
                   photoDataUrl={photoDataUrl}
+                  ink={cardInk}
                 />
               </div>
             </div>
