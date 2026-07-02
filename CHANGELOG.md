@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-07-02] — "Open Garmin Connect" button actually launches the app; Describe-what-you-ate no longer hides behind the keyboard
+
+- **"Open Garmin Connect" button in Connected Devices → Set up Garmin sync now works** — the button was silently doing nothing. Old code used a hidden anchor tag + simulated click to trigger the `gcm-ios-6573://` URL scheme, but WKWebView captures those clicks as in-page anchor navigation and doesn't route them to iOS's URL-scheme handler. Switched to a top-level `window.location.href` navigation which WKWebView delegates to iOS, plus a two-tier fallback (older `garminconnect://` alias, then the App Store) so users without Garmin Connect installed get the App Store page instead of no feedback
+- **"Describe what you ate" no longer hides behind the on-screen keyboard** — the Describe drawer's textarea and "Estimate with AI" button were being covered by the keyboard on iOS, making it impossible to submit an entry. Now uses the existing `useKeyboardHeight` hook (same pattern as ChatContainer and JarvisMode) to add live padding equal to the keyboard height, so the sheet lifts above the keyboard as soon as it appears. Focus-scroll fallback catches edge cases on smaller devices
+
 ## [2026-07-02] — Meals browser: missing ingredients fixed, longer names now wrap to two lines
 
 - **Ingredients and instructions now show for every recipe** — the meals browser used to render a "Ingredients coming soon" placeholder on roughly 730 of the 885 recipes in the library. Root cause: Supabase's PostgREST API enforces a server-side 1,000-row-per-response cap that overrides any `.range()` the client sends, and the meals fetch was asking for a single 20,000-row read of the `ingredients` and `steps` tables. Fix paginates in 1,000-row chunks until each table is drained, so every recipe now attaches its full ingredient + step list on load

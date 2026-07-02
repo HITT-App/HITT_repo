@@ -12,6 +12,7 @@ import {
   Plus, Minus,
 } from 'lucide-react'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight'
 import { startOfDay, endOfDay } from 'date-fns'
 
 type FoodItem = {
@@ -47,6 +48,7 @@ export default function LogMeal() {
   const location = useLocation()
   const { user } = useAuth()
   const { toast } = useToast()
+  const keyboardHeight = useKeyboardHeight()
 
   const prefill = location.state?.recipe as {
     name: string
@@ -536,7 +538,13 @@ export default function LogMeal() {
         }}
       >
         <DrawerContent>
-          <div className="px-5 pt-5 pb-8 space-y-4">
+          {/* Push the whole sheet up by the keyboard height so the textarea
+              + AI Estimate button stay visible above the on-screen keyboard.
+              Native only — on web the keyboard is separate from the layout. */}
+          <div
+            className="px-5 pt-5 pb-8 space-y-4"
+            style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : undefined }}
+          >
             <div>
               <p className="text-base font-bold mb-1">Describe what you ate</p>
               <p className="text-sm text-muted-foreground">
@@ -547,6 +555,12 @@ export default function LogMeal() {
             <textarea
               value={describeText}
               onChange={e => setDescribeText(e.target.value)}
+              onFocus={e => {
+                // On iOS Capacitor, the keyboardWillShow event fires just
+                // after focus. Scroll the textarea into view so the top of
+                // the drawer content sits above the keyboard immediately.
+                setTimeout(() => e.currentTarget?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 100)
+              }}
               placeholder="e.g. Large bowl of chicken fried rice with vegetables"
               rows={3}
               className="w-full bg-muted/30 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/40 resize-none outline-none focus:border-primary/50"

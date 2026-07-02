@@ -30,20 +30,39 @@ interface GarminSetupSheetProps {
 // URL scheme published by Garmin for the Connect Mobile app. `gcm://` also
 // works on some builds — the numeric variant is the canonical one and
 // what iOS Info.plist LSApplicationQueriesSchemes registers.
-const GARMIN_CONNECT_SCHEME = "gcm-ios-6573://";
+const GARMIN_CONNECT_SCHEME    = "gcm-ios-6573://";
+const GARMIN_CONNECT_ALT       = "garminconnect://";
+const GARMIN_APP_STORE_URL     = "https://apps.apple.com/app/garmin-connect/id583446403";
 
 export function GarminSetupSheet({ open, onOpenChange }: GarminSetupSheetProps) {
   const [syncing, setSyncing] = useState(false);
 
+  // Launch Garmin Connect via URL scheme. The old anchor-click approach was
+  // silently swallowed by WKWebView — schemes need to arrive via a top-level
+  // navigation, not an in-page click event. Set window.location.href and
+  // iOS routes the scheme to Garmin Connect. If the app isn't installed,
+  // the navigation fails silently and we fall through to the App Store.
   const openGarminConnect = () => {
-    // Anchor <a> tag avoids the Capacitor webview swallowing the scheme.
-    // If the app isn't installed iOS just does nothing — no crash.
-    const a = document.createElement("a");
-    a.href = GARMIN_CONNECT_SCHEME;
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    let launched = false;
+    // Watching for the page to lose visibility is our success signal — iOS
+    // has switched us out to Garmin Connect. If nothing happens in ~1.2 s
+    // the app probably isn't installed → offer the App Store instead.
+    const onHide = () => { launched = true; };
+    document.addEventListener("visibilitychange", onHide, { once: true });
+
+    window.location.href = GARMIN_CONNECT_SCHEME;
+
+    setTimeout(() => {
+      document.removeEventListener("visibilitychange", onHide);
+      if (launched) return;
+      // First scheme didn't take — try the older alias, then App Store.
+      window.location.href = GARMIN_CONNECT_ALT;
+      setTimeout(() => {
+        if (document.visibilityState === "visible") {
+          window.open(GARMIN_APP_STORE_URL, "_blank");
+        }
+      }, 400);
+    }, 1200);
   };
 
   const handleIveDoneIt = async () => {
