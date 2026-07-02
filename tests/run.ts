@@ -2968,6 +2968,26 @@ async function runGarminCiqAuditTests() {
   } catch (e: any) {
     fail('CIQ-11', 'ConnectedDevices read', e.message);
   }
+
+  // ── CIQ-12: unpair flow — hook writes revoked_at, component renders list
+  try {
+    const hook = readRepo('src/hooks/useGarminPairings.ts');
+    const list = readRepo('src/components/wearable/PairedWatchesList.tsx');
+    const page = readRepo('src/pages/ConnectedDevices.tsx');
+    const hookOk = hook.includes('revoked_at')
+      && hook.includes('.update(') && hook.includes('unpair');
+    const listOk = list.includes('useGarminPairings')
+      && /confirm|AlertDialog/i.test(list);
+    const wiredIn = page.includes('<PairedWatchesList');
+    if (hookOk && listOk && wiredIn) {
+      pass('CIQ-12', 'Unpair flow: hook writes revoked_at, list renders with confirm dialog, wired into ConnectedDevices');
+    } else {
+      fail('CIQ-12', 'Unpair flow',
+        `Missing: ${[!hookOk && 'hook.update revoked_at', !listOk && 'list confirm', !wiredIn && 'ConnectedDevices wiring'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('CIQ-12', 'Unpair audit', e.message);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

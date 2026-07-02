@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { GarminSetupSheet } from "@/components/wearable/GarminSetupSheet";
 import { PairGarminWatchDialog } from "@/components/wearable/PairGarminWatchDialog";
+import { PairedWatchesList } from "@/components/wearable/PairedWatchesList";
 
 // Multi-source view of every wearable that's putting data into the user's
 // activity_logs / health_metrics in the last 14 days. The HealthKit aggregator
@@ -192,6 +193,9 @@ export default function ConnectedDevices() {
             </p>
           </>
         )}
+
+        {/* Paired Garmin watches (via HITT CIQ app). Renders null if none. */}
+        <PairedWatchesList />
 
         {/* Reachable regardless of whether Garmin is currently detected —
             for the multi-wearable user (Apple Watch primary + Garmin

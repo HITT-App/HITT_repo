@@ -112,12 +112,14 @@ export default function BrowseMeals() {
     (async () => {
       setIsLoading(true);
       // Pull recipes + ingredients + steps in parallel and attach client-side.
-      // The linked tables are indexed by recipe_id so this is a single trip
-      // per table, not per-row.
+      // 660 owner recipes × ~6 ingredients each = ~4000 rows; Supabase's
+      // default select() caps at 1000, which silently dropped whole recipes'
+      // worth of ingredients + steps past that limit. .range(0, 19999) lifts
+      // the cap generously — the payload is still small (plain text lines).
       const [recipesRes, ingredientsRes, stepsRes] = await Promise.all([
-        supabase.from('recipes').select('*'),
-        supabase.from('ingredients').select('recipe_id, item, sort_order'),
-        supabase.from('steps').select('recipe_id, instruction, step_number'),
+        supabase.from('recipes').select('*').range(0, 4999),
+        supabase.from('ingredients').select('recipe_id, item, sort_order').range(0, 19999),
+        supabase.from('steps').select('recipe_id, instruction, step_number').range(0, 19999),
       ]);
       const ingredientsByRecipe = new Map<string, Ingredient[]>();
       for (const row of ingredientsRes.data ?? []) {

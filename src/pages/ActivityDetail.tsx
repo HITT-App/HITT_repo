@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Flame, Ruler, Heart, Zap, MapPin, FileText, Calendar, Share, Square, Smartphone, Moon, ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
-import { generateActivityShareCardBlob } from "@/lib/generate-activity-share-card";
+import html2canvas from "html2canvas";
 import { ActivityShareCard } from "@/components/workout/ActivityShareCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -128,6 +128,13 @@ const ActivityDetail = () => {
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  // Ref to the un-scaled 1080×1920 card wrapper inside the preview. handleShare
+  // snapshots THIS element directly (with the CSS transform temporarily
+  // removed) instead of doing a fresh off-screen render. Off-screen rendering
+  // proved unreliable — html2canvas produced a blank canvas on real device
+  // builds. The visible preview is demonstrably drawn correctly, so capturing
+  // it is the safest way to hand off pixel-identical output to the share sheet.
+  const captureRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -158,22 +165,43 @@ const ActivityDetail = () => {
       toast.error('Add a photo first');
       return;
     }
+    if (!captureRef.current) {
+      toast.error('Preview not ready — try again in a moment.');
+      return;
+    }
     setIsSharing(true);
     const name = fmtActivityType(log.activity_type);
+    const el = captureRef.current;
+    const width = 1080;
+    const height = cardFormat === 'square' ? 1080 : 1920;
+    const savedTransform = el.style.transform;
+    const savedPosition = el.style.position;
+    const savedTop = el.style.top;
+    const savedLeft = el.style.left;
+    const savedZ = el.style.zIndex;
     try {
-      const blob = await generateActivityShareCardBlob({
-        data: {
-          activityType: log.activity_type,
-          durationSeconds: log.duration_seconds ?? 0,
-          calories: log.calories_burned ?? null,
-          distanceKm: log.distance_km ?? null,
-          avgHR: log.avg_heart_rate ?? null,
-          volumeKg: log.total_volume_kg ?? null,
-        },
-        format: cardFormat,
-        dateISO: log.started_at ?? undefined,
-        bg: cardBg,
-        photoDataUrl,
+      // Detach the element from the (clipped) preview container so
+      // html2canvas can walk the full 1080×1920 tree without the parent's
+      // overflow:hidden truncating it. position:fixed + off-screen offset
+      // keeps it visible to the layout engine (so it actually paints —
+      // fully-off-screen -99999px offsets skip paint on some WKWebView
+      // builds) while never showing on the visible page.
+      el.style.transform = 'none';
+      el.style.position = 'fixed';
+      el.style.top = '0px';
+      el.style.left = '-99999px';
+      el.style.zIndex = '-1';
+      // Two frames so the layout reflows before we snapshot.
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      const canvas = await html2canvas(el, {
+        width, height, scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: cardBg === 'photo' ? null : '#ffffff',
+        logging: false,
+      });
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob null'))), 'image/png');
       });
       const fileName = `hiit-${(log.activity_type ?? 'workout').replace(/\s+/g, '-')}.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
@@ -199,6 +227,12 @@ const ActivityDetail = () => {
         toast.error('Could not create share image — try again in a moment.');
       }
     } finally {
+      // Restore every style we tweaked so the preview snaps back cleanly.
+      el.style.transform = savedTransform;
+      el.style.position = savedPosition;
+      el.style.top = savedTop;
+      el.style.left = savedLeft;
+      el.style.zIndex = savedZ;
       setIsSharing(false);
     }
   };
@@ -337,10 +371,13 @@ const ActivityDetail = () => {
                 ? 'repeating-linear-gradient(45deg, #1a1a1a 0 12px, #141414 12px 24px)'
                 : '#000',
             }}>
-              <div style={{
-                width: BASE_W, height: BASE_H,
-                transform: `scale(${scale})`, transformOrigin: 'top left',
-              }}>
+              <div
+                ref={captureRef}
+                style={{
+                  width: BASE_W, height: BASE_H,
+                  transform: `scale(${scale})`, transformOrigin: 'top left',
+                }}
+              >
                 <ActivityShareCard
                   data={shareData}
                   format={cardFormat}

@@ -300,6 +300,13 @@ schema check in `push-garmin-watch-workout/index.ts` → `upsertActivities` maps
 `_shared/activity-types.ts` — the normaliser will collapse whatever you send, but
 non-canonical strings hurt the fuzzy match.
 
+**Unpair from the phone** — Settings → Connected Devices renders `<PairedWatchesList />`
+for every unrevoked, redeemed pairing on the current user's row. The row's Unpair button
+does a direct `UPDATE garmin_pairings SET revoked_at = now()` via the RLS policy
+`users_revoke_own_pairings` — no edge function needed. The watch discovers the revoke on
+its next push (server returns 401 → `PushClient.onPushResponse` calls `clearToken()`,
+so the "Pair with iPhone" menu re-appears in the sport picker on the next launch).
+
 ## iOS audio (Capacitor / WKWebView)
 
 iOS WKWebView blocks `audio.play()` unless called within a user gesture window OR the audio

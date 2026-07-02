@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-07-02] — Paired Garmin watches list + Unpair button; Garmin CIQ v0.2.1 fixes notification crash
+
+- **Paired watches list in Settings → Connected Devices** — every Garmin watch paired with HITT (via the CIQ app) now shows as a row with when it was paired, when it last pushed a workout, and an **Unpair** button. Confirmation dialog before revoke, so a fat-finger tap doesn't unpair the wrong one. Row hides itself as soon as the user confirms — the watch discovers the revoke on its next workout push (server returns 401, watch silently clears its stored token, the "Pair with iPhone" menu reappears on the sport picker)
+- **Garmin CIQ v0.2.1 — fix: dismissing a notification during a workout no longer errors** — Garmin fires `onShow` again every time the view returns from being covered (notification, glance, system prompt). v0.2.0 unconditionally created a fresh `ActivityRecording.Session` in `onShow`, so as soon as the user swiped the notification away, Garmin threw an "already active" error. Session creation is now guarded so it only fires on first show. Same fix also unblocks the "Saved" flash and stop-flash from freezing on-screen if a notification interrupted either
+
 ## [2026-07-02] — Garmin CIQ v0.2.0: workouts push straight to HITT, no Apple Health middleman
 
 - **HITT users can now pair their Garmin watch with HITT directly** — Settings → Connected Devices → "Pair Garmin watch" shows a 6-digit code with a 5-minute countdown. On the watch, users open the HITT Connect IQ app, tap "Pair with iPhone", and enter the code with UP/DOWN + START. Once paired, every workout finished on the watch pushes straight to HITT the moment the user picks Save — no Apple Health sync gap, no Garmin Connect toggle to hunt for. Belt-and-braces: if the direct push ever fails (offline, backend down, revoked pairing), the existing Apple Health path still catches the workout later, and the 3-layer dedupe collapses both arrivals into one row
