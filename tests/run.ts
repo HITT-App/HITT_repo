@@ -3043,6 +3043,29 @@ async function runGarminCiqAuditTests() {
   } catch (e: any) {
     fail('CIQ-12', 'Unpair audit', e.message);
   }
+
+  // ── CIQ-13: Content-Type headers use the Garmin internal constant, not
+  // the raw "application/json" string. On some fenix / Instinct firmwares
+  // the string form silently kills HTTP requests before they leave the
+  // watch — no callback fires, no server log appears, watch just shows
+  // an unhelpful "Pair failed". Cost us most of an evening chasing casey's
+  // stuck pair on 2026-07-02 (v0.2.3 → v0.2.5). Never let this regress.
+  try {
+    const GARMIN_SRC = '/Users/vanessa/hitt-garmin/garmin/source';
+    const push = readFileSync(`${GARMIN_SRC}/PushClient.mc`, 'utf-8');
+    const badStringForm  = /"Content-Type"\s*=>\s*"application\/json"/g;
+    const goodConstant   = /"Content-Type"\s*=>\s*Communications\.REQUEST_CONTENT_TYPE_JSON/g;
+    const stringMatches  = (push.match(badStringForm) ?? []).length;
+    const constantMatches = (push.match(goodConstant) ?? []).length;
+    if (stringMatches === 0 && constantMatches >= 2) {
+      pass('CIQ-13', `PushClient uses Communications.REQUEST_CONTENT_TYPE_JSON (${constantMatches}× — no plain string)`);
+    } else {
+      fail('CIQ-13', 'Content-Type header uses Garmin constant',
+        `Found ${stringMatches}× "application/json" string (must be 0) and ${constantMatches}× REQUEST_CONTENT_TYPE_JSON (must be ≥2)`);
+    }
+  } catch (e: any) {
+    fail('CIQ-13', 'PushClient.mc audit', e.message);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
