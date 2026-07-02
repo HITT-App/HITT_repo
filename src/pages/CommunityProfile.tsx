@@ -47,6 +47,8 @@ const CommunityProfile = () => {
         .from('community_posts')
         .select('*')
         .eq('user_id', targetUserId)
+        // Hide posts from soft-deleted accounts (delete-account cascade).
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(20);
       setPosts(data || []);
