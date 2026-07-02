@@ -2788,6 +2788,189 @@ async function runRecentFeatureTests() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// GARMIN CIQ DIRECT PUSH (source-file audit for the pairing + push flow)
+// ════════════════════════════════════════════════════════════════════════════
+
+async function runGarminCiqAuditTests() {
+  section('GARMIN CIQ DIRECT PUSH (source file checks)');
+
+  const REPO = '/Users/vanessa/hitt-app';
+  const GARMIN = '/Users/vanessa/hitt-garmin/garmin';
+  const readRepo = (path: string) => readFileSync(`${REPO}/${path}`, 'utf-8');
+  const readGarmin = (path: string) => readFileSync(`${GARMIN}/${path}`, 'utf-8');
+
+  // ── CIQ-01: manifest re-adds Communications + PersistedContent (v0.2.0)
+  try {
+    const src = readGarmin('manifest.xml');
+    const hasComms = src.includes('id="Communications"');
+    const hasPersist = src.includes('id="PersistedContent"');
+    const isV02Plus = /version="0\.[2-9]/.test(src) || /version="[1-9]/.test(src);
+    if (hasComms && hasPersist && isV02Plus) {
+      pass('CIQ-01', 'CIQ manifest at v0.2.0+ with Communications + PersistedContent permissions');
+    } else {
+      fail('CIQ-01', 'CIQ manifest permissions',
+        `Missing: ${[!hasComms && 'Communications', !hasPersist && 'PersistedContent', !isV02Plus && 'v0.2.0+ version'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('CIQ-01', 'CIQ manifest read', e.message);
+  }
+
+  // ── CIQ-02: PushClient.mc has JWT storage + push + retry queue
+  try {
+    const src = readGarmin('source/PushClient.mc');
+    const hasStorage = src.includes('Application.Storage') && src.includes('KEY_JWT');
+    const hasPush = src.includes('function pushWorkout');
+    const hasQueue = src.includes('queuePending') && src.includes('MAX_PENDING');
+    if (hasStorage && hasPush && hasQueue) {
+      pass('CIQ-02', 'PushClient has JWT storage, pushWorkout, and bounded pending queue');
+    } else {
+      fail('CIQ-02', 'PushClient structure',
+        `Missing: ${[!hasStorage && 'Storage/JWT key', !hasPush && 'pushWorkout', !hasQueue && 'queuePending/MAX_PENDING'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('CIQ-02', 'PushClient.mc read', e.message);
+  }
+
+  // ── CIQ-03: RecordingView calls PushClient.pushWorkout after save
+  try {
+    const src = readGarmin('source/RecordingView.mc');
+    if (src.includes('PushClient.pushWorkout')) {
+      pass('CIQ-03', 'RecordingView.saveAndShowFinished fires PushClient.pushWorkout');
+    } else {
+      fail('CIQ-03', 'RecordingView push wiring',
+        'PushClient.pushWorkout call not found in RecordingView.mc');
+    }
+  } catch (e: any) {
+    fail('CIQ-03', 'RecordingView.mc read', e.message);
+  }
+
+  // ── CIQ-04: AuthPairingView handles 6-digit entry + redeem callback
+  try {
+    const src = readGarmin('source/AuthPairingView.mc');
+    const hasDigits = src.includes('mDigits') && src.includes('mCursor');
+    const hasRedeem = src.includes('PushClient.redeemCode');
+    if (hasDigits && hasRedeem) {
+      pass('CIQ-04', 'AuthPairingView drives 6-digit entry + calls PushClient.redeemCode');
+    } else {
+      fail('CIQ-04', 'AuthPairingView contract',
+        `Missing: ${[!hasDigits && '6-digit state', !hasRedeem && 'redeemCode call'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('CIQ-04', 'AuthPairingView.mc read', e.message);
+  }
+
+  // ── CIQ-05: sport picker exposes Pair-with-iPhone when unpaired
+  try {
+    const menu = readGarmin('source/SportMenuView.mc');
+    const delegate = readGarmin('source/SportMenuDelegate.mc');
+    const menuHasPair = menu.includes(':pair') && menu.includes('!PushClient.hasToken()');
+    const delegateHasPair = delegate.includes('case :pair') && delegate.includes('AuthPairingView');
+    if (menuHasPair && delegateHasPair) {
+      pass('CIQ-05', 'SportMenu shows Pair entry when unpaired + delegate opens AuthPairingView');
+    } else {
+      fail('CIQ-05', 'Pair menu wiring',
+        `Missing: ${[!menuHasPair && 'menu item', !delegateHasPair && 'delegate case'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('CIQ-05', 'Sport menu read', e.message);
+  }
+
+  // ── CIQ-06: garmin-jwt shared helper exports sign/verify + code hash
+  try {
+    const src = readRepo('supabase/functions/_shared/garmin-jwt.ts');
+    const required = ['signWatchPushJwt', 'verifyWatchPushJwt', 'hashPairingCode', 'garmin_watch_push'];
+    const missing = required.filter(s => !src.includes(s));
+    if (missing.length === 0) {
+      pass('CIQ-06', 'garmin-jwt.ts exports sign / verify / hash + garmin_watch_push scope');
+    } else {
+      fail('CIQ-06', 'garmin-jwt.ts exports', `Missing: ${missing.join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('CIQ-06', 'garmin-jwt.ts read', e.message);
+  }
+
+  // ── CIQ-07: three edge functions exist and route to shared helpers
+  try {
+    const create = readRepo('supabase/functions/create-garmin-pairing/index.ts');
+    const redeem = readRepo('supabase/functions/redeem-garmin-pairing/index.ts');
+    const push   = readRepo('supabase/functions/push-garmin-watch-workout/index.ts');
+    const createOk = create.includes('garmin_pairings') && create.includes('hashPairingCode');
+    const redeemOk = redeem.includes('signWatchPushJwt') && redeem.includes('MAX_ATTEMPTS');
+    const pushOk   = push.includes('verifyWatchPushJwt') && push.includes('upsertActivities')
+      && push.includes('hitt_garmin_watch') && push.includes('ff_garmin_watch_direct_push');
+    if (createOk && redeemOk && pushOk) {
+      pass('CIQ-07', 'create + redeem + push edge functions wired to shared helpers');
+    } else {
+      fail('CIQ-07', 'Edge function wiring',
+        `Missing: ${[!createOk && 'create', !redeemOk && 'redeem', !pushOk && 'push (needs feature flag + upsert)'].filter(Boolean).join(', ')}`);
+    }
+  } catch (e: any) {
+    fail('CIQ-07', 'Edge function read', e.message);
+  }
+
+  // ── CIQ-08: push endpoint uses source_platform = 'hitt_garmin_watch'
+  //           (matches SOURCE_PRIORITY entry for winner-selection to work)
+  try {
+    const push = readRepo('supabase/functions/push-garmin-watch-workout/index.ts');
+    const types = readRepo('supabase/functions/_shared/activity-types.ts');
+    if (push.includes('"hitt_garmin_watch"') && types.includes('hitt_garmin_watch:')) {
+      pass('CIQ-08', 'push endpoint tags source_platform=hitt_garmin_watch matching SOURCE_PRIORITY');
+    } else {
+      fail('CIQ-08', 'source_platform tag',
+        'push endpoint and SOURCE_PRIORITY table are out of sync');
+    }
+  } catch (e: any) {
+    fail('CIQ-08', 'source_platform audit', e.message);
+  }
+
+  // ── CIQ-09: garmin_pairings migration exists with security columns
+  try {
+    const migrationDir = `${REPO}/supabase/migrations`;
+    const files = readdirSync(migrationDir);
+    const relevant = files.find(f => f.includes('garmin_pairing'));
+    if (!relevant) throw new Error('migration file not found');
+    const src = readFileSync(`${migrationDir}/${relevant}`, 'utf-8');
+    const cols = ['code_hash', 'expires_at', 'attempts', 'redeemed_at', 'revoked_at', 'last_seen_at'];
+    const missing = cols.filter(c => !src.includes(c));
+    const hasRls = src.includes('ENABLE ROW LEVEL SECURITY');
+    if (missing.length === 0 && hasRls) {
+      pass('CIQ-09', 'garmin_pairings migration has all security columns + RLS');
+    } else {
+      fail('CIQ-09', 'garmin_pairings migration',
+        `${missing.length ? 'Missing: ' + missing.join(', ') : ''} ${!hasRls ? '(no RLS)' : ''}`);
+    }
+  } catch (e: any) {
+    fail('CIQ-09', 'garmin_pairings migration', e.message);
+  }
+
+  // ── CIQ-10: phone UI PairGarminWatchDialog invokes create-garmin-pairing
+  try {
+    const src = readRepo('src/components/wearable/PairGarminWatchDialog.tsx');
+    if (src.includes('create-garmin-pairing') && src.includes('supabase.functions.invoke')) {
+      pass('CIQ-10', 'PairGarminWatchDialog invokes create-garmin-pairing edge function');
+    } else {
+      fail('CIQ-10', 'PairGarminWatchDialog wiring',
+        'edge function invocation not found');
+    }
+  } catch (e: any) {
+    fail('CIQ-10', 'PairGarminWatchDialog read', e.message);
+  }
+
+  // ── CIQ-11: ConnectedDevices exposes "Pair Garmin watch" entry
+  try {
+    const src = readRepo('src/pages/ConnectedDevices.tsx');
+    if (src.includes('PairGarminWatchDialog') && src.includes('Pair Garmin watch')) {
+      pass('CIQ-11', 'ConnectedDevices exposes Pair Garmin watch entry');
+    } else {
+      fail('CIQ-11', 'ConnectedDevices Pair entry',
+        'PairGarminWatchDialog or entry button missing');
+    }
+  } catch (e: any) {
+    fail('CIQ-11', 'ConnectedDevices read', e.message);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // GARMIN SYNC COACHING (source-file audit for the auto-detect + banner flow)
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -3144,6 +3327,7 @@ async function main() {
   await runRecentFeatureTests();
   await runDedupeAuditTests();
   await runGarminCoachingAuditTests();
+  await runGarminCiqAuditTests();
 
   // ── Summary ───────────────────────────────────────────────────────────────
 

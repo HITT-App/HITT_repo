@@ -163,8 +163,8 @@ if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
 `generate-workout-plan` returns `{ items: [...] }` (not `plan_items`). Each item: `{ day_index, workout_id, sequence_in_day }`.
 
 **Shared activity upsert** — `supabase/functions/_shared/activity-upsert.ts`. Every ingest path
-(`log-watch-workout`, `sync-healthkit`, `push-garmin-watch-workout`) routes through
-`upsertActivities(admin, rows)`. Three dedupe layers:
+(`log-watch-workout`, `sync-healthkit`, `push-garmin-watch-workout` — see "Garmin CIQ direct push"
+below) routes through `upsertActivities(admin, rows)`. Three dedupe layers:
 
 1. **Exact-key** on `(user_id, source_platform, source_platform_id)` — catches identical re-sends
    from the same source (partial unique index).
@@ -256,6 +256,50 @@ The Setup Sheet is reachable from ConnectedDevices regardless of what
 `getPrimaryWearable` says — that's for the multi-wearable user whose Apple Watch primary
 outranks their Garmin secondary. Never hide the affordance behind detection.
 
+## Garmin CIQ direct push — the pairing + JWT + push flow
+
+The HITT Connect IQ watch app (`~/hitt-garmin/garmin/`, v0.2.0+) can push completed workouts
+straight to our backend, bypassing HealthKit entirely. Belt-and-braces alongside the
+HealthKit-mediated path — if the direct push fails, Garmin Connect → Apple Health → HITT still
+catches the workout later. The three-layer dedupe in `activity-upsert.ts` merges the two
+sources into one row via the fingerprint + fuzzy window, and winner-selection promotes the
+`hitt_garmin_watch` row over any HealthKit-mediated `garmin` row for the same workout.
+
+**Pairing (one-time per watch):**
+1. **Phone** — Settings → Connected Devices → "Pair Garmin watch" → `<PairGarminWatchDialog />`
+   invokes `create-garmin-pairing` edge function → returns a fresh 6-digit code + 5-min TTL.
+2. **Watch** — user launches the HITT CIQ app, picks the "Pair with iPhone" menu entry
+   (only shown while unpaired), enters the 6-digit code via UP/DOWN + START. Watch POSTs
+   the code to `redeem-garmin-pairing` → server validates and mints a **30-day HMAC-signed
+   JWT** scoped to `garmin_watch_push`. Watch stores it in `Application.Storage.hitt.jwt`.
+
+**Push (every workout):**
+- `RecordingView.saveAndShowFinished()` calls `PushClient.pushWorkout({...})` after
+  `session.save()`. Non-blocking — the "Saved" flash renders immediately regardless.
+- Watch POSTs to `push-garmin-watch-workout` with `Authorization: Bearer <jwt>`.
+- Server verifies signature (separate secret from Supabase JWT), checks
+  `garmin_pairings.revoked_at`, checks the `ff_garmin_watch_direct_push` server-side flag,
+  routes through `upsertActivities` with `source_platform = 'hitt_garmin_watch'`.
+- On failure: watch queues the payload in `Application.Storage.hitt.pending` (bounded at
+  8 rows). Drained on the next successful push.
+
+**Security posture:**
+- The watch JWT is **not** a Supabase user session — it's signed with
+  `GARMIN_PAIRING_HMAC_SECRET` (Supabase edge function env var). A leaked watch token can
+  only touch `push-garmin-watch-workout` — it can't call any other endpoint or bypass RLS.
+- Pairing code hashes stored server-side (SHA-256), not plaintext. Codes expire in 5
+  minutes, are burnt after 5 failed redemption attempts, and are single-use.
+- `revoked_at` column lets the phone nuke a lost watch instantly — every push checks it.
+- **Server-side feature flag** (`app_settings.ff_garmin_watch_direct_push`) can turn the
+  endpoint off without a CIQ store release. Watch treats 503 as a transient error and
+  retries later.
+
+**Adding a new payload field** — watch payload (`PushClient.pushWorkout` shape) → server
+schema check in `push-garmin-watch-workout/index.ts` → `upsertActivities` maps into
+`activity_logs`. Keep `activity_type` in the canonical set from
+`_shared/activity-types.ts` — the normaliser will collapse whatever you send, but
+non-canonical strings hurt the fuzzy match.
+
 ## iOS audio (Capacitor / WKWebView)
 
 iOS WKWebView blocks `audio.play()` unless called within a user gesture window OR the audio
@@ -307,7 +351,7 @@ AI insight reads "42 sec" not "00:42" (which it misreads as 42 minutes).
 
 Three layers:
 
-**1. Source-file audit suite** (`tests/run.ts` — ~139 tests, ~18 pre-existing failures unrelated to
+**1. Source-file audit suite** (`tests/run.ts` — ~150 tests, ~18 pre-existing failures unrelated to
 current work). Enforces structural contracts by regex-grepping source files. Groups:
 - **NF-01..04** — Primary CTA UI feedback contract. Async click handlers must flip a
   screen-transition setter (or show a loading state) *before* the first `await`. Fails loudly if
@@ -330,12 +374,21 @@ current work). Enforces structural contracts by regex-grepping source files. Gro
   wiring HealthKit resync + Garmin Connect deep link, `GarminSyncBanner` reading the hook +
   opening the sheet, wiring into `Index.tsx`, the always-reachable entry in `ConnectedDevices`,
   and drift detection between the Swift plugin schemes and Info.plist declarations.
+- **CIQ-01..11** — Garmin CIQ direct push. Guards the manifest permissions bump to v0.2.0,
+  `PushClient.mc` JWT storage + push + bounded retry queue, `RecordingView` firing the push
+  after save, `AuthPairingView` handling 6-digit entry + calling `redeemCode`, SportMenu
+  showing the Pair entry only when unpaired, `_shared/garmin-jwt.ts` exporting sign / verify /
+  hash with the `garmin_watch_push` scope, all three edge functions (`create-garmin-pairing`,
+  `redeem-garmin-pairing`, `push-garmin-watch-workout`) wired to shared helpers, `source_platform`
+  tag matching `SOURCE_PRIORITY`, the `garmin_pairings` migration with RLS + security columns,
+  and the phone-side `PairGarminWatchDialog` + ConnectedDevices entry.
 - **WA-*, CA-*, AI-*, MP-*, WP-*** — historical categories covering Watch launch, share cards, AI
   coach markers, meal plans, workout plans.
 
 **2. Pure unit tests** (mocked-dependency, no auth):
 - `tests/test-activity-dedupe.ts` — 17 cases for the normaliser + fingerprint + upsert winner-selection
 - `tests/test-garmin-sync-tier.ts` — 8 cases for the 3/7/14 day tier resolver + dismissal ledger
+- `tests/test-garmin-pairing.ts` — 8 cases for JWT sign/verify + code hashing (Garmin CIQ push auth)
 - `tests/test-wearable-detection.ts` — 11 cases for `getPrimaryWearable` decision rules
 - `tests/test-wearable-launch-copy.ts` — 32 cases for the activity × wearable copy matrix
 
@@ -344,9 +397,10 @@ current work). Enforces structural contracts by regex-grepping source files. Gro
   covering auth gating, single-source dedupe, cross-source fingerprint dedupe
 
 ```bash
-npx tsx tests/run.ts                                            # ~139 tests, ~18 pre-existing fails
+npx tsx tests/run.ts                                            # ~150 tests, ~18 pre-existing fails
 npx tsx tests/test-activity-dedupe.ts                           # 17 unit tests (dedupe pipeline)
 npx tsx tests/test-garmin-sync-tier.ts                          # 8 unit tests (3/7/14 day tier)
+npx tsx tests/test-garmin-pairing.ts                            # 8 unit tests (CIQ JWT + code hashing)
 npx tsx tests/test-wearable-detection.ts                        # 11 unit tests
 npx tsx tests/test-wearable-launch-copy.ts                      # 32 unit tests
 TEST_EMAIL=x TEST_PASSWORD=y npx tsx tests/test-wearable-endpoints.ts  # 15 smoke tests

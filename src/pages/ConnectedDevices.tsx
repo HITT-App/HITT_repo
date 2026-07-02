@@ -9,6 +9,7 @@ import { Capacitor } from "@capacitor/core";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { GarminSetupSheet } from "@/components/wearable/GarminSetupSheet";
+import { PairGarminWatchDialog } from "@/components/wearable/PairGarminWatchDialog";
 
 // Multi-source view of every wearable that's putting data into the user's
 // activity_logs / health_metrics in the last 14 days. The HealthKit aggregator
@@ -116,6 +117,7 @@ export default function ConnectedDevices() {
   const [devices, setDevices] = useState<DeviceRow[] | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [garminSheetOpen, setGarminSheetOpen] = useState(false);
+  const [pairWatchOpen, setPairWatchOpen] = useState(false);
 
   const refresh = async () => {
     if (!user) return;
@@ -194,18 +196,31 @@ export default function ConnectedDevices() {
         {/* Reachable regardless of whether Garmin is currently detected —
             for the multi-wearable user (Apple Watch primary + Garmin
             secondary) whose primary signal outranks the Garmin detection. */}
-        <div className="pt-4 border-t border-border/60">
+        <div className="pt-4 border-t border-border/60 space-y-2">
           <Button
             variant="outline"
             className="w-full"
             onClick={() => setGarminSheetOpen(true)}
           >
-            Set up Garmin sync
+            Set up Garmin sync (via Apple Health)
           </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => setPairWatchOpen(true)}
+          >
+            Pair Garmin watch (HITT Connect IQ app)
+          </Button>
+          <p className="text-[11px] text-muted-foreground text-center leading-relaxed pt-1">
+            "Set up Garmin sync" enables sharing through Apple Health. "Pair Garmin watch"
+            is for users who've installed the HITT app on their Garmin — workouts come
+            straight to HITT with no Apple Health middleman.
+          </p>
         </div>
       </main>
 
       <GarminSetupSheet open={garminSheetOpen} onOpenChange={setGarminSheetOpen} />
+      <PairGarminWatchDialog open={pairWatchOpen} onOpenChange={setPairWatchOpen} />
     </div>
   );
 }
