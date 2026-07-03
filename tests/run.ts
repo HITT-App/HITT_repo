@@ -72,16 +72,66 @@ function readIOS(path: string): string {
   return readFileSync(`${IOS}/${path}`, 'utf-8');
 }
 
-async function callFn(name: string, body: object): Promise<{ status: number; json: any }> {
+async function callFn(name: string, body: object, extraHeaders: Record<string, string> = {}): Promise<{ status: number; json: any }> {
   const res = await fetch(`${FN_BASE}/${name}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'apikey': ANON_KEY,
       'Authorization': `Bearer ${authToken}`,
+      ...extraHeaders,
     },
     body: JSON.stringify(body),
   });
+  // ai-coach and other streaming endpoints return SSE (`data: {json}\n\n`)
+  // rather than a single JSON body. Detect the content-type and assemble
+  // the choices[0].delta.content chunks into a single message.content
+  // string so the tests can pattern-match on the assembled text.
+  const contentType = res.headers.get('content-type') ?? '';
+  if (contentType.includes('text/event-stream') || contentType.includes('text/plain')) {
+    const raw = await res.text().catch(() => '');
+    let assembled = '';
+    const toolCalls: any[] = [];
+    const actions: any[] = [];
+    for (const line of raw.split(/\r?\n/)) {
+      if (!line.startsWith('data:')) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(payload);
+        // Standard OpenAI/Gemini SSE format.
+        const delta = evt?.choices?.[0]?.delta;
+        if (delta?.content) assembled += delta.content;
+        if (Array.isArray(delta?.tool_calls)) toolCalls.push(...delta.tool_calls);
+        // ai-coach structured-v1 proprietary format.
+        //   { type: 'text',   delta: '<chunk>' }
+        //   { type: 'action', action: { type: 'log_food', payload: {...} } }
+        //   { type: 'done' }
+        if (evt?.type === 'text' && typeof evt.delta === 'string') assembled += evt.delta;
+        if (evt?.type === 'action' && evt.action) actions.push(evt.action);
+      } catch { /* skip malformed frame */ }
+    }
+    // Fold structured-v1 actions into tool_calls so the same test path
+    // works for both response modes.
+    for (const action of actions) {
+      toolCalls.push({
+        function: {
+          name: action.type,
+          arguments: JSON.stringify(action.payload ?? {}),
+        },
+      });
+    }
+    const json = {
+      choices: [{
+        message: {
+          role: 'assistant',
+          content: assembled,
+          tool_calls: toolCalls.length ? toolCalls : undefined,
+        },
+      }],
+    };
+    return { status: res.status, json };
+  }
   const json = await res.json().catch(() => null);
   return { status: res.status, json };
 }
@@ -1378,50 +1428,56 @@ async function runAICoachTests() {
     fail('AI-03', 'HIIT spelling check', `HTTP ${hiitCheck.status}`);
   }
 
-  // ── AI-04: Food log marker present ───────────────────────────────────────
+  // ── AI-04: Food log surfaced (marker OR log_food tool call) ─────────────
+  //
+  // The client hits ai-coach with `X-Response-Format: structured-v1`, which
+  // switches the model from marker-emission to tool-calls. Test both paths
+  // so future migration to full tool-mode doesn't break the audit.
 
   const foodLog = await callFn('ai-coach', {
     messages: [{ role: 'user', content: 'Log that I just ate an apple' }],
     healthProfile: '',
-  });
+  }, { 'X-Response-Format': 'structured-v1' });
 
-  if (foodLog.status === 200) {
-    const text: string = foodLog.json?.choices?.[0]?.message?.content ?? '';
-    if (text.includes('[LOG_FOOD:')) {
-      pass('AI-04', 'ai-coach emits [LOG_FOOD:...] marker for food logging');
-    } else {
-      fail('AI-04', 'ai-coach emits [LOG_FOOD:...] marker for food logging', 'Marker not found in response');
+  function extractFoodLogPayload(json: any): any | null {
+    const msg = json?.choices?.[0]?.message;
+    const text: string = msg?.content ?? '';
+    const markerMatch = text.match(/\[LOG_FOOD:(\{.*?\})\]/s);
+    if (markerMatch) { try { return JSON.parse(markerMatch[1]); } catch { /* fall through */ } }
+    const toolCall = (msg?.tool_calls ?? []).find((tc: any) => (tc?.function?.name ?? tc?.name) === 'log_food');
+    if (toolCall) {
+      const args = toolCall.function?.arguments ?? toolCall.arguments;
+      if (typeof args === 'string') { try { return JSON.parse(args); } catch { /* skip */ } }
+      if (args && typeof args === 'object') return args;
     }
-  } else {
-    fail('AI-04', 'Food log marker', `HTTP ${foodLog.status}`);
+    return null;
   }
 
-  // ── AI-05: LOG_FOOD marker has required fields ────────────────────────────
-
-  if (foodLog.status === 200) {
-    const text: string = foodLog.json?.choices?.[0]?.message?.content ?? '';
-    const match = text.match(/\[LOG_FOOD:(\{.*?\})\]/s);
-    if (match) {
-      try {
-        const parsed = JSON.parse(match[1]);
-        const required = ['name', 'calories', 'protein', 'carbs', 'fat'];
-        const missing = required.filter(k => !(k in parsed));
-        if (missing.length === 0) {
-          pass('AI-05', 'LOG_FOOD marker has all required fields (name, calories, protein, carbs, fat)');
-        } else {
-          fail('AI-05', 'LOG_FOOD marker has all required fields', `Missing: ${missing.join(', ')}`);
-        }
-      } catch {
-        fail('AI-05', 'LOG_FOOD marker has all required fields', 'Could not parse JSON in marker');
-      }
-    } else {
-      skip('AI-05', 'LOG_FOOD required fields', 'No LOG_FOOD marker in response (see AI-04)');
-    }
+  const foodLogPayload = foodLog.status === 200 ? extractFoodLogPayload(foodLog.json) : null;
+  if (foodLog.status === 200 && foodLogPayload) {
+    pass('AI-04', 'ai-coach surfaces log_food via marker or tool call');
+  } else if (foodLog.status === 200) {
+    fail('AI-04', 'ai-coach surfaces log_food via marker or tool call', 'Neither marker nor log_food tool call found');
   } else {
-    skip('AI-05', 'LOG_FOOD required fields', 'Food log request failed');
+    fail('AI-04', 'ai-coach food log', `HTTP ${foodLog.status}`);
   }
 
-  // ── AI-06: Schedule plan marker present ──────────────────────────────────
+  // ── AI-05: LOG_FOOD payload has required fields ──────────────────────────
+
+  if (foodLog.status === 200 && foodLogPayload) {
+    const required = ['name', 'calories', 'protein', 'carbs', 'fat'];
+    const missing = required.filter(k => !(k in foodLogPayload));
+    if (missing.length === 0) {
+      pass('AI-05', 'log_food payload has all required fields (name, calories, protein, carbs, fat)');
+    } else {
+      fail('AI-05', 'log_food payload has all required fields', `Missing: ${missing.join(', ')}`);
+    }
+  } else if (foodLog.status === 200) {
+    skip('AI-05', 'log_food payload fields', 'No log_food surfaced (see AI-04)');
+  } else {
+    skip('AI-05', 'log_food payload fields', `HTTP ${foodLog.status}`);
+  }
+  // ── AI-06: Schedule plan surfaced (marker OR schedule_plan tool call) ────
 
   const schedulePlan = await callFn('ai-coach', {
     messages: [
@@ -1434,43 +1490,46 @@ async function runAICoachTests() {
       { role: 'user', content: '30 minutes' },
     ],
     healthProfile: '',
-  });
+  }, { 'X-Response-Format': 'structured-v1' });
 
-  if (schedulePlan.status === 200) {
-    const text: string = schedulePlan.json?.choices?.[0]?.message?.content ?? '';
-    if (text.includes('[SCHEDULE_PLAN:')) {
-      pass('AI-06', 'ai-coach emits [SCHEDULE_PLAN:...] marker when all info collected');
-    } else {
-      fail('AI-06', 'ai-coach emits [SCHEDULE_PLAN:...] marker when all info collected',
-        'Marker not found — AI may need more turns or is not following system prompt');
+  function extractSchedulePlanPayload(json: any): any | null {
+    const msg = json?.choices?.[0]?.message;
+    const text: string = msg?.content ?? '';
+    const markerMatch = text.match(/\[SCHEDULE_PLAN:(\{.*?\})\]/s);
+    if (markerMatch) { try { return JSON.parse(markerMatch[1]); } catch { /* fall through */ } }
+    const toolCall = (msg?.tool_calls ?? []).find((tc: any) => (tc?.function?.name ?? tc?.name) === 'schedule_plan');
+    if (toolCall) {
+      const args = toolCall.function?.arguments ?? toolCall.arguments;
+      if (typeof args === 'string') { try { return JSON.parse(args); } catch { /* skip */ } }
+      if (args && typeof args === 'object') return args;
     }
-  } else {
-    fail('AI-06', 'Schedule plan marker', `HTTP ${schedulePlan.status}`);
+    return null;
   }
 
-  // ── AI-07: SCHEDULE_PLAN marker has required fields ───────────────────────
-
-  if (schedulePlan.status === 200) {
-    const text: string = schedulePlan.json?.choices?.[0]?.message?.content ?? '';
-    const match = text.match(/\[SCHEDULE_PLAN:(\{.*?\})\]/s);
-    if (match) {
-      try {
-        const parsed = JSON.parse(match[1]);
-        const required = ['goal', 'daysPerWeek', 'sessionMinutes'];
-        const missing = required.filter(k => !(k in parsed));
-        if (missing.length === 0) {
-          pass('AI-07', 'SCHEDULE_PLAN marker has required fields (goal, daysPerWeek, sessionMinutes)');
-        } else {
-          fail('AI-07', 'SCHEDULE_PLAN marker has required fields', `Missing: ${missing.join(', ')}`);
-        }
-      } catch {
-        fail('AI-07', 'SCHEDULE_PLAN required fields', 'Could not parse JSON in marker');
-      }
-    } else {
-      skip('AI-07', 'SCHEDULE_PLAN required fields', 'No SCHEDULE_PLAN marker in response (see AI-06)');
-    }
+  const schedulePayload = schedulePlan.status === 200 ? extractSchedulePlanPayload(schedulePlan.json) : null;
+  if (schedulePlan.status === 200 && schedulePayload) {
+    pass('AI-06', 'ai-coach surfaces schedule_plan via marker or tool call');
+  } else if (schedulePlan.status === 200) {
+    fail('AI-06', 'ai-coach surfaces schedule_plan via marker or tool call',
+      'Neither marker nor schedule_plan tool call found');
   } else {
-    skip('AI-07', 'SCHEDULE_PLAN required fields', 'Schedule request failed');
+    fail('AI-06', 'schedule_plan surfaced', `HTTP ${schedulePlan.status}`);
+  }
+
+  // ── AI-07: schedule_plan payload has required fields ────────────────────
+
+  if (schedulePlan.status === 200 && schedulePayload) {
+    const required = ['goal', 'daysPerWeek', 'sessionMinutes'];
+    const missing = required.filter(k => !(k in schedulePayload));
+    if (missing.length === 0) {
+      pass('AI-07', 'schedule_plan payload has required fields (goal, daysPerWeek, sessionMinutes)');
+    } else {
+      fail('AI-07', 'schedule_plan payload has required fields', `Missing: ${missing.join(', ')}`);
+    }
+  } else if (schedulePlan.status === 200) {
+    skip('AI-07', 'schedule_plan payload fields', 'No schedule_plan surfaced (see AI-06)');
+  } else {
+    skip('AI-07', 'schedule_plan payload fields', 'Schedule request failed');
   }
 
   // ── AI-08: Body scan prompt emits [BODY_SCAN_PROMPT] ─────────────────────
@@ -1687,17 +1746,28 @@ async function runWorkoutPlanTests() {
       fail('WP-02', 'generate-workout-plan returns items array', `items = ${JSON.stringify(items)}`);
     }
 
-    // ── WP-03: Items have workout_id ─────────────────────────────────────────
+    // ── WP-03: Items have EITHER a library workout_id (catalogue source)
+    //          OR a workout_source='ai_generated' + exercises_snapshot pair
+    //          (fresh AI generation the Watch turns into a real workout
+    //          later). Both are valid contracts; the ingest pipeline
+    //          handles them separately.
 
     if (Array.isArray(items) && items.length > 0) {
-      const hasIds = items.every((i: any) => typeof i.workout_id === 'string' && i.workout_id.length > 0);
-      if (hasIds) {
-        pass('WP-03', 'All plan items have a valid workout_id');
+      const invalid = items.filter((i: any) => {
+        const hasLibId = typeof i.workout_id === 'string' && i.workout_id.length > 0;
+        const hasAiGen = i.workout_source === 'ai_generated'
+          && Array.isArray(i.exercises_snapshot)
+          && i.exercises_snapshot.length > 0;
+        return !hasLibId && !hasAiGen;
+      });
+      if (invalid.length === 0) {
+        pass('WP-03', `All ${items.length} plan items have workout_id OR ai_generated+exercises_snapshot`);
       } else {
-        fail('WP-03', 'All plan items have a valid workout_id', `First item: ${JSON.stringify(items[0])}`);
+        fail('WP-03', 'All plan items have workout_id OR ai_generated+exercises_snapshot',
+          `${invalid.length} bad item(s), first: ${JSON.stringify(invalid[0]).substring(0, 200)}`);
       }
     } else {
-      skip('WP-03', 'All plan items have a valid workout_id', 'No items returned (see WP-02)');
+      skip('WP-03', 'All plan items have workout_id OR ai_generated+exercises_snapshot', 'No items returned (see WP-02)');
     }
   }
 }

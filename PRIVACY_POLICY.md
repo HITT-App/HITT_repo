@@ -81,7 +81,7 @@ Depending on the features and integrations you enable, this can include:
 
 ### 3.6 Camera, photos, microphone, and voice
 - **Camera / photo library** — to scan meals and food barcodes/labels, set a profile picture, and save progress or share images.
-- **Microphone and speech recognition** — used only if you enable voice interaction with the AI coach. Voice features may be turned off by default; where enabled, audio may be processed by our speech provider (see Section 6).
+- **Microphone and speech recognition** — used for voice interaction with the AI coach. When you speak to the coach, your audio may be processed by our speech provider (see Section 6). You can disable microphone access at any time in your device settings.
 
 ### 3.7 Wearables and connected platforms
 With your permission, we connect to:
@@ -133,11 +133,11 @@ We share personal information only with providers who process it **on our behalf
 
 | Provider | Purpose | Data involved | Location |
 |---|---|---|---|
-| **Supabase** | Cloud database, authentication, file storage, and backend functions (our core infrastructure) | Account, profile, health/fitness, content, tokens | {{SUPABASE_REGION — confirm in dashboard}} |
+| **Supabase** | Cloud database, authentication, file storage, and backend functions (our core infrastructure) | Account, profile, health/fitness, content, tokens | EU (West EU region) |
 | **PostHog** | Product analytics | User ID, email, feature-usage events | EU (`eu.i.posthog.com`) |
-| **Sentry** | Crash and error monitoring | Diagnostic/error data | {{SENTRY_REGION}} |
-| **AI provider(s)** via our AI gateway ({{AI_GATEWAY_NAME}}, using Google **Gemini** and OpenAI models) | AI coaching, workout/plan generation, and body, food, and form analysis | The inputs you provide (e.g. goals, profile memory, body-scan and food data) | US / provider regions |
-| **ElevenLabs** | Voice (text-to-speech and speech-to-text) for the AI coach, **where you enable voice** | Voice/text input and generated audio | US |
+| **Sentry** | Crash and error monitoring | Diagnostic/error data | EU |
+| **Google LLC** (Gemini API) | AI coaching, workout/plan generation, and body, food, and form analysis | The inputs you provide (e.g. goals, profile memory, body-scan and food data) | Global (Google data centres) |
+| **ElevenLabs** | Voice (text-to-speech and speech-to-text) for the AI coach | Voice/text input and generated audio | US |
 | **Spoonacular** and **Open Food Facts** | Food and barcode nutrition lookup | The food/barcode you scan or search | US / EU |
 | **Apple** | App distribution, push notifications (APNs), Apple Health, Apple Watch | Push tokens; Health data you authorise | Global |
 | **Google** | Google Sign-In and Google Fit | Google account ID/profile; Fit data you authorise | Global |
@@ -149,7 +149,7 @@ We keep the current list of sub-processors up to date. We may also disclose info
 
 ## 7. AI features
 
-Some features use artificial intelligence to generate workout plans, coaching, insights, and analysis of food and body images. When you use these features, the relevant inputs (such as your profile memory, goals, and the photos or text you submit) are sent to our AI providers to generate a response. These providers process the data to return results to us and, under our agreements, do not use your data to train their general models except as permitted by their terms. AI-generated content is for general fitness and wellness guidance only and is **not medical advice** (see Section 15).
+Some features use artificial intelligence to generate workout plans, coaching, insights, and analysis of food and body images. When you use these features, the relevant inputs (such as your profile memory, goals, and the photos or text you submit) are sent to our AI provider, **Google LLC** (Gemini API), to generate a response. Google processes the data to return results to us and, under its API terms, does not use this data to train its general models. AI-generated content is for general fitness and wellness guidance only and is **not medical advice** (see Section 15).
 
 ---
 
@@ -254,11 +254,10 @@ Questions or requests about this policy or your data:
 
 ## ✅ Before you publish — checklist
 
-Company details, minimum age (16), contact email, Apple Sign In, and the removal of the dead onboarding-assessment fields are all now handled in the text. Remaining items to confirm:
+Company details, minimum age (16), contact email, Apple Sign In, provider regions (Supabase West EU, Sentry EU, PostHog EU), the AI provider (Google LLC / Gemini API), and the removal of the dead onboarding-assessment fields are all now handled in the text. Remaining items to confirm:
 
-1. **`{{SUPABASE_REGION}}`, `{{SENTRY_REGION}}`, `{{AI_GATEWAY_NAME}}`** (Section 6) — confirm the Supabase project region in the dashboard; confirm Sentry's region; name the AI gateway/provider you actually ship with.
-2. **Confirm the live third-party list** matches what actually ships (e.g. if voice/ElevenLabs stays disabled at launch, or if PostHog/Sentry change).
-3. **Android** — the policy covers Android as requested. Keep it only if the Android app ships alongside the policy; otherwise remove the Android references until launch.
-4. **Apple Sign In** — now described in Section 3.1. Make sure it's actually live in the build before you rely on that wording (Apple requires it once you offer Google sign-in).
-5. **Host it at a public URL** and link it in App Store Connect, Google Play, and the app's settings screen. Apple and Google both require a reachable privacy-policy URL.
-6. **Legal review** — have a lawyer review before publishing, especially the health-data, international-transfer, and US-state sections.
+1. **Confirm the live third-party list** matches what actually ships (voice/ElevenLabs is confirmed on at launch; re-check if PostHog/Sentry/providers change).
+2. **Android** — the policy covers Android as requested. Keep it only if the Android app ships alongside the policy; otherwise remove the Android references until launch.
+3. **Apple Sign In** — now described in Section 3.1. Make sure it's actually live in the build before you rely on that wording (Apple requires it once you offer Google sign-in).
+4. **Host it at a public URL** and link it in App Store Connect, Google Play, and the app's settings screen. Apple and Google both require a reachable privacy-policy URL.
+5. **Legal review** — have a lawyer review before publishing, especially the health-data, international-transfer, and US-state sections.
