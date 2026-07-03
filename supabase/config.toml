@@ -1,4 +1,4 @@
-project_id = "iglwpwdnwztutbaybhfq"
+project_id = "pbrqdlkjoxvglcdlixbi"
 
 # All edge functions now require JWT verification for security
 # Authentication is handled within each function
