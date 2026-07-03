@@ -5,7 +5,7 @@
 **Effective date:** 3 July 2026
 **Last updated:** 3 July 2026
 
-This Privacy Policy explains how **{{COMPANY_LEGAL_NAME}}** ("HIIT Fitness", "we", "us", or "our") collects, uses, shares, and protects your personal information when you use the HIIT Fitness service, including:
+This Privacy Policy explains how **HIITFITNESS LTD** ("HIIT Fitness", "we", "us", or "our") collects, uses, shares, and protects your personal information when you use the HIIT Fitness service, including:
 
 - the **HIIT Fitness app for iPhone and Android**;
 - the **HIIT Fitness app for Apple Watch**;
@@ -15,7 +15,7 @@ This Privacy Policy explains how **{{COMPANY_LEGAL_NAME}}** ("HIIT Fitness", "we
 
 Together, these are the **"Service"**. This policy applies worldwide. Additional region-specific rights are set out in Sections 12 (EU/UK), 13 (California & other US states), and 14 (other regions).
 
-> ⚠️ **This document contains placeholders in `{{DOUBLE_BRACES}}` that must be completed, and it should be reviewed by a qualified lawyer before publication.** See the **"Before you publish"** checklist at the end. This is a drafting aid, not legal advice.
+> ⚠️ **A few technical placeholders in `{{DOUBLE_BRACES}}` still need confirming (see the "Before you publish" checklist at the end), and this should be reviewed by a qualified lawyer before publication.** This is a drafting aid, not legal advice.
 
 ---
 
@@ -23,12 +23,9 @@ Together, these are the **"Service"**. This policy applies worldwide. Additional
 
 The data controller responsible for your personal information is:
 
-- **{{COMPANY_LEGAL_NAME}}**
-- {{REGISTERED_ADDRESS}}
-- Email: **{{PRIVACY_CONTACT_EMAIL}}**
-- {{DATA_PROTECTION_OFFICER_OR_REP — if applicable}}
-
-If you are in the EU or UK and we are required to appoint a representative, our representative's details are: {{EU_UK_REPRESENTATIVE — if applicable, otherwise remove}}.
+- **HIITFITNESS LTD** (registered in England & Wales, company number **16893850**)
+- 14 Highland Avenue, Bryncethin, Bridgend, Wales, CF32 9YH, United Kingdom
+- Email: **Hiit.co.uk@gmail.com**
 
 ---
 
@@ -50,7 +47,7 @@ We collect the following categories of information. Not all of it applies to eve
 
 ### 3.1 Account and profile information
 - **Email address** and, for email sign-up, an **encrypted password** (we never store your password in plain text — authentication is handled by our provider, Supabase).
-- If you sign in with **Google**, we receive your Google account identifier and basic profile information (name, email) as permitted by Google.
+- If you sign in with **Google** or **Apple**, we receive an account identifier and basic profile information (such as name and email) as permitted by that provider. If you use **Sign in with Apple** and choose to hide your email, Apple provides us with a private relay address instead of your real one.
 - **Display name** and **profile photo / avatar** (optional).
 - **Fitness goal**, selected **wearable type**, and app preferences.
 - **"Jarvis" AI memory:** a stored summary of facts you share with our in-app AI assistant to personalise coaching — for example your goal summary, physique notes, injuries, preferences, and lifestyle context.
@@ -62,7 +59,7 @@ Depending on the features and integrations you enable, this can include:
 - **Sleep data** — bedtime, wake time, sleep stages (deep / light / REM / awake), and sleep quality.
 - **Location and routes** — GPS tracks for outdoor workouts, including in the background while a workout is recording, and derived start/end addresses. Used to map and measure your runs, walks, and rides.
 - **Body metrics** — weight, height, body-composition / body-fat estimates (including AI "body scan" analysis), blood pressure, hydration, and mood.
-- **Onboarding assessment** — where you choose to provide it: date of birth, gender, blood type, medications, physical limitations, supplements, eating habits, calorie intake, and fitness experience.
+- **Profile details** — where you choose to provide them: gender, physical limitations, and fitness experience, used to tailor your workouts.
 - **Nutrition** — food and meal logs, calories and macronutrients, dietary preferences, and **food allergies**; meal or food-label photos you capture.
 - **Derived metrics** — such as your HIIT Score and score history.
 
@@ -204,7 +201,7 @@ If you are in the EU, UK, or a region with comparable laws, you have the right t
 - **Withdraw consent** at any time; and
 - **Lodge a complaint** with your local data-protection authority (in the UK, the Information Commissioner's Office, ico.org.uk).
 
-To exercise these rights, contact us at **{{PRIVACY_CONTACT_EMAIL}}**. We will respond within the timeframes required by law. We may need to verify your identity first.
+To exercise these rights, contact us at **Hiit.co.uk@gmail.com**. We will respond within the timeframes required by law. We may need to verify your identity first.
 
 ---
 
@@ -217,13 +214,13 @@ If you are a resident of California (CCPA/CPRA) or another US state with a priva
 - **Opt out** of the "sale" or "sharing" of personal information and of targeted advertising — **note: we do not sell or share your personal information for these purposes, and we do not engage in cross-context behavioural advertising**; and
 - **Non-discrimination** for exercising your rights.
 
-We collect the categories of personal information described in Section 3, for the purposes in Section 4. We do not knowingly process the sensitive personal information of consumers for purposes that require a right-to-limit disclosure. To exercise your rights, contact **{{PRIVACY_CONTACT_EMAIL}}**. You may use an authorised agent, subject to verification.
+We collect the categories of personal information described in Section 3, for the purposes in Section 4. We do not knowingly process the sensitive personal information of consumers for purposes that require a right-to-limit disclosure. To exercise your rights, contact **Hiit.co.uk@gmail.com**. You may use an authorised agent, subject to verification.
 
 ---
 
 ## 14. Other regions
 
-Depending on where you live, you may have additional or similar rights under laws such as Australia's Privacy Act, Canada's PIPEDA, Brazil's LGPD, and others. We honour valid requests under applicable law. Contact us at **{{PRIVACY_CONTACT_EMAIL}}**.
+Depending on where you live, you may have additional or similar rights under laws such as Australia's Privacy Act, Canada's PIPEDA, Brazil's LGPD, and others. We honour valid requests under applicable law. Contact us at **Hiit.co.uk@gmail.com**.
 
 ---
 
@@ -235,7 +232,7 @@ HIIT Fitness provides general fitness and wellness information and tools. It is 
 
 ## 16. Children's privacy
 
-The Service is not directed to children under **{{MINIMUM_AGE — e.g. 16}}**, and we do not knowingly collect personal information from them. If you believe a child has provided us with personal information, contact us at **{{PRIVACY_CONTACT_EMAIL}}** and we will delete it.
+The Service is not directed to children under **16**, and we do not knowingly collect personal information from them. If you believe a child has provided us with personal information, contact us at **Hiit.co.uk@gmail.com** and we will delete it.
 
 ---
 
@@ -249,24 +246,19 @@ We may update this Privacy Policy from time to time. When we make material chang
 
 Questions or requests about this policy or your data:
 
-- **{{COMPANY_LEGAL_NAME}}**
-- Email: **{{PRIVACY_CONTACT_EMAIL}}**
-- {{REGISTERED_ADDRESS}}
+- **HIITFITNESS LTD** (company number 16893850)
+- 14 Highland Avenue, Bryncethin, Bridgend, Wales, CF32 9YH, United Kingdom
+- Email: **Hiit.co.uk@gmail.com**
 
 ---
 
 ## ✅ Before you publish — checklist
 
-Fill in every `{{PLACEHOLDER}}` and confirm the following:
+Company details, minimum age (16), contact email, Apple Sign In, and the removal of the dead onboarding-assessment fields are all now handled in the text. Remaining items to confirm:
 
-1. **`{{COMPANY_LEGAL_NAME}}`, `{{REGISTERED_ADDRESS}}`, `{{PRIVACY_CONTACT_EMAIL}}`** — the legal entity, address, and a working privacy contact address.
-2. **`{{MINIMUM_AGE}}`** — 16 is the safe default for the EU; some app stores allow 13. Match your App Store / Play age rating.
-3. **`{{SUPABASE_REGION}}`, `{{SENTRY_REGION}}`, `{{AI_GATEWAY_NAME}}`** — confirm Supabase project region in the dashboard; name the AI gateway/provider you actually ship with.
-4. **EU/UK representative & DPO** — required only if applicable; remove the lines if not.
-5. **Confirm the live third-party list** matches what actually ships (e.g. if voice/ElevenLabs stays disabled, or if PostHog/Sentry change).
-6. **Data-practice items to double-check before publishing** (flagged from the code):
-   - The onboarding **assessment** collects sensitive data (blood type, medications, DOB) — confirm whether/where this is stored server-side vs. only on-device, and adjust Section 3.2 accordingly.
-   - **Android** is described as a supported platform but is **not yet scaffolded** in the repo. Keep this only if the Android app ships alongside the policy; otherwise remove the Android references until launch.
-   - **Apple Sign In** is not currently implemented although Google Sign-In is — Apple's guidelines generally require offering Sign in with Apple when you offer other social logins. Not a privacy-policy issue, but worth resolving before submission.
-7. **Host it at a public URL** and link it in App Store Connect, Google Play, and the app's settings screen. Apple and Google both require a reachable privacy-policy URL.
-8. **Legal review** — have a lawyer review before publishing, especially the health-data, international-transfer, and US-state sections.
+1. **`{{SUPABASE_REGION}}`, `{{SENTRY_REGION}}`, `{{AI_GATEWAY_NAME}}`** (Section 6) — confirm the Supabase project region in the dashboard; confirm Sentry's region; name the AI gateway/provider you actually ship with.
+2. **Confirm the live third-party list** matches what actually ships (e.g. if voice/ElevenLabs stays disabled at launch, or if PostHog/Sentry change).
+3. **Android** — the policy covers Android as requested. Keep it only if the Android app ships alongside the policy; otherwise remove the Android references until launch.
+4. **Apple Sign In** — now described in Section 3.1. Make sure it's actually live in the build before you rely on that wording (Apple requires it once you offer Google sign-in).
+5. **Host it at a public URL** and link it in App Store Connect, Google Play, and the app's settings screen. Apple and Google both require a reachable privacy-policy URL.
+6. **Legal review** — have a lawyer review before publishing, especially the health-data, international-transfer, and US-state sections.

@@ -40,13 +40,11 @@ import NotFound from "./pages/NotFound";
 
 // Lazy-loaded pages
 const DebugAI = lazy(() => import("./pages/DebugAI"));
-const Assessment = lazy(() => import("./pages/Assessment"));
 const AICoach = lazy(() => import("./pages/AICoach"));
 const AISurface = lazy(() => import("./components/AISurface").then(m => ({ default: m.AISurface })));
 const Profile = lazy(() => import("./pages/Profile"));
 const ConnectedDevices = lazy(() => import("./pages/ConnectedDevices"));
 const ProfileSetup = lazy(() => import("./pages/ProfileSetup"));
-const AssessmentResults = lazy(() => import("./pages/AssessmentResults"));
 const HealthMetrics = lazy(() => import("./pages/HealthMetrics"));
 const ActivityTracker = lazy(() => import("./pages/ActivityTracker"));
 const ActivityOnboarding = lazy(() => import("./pages/ActivityOnboarding"));
@@ -190,7 +188,6 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route path="/assessment" element={<ProtectedRoute><Assessment /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/ai-coach" element={<ProtectedRoute><AICoach /></ProtectedRoute>} />
             <Route path="/ai" element={<ProtectedRoute><AISurface /></ProtectedRoute>} />
@@ -238,7 +235,6 @@ const App = () => (
             <Route path="/community/user/:userId" element={<ProtectedRoute><CommunityProfile /></ProtectedRoute>} />
             <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
             <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
-            <Route path="/assessment-results" element={<ProtectedRoute><AssessmentResults /></ProtectedRoute>} />
             <Route path="/heart-rate" element={<ProtectedRoute><HeartRate /></ProtectedRoute>} />
             <Route path="/steps" element={<ProtectedRoute><Steps /></ProtectedRoute>} />
             <Route path="/weight" element={<ProtectedRoute><Weight /></ProtectedRoute>} />

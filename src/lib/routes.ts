@@ -5,8 +5,6 @@ export const ROUTES = {
   AUTH: "/auth",
   TERMS: "/terms",
   PRIVACY: "/privacy",
-  ASSESSMENT: "/assessment",
-  ASSESSMENT_RESULTS: "/assessment-results",
   PROFILE: "/profile",
   PROFILE_SETUP: "/profile-setup",
   SUBSCRIPTION: "/subscription",
