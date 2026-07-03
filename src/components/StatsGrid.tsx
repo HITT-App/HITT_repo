@@ -98,7 +98,7 @@ export const StatsGrid = () => {
   }
 
   return (
-    <div className="px-5 -mt-14 relative z-10" data-tutorial="stats">
+    <div className="px-5 mt-3 relative z-10" data-tutorial="stats">
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {STATS_CONFIG.map(({ id, Icon, label, bg, glow }) => (
           <div
