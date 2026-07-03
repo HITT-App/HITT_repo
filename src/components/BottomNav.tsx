@@ -38,11 +38,12 @@ export const BottomNav = ({ onHIITClick, onQuickAddClick, quickAddOpen }: Bottom
     }
     if (item.id === "center") return;
     if (!item.path) return;
-    if (item.id === "community" && unreadCount > 0) {
-      navigate("/community/notifications"); return;
-    } else {
-      navigate(item.path);
-    }
+    // Social tab now always routes to the feed. The unread badge is
+    // informational; the bell icon on the feed header opens the
+    // notifications inbox. Previously we hijacked the tap and
+    // redirected to notifications on unread, which trapped users
+    // out of reaching the feed until they cleared every notification.
+    navigate(item.path);
   };
 
   return (
