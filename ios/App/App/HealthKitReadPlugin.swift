@@ -19,6 +19,8 @@ public class HealthKitReadPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "queryHeartRateAverages", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "queryDailySteps", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "querySleep", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startBackgroundWorkoutSync", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopBackgroundWorkoutSync", returnType: CAPPluginReturnPromise),
     ]
 
     private let healthStore = HKHealthStore()
@@ -343,6 +345,202 @@ public class HealthKitReadPlugin: CAPPlugin, CAPBridgedPlugin {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
         fmt.timeZone = TimeZone(identifier: "UTC")
+        return fmt.string(from: d)
+    }
+
+    // MARK: - Background HealthKit observer
+    //
+    // Purpose: iOS wakes our app for ~30s whenever a new HKWorkout sample
+    // lands in HealthKit — Apple Watch finishing a workout, Garmin Connect
+    // writing via HK, Fitbit / Whoop / Oura pushing to HK. We fetch the
+    // new samples, POST them to sync-healthkit-background using a device
+    // JWT, and iOS's push arrives on the lock screen before the user
+    // reaches for their phone.
+    //
+    // Auth: the device JWT is minted server-side once (after sign-in) and
+    // cached across launches in UserDefaults. Rotates every 90 days on
+    // foreground re-mint (handled by JS).
+
+    private static let deviceTokenKey  = "hiit.hk.deviceToken"
+    private static let supabaseUrlKey  = "hiit.hk.supabaseUrl"
+    private static let anchorDataKey   = "hiit.hk.workoutAnchor"
+
+    /// JS-facing: JS passes in the freshly-minted device JWT + the
+    /// Supabase URL, we stash them and start the observer. Idempotent —
+    /// calling twice re-registers with the latest token.
+    @objc func startBackgroundWorkoutSync(_ call: CAPPluginCall) {
+        guard let token = call.getString("deviceToken"),
+              let url = call.getString("supabaseUrl") else {
+            call.reject("deviceToken and supabaseUrl required")
+            return
+        }
+        UserDefaults.standard.set(token, forKey: Self.deviceTokenKey)
+        UserDefaults.standard.set(url, forKey: Self.supabaseUrlKey)
+        registerWorkoutObserver()
+        call.resolve(["started": true])
+    }
+
+    /// Called on sign-out. Turns background delivery off and drops
+    /// the cached token so a subsequent user's workouts can't leak.
+    @objc func stopBackgroundWorkoutSync(_ call: CAPPluginCall) {
+        healthStore.disableBackgroundDelivery(for: HKObjectType.workoutType()) { _, _ in }
+        UserDefaults.standard.removeObject(forKey: Self.deviceTokenKey)
+        UserDefaults.standard.removeObject(forKey: Self.supabaseUrlKey)
+        UserDefaults.standard.removeObject(forKey: Self.anchorDataKey)
+        call.resolve(["stopped": true])
+    }
+
+    private func registerWorkoutObserver() {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+        let workoutType = HKObjectType.workoutType()
+
+        healthStore.enableBackgroundDelivery(for: workoutType, frequency: .immediate) { success, error in
+            if let error = error {
+                NSLog("[HealthKitReadPlugin] enableBackgroundDelivery error: %@", error.localizedDescription)
+            } else {
+                NSLog("[HealthKitReadPlugin] background delivery enabled: %@", success ? "yes" : "no")
+            }
+        }
+
+        // HKObserverQuery notifies us whenever workout data changes — the
+        // handler runs in the foreground OR when iOS has woken us in
+        // background. Call the completionHandler as soon as our work is
+        // dispatched so iOS doesn't penalise our next wake for delaying.
+        let query = HKObserverQuery(sampleType: workoutType, predicate: nil) { [weak self] _, completionHandler, error in
+            defer { completionHandler() }
+            if let error = error {
+                NSLog("[HealthKitReadPlugin] observer error: %@", error.localizedDescription)
+                return
+            }
+            self?.fetchAndPushNewWorkouts()
+        }
+        healthStore.execute(query)
+    }
+
+    /// Anchored query — HealthKit returns only samples added since the
+    /// last anchor, so we don't re-push the same workout every wake.
+    private func fetchAndPushNewWorkouts() {
+        guard let token = UserDefaults.standard.string(forKey: Self.deviceTokenKey),
+              let urlString = UserDefaults.standard.string(forKey: Self.supabaseUrlKey) else {
+            NSLog("[HealthKitReadPlugin] no device token or url — skipping background sync")
+            return
+        }
+
+        let anchor: HKQueryAnchor? = {
+            guard let data = UserDefaults.standard.data(forKey: Self.anchorDataKey) else { return nil }
+            return try? NSKeyedUnarchiver.unarchivedObject(ofClass: HKQueryAnchor.self, from: data)
+        }()
+
+        let query = HKAnchoredObjectQuery(
+            type: HKObjectType.workoutType(),
+            predicate: nil,
+            anchor: anchor,
+            limit: HKObjectQueryNoLimit
+        ) { [weak self] _, samples, _, newAnchor, error in
+            if let error = error {
+                NSLog("[HealthKitReadPlugin] anchored query error: %@", error.localizedDescription)
+                return
+            }
+            let workouts = (samples as? [HKWorkout]) ?? []
+            if !workouts.isEmpty {
+                self?.postWorkouts(workouts, urlString: urlString, token: token) {
+                    if let newAnchor = newAnchor,
+                       let data = try? NSKeyedArchiver.archivedData(withRootObject: newAnchor, requiringSecureCoding: true) {
+                        UserDefaults.standard.set(data, forKey: Self.anchorDataKey)
+                    }
+                }
+            } else if let newAnchor = newAnchor,
+                      let data = try? NSKeyedArchiver.archivedData(withRootObject: newAnchor, requiringSecureCoding: true) {
+                UserDefaults.standard.set(data, forKey: Self.anchorDataKey)
+            }
+        }
+        healthStore.execute(query)
+    }
+
+    private func postWorkouts(_ workouts: [HKWorkout], urlString: String, token: String, done: @escaping () -> Void) {
+        let group = DispatchGroup()
+        var payloads: [[String: Any]] = []
+        for w in workouts {
+            group.enter()
+            Self.averageHeartRate(for: w, healthStore: healthStore) { avg in
+                var dict: [String: Any] = [
+                    "workout_type": Self.activityTypeString(w.workoutActivityType),
+                    "duration_seconds": Int(w.duration.rounded()),
+                    "start_time": Self.isoTimestamp(w.startDate),
+                    "end_time": Self.isoTimestamp(w.endDate),
+                    "source_platform": Self.sourcePlatform(for: w),
+                    "source_platform_id": w.uuid.uuidString,
+                ]
+                if let cals = w.totalEnergyBurned?.doubleValue(for: HKUnit.kilocalorie()) {
+                    dict["calories"] = Int(cals.rounded())
+                }
+                if let dist = w.totalDistance?.doubleValue(for: HKUnit.meter()) {
+                    dict["distance_m"] = Int(dist.rounded())
+                }
+                if let avg = avg { dict["hr_avg"] = Int(avg.rounded()) }
+                payloads.append(dict)
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .global()) {
+            guard !payloads.isEmpty,
+                  let url = URL(string: "\(urlString)/functions/v1/sync-healthkit-background") else {
+                done(); return
+            }
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let body: [String: Any] = ["workouts": payloads]
+            req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+            URLSession.shared.dataTask(with: req) { _, response, error in
+                if let error = error {
+                    NSLog("[HealthKitReadPlugin] background POST error: %@", error.localizedDescription)
+                } else if let http = response as? HTTPURLResponse {
+                    NSLog("[HealthKitReadPlugin] background POST → %d (%d workouts)", http.statusCode, payloads.count)
+                }
+                done()
+            }.resume()
+        }
+    }
+
+    private static func activityTypeString(_ type: HKWorkoutActivityType) -> String {
+        switch type {
+        case .running: return "running"
+        case .cycling: return "cycling"
+        case .walking: return "walking"
+        case .swimming: return "swimming"
+        case .yoga: return "yoga"
+        case .hiking: return "hiking"
+        case .traditionalStrengthTraining, .functionalStrengthTraining: return "strength"
+        case .highIntensityIntervalTraining: return "hiit"
+        case .rowing: return "rowing"
+        case .other: return "other"
+        default: return "other"
+        }
+    }
+
+    /// Map the workout's source bundle-id to our canonical source_platform
+    /// enum. Mirrors the mapping in sync-healthkit's server-side helper.
+    private static func sourcePlatform(for workout: HKWorkout) -> String {
+        let bundle = workout.sourceRevision.source.bundleIdentifier.lowercased()
+        if bundle.contains("com.apple.health") { return "apple_health_native" }
+        if bundle.hasPrefix("com.apple.") { return "apple_watch" }
+        if bundle.contains("garmin") { return "garmin" }
+        if bundle.contains("fitbit") { return "fitbit" }
+        if bundle.contains("whoop") { return "whoop" }
+        if bundle.contains("oura") { return "oura" }
+        if bundle.contains("polar") { return "polar" }
+        if bundle.contains("coros") { return "coros" }
+        if bundle.contains("wahoo") { return "wahoo" }
+        return "healthkit_other"
+    }
+
+    private static func isoTimestamp(_ d: Date) -> String {
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return fmt.string(from: d)
     }
 }

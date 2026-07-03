@@ -47,6 +47,12 @@ interface HealthKitReadInterface {
   queryHeartRateAverages(opts: { sinceISO: string }): Promise<{ days: HealthKitDailyHR[] }>;
   queryDailySteps(opts: { sinceISO: string }): Promise<{ days: HealthKitDailySteps[] }>;
   querySleep(opts: { sinceISO: string }): Promise<{ nights: HealthKitSleepNight[] }>;
+  // Background sync: stores the device JWT natively, registers an
+  // HKObserverQuery + enableBackgroundDelivery on workouts. Once
+  // started, iOS wakes the app on new workout samples and the native
+  // side POSTs to sync-healthkit-background — no JS involvement per wake.
+  startBackgroundWorkoutSync(opts: { deviceToken: string; supabaseUrl: string }): Promise<{ started: boolean }>;
+  stopBackgroundWorkoutSync(): Promise<{ stopped: boolean }>;
 }
 
 const HealthKitReadImpl = registerPlugin<HealthKitReadInterface>("HealthKitRead");

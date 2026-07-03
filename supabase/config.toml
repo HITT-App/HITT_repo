@@ -22,3 +22,11 @@ verify_jwt = false
 
 [functions.push-garmin-watch-workout]
 verify_jwt = false
+
+# Background HealthKit sync endpoint — called from the iPhone's native
+# HKObserverQuery handler while the app is in a background wake, with a
+# 90-day device JWT in the Authorization header. No Supabase user
+# session is available in that context. Auth is done inside the function
+# via _shared/healthkit-device-jwt.ts.
+[functions.sync-healthkit-background]
+verify_jwt = false

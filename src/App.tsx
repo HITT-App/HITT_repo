@@ -19,6 +19,7 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { PageLoader } from "@/components/PageLoader";
 import { useCacheVersion } from "@/hooks/useCacheVersion";
 import { useNativePush } from "@/hooks/useNativePush";
+import { useHealthKitBackgroundSync } from "@/hooks/useHealthKitBackgroundSync";
 import { initWatchEventHandler } from "@/lib/watch-event-handler";
 import { initHealthKitSync } from "@/lib/healthkit-sync";
 
@@ -159,6 +160,7 @@ function CacheVersionCheck() {
 
 function NativePushRegistrar() {
   useNativePush();
+  useHealthKitBackgroundSync();
   return null;
 }
 
