@@ -20,7 +20,7 @@
     minSdkVersion="4.0.0"
     name="@Strings.AppName"
     type="watch-app"
-    version="0.2.5">
+    version="0.2.6">
 
     <iq:products>
       <!-- Forerunner -->
@@ -68,12 +68,18 @@
     </iq:products>
 
     <iq:permissions>
-      <!-- Fit + Sensor cover activity recording. Communications is the
-           direct HTTP push path to push-garmin-watch-workout (see
-           source/PushClient.mc). PersistedContent stores the pairing JWT
-           between app launches so we don't re-pair every session. -->
+      <!-- Fit + Sensor cover activity recording. Positioning gives the
+           live UI its own GPS event stream so distance climbs on-screen
+           for the user (ActivityRecording auto-enables GPS internally
+           for the FIT file, but on some firmwares Activity.getActivityInfo()
+           stays null for the UI until Positioning is also subscribed).
+           Communications is the direct HTTP push path to
+           push-garmin-watch-workout (see source/PushClient.mc).
+           PersistedContent stores the pairing JWT between app launches
+           so we don't re-pair every session. -->
       <iq:uses-permission id="Fit"/>
       <iq:uses-permission id="Sensor"/>
+      <iq:uses-permission id="Positioning"/>
       <iq:uses-permission id="Communications"/>
       <iq:uses-permission id="PersistedContent"/>
     </iq:permissions>

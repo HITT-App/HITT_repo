@@ -1,5 +1,10 @@
 # HITT App Changelog
 
+## [2026-07-03] — Garmin v0.2.6: distance + calories on the recording screen
+
+- **Distance and calories now show live under the timer during a workout** — pulled from Garmin's `Activity.getActivityInfo()` so they update every second in sync with the timer. Distance auto-switches between km and miles based on the watch's own settings. Both hide when no reading is available yet (first ~2 seconds of a session) so the row doesn't flicker. Suppressed while paused — the PAUSED pill takes that slot instead
+- **Fixed a crash when ending a GPS activity** — some fēnix firmwares threw an uncaught exception on exit because the GPS disable call passed a null callback; it now passes the real handler. Distance formatting also hardened against a `TypeCoercionException` that hit when the firmware returned distance as a Number instead of a Float (now uses `.toFloat()` with defensive reads)
+
 ## [2026-07-02] — Garmin v0.2.5: HTTP requests actually reach the server
 
 - **Pairing and workout push now work on real devices** — casey's pair attempts were silently dropped by his watch before ever reaching the server. Root cause: our HTTP payloads set `"Content-Type" => "application/json"` as a plain string. Some Garmin firmwares only recognise the internal `Communications.REQUEST_CONTENT_TYPE_JSON` constant, and reject the request locally when they see the string — no callback fires, no request goes out, watch just shows "Pair failed" with no route to diagnose. Now uses the constant everywhere, matching Garmin's documented pattern

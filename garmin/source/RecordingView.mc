@@ -19,6 +19,7 @@ import Toybox.System;
 import Toybox.Time;
 import Toybox.Time.Gregorian;
 import Toybox.Timer;
+import Toybox.Position;
 import Toybox.Application;
 import Toybox.Lang;
 
@@ -71,6 +72,21 @@ class RecordingView extends WatchUi.View {
             mSession = ActivityRecording.createSession(opts);
             mSession.start();
             mStartMs = System.getTimer();
+
+            // Belt-and-braces: ActivityRecording auto-enables GPS internally
+            // for outdoor sports (running, walking, cycling, swimming) so the
+            // FIT file records position, but on some device/firmware combos
+            // the live Activity.getActivityInfo().elapsedDistance stays null
+            // for the UI until Position events are ALSO subscribed. Explicit
+            // enable here guarantees distance climbs on-screen for the user.
+            // Skipped for indoor / non-GPS sports (strength, HIIT) — no
+            // reason to burn GPS battery when distance is meaningless.
+            if (isGpsBased(mSport)) {
+                Position.enableLocationEvents(
+                    Position.LOCATION_CONTINUOUS,
+                    method(:onPositionUpdate)
+                );
+            }
         }
 
         // Elapsed-display tick — only while actively recording.
@@ -176,6 +192,63 @@ class RecordingView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, cy, timerFont, formatElapsed(),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+
+        // Distance + Calories row — pulled live from Activity.getActivityInfo().
+        // Distance shows in km or miles based on device settings; calories are
+        // whole kcal. Both hide themselves when Activity has no reading yet
+        // (first ~2 seconds of a session) so the row doesn't flicker.
+        //
+        // Rendered BELOW the timer at the same gap as the sport name is above,
+        // so the timer stays vertically centred and this row balances it out.
+        //
+        // Suppressed while paused — the PAUSED pill takes that slot instead
+        // (see below). Bandwidth for one row of secondary info, not two.
+        var metricsY = cy + (timerH / 2) + gap + (smallH / 2);
+        var info = Toybox.Activity.getActivityInfo();
+        if (!mPaused && info != null) {
+            // Defensive reads — Garmin's Activity.Info returns values as
+            // Number OR Float depending on device / firmware, and `as Float`
+            // coercion has thrown "TypeCoercionException" on some fenix
+            // firmwares when the underlying value was a Number. .toFloat()
+            // safely widens either. Also unit-lookup wrapped so a missing
+            // devices-setting field doesn't crash the whole draw pass.
+            var useMetric = true;
+            try {
+                var settings = System.getDeviceSettings();
+                if (settings != null && settings.distanceUnits != null) {
+                    useMetric = settings.distanceUnits == System.UNIT_METRIC;
+                }
+            } catch (ex) { /* leave useMetric = true */ }
+
+            var distStr = "-";
+            var dist = info.elapsedDistance;
+            if (dist != null) {
+                var meters = dist.toFloat();
+                if (useMetric) {
+                    distStr = (meters / 1000.0).format("%.2f") + " km";
+                } else {
+                    distStr = (meters * 0.000621371).format("%.2f") + " mi";
+                }
+            }
+
+            var calStr = "-";
+            var cals = info.calories;
+            if (cals != null) {
+                calStr = cals.toNumber().format("%d") + " kcal";
+            }
+
+            // Two-column layout — distance left of centre, calories right.
+            // Values in HITT orange, labels in dim grey underneath.
+            var colWidth = dc.getWidth() / 2;
+            var leftX = colWidth / 2 + 6;
+            var rightX = colWidth + colWidth / 2 - 6;
+
+            dc.setColor(HITT_ORANGE, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(leftX,  metricsY, smallFont, distStr,
+                Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+            dc.drawText(rightX, metricsY, smallFont, calStr,
+                Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        }
 
         // Paused — HITT-orange rounded pill below the timer with the same gap.
         if (mPaused) {
@@ -301,6 +374,7 @@ class RecordingView extends WatchUi.View {
             }
             mSession.save();
             mSession = null;
+            disableGpsIfActive();
         }
         if (mTickTimer != null) {
             mTickTimer.stop();
@@ -375,6 +449,38 @@ class RecordingView extends WatchUi.View {
             }
             mSession.discard();
             mSession = null;
+            disableGpsIfActive();
+        }
+    }
+
+    // Returns true for sports where GPS distance is the expected primary
+    // metric. Kept in one place so future sports (Hike, Row, Elliptical
+    // outdoors) are easy to add.
+    private function isGpsBased(sport as ActivityRecording.Sport) as Boolean {
+        return sport == ActivityRecording.SPORT_RUNNING
+            || sport == ActivityRecording.SPORT_WALKING
+            || sport == ActivityRecording.SPORT_CYCLING
+            || sport == ActivityRecording.SPORT_SWIMMING;
+    }
+
+    // Position events fire ~1 Hz once GPS locks — we just need them
+    // subscribed so Activity.getActivityInfo() populates for the UI. The
+    // callback itself is intentionally empty; the FIT recording engine
+    // is the actual consumer of the position data.
+    function onPositionUpdate(info as Position.Info) as Void {
+        // no-op — see comment above
+    }
+
+    // Symmetric with the enable in onShow — only needs to disable if we
+    // enabled. Safe to call unconditionally (no-op if never enabled).
+    // Passes the same callback we registered on enable — some Garmin
+    // firmwares crash if you pass null here instead of a Method ref.
+    private function disableGpsIfActive() as Void {
+        if (isGpsBased(mSport)) {
+            Position.enableLocationEvents(
+                Position.LOCATION_DISABLE,
+                method(:onPositionUpdate)
+            );
         }
     }
 
