@@ -206,7 +206,7 @@ const ChallengeDetail = () => {
           <div className="space-y-3">
             <Button 
               className="w-full"
-              onClick={() => navigate('/challenge-leaderboard')}
+              onClick={() => navigate('/leaderboard')}
             >
               View Leaderboard
             </Button>

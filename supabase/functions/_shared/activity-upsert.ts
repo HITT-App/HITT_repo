@@ -144,6 +144,7 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
 
   const toInsert: StampedRow[] = [];
   const toUpgrade: Array<{ existingId: string; row: StampedRow }> = [];
+  const toEnrich: Array<{ existing: (typeof existing)[number]; row: StampedRow }> = [];
   let skipped = 0;
 
   for (const r of stamped) {
@@ -163,10 +164,26 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
       continue;
     }
 
-    // A row is already in the DB for this workout. Winner-selection:
-    // upgrade only if the incoming source is strictly higher priority.
+    // A row is already in the DB for this workout.
+    //
+    // Winner-selection:
+    //  - Incoming strictly higher priority → full upgrade (swap source
+    //    + merge non-null fields into existing).
+    //  - Incoming equal or lower priority → enrich only. Keep the
+    //    existing source_platform, but fill any NULL calories /
+    //    avg_heart_rate / distance_km on the existing row with the
+    //    incoming values. Prevents the case where a Garmin CIQ direct
+    //    push (highest priority) writes an empty stats row a minute
+    //    before HealthKit lands with the real numbers — we used to
+    //    skip the second row entirely and leave the composite empty.
     if (sourcePriority(r.source_platform) > sourcePriority(match.source_platform)) {
       toUpgrade.push({ existingId: match.id, row: r });
+    } else if (
+      (match.calories_burned == null && r.calories_burned != null) ||
+      (match.avg_heart_rate == null && r.avg_heart_rate != null) ||
+      (match.distance_km == null && r.distance_km != null)
+    ) {
+      toEnrich.push({ existing: match, row: r });
     } else {
       skipped++;
     }
@@ -198,6 +215,39 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
       .eq("id", existingId);
     if (error) {
       console.warn("[activity-upsert] upgrade skipped:", error.message);
+      skipped++;
+    } else {
+      upgraded++;
+    }
+  }
+
+  // 3b. Apply enrichments — same-workout row where the incoming source
+  //     is lower/equal priority but has a stat the existing row is
+  //     missing (typical: Garmin CIQ direct push arrives with no
+  //     calories/distance, HealthKit-mediated 'garmin' lands a minute
+  //     later with both). Fill the NULLs, keep everything else — most
+  //     importantly, don't swap source_platform back to a lower rank.
+  for (const { existing: existingRow, row } of toEnrich) {
+    const patch: Record<string, unknown> = {};
+    if (existingRow.calories_burned == null && row.calories_burned != null) {
+      patch.calories_burned = row.calories_burned;
+    }
+    if (existingRow.avg_heart_rate == null && row.avg_heart_rate != null) {
+      patch.avg_heart_rate = row.avg_heart_rate;
+    }
+    if (existingRow.distance_km == null && row.distance_km != null) {
+      patch.distance_km = row.distance_km;
+    }
+    if (Object.keys(patch).length === 0) {
+      skipped++;
+      continue;
+    }
+    const { error } = await admin
+      .from("activity_logs")
+      .update(patch)
+      .eq("id", existingRow.id);
+    if (error) {
+      console.warn("[activity-upsert] enrich skipped:", error.message);
       skipped++;
     } else {
       upgraded++;

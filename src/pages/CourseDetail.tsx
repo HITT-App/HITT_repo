@@ -56,7 +56,7 @@ const CourseDetail = () => {
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={() => navigate('/courses')}
+          onClick={() => navigate('/resources')}
           className="rounded-full"
         >
           <ArrowLeft className="w-5 h-5" />

@@ -46,7 +46,7 @@ const WorkshopDetail = () => {
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={() => navigate('/workshops')}
+          onClick={() => navigate('/resources')}
           className="rounded-full"
         >
           <ArrowLeft className="w-5 h-5" />

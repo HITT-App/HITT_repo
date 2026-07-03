@@ -130,8 +130,10 @@ export function sourcePriority(sourcePlatform: string): number {
 
 // Fuzzy-match window (seconds) used by cross-source dedupe. See
 // activity-upsert.ts. A workout arriving via BOTH direct push AND the
-// HealthKit-mediated path can have a start_time skew of a few seconds
-// (Garmin Connect rounds to whole seconds, HealthKit sometimes reports
-// session-created time). 90s is well outside any plausible skew but far
-// short of a plausible second workout in the same minute.
-export const FUZZY_MATCH_WINDOW_SECONDS = 90;
+// HealthKit-mediated path can have a start_time skew of a couple of
+// minutes: Garmin Connect uploads to Apple Health with a slight delay
+// and sometimes stamps the HKWorkout.startDate with the upload time
+// rather than the true activity start. 180s (three minutes) is well
+// outside any plausible skew for a real duplicate but still short of a
+// plausible back-to-back workout.
+export const FUZZY_MATCH_WINDOW_SECONDS = 180;

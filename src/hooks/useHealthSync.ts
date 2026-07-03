@@ -199,37 +199,16 @@ export function useHealthSync() {
         });
       }
 
-      // Workouts
-      const workoutResult = await Health.queryWorkouts({
-        startDate: startISO,
-        endDate: endISO,
-        limit: 100,
-        ascending: false,
-      }).catch(() => ({ workouts: [] as NonNullable<Awaited<ReturnType<typeof Health.queryWorkouts>>["workouts"]> }));
-
-      const workoutRows = (workoutResult.workouts ?? [])
-        .filter((w) => w.platformId)
-        .map((w) => ({
-          user_id: user.id,
-          activity_type: w.workoutType,
-          started_at: w.startDate,
-          ended_at: w.endDate,
-          duration_seconds: Math.round(w.duration),
-          distance_km: w.totalDistance != null ? w.totalDistance / 1000 : null,
-          calories_burned: w.totalEnergyBurned != null ? Math.round(w.totalEnergyBurned) : null,
-          status: "completed",
-          source_platform: platform,
-          source_platform_id: w.platformId!,
-        }));
-
-      if (workoutRows.length) {
-        await supabase
-          .from("activity_logs")
-          .upsert(workoutRows, {
-            onConflict: "user_id,source_platform,source_platform_id",
-            ignoreDuplicates: false,
-          });
-      }
+      // Workouts are handled by the newer sync-healthkit pipeline
+      // (src/lib/healthkit-sync.ts → supabase/functions/sync-healthkit)
+      // which routes every insert through _shared/activity-upsert.ts and
+      // therefore honours our 3-layer dedupe (fingerprint + fuzzy window
+      // + source-priority winner selection). This legacy hook used to
+      // write workouts directly to activity_logs with source_platform=
+      // "healthkit" (a value not in SOURCE_PRIORITY, so priority 0),
+      // producing orphan rows the new dedupe pipeline could never merge.
+      // Kept the HR / steps / sleep writes above — they don't have the
+      // same issue and haven't been migrated to the new pipeline yet.
 
       setLastSyncAt(new Date());
     } catch (err) {

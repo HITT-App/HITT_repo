@@ -243,19 +243,21 @@ export const useActivity = () => {
       // Used by the Strength share card and the ActivityDetail volume readout.
       total_volume_kg?: number;
     }) => {
-      const { data: inserted, error } = await supabase
-        .from("activity_logs")
-        .insert({
-          user_id: user?.id,
-          ...data,
-          ended_at: new Date().toISOString(),
-          score_impact: calculateScoreImpact(data),
-        })
-        .select("id")
-        .maybeSingle();
-
+      // Route through log-user-workout so upsertActivities runs — a
+      // wearable-arrived duplicate of this same workout can then upgrade
+      // this row via source-priority instead of leaving orphaned rows.
+      const { data: res, error } = await supabase.functions.invoke("log-user-workout", {
+        body: {
+          activity_type: data.activity_type,
+          duration_seconds: data.duration_seconds,
+          distance_km: data.distance_km,
+          calories_burned: data.calories_burned,
+          notes: data.notes,
+          total_volume_kg: data.total_volume_kg,
+        },
+      });
       if (error) throw error;
-      return inserted;
+      return res?.result?.insertedRows?.[0] ?? null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activity-logs"] });

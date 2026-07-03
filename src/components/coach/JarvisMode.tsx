@@ -544,7 +544,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       setTimeout(() => {
         ai.abort();
         tts.cancel();
-        navigate('/schedule');
+        navigate('/workout-schedule');
       }, 1800);
     } catch (err) {
       console.error('[Jarvis] Schedule creation failed:', err);

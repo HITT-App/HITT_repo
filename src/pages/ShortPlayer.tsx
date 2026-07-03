@@ -52,7 +52,7 @@ const ShortPlayer = () => {
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={() => navigate('/shorts')}
+          onClick={() => navigate('/resources')}
           className="text-white hover:bg-white/20"
         >
           <ArrowLeft className="w-5 h-5" />

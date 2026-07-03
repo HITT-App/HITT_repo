@@ -226,7 +226,7 @@ export function AIRecommendationsCard({
         <Button 
           variant="ghost" 
           className="w-full text-primary"
-          onClick={() => navigate("/activity-recommendations")}
+          onClick={() => navigate("/activity-dashboard")}
         >
           View All Recommendations <ChevronRight className="w-4 h-4 ml-1" />
         </Button>

@@ -3396,6 +3396,156 @@ async function runDedupeAuditTests() {
   } catch (e: any) {
     fail('DEDUPE-08', 'field-preservation audit', e.message);
   }
+
+  // ── DEDUPE-09: no code writes to activity_logs directly — every write
+  //    must route through the _shared/activity-upsert helper so the
+  //    3-layer dedupe fires. On 2026-07-03 a legacy useHealthSync hook
+  //    was found writing raw upserts, producing 150 orphan rows. This
+  //    audit catches any reintroduction of that pattern.
+  try {
+    const HELPER_PATH = 'supabase/functions/_shared/activity-upsert.ts';
+    const forbiddenPattern = /\.from\(\s*['"]activity_logs['"]\s*\)\s*\.\s*(insert|update|upsert|delete)\s*\(/;
+    const scanRoots = ['/Users/vanessa/hitt-app/src', '/Users/vanessa/hitt-app/supabase/functions'];
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      let entries: any[] = [];
+      try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      for (const e of entries) {
+        const p = `${dir}/${e.name}`;
+        if (e.isDirectory()) {
+          if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+          walk(p);
+          continue;
+        }
+        if (!/\.(ts|tsx|js|jsx)$/.test(e.name)) continue;
+        if (p.endsWith(HELPER_PATH.split('/').slice(-2).join('/'))) continue; // allow the helper itself
+        try {
+          const contents = readFileSync(p, 'utf8');
+          if (forbiddenPattern.test(contents)) offenders.push(p.replace('/Users/vanessa/hitt-app/', ''));
+        } catch { /* ignore unreadable */ }
+      }
+    };
+    scanRoots.forEach(walk);
+    if (offenders.length === 0) {
+      pass('DEDUPE-09', 'no code writes to activity_logs outside the shared helper');
+    } else {
+      fail('DEDUPE-09', 'direct activity_logs writers detected',
+        `Offenders: ${offenders.join(', ')} — route through _shared/activity-upsert.ts`);
+    }
+  } catch (e: any) {
+    fail('DEDUPE-09', 'direct-write audit', e.message);
+  }
+
+  // ── DEDUPE-10: every source_platform string literal in the codebase
+  //    must be a key in SOURCE_PRIORITY. The legacy hook was writing
+  //    source_platform="healthkit" — a value not in the priority table,
+  //    so it silently ranked 0 and never won any winner-selection.
+  try {
+    const typesSrc = readShared('activity-types.ts');
+    const priorityBlock = typesSrc.match(/SOURCE_PRIORITY[^{]*\{([^}]+)\}/s);
+    const knownSources = new Set<string>();
+    if (priorityBlock) {
+      for (const m of priorityBlock[1].matchAll(/(\w+)\s*:\s*\d+/g)) knownSources.add(m[1]);
+    }
+    // Only check source_platform literals in files that touch activity_logs.
+    // Whitelist non-activity_logs values that appear in the same files
+    // (health_metrics uses "apple_health" for HR/steps aggregates —
+    // legitimate, not part of the activity_logs winner-selection contract).
+    const NON_ACTIVITY_WHITELIST = new Set(["apple_health"]);
+    const litPattern = /source_platform\s*:\s*['"`]([a-zA-Z0-9_]+)['"`]/g;
+    const scanRoots = ['/Users/vanessa/hitt-app/src', '/Users/vanessa/hitt-app/supabase/functions'];
+    const unknown: Array<{ file: string; value: string }> = [];
+    const walk = (dir: string) => {
+      let entries: any[] = [];
+      try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      for (const e of entries) {
+        const p = `${dir}/${e.name}`;
+        if (e.isDirectory()) {
+          if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+          walk(p);
+          continue;
+        }
+        if (!/\.(ts|tsx|js|jsx)$/.test(e.name)) continue;
+        try {
+          const contents = readFileSync(p, 'utf8');
+          // Skip files that only touch other tables (heuristic: must
+          // mention activity_logs or upsertActivities).
+          if (!/activity_logs|upsertActivities/.test(contents)) continue;
+          for (const m of contents.matchAll(litPattern)) {
+            const value = m[1];
+            if (!knownSources.has(value) && !NON_ACTIVITY_WHITELIST.has(value)) {
+              unknown.push({ file: p.replace('/Users/vanessa/hitt-app/', ''), value });
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    };
+    scanRoots.forEach(walk);
+    if (unknown.length === 0) {
+      pass('DEDUPE-10', `every source_platform literal (${knownSources.size} known) exists in SOURCE_PRIORITY`);
+    } else {
+      const shown = unknown.slice(0, 3).map(u => `"${u.value}" @ ${u.file}`).join('; ');
+      fail('DEDUPE-10', 'unknown source_platform literals',
+        `${unknown.length} occurrence(s): ${shown}${unknown.length > 3 ? ' …' : ''}`);
+    }
+  } catch (e: any) {
+    fail('DEDUPE-10', 'source_platform literal audit', e.message);
+  }
+
+  // ── DEDUPE-11: every navigate() target string references a real route
+  //    declared in App.tsx. On 2026-07-03 the delete-account flow was
+  //    navigating to /login which had no route and rendered the NotFound
+  //    404 as the user's last impression of the app.
+  try {
+    const appSrc = readFileSync('/Users/vanessa/hitt-app/src/App.tsx', 'utf8');
+    const declared = new Set<string>();
+    for (const m of appSrc.matchAll(/path=["']([^"'*]+)["']/g)) {
+      // Strip the parameter fragment (e.g. `/activity/:id` → `/activity/`).
+      const base = m[1].split('/:')[0];
+      declared.add(base === '' ? '/' : base);
+    }
+    const navPattern = /navigate\(\s*['"`]([^'"`?#]+)/g;
+    const offenders: Array<{ file: string; target: string }> = [];
+    const walk = (dir: string) => {
+      let entries: any[] = [];
+      try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      for (const e of entries) {
+        const p = `${dir}/${e.name}`;
+        if (e.isDirectory()) {
+          if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+          walk(p);
+          continue;
+        }
+        if (!/\.(ts|tsx)$/.test(e.name)) continue;
+        try {
+          const contents = readFileSync(p, 'utf8');
+          for (const m of contents.matchAll(navPattern)) {
+            const raw = m[1];
+            if (raw.startsWith('-')) continue;       // navigate(-1) style
+            if (raw.startsWith('http')) continue;    // external
+            if (raw.includes('${')) continue;        // interpolated — assume dynamic /:id form
+            if (raw.startsWith('/')) {
+              const base = raw.split('/').slice(0, 2).join('/');   // e.g. /activity/xxxx → /activity
+              const withTrailing = base + '/';
+              if (!declared.has(base) && !declared.has(withTrailing) && !declared.has(raw)) {
+                offenders.push({ file: p.replace('/Users/vanessa/hitt-app/', ''), target: raw });
+              }
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    };
+    walk('/Users/vanessa/hitt-app/src');
+    if (offenders.length === 0) {
+      pass('DEDUPE-11', 'every navigate() target has a matching Route in App.tsx');
+    } else {
+      const shown = offenders.map(o => `navigate("${o.target}") @ ${o.file}`).join('\n         ');
+      fail('DEDUPE-11', `dead route targets (${offenders.length})`,
+        `\n         ${shown}`);
+    }
+  } catch (e: any) {
+    fail('DEDUPE-11', 'route target audit', e.message);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

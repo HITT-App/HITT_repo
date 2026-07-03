@@ -275,16 +275,19 @@ const Triathlon = () => {
       (acc, l) => ({ elapsed: acc.elapsed + l.elapsed, distance: acc.distance + l.distance, calories: acc.calories + l.calories }),
       { elapsed: 0, distance: 0, calories: 0 },
     );
-    await supabase.from('activity_logs').insert({
-      user_id: user.id,
-      activity_type: 'Triathlon',
-      started_at: startedAtRef.current,
-      ended_at: new Date().toISOString(),
-      duration_seconds: totals.elapsed,
-      distance_km: Math.round(totals.distance * 100) / 100,
-      calories_burned: totals.calories,
-      status: 'completed',
-      notes: `Swim: ${fmt(legData[0].elapsed)} | Bike: ${fmt(legData[1].elapsed)} ${legData[1].distance.toFixed(2)}km | Run: ${fmt(legData[2].elapsed)} ${legData[2].distance.toFixed(2)}km`,
+    // Route through log-user-workout so upsertActivities runs — same
+    // 3-layer dedupe as every other ingest path.
+    await supabase.functions.invoke('log-user-workout', {
+      body: {
+        activity_type: 'Triathlon',
+        started_at: startedAtRef.current,
+        ended_at: new Date().toISOString(),
+        duration_seconds: totals.elapsed,
+        distance_km: Math.round(totals.distance * 100) / 100,
+        calories_burned: totals.calories,
+        status: 'completed',
+        notes: `Swim: ${fmt(legData[0].elapsed)} | Bike: ${fmt(legData[1].elapsed)} ${legData[1].distance.toFixed(2)}km | Run: ${fmt(legData[2].elapsed)} ${legData[2].distance.toFixed(2)}km`,
+      },
     });
   }, [user, legData]);
 

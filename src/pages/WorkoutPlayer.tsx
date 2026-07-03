@@ -866,7 +866,7 @@ export default function WorkoutPlayer() {
   const handleFinish = () => {
     clearNewBadges()
     toast({ title: 'Great workout!', description: 'Your progress has been saved.' })
-    navigate('/home')
+    navigate('/')
   }
 
   // ── render paths ──────────────────────────────────────────────────────────

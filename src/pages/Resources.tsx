@@ -199,7 +199,7 @@ const Resources = () => {
               <span className="text-lg">📄</span>
               <h2 className="font-semibold text-foreground">Latest Article</h2>
             </div>
-            <Button variant="link" className="text-primary p-0 h-auto" onClick={() => navigate('/articles')}>
+            <Button variant="link" className="text-primary p-0 h-auto" onClick={() => navigate('/resources')}>
               See All
             </Button>
           </div>
@@ -240,7 +240,7 @@ const Resources = () => {
               <span className="text-lg">🎬</span>
               <h2 className="font-semibold text-foreground">HIIT Shorts</h2>
             </div>
-            <Button variant="link" className="text-primary p-0 h-auto" onClick={() => navigate('/shorts')}>
+            <Button variant="link" className="text-primary p-0 h-auto" onClick={() => navigate('/resources')}>
               See All
             </Button>
           </div>
@@ -288,7 +288,7 @@ const Resources = () => {
               <span className="text-lg">🎓</span>
               <h2 className="font-semibold text-foreground">Workshops</h2>
             </div>
-            <Button variant="link" className="text-primary p-0 h-auto" onClick={() => navigate('/workshops')}>
+            <Button variant="link" className="text-primary p-0 h-auto" onClick={() => navigate('/resources')}>
               See All
             </Button>
           </div>
