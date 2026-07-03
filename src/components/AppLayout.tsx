@@ -16,7 +16,6 @@ const HIDDEN_NAV_ROUTES = [
   "/live-session",
   "/welcome",
   "/auth",
-  "/assessment",
   "/onboarding",
   "/community/chatroom",
   "/community/post",

@@ -12,7 +12,6 @@ const HIDDEN_ROUTES = [
   '/sleeping',
   '/live-session',
   '/auth',
-  '/assessment',
   '/onboarding',
   '/welcome',
   '/community/chatroom',
