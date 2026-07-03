@@ -5,7 +5,7 @@ import { ChooseSportSheet } from "@/components/ChooseSportSheet";
 import {
   Home, Activity, Moon, Apple, Calendar, Bot,
   LogOut, User, Trophy, Target, MessageCircle,
-  Bell, Search, Footprints, Droplets,
+  Footprints, Droplets,
   Scale, Gauge, Smile, Camera, UtensilsCrossed,
   Clock, X, Shield, Sun, ScanLine, Crosshair,
   Barcode, Upload,
@@ -58,8 +58,6 @@ export function HIITMenu({ open, onOpenChange }: HIITMenuProps) {
       items: [
         { icon: Home, label: "Home", path: "/" },
         ...(flags.ai_coach_enabled ? [{ icon: Bot, label: "HIIT AI Coach", path: "/ai" }] : []),
-        { icon: Search, label: "Search", path: "/search" },
-        { icon: Bell, label: "Notifications", path: "/notifications" },
       ],
     },
     {

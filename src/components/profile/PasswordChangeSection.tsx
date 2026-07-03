@@ -6,22 +6,31 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Lock, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
 
 const passwordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
   newPassword: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+})
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: "New password must differ from your current password",
+    path: ["newPassword"],
+  });
 
 export function PasswordChangeSection() {
-  const { updatePassword } = useAuth();
+  const { user, updatePassword } = useAuth();
   const { toast } = useToast();
-  
+
   const [isExpanded, setIsExpanded] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,9 +53,9 @@ export function PasswordChangeSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
-      passwordSchema.parse({ newPassword, confirmPassword });
+      passwordSchema.parse({ currentPassword, newPassword, confirmPassword });
       setErrors({});
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -61,12 +70,39 @@ export function PasswordChangeSection() {
       }
     }
 
+    if (!user?.email) {
+      toast({
+        variant: 'destructive',
+        title: 'Session error',
+        description: 'Please sign out and back in, then try again.',
+      });
+      return;
+    }
+
     setIsLoading(true);
-    
+
+    // Verify the current password by attempting to sign in with it.
+    // supabase.auth.signInWithPassword reuses the same session on
+    // success, so we don't disturb the active session — but a wrong
+    // password returns an error before we touch updateUser. Prevents
+    // anyone with an unlocked phone (or an active session on someone
+    // else's device) from silently taking the account over. Apple
+    // review flags this in most first-time submissions.
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      setIsLoading(false);
+      setErrors({ currentPassword: 'Current password is incorrect' });
+      return;
+    }
+
     const { error } = await updatePassword(newPassword);
-    
+
     setIsLoading(false);
-    
+
     if (error) {
       toast({
         variant: 'destructive',
@@ -78,6 +114,7 @@ export function PasswordChangeSection() {
         title: 'Password updated!',
         description: 'Your password has been successfully changed.',
       });
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setIsExpanded(false);
@@ -104,6 +141,33 @@ export function PasswordChangeSection() {
 
       {isExpanded && (
         <form onSubmit={handleSubmit} className="space-y-4 p-4 rounded-xl bg-secondary/50 border border-border">
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword" className="text-sm">
+              Current Password
+            </Label>
+            <div className="relative">
+              <Input
+                id="currentPassword"
+                type={showCurrentPassword ? "text" : "password"}
+                placeholder="Enter your current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                className="pr-10 bg-background"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {errors.currentPassword && (
+              <p className="text-xs text-destructive">{errors.currentPassword}</p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="newPassword" className="text-sm">
               New Password
@@ -176,7 +240,7 @@ export function PasswordChangeSection() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || !newPassword || !confirmPassword}
+            disabled={isLoading || !currentPassword || !newPassword || !confirmPassword}
           >
             {isLoading ? (
               <span className="flex items-center gap-2">

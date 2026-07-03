@@ -89,8 +89,25 @@ export default function Profile() {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       if (res.error) throw res.error;
+
+      // Route order matters. If we signOut() before navigating away,
+      // ProtectedRoute re-renders <Profile /> with user=null and
+      // redirects to /auth. Then our queued navigate('/welcome')
+      // fires, Welcome's own useEffect reads the localStorage
+      // onboarding flag and immediately punts to /auth again —
+      // producing a visible up/down flicker as two routers race.
+      //
+      // Fix: navigate first, wipe the flags Welcome checks so it can't
+      // punt, then clear the session and toast. The user lands on the
+      // marketing splash cleanly with confirmation.
+      localStorage.removeItem('hiit_onboarding_complete');
+      sessionStorage.removeItem('hiit_welcomed');
+      navigate('/welcome', { replace: true });
       await signOut();
-      navigate('/login');
+      toast({
+        title: 'Account deleted',
+        description: 'Your account and data will be permanently removed within 30 days.',
+      });
     } catch {
       toast({ title: 'Something went wrong', description: 'Please try again or contact support.', variant: 'destructive' });
       setDeleting(false);

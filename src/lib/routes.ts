@@ -93,9 +93,8 @@ export const ROUTES = {
   // Resources
   RESOURCES: "/resources",
 
-  // Notifications & Search
+  // Notifications
   NOTIFICATIONS: "/notifications",
-  SEARCH: "/search",
 
   // Gamification
   ACHIEVEMENTS_INTRO: "/achievements-intro",

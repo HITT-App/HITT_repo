@@ -160,6 +160,23 @@ serve(async (req) => {
     // stop being able to hit our RLS-scoped endpoints.
     await admin.auth.admin.signOut(uid, "global");
 
+    // Ban the auth user for the length of the restore window. Supabase
+    // Auth honours `ban_duration` on sign-in — attempts return the
+    // generic "Invalid credentials" error, so a re-signup with the same
+    // email is also blocked until the day-30 purge deletes the auth
+    // row entirely. Without this, users could soft-delete, sign back in
+    // instantly, and see their account fully working — which reads as
+    // "delete does nothing" to Apple review (Guideline 5.1.1(v)).
+    // 30 days = 720 hours.
+    try {
+      await admin.auth.admin.updateUserById(uid, { ban_duration: "720h" });
+    } catch (banErr) {
+      // Non-fatal: the primary soft-delete already succeeded and the
+      // purge job will finish the job. Log so we notice if this starts
+      // failing systematically.
+      console.error("[delete-account] failed to ban user:", banErr);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

@@ -107,7 +107,6 @@ const WorkoutPlayer = lazy(() => import("./pages/WorkoutPlayer"));
 const WorkoutSchedule = lazy(() => import("./pages/WorkoutSchedule"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const NotificationPreferences = lazy(() => import("./pages/NotificationPreferences"));
-const Search = lazy(() => import("./pages/Search"));
 const ServerError = lazy(() => import("./pages/ServerError"));
 const NoInternet = lazy(() => import("./pages/NoInternet"));
 const Maintenance = lazy(() => import("./pages/Maintenance"));
@@ -260,7 +259,6 @@ const App = () => (
             <Route path="/workout-player/:id" element={<ProtectedRoute><WorkoutPlayer /></ProtectedRoute>} />
             <Route path="/workout-schedule" element={<ProtectedRoute><WorkoutSchedule /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-            <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
             <Route path="/server-error" element={<ServerError />} />
             <Route path="/no-internet" element={<NoInternet />} />
             <Route path="/maintenance" element={<Maintenance />} />

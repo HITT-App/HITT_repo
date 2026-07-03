@@ -1,7 +1,6 @@
-import { Search, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { HIITScoreBadge } from "./HIITScoreBadge";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCommunityNotifications } from "@/hooks/useCommunityNotifications";
@@ -81,17 +80,6 @@ export function HomeHeader({ userName = "Athlete", score, scoreComponents, avata
       {/* HIIT Score Badge */}
       <div className="bg-card border border-border/60 rounded-xl p-3">
         <HIITScoreBadge score={score} components={scoreComponents} label="Average Fitness" />
-      </div>
-
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search HIIT..."
-          className="pl-10 bg-secondary border-0 rounded-xl h-11"
-          onClick={() => navigate("/search")}
-          readOnly
-        />
       </div>
     </div>
   );

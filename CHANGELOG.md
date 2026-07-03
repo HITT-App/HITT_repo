@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-07-03] — Launch splash first, dead search removed, workout upload robust, schedule jumps to plan week
+
+- **New users see the launch splash before sign-in** — first-time unauthed users now land on the "Free while we're new" launch splash before hitting Auth. Returning signed-out users skip straight to sign-in as before; the splash is a one-shot hook, not something to shove in every session
+- **"Search" removed from the app** — the search icon at the top of Home and the Search entry in the HIIT menu both took users to a placeholder page that returned six mock items regardless of query. A broken feature is worse than a missing one; existing browse-and-filter UX on Meals and Workouts covers what search would have done. When real search is worth building we'll build it properly
+- **Notifications tidied out of the HIIT menu** — still fully reachable from the bell icon on Home; just cleaning up a redundant nav entry
+- **"Upload your workout plan" flow no longer fails on long plans** — Gemini was truncating multi-week structured plans mid-JSON because our output budget was set too low, then the parser gave up. Now the AI is forced to emit strict JSON at the API level, the token budget is doubled, and any residual quirks (unescaped quotes, trailing commas, unclosed brackets from truncation) go through a purpose-built JSON-repair library before we bail. Long detailed plans now load first time
+- **Schedule opens on the week your plan starts** — after saving an uploaded plan, the schedule view now jumps directly to the week the plan begins instead of showing "Nothing scheduled yet" for the current week. Fixes the confusing empty state when someone uploads on (say) a Friday for a plan that begins next Monday
+- **Change-password flow now requires your current password** — extra safety step before setting a new one, plus a check that the new password actually differs from the old
+
 ## [2026-07-02] — "Open Garmin Connect" button actually launches the app; Describe-what-you-ate no longer hides behind the keyboard
 
 - **"Open Garmin Connect" button in Connected Devices → Set up Garmin sync now works** — the button was silently doing nothing. Old code used a hidden anchor tag + simulated click to trigger the `gcm-ios-6573://` URL scheme, but WKWebView captures those clicks as in-page anchor navigation and doesn't route them to iOS's URL-scheme handler. Switched to a top-level `window.location.href` navigation which WKWebView delegates to iOS, plus a two-tier fallback (older `garminconnect://` alias, then the App Store) so users without Garmin Connect installed get the App Store page instead of no feedback

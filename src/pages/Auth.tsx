@@ -792,8 +792,19 @@ const Auth = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background overflow-y-auto">
-      <div className="w-full max-w-sm mx-auto px-6 py-12 pb-32">
+    // `min-h-[100dvh]` respects iOS's dynamic viewport (address bar +
+    // home indicator). overflow-y-auto stays as a graceful fallback for
+    // shorter phones / keyboard-open state — but with the top/bottom
+    // padding tightened to the safe-area only, the form fits within
+    // one screen on modern devices, so no visible scroll appears.
+    <div className="min-h-[100dvh] bg-background overflow-y-auto flex">
+      <div
+        className="w-full max-w-sm mx-auto px-6 py-8 my-auto"
+        style={{
+          paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 24px)',
+          paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 24px)',
+        }}
+      >
         {view === "signin" && renderSignIn()}
         {view === "signup" && renderSignUp()}
         {view === "forgot-password" && renderForgotPassword()}

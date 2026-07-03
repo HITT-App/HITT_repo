@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { jsonrepair } from "https://esm.sh/jsonrepair@3.7.0";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 
@@ -173,7 +174,19 @@ Return ONLY valid JSON in this exact shape:
     const response = await aiChatCompletion({
       model: "gemini-2.5-flash",
       messages: [{ role: "user", content: messageContent }],
-      max_tokens: 8000,
+      // Bumped from 8000. A 4-week plan with 3 sessions per week × 5-8
+      // exercises per session serialises to well over 12000 chars. The
+      // 8000-token cap was silently truncating longer responses mid-JSON,
+      // producing an unclosed object that the parser couldn't extract.
+      // Gemini 2.5 Flash supports up to 65k output tokens.
+      max_tokens: 16000,
+      // Force valid JSON output at the API level. Gemini 2.5 supports the
+      // OpenAI-compatible response_format flag via OpenRouter — the model
+      // still returns text but the runtime rejects it and re-samples until
+      // the string parses as JSON. Eliminates the "trailing prose" / "smart
+      // quotes" / "unescaped newlines in string values" class of failure
+      // that the local repair logic below only partially handled.
+      response_format: { type: "json_object" },
     });
 
     if (!response.ok) {
@@ -185,30 +198,77 @@ Return ONLY valid JSON in this exact shape:
     const raw = data.choices?.[0]?.message?.content;
     if (!raw) throw new Error("No response from AI");
 
-    // Strip thinking tags (Gemini 2.5 Flash prepends <antml_thinking>...</antml_thinking>),
-    // markdown code fences, and any leading/trailing prose
+    // TEMP DIAGNOSTIC — log the full raw AI response so we can see what shape
+    // Lovable's gateway is returning. Remove once the malformed-JSON class of
+    // bug is nailed down (chasing casey/vanessa upload failures 2026-07-03).
+    console.log("[parse-workout-plan] raw AI response length:", raw.length);
+    console.log("[parse-workout-plan] raw AI response first 3000 chars:", raw.slice(0, 3000));
+    if (raw.length > 3000) {
+      console.log("[parse-workout-plan] raw AI response last 500 chars:", raw.slice(-500));
+    }
+
+    // With response_format=json_object above the model MUST emit strict
+    // JSON — the raw content should parse directly. Belt-and-braces: fall
+    // through the same tag-stripping + repair pipeline in case the flag is
+    // silently dropped by an intermediate proxy.
     const detagged = raw
       .replace(/<antml_thinking>[\s\S]*?<\/antml_thinking>/gi, "")
       .replace(/^```(?:json)?\s*/im, "")
       .replace(/\s*```\s*$/im, "")
       .trim();
 
-    const jsonMatch = detagged.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error("parse-workout-plan: no JSON in response. raw length:", raw.length, "first 300 chars:", raw.slice(0, 300));
-      throw new Error("Couldn't extract a structured plan from your file. Try pasting the text directly or exporting a cleaner CSV.");
+    // Multi-stage parse pipeline. Each stage handles a different failure
+    // mode we've seen from Gemini 2.5 Flash on long workout-plan responses:
+    //   1. Well-formed JSON (happy path) → direct parse
+    //   2. JSON wrapped in prose → regex-extract the outermost { ... }
+    //   3. LLM quirks (smart quotes, trailing commas, control chars) → repair + parse
+    //   4. Truncated / malformed / unterminated JSON → jsonrepair library
+    //      (auto-closes brackets, escapes stray quotes, terminates strings)
+    let result: any = null;
+
+    // Stage 1
+    try { result = JSON.parse(detagged); } catch { /* fall through */ }
+
+    // Stage 2
+    let extracted = detagged;
+    if (!result) {
+      const jsonMatch = detagged.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        extracted = jsonMatch[0];
+        try { result = JSON.parse(extracted); } catch { /* fall through */ }
+      } else {
+        // No closing brace at all — response was truncated mid-JSON.
+        // Extract from the first '{' onwards so jsonrepair can auto-close it.
+        const openIdx = detagged.indexOf("{");
+        if (openIdx >= 0) extracted = detagged.slice(openIdx);
+      }
     }
 
-    let result: any;
-    try {
-      result = JSON.parse(jsonMatch[0]);
-    } catch {
-      // Attempt repair: strip control characters (non-printable except tab/newline/CR) then retry
-      const repaired = jsonMatch[0].replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "");
+    // Stage 3
+    if (!result) {
+      const repaired = extracted
+        .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "")   // non-printable control chars
+        .replace(/[‘’]/g, "'")                 // smart single quotes → straight
+        .replace(/[“”]/g, '"')                 // smart double quotes → straight
+        .replace(/,\s*([}\]])/g, "$1");                  // trailing commas before } or ]
+      try { result = JSON.parse(repaired); } catch { /* fall through */ }
+    }
+
+    // Stage 4 — purpose-built LLM-JSON repair library. Handles unclosed
+    // brackets from truncated responses, unescaped quotes in string values,
+    // unterminated strings, missing commas, etc.
+    if (!result) {
       try {
-        result = JSON.parse(repaired);
+        result = JSON.parse(jsonrepair(extracted));
       } catch (parseErr) {
-        console.error("parse-workout-plan: JSON repair failed:", parseErr, "first 500:", jsonMatch[0].slice(0, 500));
+        const errPos = String(parseErr?.message ?? "").match(/position (\d+)/)?.[1];
+        const window = errPos
+          ? extracted.slice(Math.max(0, +errPos - 200), +errPos + 200)
+          : extracted.slice(0, 500);
+        console.error("parse-workout-plan: JSON repair failed after all fallbacks:", parseErr,
+          "content length:", extracted.length,
+          "raw length:", raw.length,
+          "error window:", window);
         throw new Error("The AI returned malformed JSON. Try pasting the key sessions as plain text instead of uploading the file.");
       }
     }

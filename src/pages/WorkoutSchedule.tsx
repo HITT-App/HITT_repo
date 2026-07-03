@@ -50,7 +50,18 @@ export default function WorkoutSchedule() {
   const { toast } = useToast()
 
   const [view, setView] = useState<'week' | 'month'>('week')
-  const [currentDate, setCurrentDate] = useState(new Date())
+  // Initial view week can be overridden with ?date=YYYY-MM-DD — used by the
+  // upload flow to jump straight to the week the newly-scheduled plan starts
+  // in, so users don't land on an empty current-week view and think their
+  // upload failed.
+  const [currentDate, setCurrentDate] = useState(() => {
+    const dateParam = new URLSearchParams(window.location.search).get('date')
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      const parsed = new Date(dateParam)
+      if (!isNaN(parsed.getTime())) return parsed
+    }
+    return new Date()
+  })
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([])
   const [isLoading, setIsLoading] = useState(true)

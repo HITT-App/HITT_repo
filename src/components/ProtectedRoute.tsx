@@ -20,7 +20,13 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    // First-time users (never completed onboarding) see the LaunchSplash
+    // at /welcome — the "free while we're new" pitch is one-shot. Returning
+    // signed-out users skip straight to /auth. The flag is set by
+    // LaunchSplash.tsx and OnboardingScreen.tsx when either finishes.
+    const seenOnboarding = typeof window !== "undefined"
+      && localStorage.getItem("hiit_onboarding_complete") === "true";
+    return <Navigate to={seenOnboarding ? "/auth" : "/welcome"} replace />;
   }
 
   return <>{children}</>;

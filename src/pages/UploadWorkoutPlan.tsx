@@ -238,7 +238,10 @@ export default function UploadWorkoutPlan() {
       if (error) throw error
 
       toast.success(`${rows.length} sessions added to your schedule!`)
-      navigate("/workout-schedule")
+      // Jump the schedule view to the week the plan starts in — otherwise a
+      // user who uploads on (say) Friday sees "Nothing scheduled yet" for
+      // the current week because their plan doesn't start until next Monday.
+      navigate(`/workout-schedule?date=${startDate}`)
     } catch (err: any) {
       toast.error(err.message || "Failed to save plan.")
       setStep("review")
