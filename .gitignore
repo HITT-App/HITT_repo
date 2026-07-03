@@ -54,3 +54,6 @@ supabase_scripts/generated_seed.sql
 # Private developer key for signing CIQ builds — never commit
 *.der
 hitt-connect-iq-developer.key
+
+# Design working files (mockups, splash/icon options) — not part of the build
+garmin/*.pdf
