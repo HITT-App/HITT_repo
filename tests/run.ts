@@ -4161,6 +4161,41 @@ function platformAudits() {
     fail('SCHED-01', 'pg_cron schedule audit', e.message);
   }
 
+  // ── SCHED-02: any pg_cron job that fans out a per-row notification via
+  //    pg_net (i.e. its command references net.http_post AND selects from
+  //    a source table) must dedupe by a column matching /.*_sent_at$/ so
+  //    the same row can't be fired twice on overlapping cron windows.
+  //    Guards against a future rush-job scheduler forgetting the guard
+  //    and shipping duplicate lock-screen banners.
+  try {
+    const migDir = '/Users/vanessa/hitt-app/supabase/migrations';
+    const files = readdirSync(migDir).filter(n => /\.sql$/.test(n));
+    const offenders: string[] = [];
+    for (const name of files) {
+      const src = readFileSync(`${migDir}/${name}`, 'utf8');
+      const cronCommands = [...src.matchAll(/cron\.schedule\s*\([^,]+,\s*'[^']*'\s*,\s*\$([a-z_]*)\$([\s\S]*?)\$\1\$/gi)]
+        .map(m => m[2]);
+      for (const cmd of cronCommands) {
+        if (!/net\.http_post\s*\(/i.test(cmd)) continue;
+        // Per-row fan-out: reads from a public-schema table (dispatch
+        // one push per candidate row). One-shot maintenance crons (like
+        // the purge cron which reads only from vault + hits an endpoint
+        // once) don't need per-row dedupe and are excluded here.
+        if (!/FROM\s+public\.\w+/i.test(cmd)) continue;
+        if (!/_sent_at\s+IS\s+NULL/i.test(cmd) && !/UPDATE[^;]+SET[^;]*_sent_at\s*=/i.test(cmd)) {
+          offenders.push(`${name}`);
+        }
+      }
+    }
+    if (offenders.length === 0) {
+      pass('SCHED-02', 'every per-row cron fan-out has a *_sent_at dedupe guard');
+    } else {
+      fail('SCHED-02', `${offenders.length} cron migration(s) without dedupe guard`, offenders.join(', '));
+    }
+  } catch (e: any) {
+    fail('SCHED-02', 'per-row cron dedupe audit', e.message);
+  }
+
   // ── FLAG-01: every `flags.xxx_enabled` reference in code has a
   //    fallback in useFeatureFlags OR is created as a row in an early
   //    migration. Catches new flags shipped without a DB row →

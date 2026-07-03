@@ -17,6 +17,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithApple: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
@@ -38,6 +39,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         webClientId: GOOGLE_WEB_CLIENT_ID,
         iOSClientId: GOOGLE_IOS_CLIENT_ID,
         mode: "online",
+      },
+      // iOS uses the native ASAuthorization flow keyed off the app's bundle ID,
+      // so no clientId is needed here. Empty redirectUrl keeps it fully native
+      // (no browser redirect). Web/Android would need a Services ID + redirect.
+      apple: {
+        redirectUrl: "",
       },
     }).catch((e) => {
       console.error("SocialLogin init failed:", e);
@@ -66,6 +73,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           import("@/plugins/WatchPlugin").then(({ prepareWatchHealthAuth }) => {
             void prepareWatchHealthAuth();
           });
+          // Persist the device's IANA timezone to profiles.time_zone so
+          // the server-side workout-reminder cron interprets scheduled
+          // times in the user's local wall clock (see migration
+          // 20260703160000_workout_reminder_push.sql).
+          (async () => {
+            try {
+              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              if (!tz) return;
+              const { data: existing } = await supabase
+                .from("profiles")
+                .select("time_zone")
+                .eq("user_id", session.user.id)
+                .maybeSingle();
+              if (existing?.time_zone === tz) return;
+              await supabase
+                .from("profiles")
+                .update({ time_zone: tz })
+                .eq("user_id", session.user.id);
+            } catch (err) {
+              console.warn("[useAuth] time_zone sync skipped:", err);
+            }
+          })();
         } else if (event === "SIGNED_OUT") {
           resetAnalyticsUser();
           logSecurityEvent(SecurityEventTypes.AUTH_LOGOUT, {
@@ -203,6 +232,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error: error as Error | null };
   };
 
+  const signInWithApple = async () => {
+    if (Capacitor.isNativePlatform()) {
+      // Native flow: the SocialLogin plugin runs Apple's ASAuthorization sheet
+      // and returns an identity token (JWT), which we hand to Supabase via
+      // signInWithIdToken. Supabase verifies it against Apple's public keys and
+      // the app's bundle ID — no client secret, entirely native.
+      try {
+        const result = await SocialLogin.login({
+          provider: "apple",
+          options: { scopes: ["email", "name"] },
+        });
+
+        const appleResult = result.result as { idToken?: string | null } | null;
+        const idToken = appleResult?.idToken;
+
+        if (!idToken) {
+          return { error: new Error("Apple sign-in did not return an ID token") };
+        }
+
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: "apple",
+          token: idToken,
+        });
+
+        if (error) return { error: error as Error | null };
+
+        // Push session into React state — onAuthStateChange can be unreliable
+        // immediately after a native bridge callback.
+        const { data: { session: newSession } } = await supabase.auth.getSession();
+        if (newSession) {
+          setSession(newSession);
+          setUser(newSession.user);
+          setLoading(false);
+        }
+        return { error: null };
+      } catch (e: unknown) {
+        const msg = (e as Error)?.message ?? String(e);
+        if (msg.includes("cancel") || msg.includes("CANCEL")) {
+          return { error: new Error("USER_CANCELLED") };
+        }
+        return { error: new Error(`Apple sign-in failed: ${msg}`) };
+      }
+    }
+
+    // Web flow: standard Supabase OAuth redirect. Requires an Apple Services ID
+    // + client secret configured in Supabase — not set up yet (iOS-only for now),
+    // so the Apple button is gated to native iOS in the UI.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    return { error: error as Error | null };
+  };
+
   const signOut = async () => {
     try {
       if (Capacitor.isNativePlatform()) {
@@ -278,7 +361,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{
       user, session, loading,
-      signUp, signIn, signInWithGoogle,
+      signUp, signIn, signInWithGoogle, signInWithApple,
       signOut, resetPassword, updatePassword, resendVerificationEmail,
     }}>
       {children}
