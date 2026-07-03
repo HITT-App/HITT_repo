@@ -4349,6 +4349,95 @@ function platformAudits() {
   } catch (e: any) {
     fail('RLS-01', 'RLS coverage audit', e.message);
   }
+
+  // ── NOTIFY-02: community push wiring — grep migrations for the trigger
+  //    DDL we rely on so a future teammate deleting the migration file
+  //    trips this audit before shipping. Checks that:
+  //    (a) triggers exist on community_follows / _comments / _messages
+  //        that write into community_notifications, and
+  //    (b) a fan-out trigger on community_notifications invokes notify-
+  //        user via pg_net.
+  try {
+    const migDir = '/Users/vanessa/hitt-app/supabase/migrations';
+    const migSrc = readdirSync(migDir).filter(n => /\.sql$/.test(n))
+      .map(n => readFileSync(`${migDir}/${n}`, 'utf8')).join('\n');
+    const missing: string[] = [];
+    // Grab every trigger function body so we can look at its INSERT statements.
+    // Same-name-with-community_notifications-write is what proves the wiring;
+    // a bare AFTER INSERT trigger isn't enough since some legacy triggers on
+    // these tables count likes, not notifications.
+    const fnBodies = [...migSrc.matchAll(
+      /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION[^$]*\$\$([\s\S]*?)\$\$/gi,
+    )].map(m => m[1]);
+    for (const table of ['community_follows', 'community_comments', 'community_messages']) {
+      const triggerRe = new RegExp(
+        `CREATE\\s+TRIGGER[^;]*\\s+AFTER\\s+INSERT\\s+ON\\s+(?:public\\.)?${table}\\b[^;]*EXECUTE\\s+(?:PROCEDURE|FUNCTION)\\s+(?:public\\.)?(\\w+)`,
+        'is',
+      );
+      const m = migSrc.match(triggerRe);
+      if (!m) { missing.push(`${table} → community_notifications trigger`); continue; }
+      const fnName = m[1];
+      // The named function body must INSERT into community_notifications.
+      const fnRe = new RegExp(
+        `FUNCTION\\s+(?:public\\.)?${fnName}[\\s\\S]*?\\$\\$([\\s\\S]*?)\\$\\$`,
+        'i',
+      );
+      const fnBody = migSrc.match(fnRe)?.[1] ?? '';
+      if (!/INSERT\s+INTO\s+(?:public\.)?community_notifications/i.test(fnBody)) {
+        missing.push(`${table}: trigger ${fnName} doesn't write to community_notifications`);
+      }
+      // Suppress unused-var warning.
+      void fnBodies;
+    }
+    // Fan-out trigger must call pg_net on community_notifications inserts.
+    const fanoutRe = /CREATE\s+TRIGGER[^;]*\s+AFTER\s+INSERT\s+ON\s+(?:public\.)?community_notifications\b/i;
+    const pgNetRe = /pg_net|net\.http_post/i;
+    if (!fanoutRe.test(migSrc)) missing.push('community_notifications fan-out trigger');
+    if (!pgNetRe.test(migSrc)) missing.push('pg_net invocation to notify-user');
+    if (missing.length === 0) {
+      pass('NOTIFY-02', 'community push triggers wired end-to-end (3 upstream + 1 fan-out to notify-user)');
+    } else {
+      fail('NOTIFY-02', `${missing.length} community push trigger piece(s) missing`,
+        missing.join('; '));
+    }
+  } catch (e: any) {
+    fail('NOTIFY-02', 'community push trigger audit', e.message);
+  }
+
+  // ── CFG-02: cron / trigger Vault entries. Every migration that reads a
+  //    named secret via `vault.decrypted_secrets` must also document that
+  //    secret in a comment (so a future op can tell what to set in
+  //    Studio → Vault). Enforces the same "operationally discoverable"
+  //    contract we set for the purge-cron secret pair.
+  try {
+    const migDir = '/Users/vanessa/hitt-app/supabase/migrations';
+    const files = readdirSync(migDir).filter(n => /\.sql$/.test(n));
+    const offenders: string[] = [];
+    for (const name of files) {
+      const src = readFileSync(`${migDir}/${name}`, 'utf8');
+      const names = [...src.matchAll(/decrypted_secrets\s+WHERE\s+name\s*=\s*'([^']+)'/gi)]
+        .map(m => m[1]);
+      if (names.length === 0) continue;
+      const uniq = [...new Set(names)];
+      // Every referenced secret should be documented — either in a `--`
+      // comment line OR via a `vault.create_secret(..., '<name>', '<desc>')`
+      // call that describes what the secret is for.
+      const missing = uniq.filter(n => {
+        const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const commentRe = new RegExp(`--[^\\n]*${escaped}`, 'i');
+        const createSecretRe = new RegExp(`vault\\.create_secret\\s*\\([^)]*'${escaped}'`, 'i');
+        return !commentRe.test(src) && !createSecretRe.test(src);
+      });
+      if (missing.length > 0) offenders.push(`${name}: ${missing.join(', ')}`);
+    }
+    if (offenders.length === 0) {
+      pass('CFG-02', 'every Vault secret used in a migration is documented in a comment');
+    } else {
+      fail('CFG-02', `${offenders.length} undocumented Vault secret(s)`, offenders.join('; '));
+    }
+  } catch (e: any) {
+    fail('CFG-02', 'vault documentation audit', e.message);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
