@@ -79,10 +79,6 @@ async function fetchPostsPage(
   let query = supabase
     .from('community_posts')
     .select('*')
-    // Filter out posts from deleted accounts. delete-account soft-deletes
-    // community_posts by setting deleted_at, so this hides them from every
-    // feed the moment the user taps Delete — not 30 days later at purge.
-    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(PAGE_SIZE);
 
@@ -715,8 +711,6 @@ export const useCommunityComments = (postId: string) => {
           .from('community_comments')
           .select('*')
           .eq('post_id', postId)
-          // Hide comments from soft-deleted accounts immediately.
-          .is('deleted_at', null)
           .order('created_at', { ascending: true }),
         user
           ? supabase

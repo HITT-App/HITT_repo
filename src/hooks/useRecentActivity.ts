@@ -31,7 +31,6 @@ export function useRecentActivity(limit: number = 10) {
         supabase
           .from("community_posts")
           .select("id, content, created_at")
-          .is("deleted_at", null)
           .gte("created_at", sevenDaysAgo.toISOString())
           .order("created_at", { ascending: false })
           .limit(5),

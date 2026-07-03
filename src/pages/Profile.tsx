@@ -106,7 +106,7 @@ export default function Profile() {
       await signOut();
       toast({
         title: 'Account deleted',
-        description: 'Your account and data will be permanently removed within 30 days.',
+        description: 'Your account and all data have been permanently removed.',
       });
     } catch {
       toast({ title: 'Something went wrong', description: 'Please try again or contact support.', variant: 'destructive' });
@@ -692,12 +692,12 @@ export default function Profile() {
             <DialogTitle className="text-destructive">Delete your account</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground space-y-3 pt-1">
               <span className="block">
-                This will delete your profile, workouts, nutrition logs, sleep data, health metrics,
-                community posts, and all other personal data.
+                This will permanently delete your profile, workouts, nutrition logs,
+                sleep data, health metrics, community posts, and all other personal
+                data. Connected watches (Garmin, Apple Watch, etc.) will be unpaired.
               </span>
-              <span className="block">
-                You have <strong>30 days to change your mind</strong> — log back in within that window
-                and we'll restore everything. After 30 days, deletion is permanent and cannot be undone.
+              <span className="block font-semibold text-destructive">
+                This is permanent and cannot be undone.
               </span>
             </DialogDescription>
           </DialogHeader>

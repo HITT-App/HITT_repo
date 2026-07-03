@@ -39,6 +39,19 @@ interface PushPayload {
   external_id?: string;         // watch-generated activity id; falls back to a hash-of-payload
 }
 
+// Small helper for the push-notification body copy. Keeps the wording
+// consistent with what the composer / feed shows for the same activity.
+function friendlyActivityName(type: string | null | undefined): string {
+  const map: Record<string, string> = {
+    running: "run", jogging: "run", walking: "walk",
+    cycling: "ride", swimming: "swim", hiit: "HIIT",
+    strength: "strength session", yoga: "yoga",
+    hiking: "hike", rowing: "row",
+  };
+  const key = (type ?? "").toLowerCase();
+  return map[key] ?? "workout";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") {
@@ -130,6 +143,43 @@ serve(async (req) => {
       .from("garmin_pairings")
       .update({ last_seen_at: new Date().toISOString() })
       .eq("id", pairing.id);
+
+    // Fire a push notification for genuinely NEW activities (dedupe
+    // upgrades / skips don't count — the user already saw those). Push
+    // only fires from this direct-push path because the user's phone
+    // is idle when a Garmin workout ends; HealthKit-mediated activities
+    // arrive during in-app foreground sync where share-prompt.ts
+    // already surfaces an in-app toast. Non-blocking: notify-user
+    // failures never fail the workout ingest.
+    const freshRow = result.insertedRows?.[0];
+    if (freshRow) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const mins = Math.max(1, Math.round(freshRow.duration_seconds / 60));
+        const cals = freshRow.calories_burned;
+        const activityName = friendlyActivityName(freshRow.activity_type);
+        const bodyParts = [`${mins}-min ${activityName}`];
+        if (cals && cals > 0) bodyParts.push(`${cals} kcal`);
+        bodyParts.push("Tap to share it.");
+        await fetch(`${supabaseUrl}/functions/v1/notify-user`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${serviceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: claims.sub,
+            category: "workout",
+            title: "Workout logged from your Garmin",
+            body: bodyParts.join(" · "),
+            url: `/activity/${freshRow.id}`,
+          }),
+        });
+      } catch (notifyErr) {
+        console.error("[push-garmin-watch-workout] notify-user failed:", notifyErr);
+      }
+    }
 
     return new Response(JSON.stringify({ ok: true, result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
