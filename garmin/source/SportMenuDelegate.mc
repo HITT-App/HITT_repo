@@ -3,7 +3,7 @@
 // recording view.
 
 import Toybox.WatchUi;
-import Toybox.ActivityRecording;
+import Toybox.Activity;
 import Toybox.Application;
 import Toybox.Lang;
 
@@ -14,33 +14,33 @@ class SportMenuDelegate extends WatchUi.Menu2InputDelegate {
     }
 
     function onSelect(item as WatchUi.MenuItem) as Void {
-        var sport = ActivityRecording.SPORT_GENERIC;
-        var subSport = ActivityRecording.SUB_SPORT_GENERIC;
+        var sport = Activity.SPORT_GENERIC;
+        var subSport = Activity.SUB_SPORT_GENERIC;
         var name = item.getLabel();
 
-        // Sport code table — see Toybox.ActivityRecording.Sport enum in the
+        // Sport code table — see Toybox.Activity.Sport enum in the
         // Connect IQ SDK docs. Strength / HIIT map to SPORT_TRAINING with a
         // sub-sport hint so Garmin Connect categorises the FIT properly.
         switch (item.getId()) {
             case :run:
-                sport = ActivityRecording.SPORT_RUNNING;
+                sport = Activity.SPORT_RUNNING;
                 break;
             case :walk:
-                sport = ActivityRecording.SPORT_WALKING;
+                sport = Activity.SPORT_WALKING;
                 break;
             case :bike:
-                sport = ActivityRecording.SPORT_CYCLING;
+                sport = Activity.SPORT_CYCLING;
                 break;
             case :swim:
-                sport = ActivityRecording.SPORT_SWIMMING;
+                sport = Activity.SPORT_SWIMMING;
                 break;
             case :strength:
-                sport = ActivityRecording.SPORT_TRAINING;
-                subSport = ActivityRecording.SUB_SPORT_STRENGTH_TRAINING;
+                sport = Activity.SPORT_TRAINING;
+                subSport = Activity.SUB_SPORT_STRENGTH_TRAINING;
                 break;
             case :hiit:
-                sport = ActivityRecording.SPORT_TRAINING;
-                subSport = ActivityRecording.SUB_SPORT_CARDIO_TRAINING;
+                sport = Activity.SPORT_TRAINING;
+                subSport = Activity.SUB_SPORT_CARDIO_TRAINING;
                 break;
             case :pair:
                 // Pair-with-phone flow. Doesn't start a session — pushes

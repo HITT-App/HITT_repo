@@ -14,6 +14,7 @@
 
 import Toybox.WatchUi;
 import Toybox.ActivityRecording;
+import Toybox.Activity;
 import Toybox.Graphics;
 import Toybox.System;
 import Toybox.Time;
@@ -28,8 +29,8 @@ class RecordingView extends WatchUi.View {
     private const HITT_ORANGE = 0xF97316;
 
     private var mSession as ActivityRecording.Session?;
-    private var mSport as ActivityRecording.Sport;
-    private var mSubSport as ActivityRecording.SubSport;
+    private var mSport as Activity.Sport;
+    private var mSubSport as Activity.SubSport;
     private var mName as String;
 
     private var mTickTimer as Timer.Timer?;
@@ -42,7 +43,7 @@ class RecordingView extends WatchUi.View {
     private var mStopFlash as Boolean = false;
     private var mSessionStarted as Boolean = false;
 
-    function initialize(sport as ActivityRecording.Sport, subSport as ActivityRecording.SubSport, name as String) {
+    function initialize(sport as Activity.Sport, subSport as Activity.SubSport, name as String) {
         View.initialize();
         mSport = sport;
         mSubSport = subSport;
@@ -456,11 +457,11 @@ class RecordingView extends WatchUi.View {
     // Returns true for sports where GPS distance is the expected primary
     // metric. Kept in one place so future sports (Hike, Row, Elliptical
     // outdoors) are easy to add.
-    private function isGpsBased(sport as ActivityRecording.Sport) as Boolean {
-        return sport == ActivityRecording.SPORT_RUNNING
-            || sport == ActivityRecording.SPORT_WALKING
-            || sport == ActivityRecording.SPORT_CYCLING
-            || sport == ActivityRecording.SPORT_SWIMMING;
+    private function isGpsBased(sport as Activity.Sport) as Boolean {
+        return sport == Activity.SPORT_RUNNING
+            || sport == Activity.SPORT_WALKING
+            || sport == Activity.SPORT_CYCLING
+            || sport == Activity.SPORT_SWIMMING;
     }
 
     // Position events fire ~1 Hz once GPS locks — we just need them
