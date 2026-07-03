@@ -214,6 +214,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       // Even if signOut fails (e.g. expired session), clear local state
     }
+
+    // Wipe every user-scoped local flag / cache so the next user of the
+    // device doesn't inherit tutorial state, body-scan notes, alarm
+    // config etc. Device-scoped preferences (e.g. hitt.hk.device.token,
+    // chatroom background) stay — they belong to the device, not the
+    // user, and the STORAGE-01 audit whitelists them explicitly.
+    if (typeof window !== 'undefined') {
+      const KEYS = [
+        'hiit_assessment_complete',
+        'hiit-body-scan-summary',
+        'hiit-body-scan-at',
+        'hiit-ai-custom-response',
+        'hiit-ai-custom-memory',
+        'hiit_tutorial_complete',
+        'sleepStartTime',
+        'alarmEnabled',
+        'alarmTime',
+        'securityLogs',
+        'hiit-plan-onboarding-done',
+        'dailyCheckinSkipped',
+        'push-banner-dismissed',
+        'jarvis_onboarding_suppressed',
+        'jarvis_last_greeted',
+        // Login-flow flags handled elsewhere but safe to clear too
+        'hiit_onboarding_complete',
+      ];
+      for (const k of KEYS) localStorage.removeItem(k);
+      sessionStorage.removeItem('hiit_welcomed');
+    }
+
     setUser(null);
     setSession(null);
   };

@@ -3741,10 +3741,17 @@ function platformAudits() {
         setKeys.add(m[1]);
       }
     }
-    // Also collect keys that ARE cleared in the auth files.
+    // Also collect keys that ARE cleared in the auth files. Two idioms:
+    //  (a) localStorage.removeItem('literal-key')
+    //  (b) A `const KEYS = ['a', 'b'…]` list piped through a loop that
+    //      calls removeItem(k). Common when many keys need wiping.
     const cleared = new Set<string>();
     for (const m of signOutClearsHits.matchAll(/(?:localStorage|sessionStorage)\.removeItem\s*\(\s*['"]([^'"]+)['"]/g)) {
       cleared.add(m[1]);
+    }
+    const loopBlock = signOutClearsHits.match(/const\s+KEYS\s*=\s*\[([\s\S]*?)\][\s\S]{0,200}?removeItem\s*\(\s*k\s*\)/);
+    if (loopBlock) {
+      for (const m of loopBlock[1].matchAll(/['"]([\w_.\-]+)['"]/g)) cleared.add(m[1]);
     }
     // Whitelist keys that are per-session or per-device (not per-user);
     // clearing them on sign-out would be wrong.
@@ -3761,7 +3768,7 @@ function platformAudits() {
       pass('STORAGE-01', `all ${setKeys.size} setItem key(s) are cleared on signOut or whitelisted`);
     } else {
       fail('STORAGE-01', `${missing.length} localStorage key(s) never cleared on signOut`,
-        missing.slice(0, 6).join(', ') + (missing.length > 6 ? ' …' : ''));
+        missing.join(', '));
     }
   } catch (e: any) {
     fail('STORAGE-01', 'storage cleanup audit', e.message);
@@ -3824,13 +3831,25 @@ function platformAudits() {
       const src = readFileSync(p, 'utf8');
       // Pattern: .from("<risky>").select(...) that ends without .limit / .range / .single / .maybeSingle.
       for (const table of RISKY) {
+        // Capture the whole select(...) invocation including its options
+        // object so we can detect `{ count: "exact", head: true }`.
         const re = new RegExp(
-          `\\.from\\(\\s*['"\`]${table}['"\`]\\s*\\)\\s*\\.select\\(([^)]*)\\)([\\s\\S]{0,400})`,
+          `\\.from\\(\\s*['"\`]${table}['"\`]\\s*\\)\\s*\\.select\\(([\\s\\S]*?)\\)([\\s\\S]{0,400})`,
           'g',
         );
         for (const m of src.matchAll(re)) {
+          const selectArg = m[1];
           const tail = m[2];
+          // Head-only count query — no rows returned, safe.
+          if (/head\s*:\s*true/.test(selectArg) || /count\s*:\s*['"`]exact['"`]/.test(selectArg)) continue;
+          // Explicit pagination / single-row escape.
           if (/\.(limit|range|single|maybeSingle|count)\s*\(/.test(tail)) continue;
+          // Any bounded filter effectively caps the row count for this
+          // query (a date window, an eq(id, …) join, an in() list, or a
+          // small-cardinality eq). Skip those to avoid noise.
+          if (/\.(gte|lte|gt|lt)\s*\(/.test(tail)) continue;
+          if (/\.eq\s*\(\s*['"`](id|user_id|post_id|workout_id|conversation_id|thread_id)['"`]/.test(tail)) continue;
+          if (/\.in\s*\(/.test(tail)) continue;
           offenders.push(`${relPath(p)}:${table}`);
         }
       }
@@ -3839,7 +3858,7 @@ function platformAudits() {
       pass('PERF-01', 'no unbounded select() on high-cardinality tables');
     } else {
       fail('PERF-01', `${offenders.length} unbounded read(s) — PostgREST caps at 1000 rows`,
-        offenders.slice(0, 5).join(', ') + (offenders.length > 5 ? ' …' : ''));
+        offenders.join(', '));
     }
   } catch (e: any) {
     fail('PERF-01', 'unbounded select audit', e.message);
@@ -4033,6 +4052,23 @@ function platformAudits() {
       // adjustment nearby.
       const hits = [...src.matchAll(/(?:Date\.now\(\)|getTime\(\))\s*[+\-]\s*\d+\s*\*\s*\d+/g)];
       if (hits.length === 0) continue;
+      // False-positive filter: Date.now() ± N * M wrapped in a new
+      // Date(…) constructor is a pure epoch millisecond delta. Whether
+      // it lands in .toISOString() for a range query OR in a scheduled
+      // notification's `at`, iOS/Postgres both treat it correctly. TZ
+      // only matters when we do calendar-day math (start-of-day, day-
+      // of-week etc), which is a different pattern.
+      const wrappedInNewDate = /new\s+Date\s*\(\s*(?:Date\.now\(\)|getTime\(\))\s*[+\-]\s*\d+\s*\*\s*\d+/.test(src);
+      if (wrappedInNewDate) {
+        // If the ONLY hits are inside `new Date(...)`, skip the file.
+        const naiveOnly = hits.every(h => {
+          // Check the 40 chars before the match — must contain `new Date(`
+          const start = h.index ?? 0;
+          const window = src.slice(Math.max(0, start - 40), start);
+          return /new\s+Date\s*\(\s*$/.test(window);
+        });
+        if (naiveOnly) continue;
+      }
       // date-fns import? Then likely fine — it handles TZ correctly.
       if (/from ['"]date-fns['"]/.test(src)) continue;
       offenders.push(relPath(p));

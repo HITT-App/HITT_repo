@@ -99,10 +99,11 @@ export default function AdminAnalytics() {
 
       setDailyStats(last14Days);
 
-      // Fetch workout categories
+      // Fetch workout categories (bounded — analytics-only aggregation)
       const { data: workouts } = await supabase
         .from("workouts")
-        .select("category");
+        .select("category")
+        .limit(1000);
 
       const categoryCount: Record<string, number> = {};
       workouts?.forEach((w) => {
@@ -113,10 +114,11 @@ export default function AdminAnalytics() {
         Object.entries(categoryCount).map(([name, value]) => ({ name, value }))
       );
 
-      // Fetch meal categories
+      // Fetch meal categories (bounded — analytics-only aggregation)
       const { data: meals } = await supabase
         .from("meals")
-        .select("category");
+        .select("category")
+        .limit(1000);
 
       const mealCount: Record<string, number> = {};
       meals?.forEach((m) => {

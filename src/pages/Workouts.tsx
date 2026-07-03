@@ -28,7 +28,8 @@ const Workouts = () => {
         .from("workouts")
         .select("*")
         .order("category")
-        .order("difficulty");
+        .order("difficulty")
+        .limit(1000);
       if (error) throw error;
       return data || [];
     },

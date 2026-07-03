@@ -103,7 +103,8 @@ export default function AdminWorkouts() {
     const { data, error } = await supabase
       .from("workouts")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(1000);
 
     if (error) {
       toast({ variant: "destructive", title: "Error loading workouts" });

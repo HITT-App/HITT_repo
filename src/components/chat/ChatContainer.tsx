@@ -45,7 +45,13 @@ export function ChatContainer({ messages, isLoading, onSend, error, onVoiceClick
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ text: text.slice(0, 500), voiceId }),
+          // ElevenLabs otherwise pronounces "HIIT" as H-I-I-T. Normalise
+          // to "hit" per the CLAUDE.md TTS rule before sending. Also
+          // catches wake-word variants like "Ok HIIT".
+          body: JSON.stringify({
+            text: text.slice(0, 500).replace(/\bHIIT\b/g, 'hit').replace(/\bOk HIIT\b/gi, 'ok hit'),
+            voiceId,
+          }),
         }
       );
       if (!res.ok) return;

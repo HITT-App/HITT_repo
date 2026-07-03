@@ -268,7 +268,10 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-background sticky top-0 z-20">
+      <header
+        className="flex items-center justify-between px-4 pb-3 border-b border-border/60 bg-background sticky top-0 z-20"
+        style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 12px)' }}
+      >
         <h1 className="font-semibold">Profile</h1>
         {isAdmin && (
           <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="gap-2">

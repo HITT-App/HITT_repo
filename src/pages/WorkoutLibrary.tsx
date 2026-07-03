@@ -96,7 +96,8 @@ export default function WorkoutLibrary() {
         .from('workouts')
         .select('*')
         .order('is_featured', { ascending: false })
-        .order('rating', { ascending: false });
+        .order('rating', { ascending: false })
+        .limit(1000);
 
       if (error) throw error;
       setWorkouts(data || []);

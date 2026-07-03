@@ -233,6 +233,7 @@ const ChallengeDetail = () => {
       {/* Join Confirmation Dialog */}
       <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
         <DialogContent className="text-center">
+          <DialogTitle className="sr-only">Join challenge confirmation</DialogTitle>
           <div className="py-6">
             <div className="text-6xl mb-4">🏁</div>
             <h2 className="text-2xl font-bold text-primary mb-2">20K</h2>
@@ -265,6 +266,7 @@ const ChallengeDetail = () => {
       {/* Challenge Complete Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
         <DialogContent className="text-center">
+          <DialogTitle className="sr-only">Challenge complete</DialogTitle>
           <div className="py-6">
             <div className="text-6xl mb-4">🏁</div>
             <h2 className="text-2xl font-bold mb-2">Challenge Complete!</h2>

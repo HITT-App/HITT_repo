@@ -30,7 +30,7 @@ export default function AdminMeals() {
   });
 
   const fetchMeals = async () => {
-    const { data } = await supabase.from("meals").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("meals").select("*").order("created_at", { ascending: false }).limit(1000);
     setMeals(data || []);
     setLoading(false);
   };

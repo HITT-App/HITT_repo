@@ -60,7 +60,10 @@ const NotificationDemo = () => {
     <>
       <div className="min-h-screen bg-background">
         {/* Header */}
-        <header className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border z-10">
+        <header
+          className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border z-10"
+          style={{ paddingTop: 'calc(var(--safe-area-inset-top, 0px) + 4px)' }}
+        >
           <div className="flex items-center gap-3 px-4 py-4">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-5 h-5" />
