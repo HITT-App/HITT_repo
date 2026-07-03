@@ -4370,23 +4370,29 @@ function platformAudits() {
       /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION[^$]*\$\$([\s\S]*?)\$\$/gi,
     )].map(m => m[1]);
     for (const table of ['community_follows', 'community_comments', 'community_messages']) {
+      // Find EVERY AFTER INSERT trigger on this table — some tables have
+      // multiple (a counter trigger + a notification trigger).
       const triggerRe = new RegExp(
         `CREATE\\s+TRIGGER[^;]*\\s+AFTER\\s+INSERT\\s+ON\\s+(?:public\\.)?${table}\\b[^;]*EXECUTE\\s+(?:PROCEDURE|FUNCTION)\\s+(?:public\\.)?(\\w+)`,
-        'is',
+        'gis',
       );
-      const m = migSrc.match(triggerRe);
-      if (!m) { missing.push(`${table} → community_notifications trigger`); continue; }
-      const fnName = m[1];
-      // The named function body must INSERT into community_notifications.
-      const fnRe = new RegExp(
-        `FUNCTION\\s+(?:public\\.)?${fnName}[\\s\\S]*?\\$\\$([\\s\\S]*?)\\$\\$`,
-        'i',
-      );
-      const fnBody = migSrc.match(fnRe)?.[1] ?? '';
-      if (!/INSERT\s+INTO\s+(?:public\.)?community_notifications/i.test(fnBody)) {
-        missing.push(`${table}: trigger ${fnName} doesn't write to community_notifications`);
+      const fnNames = [...migSrc.matchAll(triggerRe)].map(m => m[1]);
+      if (fnNames.length === 0) {
+        missing.push(`${table}: no AFTER INSERT trigger`);
+        continue;
       }
-      // Suppress unused-var warning.
+      // At least ONE of the trigger functions must INSERT into community_notifications.
+      const anyWrites = fnNames.some(fnName => {
+        const fnRe = new RegExp(
+          `FUNCTION\\s+(?:public\\.)?${fnName}[\\s\\S]*?\\$\\$([\\s\\S]*?)\\$\\$`,
+          'i',
+        );
+        const fnBody = migSrc.match(fnRe)?.[1] ?? '';
+        return /INSERT\s+INTO\s+(?:public\.)?community_notifications/i.test(fnBody);
+      });
+      if (!anyWrites) {
+        missing.push(`${table}: none of ${fnNames.join(', ')} writes to community_notifications`);
+      }
       void fnBodies;
     }
     // Fan-out trigger must call pg_net on community_notifications inserts.
