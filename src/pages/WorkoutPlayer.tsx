@@ -827,20 +827,20 @@ export default function WorkoutPlayer() {
           body_area: ex.body_area ?? null, thumbnail_url: ex.thumbnail_url ?? null,
           video_url: ex.video_url ?? null,
         }))
-        await supabase.from('workout_progress').insert({
+        const { data: progressRow } = await supabase.from('workout_progress').insert({
           user_id: user.id, workout_id: workout.id, workout_source: 'catalogue',
           workout_title: workout.title, workout_description: workout.description ?? null,
           exercises_snapshot: snapshot, estimated_duration_minutes: workout.duration_minutes ?? null,
           estimated_calories: workout.calories_burned ?? null,
           duration_seconds: totalElapsed, calories_burned: workoutCalories,
-        })
+        }).select('id').single()
         const pts = await recordWorkout()
         setPointsEarned(pts)
         const pbs = await detectPBs(user.id, totalElapsed, workoutCalories)
         setDetectedPBs(pbs)
-        if (pbs.length > 0) {
-          const nid = await schedulePBShareReminder(workout.id, workout.title, pbs.map(pb => ({ kind: pb.kind, label: pb.label, value: pb.value })))
-          if (nid !== null) sessionStorage.setItem(`pb_notif_${workout.id}`, String(nid))
+        if (pbs.length > 0 && progressRow?.id) {
+          const nid = await schedulePBShareReminder(progressRow.id, pbs.map(pb => ({ kind: pb.kind, label: pb.label, value: pb.value })))
+          if (nid !== null) sessionStorage.setItem(`pb_notif_${workout.id}`, nid)
         }
         setTimeout(() => notifyUser(user.id, 'workout', 'Workout complete! 💪', `You finished ${workout.title}. Great work!`, '/home'), 3000)
         setTimeout(() => {

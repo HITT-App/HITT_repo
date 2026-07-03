@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -26,6 +27,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+
+        // Clear the app-icon badge whenever the app comes to the foreground.
+        // Pushes (notify-user) set badge:1 and nothing else ever resets it, so
+        // without this the badge sticks on the icon forever after the first push.
+        if #available(iOS 16.0, *) {
+            UNUserNotificationCenter.current().setBadgeCount(0)
+        } else {
+            application.applicationIconBadgeNumber = 0
+        }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

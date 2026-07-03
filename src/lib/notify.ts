@@ -1,10 +1,8 @@
-import { Capacitor } from "@capacitor/core";
-import { LocalNotifications } from "@capacitor/local-notifications";
 import { supabase } from "@/integrations/supabase/client";
 
 export async function notifyUser(
   userId: string,
-  category: "workout" | "nutrition" | "coaching" | "community" | "social" | "admin",
+  category: "workout" | "nutrition" | "coaching" | "community" | "social" | "admin" | "jarvis",
   title: string,
   body: string,
   url?: string
@@ -24,44 +22,53 @@ type PBSummary = {
   value: number;
 };
 
-// Schedules an on-device local notification to fire 30 min after a PB workout.
-// Returns the notification ID so it can be cancelled if the user shares first.
+// Schedules a server-side PB-share reminder push to fire 30 minutes
+// after a workout_progress row is written. The pg_cron
+// fire_pb_share_reminders job (see migration 20260703170000) scans
+// workout_progress for rows where pb_share_reminder_at is due and
+// pb_share_notified_at is NULL, then fires notify-user.
+//
+// Server-side means the reminder fires even if the app is fully
+// closed and even if the phone is restored to a new device — neither
+// possible with the old LocalNotifications path this replaces.
+//
+// Takes the workout_progress row id (returned from the insert
+// upstream). Returns that id back if scheduled so the caller can
+// call cancelPBShareReminder if the user shares immediately.
 export const schedulePBShareReminder = async (
-  workoutId: string,
-  workoutTitle: string,
+  workoutProgressId: string,
   pbs: PBSummary[]
-): Promise<number | null> => {
-  if (pbs.length === 0 || !Capacitor.isNativePlatform()) return null;
-
-  const lastChunk = workoutId.replace(/-/g, '').slice(-8);
-  const notificationId = parseInt(lastChunk, 16) % 2147483647;
-
-  const fireAt = new Date(Date.now() + 30 * 60 * 1000);
-  const pbLabels = pbs.map(pb => pb.label).join(' + ');
-
+): Promise<string | null> => {
+  if (pbs.length === 0) return null;
+  const fireAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   try {
-    await LocalNotifications.requestPermissions();
-    await LocalNotifications.schedule({
-      notifications: [{
-        id: notificationId,
-        title: `🏆 New PB — ${pbLabels}!`,
-        body: `Your ${workoutTitle} was a personal best. Share it with the community?`,
-        schedule: { at: fireAt, allowWhileIdle: true },
-        extra: { deepLink: `/home`, workoutId },
-      }]
-    });
-    return notificationId;
+    const { error } = await supabase
+      .from("workout_progress")
+      .update({ pb_share_reminder_at: fireAt })
+      .eq("id", workoutProgressId);
+    if (error) {
+      console.error("[schedulePBShareReminder] update failed:", error.message);
+      return null;
+    }
+    return workoutProgressId;
   } catch (err) {
-    console.error('[schedulePBShareReminder] failed:', err);
+    console.error("[schedulePBShareReminder] failed:", err);
     return null;
   }
 };
 
-export const cancelPBShareReminder = async (notificationId: number) => {
-  if (!Capacitor.isNativePlatform()) return;
+// Cancels a pending PB-share reminder by clearing pb_share_reminder_at
+// and stamping pb_share_notified_at so the cron's fanout guard trips.
+export const cancelPBShareReminder = async (workoutProgressId: string) => {
   try {
-    await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
+    await supabase
+      .from("workout_progress")
+      .update({
+        pb_share_reminder_at: null,
+        pb_share_notified_at: new Date().toISOString(),
+      })
+      .eq("id", workoutProgressId);
   } catch (err) {
-    console.error('[cancelPBShareReminder] failed:', err);
+    console.error("[cancelPBShareReminder] failed:", err);
   }
 };

@@ -14,6 +14,8 @@ const CATEGORY_COLUMN: Record<string, string> = {
   community: "community_notifications",
   social:    "social_notifications",
   admin:     "admin_notifications",
+  // Jarvis-scheduled nudges (PB share prompt, missed workout, weekly recap).
+  jarvis:    "jarvis_nudges",
 };
 
 // ── APNs JWT ──────────────────────────────────────────────────────────────────
