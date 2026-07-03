@@ -3549,6 +3549,329 @@ async function runDedupeAuditTests() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// PLATFORM AUDITS — auth, config, storage, a11y, perf, string safety
+// ════════════════════════════════════════════════════════════════════════════
+
+function walkFiles(root: string, extRegex: RegExp): string[] {
+  const out: string[] = [];
+  const stack = [root];
+  while (stack.length) {
+    const dir = stack.pop()!;
+    let entries: any[] = [];
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const e of entries) {
+      const p = `${dir}/${e.name}`;
+      if (e.isDirectory()) {
+        if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+        stack.push(p);
+        continue;
+      }
+      if (extRegex.test(e.name)) out.push(p);
+    }
+  }
+  return out;
+}
+
+function platformAudits() {
+  section('PLATFORM AUDITS');
+
+  const relPath = (p: string) => p.replace('/Users/vanessa/hitt-app/', '');
+
+  // ── AUTH-01: every supabase/functions/*/index.ts either checks a Supabase
+  //    user session (auth.getUser) OR verifies a device JWT (Garmin / HK)
+  //    OR checks the PURGE_CRON_SECRET (cron-scoped). Anything reading
+  //    req.json without one of those is an unauthenticated hole.
+  try {
+    const FN_ROOT = '/Users/vanessa/hitt-app/supabase/functions';
+    const indexFiles = walkFiles(FN_ROOT, /^index\.ts$/);
+    // Exclude _shared and utility-only endpoints.
+    const scanned = indexFiles.filter(p => !/\/_shared\//.test(p));
+    const authPatterns = [
+      /auth\.getUser\s*\(/,
+      /verifyWatchPushJwt\s*\(/,
+      /verifyHealthKitDeviceJwt\s*\(/,
+      /PURGE_CRON_SECRET/,
+      // Anon-key + open endpoints (analyze-body, elevenlabs-tts etc.) that
+      // are legitimately public read the ANON_KEY header explicitly.
+      /Deno\.env\.get\(['"]SUPABASE_ANON_KEY['"]\)/,
+    ];
+    // Endpoints whose auth model is the payload itself:
+    //   redeem-garmin-pairing — 6-digit code hash-lookup + expiry + attempt cap
+    //   lookup-barcode        — public barcode → nutrition lookup, no user data touched
+    const CODE_AS_AUTH = new Set([
+      'redeem-garmin-pairing',
+      'lookup-barcode',
+    ]);
+    const offenders: string[] = [];
+    for (const p of scanned) {
+      const src = readFileSync(p, 'utf8');
+      if (!/req\.json\s*\(/.test(src)) continue;   // no body read = not an ingest
+      const fnName = p.split('/').slice(-2, -1)[0];
+      if (CODE_AS_AUTH.has(fnName)) continue;      // whitelisted per comment
+      const hasAuth = authPatterns.some(pat => pat.test(src));
+      if (!hasAuth) offenders.push(relPath(p));
+    }
+    if (offenders.length === 0) {
+      pass('AUTH-01', `all ${scanned.length} edge functions check auth or a device JWT before reading body`);
+    } else {
+      fail('AUTH-01', `${offenders.length} edge fn(s) read body without auth check`,
+        offenders.join(', '));
+    }
+  } catch (e: any) {
+    fail('AUTH-01', 'edge fn auth audit', e.message);
+  }
+
+  // ── A11Y-01: every <DialogContent> (Radix) has a matching <DialogTitle>
+  //    in the same JSX return block. Missing DialogTitle triggers the
+  //    Radix a11y warning + Apple screen-reader review flag.
+  try {
+    const files = walkFiles('/Users/vanessa/hitt-app/src', /\.tsx$/);
+    const offenders: string[] = [];
+    for (const p of files) {
+      const src = readFileSync(p, 'utf8');
+      // Find each <DialogContent occurrence; require <DialogTitle within
+      // the next 2000 chars (comfortably one Dialog block).
+      const re = /<DialogContent[\s>][\s\S]{0,2000}?<\/DialogContent>/g;
+      for (const m of src.matchAll(re)) {
+        if (!/<DialogTitle[\s>]/.test(m[0])) {
+          offenders.push(relPath(p));
+          break;
+        }
+      }
+    }
+    if (offenders.length === 0) {
+      pass('A11Y-01', 'every DialogContent has a matching DialogTitle');
+    } else {
+      fail('A11Y-01', `${offenders.length} file(s) with DialogContent missing DialogTitle`,
+        offenders.slice(0, 5).join(', ') + (offenders.length > 5 ? ` (+${offenders.length - 5} more)` : ''));
+    }
+  } catch (e: any) {
+    fail('A11Y-01', 'DialogTitle audit', e.message);
+  }
+
+  // ── DEPS-01: no accidental leaks in tree. .bak files block the deploy
+  //    script; .env / .p8 / credentials.* files would leak on git add.
+  try {
+    const dangerous: string[] = [];
+    const stack = ['/Users/vanessa/hitt-app'];
+    while (stack.length) {
+      const dir = stack.pop()!;
+      let entries: any[] = [];
+      try { entries = readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+      for (const e of entries) {
+        const p = `${dir}/${e.name}`;
+        if (e.isDirectory()) {
+          if (e.name === 'node_modules' || e.name === '.git' || e.name === 'dist'
+            || e.name === 'ios' /* Xcode-generated bak/pem paths are fine */) continue;
+          stack.push(p);
+          continue;
+        }
+        if (/\.bak$/.test(e.name)) dangerous.push(relPath(p));
+        else if (/^\.env(\.|$)/.test(e.name) && !e.name.includes('example')) dangerous.push(relPath(p));
+        else if (/\.p8$/.test(e.name)) dangerous.push(relPath(p));
+        else if (/^credentials\./.test(e.name)) dangerous.push(relPath(p));
+      }
+    }
+    // Whitelist .env at repo root — Vite dev needs it locally, .gitignore blocks it.
+    const notWhitelisted = dangerous.filter(p => p !== '.env');
+    if (notWhitelisted.length === 0) {
+      pass('DEPS-01', 'no .bak / .p8 / credentials.* / stray .env files in tree');
+    } else {
+      fail('DEPS-01', `${notWhitelisted.length} sensitive/blocking file(s) found`,
+        notWhitelisted.slice(0, 5).join(', ') + (notWhitelisted.length > 5 ? ' …' : ''));
+    }
+  } catch (e: any) {
+    fail('DEPS-01', 'sensitive file audit', e.message);
+  }
+
+  // ── CFG-01: every edge function directory has a matching entry in
+  //    config.toml if it uses device-JWT auth (verify_jwt=false), or
+  //    inherits the default otherwise. We flag functions that verify a
+  //    device JWT but don't have verify_jwt=false in config.
+  try {
+    const FN_ROOT = '/Users/vanessa/hitt-app/supabase/functions';
+    const configSrc = readFileSync('/Users/vanessa/hitt-app/supabase/config.toml', 'utf8');
+    const configuredFalse = new Set<string>();
+    for (const m of configSrc.matchAll(/\[functions\.([\w-]+)\][^[]*verify_jwt\s*=\s*false/g)) {
+      configuredFalse.add(m[1]);
+    }
+    const fnDirs = readdirSync(FN_ROOT, { withFileTypes: true })
+      .filter(e => e.isDirectory() && !e.name.startsWith('_'))
+      .map(e => e.name);
+    const offenders: string[] = [];
+    for (const fnName of fnDirs) {
+      const indexPath = `${FN_ROOT}/${fnName}/index.ts`;
+      let src = '';
+      try { src = readFileSync(indexPath, 'utf8'); } catch { continue; }
+      const usesDeviceJwt = /verifyWatchPushJwt|verifyHealthKitDeviceJwt|PURGE_CRON_SECRET/.test(src);
+      if (usesDeviceJwt && !configuredFalse.has(fnName)) {
+        offenders.push(`${fnName} (verifies device JWT but not set verify_jwt=false in config.toml)`);
+      }
+    }
+    if (offenders.length === 0) {
+      pass('CFG-01', `every device-JWT edge fn has verify_jwt=false in config.toml`);
+    } else {
+      fail('CFG-01', `${offenders.length} edge fn config mismatch(es)`, offenders.join('; '));
+    }
+  } catch (e: any) {
+    fail('CFG-01', 'edge fn config audit', e.message);
+  }
+
+  // ── STORAGE-01: every localStorage.setItem / sessionStorage.setItem key
+  //    used outside auth flows should be cleared on signOut. The delete-
+  //    account flicker was caused by hiit_onboarding_complete surviving
+  //    signOut. Flag any key set outside the auth path that isn't
+  //    referenced (setItem OR removeItem) in useAuth or Profile signOut.
+  try {
+    const files = walkFiles('/Users/vanessa/hitt-app/src', /\.(ts|tsx)$/);
+    const AUTH_PATHS = new Set([
+      '/Users/vanessa/hitt-app/src/hooks/useAuth.tsx',
+      '/Users/vanessa/hitt-app/src/pages/Profile.tsx',
+      '/Users/vanessa/hitt-app/src/pages/Auth.tsx',
+    ]);
+    const setKeys = new Set<string>();
+    let signOutClearsHits = '';
+    for (const p of files) {
+      const src = readFileSync(p, 'utf8');
+      if (AUTH_PATHS.has(p)) {
+        signOutClearsHits += src;
+        continue;
+      }
+      for (const m of src.matchAll(/(?:localStorage|sessionStorage)\.setItem\s*\(\s*['"]([^'"]+)['"]/g)) {
+        setKeys.add(m[1]);
+      }
+    }
+    // Also collect keys that ARE cleared in the auth files.
+    const cleared = new Set<string>();
+    for (const m of signOutClearsHits.matchAll(/(?:localStorage|sessionStorage)\.removeItem\s*\(\s*['"]([^'"]+)['"]/g)) {
+      cleared.add(m[1]);
+    }
+    // Whitelist keys that are per-session or per-device (not per-user);
+    // clearing them on sign-out would be wrong.
+    const OK_UNCLEARED = new Set<string>([
+      'hitt.hk.device.token',
+      'hitt.hk.device.expiresAt',
+      'hitt.hk.deviceToken',
+      'hitt.hk.supabaseUrl',
+      'hitt.hk.workoutAnchor',
+      'hitt.chatroom.background',   // device-wide preference
+    ]);
+    const missing = [...setKeys].filter(k => !cleared.has(k) && !OK_UNCLEARED.has(k));
+    if (missing.length === 0) {
+      pass('STORAGE-01', `all ${setKeys.size} setItem key(s) are cleared on signOut or whitelisted`);
+    } else {
+      fail('STORAGE-01', `${missing.length} localStorage key(s) never cleared on signOut`,
+        missing.slice(0, 6).join(', ') + (missing.length > 6 ? ' …' : ''));
+    }
+  } catch (e: any) {
+    fail('STORAGE-01', 'storage cleanup audit', e.message);
+  }
+
+  // ── NAV-02: window.location.href = '/…' and location.assign('/…') and
+  //    location.replace('/…') targets exist as Routes in App.tsx. Broader
+  //    than DEDUPE-11 which only checked navigate().
+  try {
+    const appSrc = readFileSync('/Users/vanessa/hitt-app/src/App.tsx', 'utf8');
+    const declared = new Set<string>();
+    for (const m of appSrc.matchAll(/path=["']([^"'*]+)["']/g)) {
+      const base = m[1].split('/:')[0];
+      declared.add(base === '' ? '/' : base);
+    }
+    const files = walkFiles('/Users/vanessa/hitt-app/src', /\.(ts|tsx)$/);
+    const patterns = [
+      /window\.location\.href\s*=\s*['"`]([^'"`?#]+)/g,
+      /location\.assign\s*\(\s*['"`]([^'"`?#]+)/g,
+      /location\.replace\s*\(\s*['"`]([^'"`?#]+)/g,
+    ];
+    const offenders: Array<{ file: string; target: string }> = [];
+    for (const p of files) {
+      const src = readFileSync(p, 'utf8');
+      for (const pat of patterns) {
+        for (const m of src.matchAll(pat)) {
+          const raw = m[1];
+          if (raw.startsWith('http') || raw.includes('${') || !raw.startsWith('/')) continue;
+          const base = raw.split('/').slice(0, 2).join('/');
+          const withTrailing = base + '/';
+          if (!declared.has(base) && !declared.has(withTrailing) && !declared.has(raw)) {
+            offenders.push({ file: relPath(p), target: raw });
+          }
+        }
+      }
+    }
+    if (offenders.length === 0) {
+      pass('NAV-02', 'every location.href / assign / replace target has a matching Route');
+    } else {
+      const shown = offenders.slice(0, 5).map(o => `"${o.target}" @ ${o.file}`).join('; ');
+      fail('NAV-02', `${offenders.length} dead location target(s)`, shown);
+    }
+  } catch (e: any) {
+    fail('NAV-02', 'location target audit', e.message);
+  }
+
+  // ── PERF-01: no `supabase.from(...).select('*')` on paginated tables
+  //    without a `.limit()` or `.range()`. PostgREST silently caps
+  //    responses at 1000 rows — the bug that dropped 730 of 885 owner
+  //    recipes' ingredients (see CLAUDE.md drainTable notes).
+  try {
+    const files = walkFiles('/Users/vanessa/hitt-app/src', /\.(ts|tsx)$/);
+    // Tables where truncation is a functional bug.
+    const RISKY = ['recipes', 'meals', 'ingredients', 'workouts', 'workout_exercises',
+      'activity_logs', 'meal_logs', 'community_posts', 'community_comments',
+      'community_messages', 'chatroom_messages', 'notification_preferences',
+      'nutrition_profiles'];
+    const offenders: string[] = [];
+    for (const p of files) {
+      const src = readFileSync(p, 'utf8');
+      // Pattern: .from("<risky>").select(...) that ends without .limit / .range / .single / .maybeSingle.
+      for (const table of RISKY) {
+        const re = new RegExp(
+          `\\.from\\(\\s*['"\`]${table}['"\`]\\s*\\)\\s*\\.select\\(([^)]*)\\)([\\s\\S]{0,400})`,
+          'g',
+        );
+        for (const m of src.matchAll(re)) {
+          const tail = m[2];
+          if (/\.(limit|range|single|maybeSingle|count)\s*\(/.test(tail)) continue;
+          offenders.push(`${relPath(p)}:${table}`);
+        }
+      }
+    }
+    if (offenders.length === 0) {
+      pass('PERF-01', 'no unbounded select() on high-cardinality tables');
+    } else {
+      fail('PERF-01', `${offenders.length} unbounded read(s) — PostgREST caps at 1000 rows`,
+        offenders.slice(0, 5).join(', ') + (offenders.length > 5 ? ' …' : ''));
+    }
+  } catch (e: any) {
+    fail('PERF-01', 'unbounded select audit', e.message);
+  }
+
+  // ── STR-01: every AI/TTS text-generation flow must run text through
+  //    the `.replace(/\bHIIT\b/g, 'hit')` normaliser before passing to
+  //    elevenlabs-tts. Grep for direct fetches of the TTS endpoint that
+  //    don't include the replace.
+  try {
+    const files = walkFiles('/Users/vanessa/hitt-app', /\.(ts|tsx)$/)
+      .filter(p => !p.includes('/node_modules/') && !p.includes('/dist/') && !p.includes('/tests/'));
+    const offenders: string[] = [];
+    for (const p of files) {
+      const src = readFileSync(p, 'utf8');
+      if (!/elevenlabs-tts/.test(src)) continue;
+      if (p.endsWith('elevenlabs-tts/index.ts')) continue;                 // the function itself is fine
+      if (/\.replace\(\/\\bHIIT\\b\/g\s*,\s*['"`]hit/.test(src)) continue;
+      offenders.push(relPath(p));
+    }
+    if (offenders.length === 0) {
+      pass('STR-01', 'every TTS caller normalises HIIT → "hit"');
+    } else {
+      fail('STR-01', `${offenders.length} TTS caller(s) skip the HIIT-normalise step`,
+        offenders.join(', '));
+    }
+  } catch (e: any) {
+    fail('STR-01', 'TTS normalise audit', e.message);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // MAIN
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -3574,6 +3897,7 @@ async function main() {
   await runWatchAuditTests();
   await runRecentFeatureTests();
   await runDedupeAuditTests();
+  platformAudits();
   await runGarminCoachingAuditTests();
   await runGarminCiqAuditTests();
 

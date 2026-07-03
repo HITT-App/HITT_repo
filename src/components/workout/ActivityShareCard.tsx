@@ -139,10 +139,11 @@ function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
       const km = d.distanceKm ?? 0;
       const pace = d.paceSecondsPerKm
         ?? (km > 0 && d.durationSeconds > 0 ? d.durationSeconds / km : null);
+      const dur = fmtDurationCompact(d.durationSeconds);
       return [
         { label: 'Distance', value: km ? km.toFixed(1) : '—', unit: 'km' },
         { label: 'Avg Pace', value: pace ? fmtPacePerKm(pace) : '—', unit: '/km' },
-        { label: 'Calories', value: fmtInt(d.calories ?? 0), unit: 'kcal' },
+        { label: 'Time', value: dur.value, unit: dur.unit },
       ];
     }
     case 'bike': {
@@ -150,10 +151,11 @@ function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
       const avgSpeed = km > 0 && d.durationSeconds > 0
         ? (km / (d.durationSeconds / 3600))
         : null;
+      const dur = fmtDurationCompact(d.durationSeconds);
       return [
         { label: 'Distance', value: km ? km.toFixed(1) : '—', unit: 'km' },
         { label: 'Avg Speed', value: avgSpeed ? avgSpeed.toFixed(1) : '—', unit: 'km/h' },
-        { label: 'Calories', value: fmtInt(d.calories ?? 0), unit: 'kcal' },
+        { label: 'Time', value: dur.value, unit: dur.unit },
       ];
     }
     case 'swim': {
@@ -161,10 +163,11 @@ function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
       // Derive per-100m pace from total distance + duration when absent.
       const per100 = d.swimPacePer100m
         ?? (meters > 0 && d.durationSeconds > 0 ? d.durationSeconds / (meters / 100) : null);
+      const dur = fmtDurationCompact(d.durationSeconds);
       return [
         { label: 'Distance', value: meters ? fmtInt(meters) : '—', unit: 'm' },
         { label: 'Pace', value: per100 ? fmtPacePerKm(per100) : '—', unit: '/100m' },
-        { label: 'Calories', value: fmtInt(d.calories ?? 0), unit: 'kcal' },
+        { label: 'Time', value: dur.value, unit: dur.unit },
       ];
     }
     case 'strength': {
@@ -185,18 +188,21 @@ function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
     case 'cardio': {
       const dur = fmtDurationCompact(d.durationSeconds);
       return [
-        { label: 'Duration', value: dur.value, unit: dur.unit },
         { label: 'Avg HR', value: d.avgHR != null ? String(Math.round(d.avgHR)) : '—', unit: 'bpm' },
         { label: 'Calories', value: fmtInt(d.calories ?? 0), unit: 'kcal' },
+        { label: 'Time', value: dur.value, unit: dur.unit },
       ];
     }
     case 'walk':
     case 'hike': {
       const km = d.distanceKm ?? 0;
+      const pace = d.paceSecondsPerKm
+        ?? (km > 0 && d.durationSeconds > 0 ? d.durationSeconds / km : null);
+      const dur = fmtDurationCompact(d.durationSeconds);
       return [
         { label: 'Distance', value: km ? km.toFixed(1) : '—', unit: 'km' },
-        { label: 'Duration', value: fmtDurationHMS(d.durationSeconds) },
-        { label: 'Calories', value: fmtInt(d.calories ?? 0), unit: 'kcal' },
+        { label: 'Avg Pace', value: pace ? fmtPacePerKm(pace) : '—', unit: '/km' },
+        { label: 'Time', value: dur.value, unit: dur.unit },
       ];
     }
     case 'yoga': {

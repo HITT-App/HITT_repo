@@ -116,6 +116,33 @@ serve(async (req) => {
       });
     }
 
+    // Auth: accept EITHER service-role bearer (server-to-server calls
+    // from push-garmin-watch-workout / sync-healthkit-background) OR a
+    // user session whose user.id matches the requested target user_id
+    // (prevents user A firing pushes at user B's device).
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const isService = authHeader === `Bearer ${serviceKey}`;
+
+    if (!isService) {
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: { user }, error: authError } = await userClient.auth.getUser();
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (user.id !== user_id) {
+        return new Response(JSON.stringify({ error: "Cannot send push to another user" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Check notification preferences
     const prefCol = CATEGORY_COLUMN[category] ?? "push_enabled";
     const { data: prefs } = await supabase
