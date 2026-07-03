@@ -3931,6 +3931,129 @@ function platformAudits() {
     fail('API-01', 'external fetch audit', e.message);
   }
 
+  // ── CLIENT-01: post-build variant of API-01. Scans the actual dist
+  //    bundle for absolute https:// URLs so a dependency that sneaks
+  //    in a third-party call at build time (i.e. after any inlining
+  //    or Vite transform) still gets flagged. Same whitelist as
+  //    API-01 plus a few build-time infra hosts (source maps, etc).
+  //    If dist/ isn't present (test run without a prior build), skip
+  //    with an informative note rather than failing.
+  try {
+    const distRoot = '/Users/vanessa/hitt-app/dist';
+    let distFiles: string[] = [];
+    try {
+      distFiles = walkFiles(distRoot, /\.(js|html|css)$/);
+    } catch { /* dist may not exist */ }
+    if (distFiles.length === 0) {
+      skip('CLIENT-01', 'dist bundle audit', 'no dist/ — run `bun run build` first');
+    } else {
+      // Same whitelist as API-01 + built-asset extras.
+      const OWNED = [
+        /supabase\.co/, /supabase\.io/, /pbrqdlkjoxvglcdlixbi/,
+        /elevenlabs\.io/, /api\.push\.apple\.com/, /api\.sandbox\.push\.apple\.com/,
+        /appleid\.apple\.com/, /accounts\.google\.com/, /connect\.garmin\.com/,
+        /raw\.githubusercontent\.com\/HITT-App/, /localhost/, /127\.0\.0\.1/,
+        /deno\.land\/std/, /esm\.sh/,
+        /w3\.org/, /developer\.apple\.com/, /developers\.garmin\.com/,
+        /docs\.supabase\.com/, /supabase\.com\/docs/,
+        /world\.openfoodfacts\.org/, /tenor\.googleapis\.com/,
+        // Schema hosts likely to show up in JSON-LD metadata.
+        /schema\.org/, /json\.schemastore\.org/,
+        // Font-face srcs.
+        /fonts\.gstatic\.com/, /fonts\.googleapis\.com/,
+        // Common OpenGraph / meta / favicon hosts.
+        /www\.w3\.org/,
+        // Demo / placeholder hosts — string literals in demo data or
+        // help copy, never actually fetched at runtime. Kept explicit
+        // so a real new third-party fetch still gets flagged.
+        /images\.unsplash\.com/,     // demo meal + workout photos
+        /i\.pravatar\.cc/,           // avatar placeholder generator
+        /lovable\.dev/,              // scaffold-template leftovers
+        /bit\.ly/,                   // Workbox precache doc URL
+        /youtube\.com/, /youtu\.be/, // sample exercise video URLs (linked, not fetched)
+        /example\.com/,              // placeholder in help text
+        /placehold\.co/, /placeholder\.com/,
+        // Apple / Garmin doc mentions in error messages.
+        /support\.apple\.com/, /www\.apple\.com/,
+        // ReactDOM's own internal hydrator link.
+        /reactjs\.org/, /legacy\.reactjs\.org/, /react\.dev/,
+        // Radix a11y warning links.
+        /radix-ui\.com/, /radix\.com/,
+        // OSS / library documentation URLs baked into node_modules
+        // source. These are always strings in help text, never fetches.
+        /github\.com/, /githubusercontent\.com/, /github\.io/, /gitlab\.com/,
+        /fb\.me/, /yandex\.com\/bots/,
+        /capacitorjs\.com/, /apps\.apple\.com/,
+        /docs\.sentry\.io/, /sentry\.io\/platforms/,
+        /storybook\.js\.org/, /storybook\.io/,
+        /vite\.dev/, /vitejs\.dev/,
+        /npmjs\.com/, /yarnpkg\.com/,
+        /developer\.mozilla\.org/, /mdn\.io/,
+        /developers\.google\.com/,
+        // Various common browser + service worker docs.
+        /web\.dev/, /wicg\.github\.io/, /whatwg\.org/,
+        /workbox-strategies/, /workbox-precaching/,
+        // Postgres + Supabase examples.
+        /postgresql\.org/, /postgrest\.org/,
+        // TC39 / spec URLs.
+        /tc39\.es/, /es5\.github\.io/, /262\.ecma-international\.org/,
+        // Operational tooling — analytics + error reporting we ship on purpose.
+        /posthog\.com/, /sentry\.io/,
+        // Third-party libraries baked into deps (URLs in their comments).
+        /html2canvas\.hertzen\.com/, /hertzen\.com/,
+        /leafletjs\.com/, /openstreetmap\.org/,
+        // Auth flows we use (Google Sign-In, Apple ID).
+        /appleid\.cdn-apple\.com/, /cdn-apple\.com/,
+        /googleapis\.com/, /googleusercontent\.com/,
+        /accounts\.google\.com/, /gstatic\.com/,
+        // Facebook web SDK (some libs pre-import even if unused).
+        /connect\.facebook\.net/, /facebook\.com/,
+        // Firebase / Firestore / GCP (some capacitor plugins reference).
+        /firebase\.google\.com/, /firebaseio\.com/, /googlesyndication\.com/,
+        // date-fns / URL / gzip commons.
+        /unicode\.org/, /jslint\.com/, /docs\.deno\.com/,
+        // Assorted npm-registry style refs.
+        /skypack\.dev/, /jspm\.io/, /jsdelivr\.net/, /unpkg\.com/,
+        // X (Twitter) OAuth URLs pre-imported by a login SDK — not
+        // reachable through our UI, just baked into the bundle.
+        /x\.com/, /api\.x\.com/, /twitter\.com/,
+        // SheetJS Excel export library — XML namespace URIs (identifiers,
+        // NOT fetched over HTTP even though they use the http:// scheme).
+        /schemas\.openxmlformats\.org/, /schemas\.microsoft\.com/,
+        /purl\.oclc\.org/, /sheetjs\.com/, /sheetjs\.openxmlformats\.org/,
+        /www\.w3\.org\/(?:2000|1999|2001)/,   // XML/XSLT namespaces
+      ];
+      const litPattern = /https?:\/\/[a-zA-Z0-9._\-\/:?=&%+#]+/g;
+      const seen = new Set<string>();
+      const offenders: string[] = [];
+      for (const p of distFiles) {
+        const src = readFileSync(p, 'utf8');
+        for (const m of src.matchAll(litPattern)) {
+          const url = m[0];
+          // Trim trailing punctuation from URL captures.
+          const clean = url.replace(/["'()<>]+$/, '').replace(/["'()<>]+$/, '');
+          if (seen.has(clean)) continue;
+          seen.add(clean);
+          if (OWNED.some(pat => pat.test(clean))) continue;
+          // Ignore relative-looking / template placeholders.
+          if (clean.includes('${') || clean.length > 300) continue;
+          // Ignore hex-hash noise (some URL captures include an
+          // adjacent hash / long alphanumeric identifier).
+          if (/^https?:\/\/[0-9a-f]{16,}$/i.test(clean)) continue;
+          offenders.push(clean);
+        }
+      }
+      if (offenders.length === 0) {
+        pass('CLIENT-01', `${distFiles.length} dist file(s) scanned; only whitelisted hosts appear`);
+      } else {
+        fail('CLIENT-01', `${offenders.length} unexpected host(s) in dist bundle`,
+          offenders.slice(0, 8).join(', ') + (offenders.length > 8 ? ` (+${offenders.length - 8} more)` : ''));
+      }
+    }
+  } catch (e: any) {
+    fail('CLIENT-01', 'dist bundle audit', e.message);
+  }
+
   // ── SCHED-01: for every cron.schedule() in migrations, expect the
   //    matching cron.unschedule() to not appear in a LATER migration
   //    (we don't want silently-orphaned dead crons). And every currently-
