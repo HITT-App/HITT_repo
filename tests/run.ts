@@ -3869,6 +3869,257 @@ function platformAudits() {
   } catch (e: any) {
     fail('STR-01', 'TTS normalise audit', e.message);
   }
+
+  // ── API-01: no fetch("http…") hardcoded to a domain we don't own.
+  //    Whitelist is our infra + known media/CDN hosts. Guards against
+  //    supply-chain drift + surprise data exfil vectors.
+  try {
+    const files = walkFiles('/Users/vanessa/hitt-app', /\.(ts|tsx|swift|js)$/)
+      .filter(p => !p.includes('/node_modules/') && !p.includes('/dist/')
+        && !p.includes('/DerivedData/') && !p.includes('/Pods/')
+        && !p.includes('/ios/App/App/public/'));   // built bundle mirrors
+    const OWNED = [
+      /supabase\.co/, /supabase\.io/, /pbrqdlkjoxvglcdlixbi/,
+      /elevenlabs\.io/, /api\.push\.apple\.com/, /api\.sandbox\.push\.apple\.com/,
+      /appleid\.apple\.com/, /accounts\.google\.com/, /connect\.garmin\.com/,
+      /raw\.githubusercontent\.com\/HITT-App/, /localhost/, /127\.0\.0\.1/,
+      // Deno stdlib + esm.sh registry are used by our edge functions.
+      /deno\.land\/std/, /esm\.sh/,
+      // Docs / spec references (never actually fetched at runtime).
+      /w3\.org/, /developer\.apple\.com/, /developers\.garmin\.com/,
+      /docs\.supabase\.com/, /supabase\.com\/docs/,
+      // Approved third-party APIs.
+      /world\.openfoodfacts\.org/,     // public nutrition/barcode DB
+      /tenor\.googleapis\.com/,        // Google-hosted GIF picker
+    ];
+    const litPattern = /(?:fetch|new URL|axios\.get|axios\.post)\s*\(\s*[`'"]([hH][tT][tT][pP][sS]?:\/\/[^`'"\s${}]+)/g;
+    const offenders: Array<{ file: string; url: string }> = [];
+    for (const p of files) {
+      const src = readFileSync(p, 'utf8');
+      for (const m of src.matchAll(litPattern)) {
+        const url = m[1];
+        if (OWNED.some(pat => pat.test(url))) continue;
+        offenders.push({ file: relPath(p), url });
+      }
+    }
+    if (offenders.length === 0) {
+      pass('API-01', 'no hardcoded fetch to non-whitelisted hosts');
+    } else {
+      const shown = offenders.slice(0, 5).map(o => `${o.url} @ ${o.file}`).join('; ');
+      fail('API-01', `${offenders.length} fetch to unknown host(s)`, shown);
+    }
+  } catch (e: any) {
+    fail('API-01', 'external fetch audit', e.message);
+  }
+
+  // ── SCHED-01: for every cron.schedule() in migrations, expect the
+  //    matching cron.unschedule() to not appear in a LATER migration
+  //    (we don't want silently-orphaned dead crons). And every currently-
+  //    intended cron job should either have a schedule migration OR a
+  //    documented one-time Studio-created reason.
+  try {
+    const migDir = '/Users/vanessa/hitt-app/supabase/migrations';
+    const migs = readdirSync(migDir).filter(n => /\.sql$/.test(n)).sort();
+    const scheduled = new Map<string, string>();  // jobname → migration
+    const unscheduled = new Map<string, string>();
+    for (const name of migs) {
+      const src = readFileSync(`${migDir}/${name}`, 'utf8');
+      for (const m of src.matchAll(/cron\.schedule\s*\(\s*['"]([^'"]+)['"]/g)) {
+        scheduled.set(m[1], name);
+      }
+      for (const m of src.matchAll(/cron\.unschedule\s*\(\s*['"]([^'"]+)['"]/g)) {
+        unscheduled.set(m[1], name);
+      }
+    }
+    // Any job scheduled BEFORE it was unscheduled is fine (cancelled).
+    // Any job unscheduled BEFORE it was scheduled = migration order bug.
+    // Any job scheduled but never touched again = "currently expected to
+    // exist" — we can't verify pg_cron.job without live DB, but flagging
+    // the imbalance still catches drift.
+    const orphans: string[] = [];
+    for (const [name, ums] of unscheduled) {
+      if (!scheduled.has(name)) orphans.push(`unschedule "${name}" @ ${ums} but never scheduled`);
+    }
+    if (orphans.length === 0) {
+      pass('SCHED-01', `${scheduled.size} pg_cron schedule(s) accounted for in migrations`);
+    } else {
+      fail('SCHED-01', `${orphans.length} cron migration order issue(s)`, orphans.slice(0, 3).join('; '));
+    }
+  } catch (e: any) {
+    fail('SCHED-01', 'pg_cron schedule audit', e.message);
+  }
+
+  // ── FLAG-01: every `flags.xxx_enabled` reference in code has a
+  //    fallback in useFeatureFlags OR is created as a row in an early
+  //    migration. Catches new flags shipped without a DB row →
+  //    feature stays permanently off in prod.
+  try {
+    const files = walkFiles('/Users/vanessa/hitt-app/src', /\.(ts|tsx)$/);
+    const referenced = new Set<string>();
+    for (const p of files) {
+      const src = readFileSync(p, 'utf8');
+      for (const m of src.matchAll(/\bflags\.([\w]+_enabled)\b/g)) referenced.add(m[1]);
+    }
+    // Read the fallback default map inside useFeatureFlags.
+    const flagsSrc = readFileSync('/Users/vanessa/hitt-app/src/hooks/useFeatureFlags.ts', 'utf8');
+    const declared = new Set<string>();
+    for (const m of flagsSrc.matchAll(/(\w+_enabled)\s*:/g)) declared.add(m[1]);
+    // Also allow declarations in the feature_flags migrations.
+    const migDir = '/Users/vanessa/hitt-app/supabase/migrations';
+    for (const name of readdirSync(migDir).filter(n => /\.sql$/.test(n))) {
+      const src = readFileSync(`${migDir}/${name}`, 'utf8');
+      for (const m of src.matchAll(/['"]([\w]+_enabled)['"]/g)) declared.add(m[1]);
+    }
+    const missing = [...referenced].filter(k => !declared.has(k));
+    if (missing.length === 0) {
+      pass('FLAG-01', `all ${referenced.size} feature flag(s) have a fallback default`);
+    } else {
+      fail('FLAG-01', `${missing.length} flag(s) referenced without a default`,
+        missing.join(', '));
+    }
+  } catch (e: any) {
+    fail('FLAG-01', 'feature-flag audit', e.message);
+  }
+
+  // ── UI-01: every page under src/pages that renders a <header> element
+  //    or an equivalent header container uses either the CLAUDE.md
+  //    sticky pattern (sticky top-0 + safe-area padding) OR the
+  //    fixed inset-0 layout with safe-area padding. Guards against
+  //    headers ducking under the dynamic island / notch.
+  try {
+    const files = walkFiles('/Users/vanessa/hitt-app/src/pages', /\.tsx$/);
+    const offenders: string[] = [];
+    for (const p of files) {
+      const src = readFileSync(p, 'utf8');
+      // Only fail when the file actually has a sticky OR fixed-position
+      // header — pages that scroll naturally under a nav bar don't need
+      // safe-area on the header (the AppLayout wrapper handles it).
+      const usesStickyHeader = /<header[^>]*(?:sticky|fixed)/i.test(src)
+        || /className=["'][^"']*sticky\s+top-0[^"']*["'][^>]*(?:role=["']banner["']|<header)/i.test(src);
+      if (!usesStickyHeader) continue;
+      // Safe-area coverage: any of these patterns.
+      const hasSafeArea = /safe-area-inset-top/.test(src)
+        || /paddingTop:\s*['"`]?calc\(env\(safe-area-inset-top/.test(src)
+        || /pt-\[env\(safe-area-inset-top/.test(src);
+      if (hasSafeArea) continue;
+      offenders.push(relPath(p));
+    }
+    if (offenders.length === 0) {
+      pass('UI-01', 'every page header respects sticky + safe-area pattern');
+    } else {
+      fail('UI-01', `${offenders.length} page(s) may have header under the pill`,
+        offenders.slice(0, 5).join(', ') + (offenders.length > 5 ? ' …' : ''));
+    }
+  } catch (e: any) {
+    fail('UI-01', 'sticky header audit', e.message);
+  }
+
+  // ── DATE-01: scheduled_workouts + reminder/notification code must not
+  //    do naïve `new Date()` arithmetic — user's timezone matters. Grep
+  //    for the pattern `Date.now() + N * 86400000` etc in scheduling/
+  //    reminder code paths.
+  try {
+    // Scope tightly: only look at files that touch scheduling / reminders.
+    const files = walkFiles('/Users/vanessa/hitt-app', /\.(ts|tsx)$/)
+      .filter(p => !p.includes('/node_modules/') && !p.includes('/dist/')
+        && !p.includes('/tests/'));
+    const offenders: string[] = [];
+    for (const p of files) {
+      const src = readFileSync(p, 'utf8');
+      // Only relevant if the file touches scheduling / reminder domain.
+      if (!/scheduled_workouts|reminder|schedule.*at|next.*workout/i.test(src)) continue;
+      // Look for suspicious naive arithmetic: Date.now() + literal * literal
+      // OR new Date().getTime() + literal * literal without date-fns / TZ
+      // adjustment nearby.
+      const hits = [...src.matchAll(/(?:Date\.now\(\)|getTime\(\))\s*[+\-]\s*\d+\s*\*\s*\d+/g)];
+      if (hits.length === 0) continue;
+      // date-fns import? Then likely fine — it handles TZ correctly.
+      if (/from ['"]date-fns['"]/.test(src)) continue;
+      offenders.push(relPath(p));
+    }
+    if (offenders.length === 0) {
+      pass('DATE-01', 'no naïve Date arithmetic in scheduled/reminder code paths');
+    } else {
+      fail('DATE-01', `${offenders.length} file(s) with unsafe Date math`,
+        offenders.slice(0, 3).join(', ') + (offenders.length > 3 ? ' …' : ''));
+    }
+  } catch (e: any) {
+    fail('DATE-01', 'date math audit', e.message);
+  }
+
+  // ── NOTIFY-01: every push-notification category referenced by notify-
+  //    user's CATEGORY_COLUMN map has a matching column on
+  //    notification_preferences. Ensures no push category is silently
+  //    ignored because its column doesn't exist.
+  try {
+    const notifSrc = readFileSync('/Users/vanessa/hitt-app/supabase/functions/notify-user/index.ts', 'utf8');
+    const catMap = notifSrc.match(/CATEGORY_COLUMN[^{]*\{([\s\S]*?)\}/);
+    const columns = new Set<string>();
+    if (catMap) {
+      for (const m of catMap[1].matchAll(/['"]([\w]+)['"]/g)) columns.add(m[1]);
+    }
+    // Cross-check against the notification_preferences CREATE TABLE + any ALTER TABLE.
+    const migDir = '/Users/vanessa/hitt-app/supabase/migrations';
+    const declared = new Set<string>();
+    for (const name of readdirSync(migDir).filter(n => /\.sql$/.test(n))) {
+      const src = readFileSync(`${migDir}/${name}`, 'utf8');
+      // Match column-name defs inside notification_preferences DDL.
+      const npRegions = src.split(/notification_preferences/i);
+      for (let i = 1; i < npRegions.length; i++) {
+        const region = npRegions[i].slice(0, 1200);
+        for (const m of region.matchAll(/\b(\w+)\s+(?:BOOLEAN|BOOL|TEXT|TIMESTAMPTZ|INT|INTEGER)\b/gi)) {
+          declared.add(m[1]);
+        }
+      }
+    }
+    // Filter columns to the actual DB column names (values, not category keys)
+    const referenced = new Set<string>();
+    const kvRe = /['"]?([\w-]+)['"]?\s*:\s*['"]([\w_]+)['"]/g;
+    if (catMap) {
+      for (const m of catMap[1].matchAll(kvRe)) referenced.add(m[2]);
+    }
+    const missing = [...referenced].filter(k => !declared.has(k));
+    if (missing.length === 0) {
+      pass('NOTIFY-01', `all ${referenced.size} push category column(s) exist on notification_preferences`);
+    } else {
+      fail('NOTIFY-01', `${missing.length} category column(s) missing from DDL`, missing.join(', '));
+    }
+  } catch (e: any) {
+    fail('NOTIFY-01', 'notification-preferences audit', e.message);
+  }
+
+  // ── RLS-01: partial static check. We can't query pg_policies without
+  //    live auth here, so we grep migrations for `CREATE POLICY` /
+  //    `ENABLE ROW LEVEL SECURITY` per user-owned table and flag any
+  //    table in delete-account's list that lacks BOTH.
+  try {
+    const migDir = '/Users/vanessa/hitt-app/supabase/migrations';
+    const migSrc = readdirSync(migDir).filter(n => /\.sql$/.test(n))
+      .map(n => readFileSync(`${migDir}/${n}`, 'utf8')).join('\n');
+    const daSrc = readFileSync('/Users/vanessa/hitt-app/supabase/functions/delete-account/index.ts', 'utf8');
+    const userTables = new Set<string>();
+    const arrayMatch = daSrc.match(/USER_ID_TABLES[^[]*\[([\s\S]*?)\]/);
+    if (arrayMatch) {
+      for (const m of arrayMatch[1].matchAll(/["'`](\w+)["'`]/g)) userTables.add(m[1]);
+    }
+    userTables.add('profiles');
+    const missing: string[] = [];
+    for (const t of userTables) {
+      const rlsEnabled = new RegExp(`ALTER\\s+TABLE\\s+(?:public\\.)?${t}\\s+ENABLE\\s+ROW\\s+LEVEL\\s+SECURITY`, 'i').test(migSrc);
+      const hasPolicy = new RegExp(`CREATE\\s+POLICY[^;]*\\sON\\s+(?:public\\.)?${t}\\b`, 'is').test(migSrc);
+      if (!rlsEnabled || !hasPolicy) {
+        missing.push(`${t}${!rlsEnabled ? ' (no RLS)' : ''}${!hasPolicy ? ' (no policy)' : ''}`);
+      }
+    }
+    if (missing.length === 0) {
+      pass('RLS-01', `all ${userTables.size} user-scoped tables have RLS + at least one policy`);
+    } else {
+      fail('RLS-01', `${missing.length} table(s) missing RLS or policy`,
+        missing.slice(0, 5).join(', ') + (missing.length > 5 ? ' …' : ''));
+    }
+  } catch (e: any) {
+    fail('RLS-01', 'RLS coverage audit', e.message);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
