@@ -199,7 +199,7 @@ Return ONLY valid JSON in this exact shape:
     if (!raw) throw new Error("No response from AI");
 
     // TEMP DIAGNOSTIC — log the full raw AI response so we can see what shape
-    // Lovable's gateway is returning. Remove once the malformed-JSON class of
+    // the AI gateway is returning. Remove once the malformed-JSON class of
     // bug is nailed down (chasing casey/vanessa upload failures 2026-07-03).
     console.log("[parse-workout-plan] raw AI response length:", raw.length);
     console.log("[parse-workout-plan] raw AI response first 3000 chars:", raw.slice(0, 3000));

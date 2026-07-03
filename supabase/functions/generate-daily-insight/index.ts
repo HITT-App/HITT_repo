@@ -145,7 +145,7 @@ serve(async (req) => {
     ].filter(Boolean).join(". ");
 
     const aiResponse = await aiChatCompletion({
-      model: "gpt-4o-mini",
+      model: "gemini-2.5-flash",
       messages: [
         {
           role: "system",

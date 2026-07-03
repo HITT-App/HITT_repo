@@ -3,9 +3,6 @@ project_id = "iglwpwdnwztutbaybhfq"
 # All edge functions now require JWT verification for security
 # Authentication is handled within each function
 
-[functions.generate-activity-image]
-verify_jwt = false
-
 [functions.smart-insights]
 verify_jwt = false
 

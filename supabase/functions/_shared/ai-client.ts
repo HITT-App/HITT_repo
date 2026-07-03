@@ -1,13 +1,11 @@
 // Provider-neutral wrapper for OpenAI-compatible chat-completion APIs.
 //
 // Every edge function that needs an LLM calls aiChatCompletion() instead of
-// hardcoding a gateway URL. Switching providers (Lovable → Anthropic, OpenAI,
-// OpenRouter, …) becomes a change to two Supabase secrets, no code.
+// hardcoding a gateway URL. Switching providers (Google Gemini, Anthropic,
+// OpenAI, OpenRouter, …) is a change to two Supabase secrets, no code.
 //
-// Defaults preserve legacy behaviour: if AI_GATEWAY_URL is unset, Lovable's
-// gateway is used; if AI_API_KEY is unset, LOVABLE_API_KEY is used. Once the
-// provider swap is made, the new secrets take over and the fallbacks can be
-// deleted.
+// Both AI_GATEWAY_URL and AI_API_KEY must be set — there is no hardcoded
+// provider fallback. Current provider: Google Gemini API (gemini-2.5-flash).
 
 export interface AIChatCompletionOptions {
   model: string;
@@ -22,15 +20,13 @@ export interface AIChatCompletionOptions {
 }
 
 function getConfig(): { url: string; apiKey: string } {
-  const url = Deno.env.get("AI_GATEWAY_URL") ?? "https://ai.gateway.lovable.dev";
-  const apiKey =
-    Deno.env.get("AI_API_KEY") ??
-    Deno.env.get("LOVABLE_API_KEY") ??
-    "";
+  const url = Deno.env.get("AI_GATEWAY_URL");
+  const apiKey = Deno.env.get("AI_API_KEY");
+  if (!url) {
+    throw new Error("AI_GATEWAY_URL environment variable is not set");
+  }
   if (!apiKey) {
-    throw new Error(
-      "AI_API_KEY (or legacy LOVABLE_API_KEY) environment variable is not set"
-    );
+    throw new Error("AI_API_KEY environment variable is not set");
   }
   return { url: url.replace(/\/$/, ''), apiKey };
 }
