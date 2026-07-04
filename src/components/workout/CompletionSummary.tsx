@@ -367,6 +367,9 @@ export function CompletionSummary({
   pointsEarned,
   onDone,
 }: CompletionSummaryProps) {
+  // Hooks — must all run every render. Do NOT put an early return above
+  // these; React errors 300/310 fire the moment a hook's call order shifts
+  // between renders.
   const [format, setFormat]       = useState<'square' | 'story'>('square');
   const [isSharing, setIsSharing] = useState(false);
   // Play the HITT-hero celebratory flash on first mount, then reveal the
@@ -375,19 +378,9 @@ export function CompletionSummary({
   const [introDone, setIntroDone] = useState(false);
   const dragStartY  = useRef<number | null>(null);
 
-  if (!introDone) {
-    return <CompletionIntro onComplete={() => setIntroDone(true)} />;
-  }
-
+  // Derived values — cheap, safe to compute every render. They feed the
+  // callback below, which must be declared as a hook before any early return.
   const heroMetrics = getHeroMetrics(activityType, stats);
-  const square     = format === 'square';
-  const BASE_W = 1080, BASE_H = square ? 1080 : 1920;
-  const previewW = Math.min(window.innerWidth * 0.85, 380);
-  const scale    = previewW / BASE_W;
-  const previewH = BASE_H * scale;
-
-  // Assemble ActivityShareData once — used by both the preview and the
-  // eventual share/save. Any missing raw values fall back to '—' in the card.
   const parsed = parseStatsForShareCard(stats);
   const shareData: React.ComponentProps<typeof ActivityShareCard>['data'] = {
     activityType: activityType ?? 'workout',
@@ -435,6 +428,17 @@ export function CompletionSummary({
       setIsSharing(false);
     }
   }, [activityTitle, activityType, heroMetrics, isSharing, shareData, format, onDone]);
+
+  // Early return AFTER all hooks. Rules of hooks: consistent call order.
+  if (!introDone) {
+    return <CompletionIntro onComplete={() => setIntroDone(true)} />;
+  }
+
+  const square    = format === 'square';
+  const BASE_W    = 1080, BASE_H = square ? 1080 : 1920;
+  const previewW  = Math.min(window.innerWidth * 0.85, 380);
+  const scale     = previewW / BASE_W;
+  const previewH  = BASE_H * scale;
 
   return (
     <div
