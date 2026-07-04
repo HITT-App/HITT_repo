@@ -1,4 +1,4 @@
-import { ChevronRight, Heart, Activity, Droplets, Scale, Footprints, Moon, Sparkles } from "lucide-react";
+import { ChevronRight, Heart, Activity, Droplets, Scale, Footprints, Moon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -136,18 +136,6 @@ export function FitnessMetricsCard({ hasData = false }: FitnessMetricsCardProps)
           path="/heart-rate"
         />
       </Card>
-
-      {/* AI Recommendations Teaser */}
-      <button
-        onClick={() => navigate("/health-recommendations")}
-        className="mt-3 w-full flex items-center gap-3 p-3 rounded-[18px] bg-primary/5 border border-primary/20 touch-manipulation"
-      >
-        <Sparkles className="w-5 h-5 text-primary" />
-        <div className="flex-1 text-left">
-          <p className="text-sm font-medium text-foreground">AI Recommendations</p>
-          <p className="text-xs text-muted-foreground">3 personalized suggestions</p>
-        </div>
-      </button>
     </div>
   );
 }

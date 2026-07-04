@@ -678,7 +678,7 @@ const Auth = () => {
       <div className="mt-6 text-center animate-fade-up" style={{ animationDelay: "0.2s" }}>
         <p className="text-muted-foreground text-sm">
           Don't remember your email?{" "}
-          <span className="text-primary">Contact us at help@hiit.ai</span>
+          <a href="mailto:hiit.co.uk@gmail.com" className="text-primary hover:underline">Contact us at hiit.co.uk@gmail.com</a>
         </p>
       </div>
     </>
@@ -716,7 +716,7 @@ const Auth = () => {
         <div className="mt-6 text-center animate-fade-up" style={{ animationDelay: "0.2s" }}>
           <p className="text-muted-foreground text-sm">
             Still don't get any email?{" "}
-            <span className="text-primary">Contact us at help@hiit.ai</span>
+            <a href="mailto:hiit.co.uk@gmail.com" className="text-primary hover:underline">Contact us at hiit.co.uk@gmail.com</a>
           </p>
         </div>
       </div>

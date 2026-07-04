@@ -168,7 +168,7 @@ export default function WorkoutSchedule() {
         .gte('scheduled_date', rangeStart)
         .lte('scheduled_date', rangeEnd)
         .order('scheduled_date')
-        .order('scheduled_time')
+        .order('created_at')
 
       if (error) throw error
       setScheduledWorkouts((data as unknown as ScheduledWorkout[]) || [])
@@ -255,10 +255,7 @@ export default function WorkoutSchedule() {
   const today = startOfDay(new Date())
   const upcomingWorkouts = scheduledWorkouts
     .filter(w => parseISO(w.scheduled_date) >= today && w.status !== 'completed')
-    .sort((a, b) => {
-      const d = a.scheduled_date.localeCompare(b.scheduled_date)
-      return d !== 0 ? d : (a.scheduled_time || '').localeCompare(b.scheduled_time || '')
-    })
+    .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
   const nextUp = upcomingWorkouts[0] ?? null
 
   // When label for the hero
@@ -388,7 +385,7 @@ export default function WorkoutSchedule() {
                     fontSize: 9.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
                     padding: '3px 8px', borderRadius: 999, color: '#1a0a00', background: 'rgba(26,10,0,0.18)',
                   }}>
-                    {heroWhen}{nextUp.scheduled_time ? ` · ${nextUp.scheduled_time}` : ''}
+                    {heroWhen}
                   </span>
                   <h2 style={{ margin: '14px 0 0', fontSize: 27, fontWeight: 800, color: '#1a0a00', letterSpacing: '-0.5px', lineHeight: 1.05 }}>
                     {nextUp.workout_title ?? nextUp.workout?.title ?? 'Workout'}
@@ -448,9 +445,6 @@ export default function WorkoutSchedule() {
                                 {isRest ? 'Rest day' : (workouts[0].workout_title ?? workouts[0].workout?.title ?? 'Workout')}
                               </p>
                             </div>
-                            {!isRest && workouts[0].scheduled_time && (
-                              <span className="text-[12px] text-muted-foreground font-mono">{workouts[0].scheduled_time}</span>
-                            )}
                             {!isRest && (
                               workouts[0].status === 'completed'
                                 ? <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
@@ -578,7 +572,7 @@ export default function WorkoutSchedule() {
                         <div className="flex-1 min-w-0">
                           <p className="text-[15px] font-bold text-foreground truncate">{w.workout_title ?? w.workout?.title}</p>
                           <p className="text-[12.5px] text-muted-foreground">
-                            {w.scheduled_time ?? ''}{w.scheduled_time ? ' · ' : ''}{(w.estimated_duration_minutes ?? w.workout?.duration_minutes) ?? '—'} min
+                            {(w.estimated_duration_minutes ?? w.workout?.duration_minutes) ?? '—'} min
                           </p>
                         </div>
                         {w.status === 'completed'

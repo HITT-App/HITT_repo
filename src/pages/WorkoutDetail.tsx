@@ -63,7 +63,6 @@ export default function WorkoutDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [showSchedule, setShowSchedule] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedTime, setSelectedTime] = useState({ hour: 10, minute: 0 });
   const [isSaved, setIsSaved] = useState(false);
   const [completionCount, setCompletionCount] = useState(0);
 
@@ -123,7 +122,6 @@ export default function WorkoutDetail() {
       const { error } = await supabase.from('scheduled_workouts').insert({
         user_id: user.id, workout_id: workout.id,
         scheduled_date: format(scheduledDate, 'yyyy-MM-dd'),
-        scheduled_time: `${selectedTime.hour.toString().padStart(2, '0')}:${selectedTime.minute.toString().padStart(2, '0')}:00`,
         status: 'scheduled',
       });
       if (error) throw error;
@@ -456,32 +454,9 @@ export default function WorkoutDetail() {
                 })}
               </div>
             </div>
-            <div>
-              <h4 className="font-medium mb-3">Select Time</h4>
-              <div className="flex items-center justify-center gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="h-32 overflow-y-auto">
-                    {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(hour => (
-                      <button key={hour} onClick={() => setSelectedTime(prev => ({ ...prev, hour }))}
-                        className={cn("block py-1.5 text-lg transition-all", selectedTime.hour === hour ? "font-bold text-primary" : "text-muted-foreground")}>
-                        {hour.toString().padStart(2, '0')}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <span className="text-2xl font-bold">:</span>
-                <div className="flex flex-col items-center">
-                  <div className="h-32 overflow-y-auto">
-                    {[0, 15, 30, 45].map(minute => (
-                      <button key={minute} onClick={() => setSelectedTime(prev => ({ ...prev, minute }))}
-                        className={cn("block py-1.5 text-lg transition-all", selectedTime.minute === minute ? "font-bold text-primary" : "text-muted-foreground")}>
-                        {minute.toString().padStart(2, '0')}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              We'll remind you in the morning, and again in the evening if you haven't logged it.
+            </p>
             <Button onClick={handleSchedule} className="w-full h-12 rounded-2xl">Confirm</Button>
           </div>
         </SheetContent>

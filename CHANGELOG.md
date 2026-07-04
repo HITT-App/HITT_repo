@@ -1,5 +1,20 @@
 # HITT App Changelog
 
+## [2026-07-04] — Terms of Service rewritten to match the app, contact + privacy URL tightened
+
+- **New Terms of Service** — replaced the January placeholder ToS with copy that reflects what the app actually does: HIIT workouts, the Apple Watch and Garmin CIQ companions, wearable and HealthKit integrations, the Jarvis AI coach, meal logging, community features (posts, comments, DMs, follows), and notifications. Age minimum lowered from 18 to **16** in line with the Privacy Policy. Adds explicit AI-content, health-not-medical-advice, community-conduct, and Apple App Store EULA clauses. Governing law: England & Wales. Now rendered from `src/content/terms-of-service.md` via the same react-markdown pipeline as the Privacy Policy
+- **Contact email set to hiit.co.uk@gmail.com everywhere** — replaced the two stale `help@hiit.ai` references on the Auth screen with the real contact
+- **Privacy Policy URL** — the hosted copy lives at [hiituk.com/privacy](https://www.hiituk.com/privacy); the Terms link out to it, and the in-app renderer stays in sync with the source file at repo root
+
+## [2026-07-03] — Privacy Policy refreshed, workout reminders reworked, notification pipeline verified end-to-end
+
+- **New Privacy Policy** — replaced the January placeholder copy with a full 2026-07-03 policy covering the iOS + watchOS + Garmin CIQ apps, wearable integrations, community features, and regional rights (UK GDPR, EEA, California/US). Rendered at runtime from `src/content/privacy-policy.md`. Hosted at [hiituk.com/privacy](https://www.hiituk.com/privacy)
+- **Terms of Service last-updated date bumped to 3 July 2026** — copy itself is unchanged pending a full ToS rewrite
+- **Workout reminders rebuilt as day-based, not time-based** — old model tried to fire 30 min before `scheduled_time`, but workouts here are scheduled to a day, not a clock. Now: one morning nudge at ~08:00 local ("You have {title} today"), one evening nudge at ~19:00 local ("{title} — log it or reschedule") which is skipped if any workout was logged that local day. Both crons are tz-aware per `profiles.time_zone`
+- **AI Recommendations teaser removed from Home** — the "3 personalized suggestions" card on Home was pointing at a stale generator; removing it rather than shipping decorative UI. Real personalisation will come through Jarvis when it's ready
+- **Community chat header sticks to the top** — previously the DM header scrolled away when swiping through messages; now uses the standard sticky header + safe-area pattern the rest of the app has moved to
+- **Notification pipeline verified end-to-end** — follows, comments, DMs, PB share prompts, and weekly recap pushes all confirmed delivering through the Vault-backed cron → notify-user → APNs path
+
 ## [2026-07-03] — Launch splash first, dead search removed, workout upload robust, schedule jumps to plan week
 
 - **New users see the launch splash before sign-in** — first-time unauthed users now land on the "Free while we're new" launch splash before hitting Auth. Returning signed-out users skip straight to sign-in as before; the splash is a one-shot hook, not something to shove in every session

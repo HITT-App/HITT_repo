@@ -94,7 +94,10 @@ const CommunityChat = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="flex items-center gap-3 p-4 border-b border-border bg-background">
+      <header
+        className="sticky top-0 z-20 flex items-center gap-3 px-4 py-3 bg-background/90 backdrop-blur-sm border-b border-border/40"
+        style={{ paddingTop: "calc(var(--safe-area-inset-top, 0px) + 12px)" }}
+      >
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
