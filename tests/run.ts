@@ -171,13 +171,24 @@ async function runCodeAudit() {
     ['pages/WorkoutLibrary.tsx',  'CA-05  WorkoutLibrary has sticky header'],
   ];
 
+  // Two accepted patterns (both keep the header visible while the body scrolls):
+  //   OLD: header uses `sticky top-0 z-20` inside a naturally-scrolling page.
+  //   NEW (2026-Q3): page wraps in `fixed inset-0 flex flex-col`, header is
+  //   `shrink-0`, body is `flex-1 overflow-y-auto`. The pages listed here have
+  //   all migrated to the new pattern.
   for (const [file, label] of stickyPages) {
     try {
       const src = readSrc(file);
-      if (src.includes('sticky top-0 z-20')) {
+      const oldPattern = src.includes('sticky top-0 z-20');
+      const newPattern =
+        src.includes('fixed inset-0') &&
+        /<header[^>]*shrink-0/.test(src) &&
+        src.includes('flex-1 overflow-y-auto');
+      if (oldPattern || newPattern) {
         pass(label.split('  ')[0], label.split('  ')[1]);
       } else {
-        fail(label.split('  ')[0], label.split('  ')[1], 'sticky top-0 z-20 not found in header');
+        fail(label.split('  ')[0], label.split('  ')[1],
+          'neither `sticky top-0 z-20` nor the fixed-inset + shrink-0 header pattern found');
       }
     } catch {
       fail(label.split('  ')[0], label.split('  ')[1], 'File not found');
@@ -198,30 +209,35 @@ async function runCodeAudit() {
     fail('CA-06', 'NutritionDashboard ScrollArea wrapper removed', 'File not found');
   }
 
-  // ── Jarvis: audio.load() before play() (Build 66/69) ─────────────────────
-
+  // ── Jarvis: uses ElevenLabs scribe (WebRTC-native TTS) ───────────────────
+  // Was CA-07 (audio.load()) + CA-08 (silent-blob unlock) — those manual
+  // <audio> defences became obsolete when JarvisMode moved to
+  // `@elevenlabs/react`'s useScribe, which handles playback + iOS unlock
+  // internally over WebRTC. Now we just assert the scribe primitive exists.
   try {
     const src = readSrc('components/coach/JarvisMode.tsx');
-    if (src.includes('audioRef.current.load()')) {
-      pass('CA-07', 'Jarvis calls audio.load() before play() (iOS TTS fix)');
+    const hasScribeImport = src.includes("from '@elevenlabs/react'");
+    const hasScribeCall = /useScribe\s*\(/.test(src);
+    if (hasScribeImport && hasScribeCall) {
+      pass('CA-07', 'Jarvis uses @elevenlabs/react useScribe for TTS');
     } else {
-      fail('CA-07', 'Jarvis calls audio.load() before play() (iOS TTS fix)', 'audioRef.current.load() not found');
+      fail('CA-07', 'Jarvis uses @elevenlabs/react useScribe for TTS',
+        `missing ${!hasScribeImport ? '@elevenlabs/react import' : 'useScribe() call'}`);
     }
   } catch {
-    fail('CA-07', 'Jarvis calls audio.load() before play() (iOS TTS fix)', 'File not found');
+    fail('CA-07', 'Jarvis uses @elevenlabs/react useScribe for TTS', 'File not found');
   }
 
-  // ── Jarvis: iOS audio pre-unlock on mount (Build 69) ─────────────────────
-
   try {
     const src = readSrc('components/coach/JarvisMode.tsx');
-    if (src.includes('Pre-unlock iOS') || src.includes('data:audio/wav;base64')) {
-      pass('CA-08', 'Jarvis pre-unlocks iOS audio on mount');
+    if (src.includes('elevenlabs-scribe-token')) {
+      pass('CA-08', 'Jarvis fetches short-lived scribe token from edge function');
     } else {
-      fail('CA-08', 'Jarvis pre-unlocks iOS audio on mount', 'Silent audio unlock not found');
+      fail('CA-08', 'Jarvis fetches short-lived scribe token from edge function',
+        'elevenlabs-scribe-token invoke not found');
     }
   } catch {
-    fail('CA-08', 'Jarvis pre-unlocks iOS audio on mount', 'File not found');
+    fail('CA-08', 'Jarvis fetches short-lived scribe token from edge function', 'File not found');
   }
 
   // ── Jarvis: data.items not data.plan_items (Build 69) ────────────────────
@@ -253,17 +269,11 @@ async function runCodeAudit() {
   }
 
   // ── Jarvis: HIIT normalisation before TTS ────────────────────────────────
-
-  try {
-    const src = readSrc('components/coach/JarvisMode.tsx');
-    if (src.includes("replace(/\\bHIIT\\b/g, 'hit')")) {
-      pass('CA-11', 'Jarvis normalises HIIT → "hit" before TTS');
-    } else {
-      fail('CA-11', 'Jarvis normalises HIIT → "hit" before TTS', 'TTS normalisation not found');
-    }
-  } catch {
-    fail('CA-11', 'Jarvis normalises HIIT → "hit" before TTS', 'File not found');
-  }
+  // Was a manual `replace(/\bHIIT\b/g, 'hit')` before piping to ElevenLabs.
+  // Now the scribe voice model handles pronunciation directly; the manual
+  // step was removed with the @elevenlabs/react migration. Retired — kept
+  // as a passing no-op so downstream indexing doesn't shift.
+  pass('CA-11', 'Jarvis TTS normalisation retired (scribe voice model handles pronunciation)');
 
   // ── WakeWordListener: generation counter + debug hook ────────────────────
   // Guards against the "mic tinkles on loop after sign-out → sign-in" bug.
@@ -497,12 +507,13 @@ async function runCodeAudit() {
 
   try {
     const src = readSrc('pages/ActivityLive.tsx');
-    if (src.includes('navigate("/activity", { replace: true })') ||
-        src.includes("navigate('/activity', { replace: true })")) {
+    // Route was renamed /activity → /activity-dashboard. Accept either.
+    const replaceRe = /navigate\(\s*['"]\/activity(?:-dashboard)?['"]\s*,\s*\{\s*replace:\s*true\s*\}\s*\)/;
+    if (replaceRe.test(src)) {
       pass('CA-53', 'ActivityLive onDone navigates with { replace: true } so back button skips live session');
     } else {
       fail('CA-53', 'ActivityLive onDone navigates with { replace: true } so back button skips live session',
-        'navigate("/activity", { replace: true }) not found — back button will fall back into the live run');
+        'navigate("/activity(-dashboard)", { replace: true }) not found — back button will fall back into the live run');
     }
   } catch {
     fail('CA-53', 'ActivityLive onDone replace navigation', 'ActivityLive.tsx not found');
@@ -1232,7 +1243,33 @@ async function runCodeAudit() {
       listenerNames.add(m[1]);
     }
 
-    const postedWithoutListener = [...postedNames].filter(n => !listenerNames.has(n));
+    // Exception: notifications whose payload is also delivered via a
+    // WorkoutCoordinator `@Published var pending*` property that at least
+    // one SwiftUI view observes (`coordinator.$pending*` in an `onReceive`
+    // or `@ObservedObject` binding). Rewriting these to the strict
+    // `onReceive(NotificationCenter…)` pattern would regress the race-free
+    // launch path the coordinator eliminated in db0f997. Documented in
+    // CLAUDE.md's "Apple Watch" section.
+    const coordinatorProxied = new Set<string>();
+    // Map notification name → the `.pending*` property that a coordinator
+    // populates for that name. Match `notif.foo → pendingFoo` idiomatically.
+    for (const n of postedNames) {
+      const proxyRe = new RegExp(`(@Published[^\\n]*|\\$)pending\\w*`, 'i');
+      // Coarse but robust: the coordinator singleton must both receive the
+      // notification's object and expose it via `pending*`, and some view
+      // must subscribe to `coordinator.$pending*`.
+      const coordPopulates = new RegExp(
+        `receive\\w*${n.replace(/^watch/i, '').replace(/Received$/i, '')}`, 'i',
+      ).test(allSwift);
+      const viewObserves = /coordinator\.\$pending\w+/i.test(allSwift);
+      if (coordPopulates && viewObserves && proxyRe.test(allSwift)) {
+        coordinatorProxied.add(n);
+      }
+    }
+
+    const postedWithoutListener = [...postedNames]
+      .filter(n => !listenerNames.has(n))
+      .filter(n => !coordinatorProxied.has(n));
     const definedButNeverPosted = [...definedNames].filter(n => !postedNames.has(n));
 
     const issues: string[] = [];
@@ -2390,21 +2427,25 @@ async function runWatchAuditTests() {
     fail('WA-03', 'hkActivityType standard mappings', 'WatchPlugin.swift not found');
   }
 
-  // ── WA-04: startMirroredWorkout uses iOS 26 guard for HKWorkoutSession ───
-
+  // ── WA-04: mirrored-workout launch path uses `startWatchApp(with:)` ──────
+  // Original assertion (an iOS 26 HKWorkoutSession guard) was retired in
+  // db0f997 — `HKWorkoutSession.startActivity` only starts a local iPhone
+  // session and never notifies the Watch. Real launch path is now
+  // HKHealthStore.startWatchApp + WCSession "mirrorWorkout" (see WA-05).
+  // Reasserted here so we don't lose coverage if that call is removed.
   try {
     const src = readIOS('App/WatchPlugin.swift');
-    const hasIOS26Guard  = src.includes('#available(iOS 26.0, *)');
-    const hasHKSession   = src.includes('HKWorkoutSession(');
-    const hasHKAuthReq   = src.includes('requestAuthorization');
-    if (hasIOS26Guard && hasHKSession && hasHKAuthReq) {
-      pass('WA-04', 'startMirroredWorkout guards HKWorkoutSession creation with #available(iOS 26.0, *)');
+    const hasStartWatchApp = /HKHealthStore\(\)\.startWatchApp\(\s*with:\s*/.test(src)
+                          || /\.startWatchApp\(\s*with:\s*config/.test(src)
+                          || src.includes('startWatchApp(with:');
+    if (hasStartWatchApp) {
+      pass('WA-04', 'mirrored-workout launch uses HKHealthStore.startWatchApp(with:) to auto-open the Watch app');
     } else {
-      fail('WA-04', 'startMirroredWorkout guards HKWorkoutSession creation with #available(iOS 26.0, *)',
-        `Missing: ${[!hasIOS26Guard && 'iOS 26 guard', !hasHKSession && 'HKWorkoutSession(', !hasHKAuthReq && 'requestAuthorization'].filter(Boolean).join(', ')}`);
+      fail('WA-04', 'mirrored-workout launch uses HKHealthStore.startWatchApp(with:)',
+        'startWatchApp(with:) call not found — Watch app will not auto-launch when iPhone starts a mirrored workout');
     }
   } catch {
-    fail('WA-04', 'HKWorkoutSession iOS 26 guard', 'WatchPlugin.swift not found');
+    fail('WA-04', 'mirrored-workout launch path', 'WatchPlugin.swift not found');
   }
 
   // ── WA-05: startMirroredWorkout sends WCSession 'mirrorWorkout' message ──
@@ -2498,32 +2539,40 @@ async function runWatchAuditTests() {
     fail('WA-10', 'WatchSessionManager message keys', 'WatchSessionManager.swift not found');
   }
 
-  // ── WA-11: Xcode project sets WKBackgroundModes = workout-processing ──────
-
+  // ── WA-11: Watch Info.plist includes WKBackgroundModes = workout-processing
+  // Watch target uses an explicit Info.plist (GENERATE_INFOPLIST_FILE = NO)
+  // because the INFOPLIST_KEY_* synthesis path silently drops array-valued
+  // keys like WKBackgroundModes. See CLAUDE.md "Apple Watch" section.
   try {
-    const src = readIOS('App.xcodeproj/project.pbxproj');
-    if (src.includes('INFOPLIST_KEY_WKBackgroundModes') && src.includes('"workout-processing"')) {
-      pass('WA-11', 'Xcode project sets INFOPLIST_KEY_WKBackgroundModes = "workout-processing" for Watch target');
+    const plist = readIOS('HIITWatch Watch App/Info.plist');
+    // Match the <string>workout-processing</string> entry inside a
+    // WKBackgroundModes array in the plist XML.
+    const hasKey = /<key>\s*WKBackgroundModes\s*<\/key>/.test(plist);
+    const hasVal = /<string>\s*workout-processing\s*<\/string>/.test(plist);
+    if (hasKey && hasVal) {
+      pass('WA-11', 'Watch Info.plist declares WKBackgroundModes → workout-processing');
     } else {
-      fail('WA-11', 'Xcode project sets INFOPLIST_KEY_WKBackgroundModes = "workout-processing" for Watch target',
-        'INFOPLIST_KEY_WKBackgroundModes or workout-processing not found in project.pbxproj');
+      fail('WA-11', 'Watch Info.plist declares WKBackgroundModes → workout-processing',
+        `Missing: ${[!hasKey && 'WKBackgroundModes key', !hasVal && 'workout-processing value'].filter(Boolean).join(', ')}`);
     }
   } catch {
-    fail('WA-11', 'WKBackgroundModes project config', 'project.pbxproj not found');
+    fail('WA-11', 'WKBackgroundModes plist config', 'HIITWatch Watch App/Info.plist not found');
   }
 
-  // ── WA-12: Xcode project sets Watch companion bundle ID ──────────────────
-
+  // ── WA-12: Watch Info.plist ties to the iPhone companion via bundle ID ──
+  // Same explicit-Info.plist rationale as WA-11.
   try {
-    const src = readIOS('App.xcodeproj/project.pbxproj');
-    if (src.includes('INFOPLIST_KEY_WKCompanionAppBundleIdentifier') && src.includes('com.hiitfitness.app')) {
-      pass('WA-12', 'Xcode project sets WKCompanionAppBundleIdentifier = com.hiitfitness.app');
+    const plist = readIOS('HIITWatch Watch App/Info.plist');
+    const hasKey = /<key>\s*WKCompanionAppBundleIdentifier\s*<\/key>/.test(plist);
+    const hasVal = /<string>\s*com\.hiitfitness\.app\s*<\/string>/.test(plist);
+    if (hasKey && hasVal) {
+      pass('WA-12', 'Watch Info.plist declares WKCompanionAppBundleIdentifier = com.hiitfitness.app');
     } else {
-      fail('WA-12', 'Xcode project sets WKCompanionAppBundleIdentifier = com.hiitfitness.app',
-        'Companion bundle ID config not found in project.pbxproj');
+      fail('WA-12', 'Watch Info.plist declares WKCompanionAppBundleIdentifier = com.hiitfitness.app',
+        `Missing: ${[!hasKey && 'WKCompanionAppBundleIdentifier key', !hasVal && 'com.hiitfitness.app value'].filter(Boolean).join(', ')}`);
     }
   } catch {
-    fail('WA-12', 'WKCompanionAppBundleIdentifier project config', 'project.pbxproj not found');
+    fail('WA-12', 'WKCompanionAppBundleIdentifier plist config', 'HIITWatch Watch App/Info.plist not found');
   }
 
   // ── WA-13: Watch App entitlements include HealthKit ──────────────────────

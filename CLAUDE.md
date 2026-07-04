@@ -145,6 +145,14 @@ in `WatchSessionManager.swift`. Add the same for any new persisted data.
 read from `WatchSessionManager`. Computed properties that read from the singleton do NOT trigger
 re-renders. Always use the `@State` + `onReceive(.notificationName)` + `onAppear { state = manager.value }` pattern.
 
+**Exception: WorkoutCoordinator @Published proxy** — for structured workouts we intentionally
+route the `.watchStructuredWorkoutReceived` notification through `WorkoutCoordinator.shared`, which
+exposes a `@Published var pendingStructuredWorkout` that `ContentView` observes. This avoids the
+classic onReceive-during-onAppear race — the notification can fire before a fresh view's observer
+attaches, and the coordinator's @Published fills that gap. This is a working exception, not a bug
+worth "fixing" back to strict onReceive. If you add another launch-critical notification, prefer
+this same coordinator-proxy shape and skip the direct onReceive on the destination view.
+
 **WCSession delivery** — use `sendMessage` when Watch is reachable; fall back to `transferUserInfo`
 (NOT `updateApplicationContext`) for reliable queued delivery. `updateApplicationContext` overwrites;
 `transferUserInfo` queues in order. Watch receives `transferUserInfo` via `session(_:didReceiveUserInfo:)`.
