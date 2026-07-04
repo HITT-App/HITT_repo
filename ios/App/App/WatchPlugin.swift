@@ -1,6 +1,7 @@
 import Capacitor
 import Foundation
 import HealthKit
+import WatchConnectivity
 
 @objc(WatchPlugin)
 public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -8,6 +9,7 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "Watch"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isWatchPaired", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sendWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sendMessage", returnType: CAPPluginReturnPromise),
