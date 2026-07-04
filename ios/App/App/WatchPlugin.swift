@@ -269,19 +269,33 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private static func hkActivityType(for str: String) -> HKWorkoutActivityType {
-        switch str {
-        case "running", "jogging":   return .running
-        case "walking":              return .walking
-        case "cycling", "cycle":     return .cycling
-        case "swimming":             return .swimming
-        case "hiking", "hike":       return .hiking
-        case "rowing":               return .rowing
-        case "strength", "gym":      return .traditionalStrengthTraining
-        case "yoga":                 return .yoga
+        // Lowercase input so the ChooseSportSheet's proper-cased sport names
+        // ("Run", "Cycling", "Swim") match. Previously "Run" fell through to
+        // the default `.highIntensityIntervalTraining`, which then propagated
+        // through `startWatchApp(with:)` and stamped the mirrored Watch
+        // session as HIIT — bug reported 2026-07-04.
+        switch str.lowercased() {
+        case "running", "jogging", "run", "jog", "trail", "trail run":
+            return .running
+        case "walking", "walk", "power walk", "powerwalk":
+            return .walking
+        case "cycling", "cycle", "bike", "mtb", "mountain bike":
+            return .cycling
+        case "swimming", "swim":
+            return .swimming
+        case "hiking", "hike":
+            return .hiking
+        case "rowing", "row":
+            return .rowing
+        case "strength", "gym", "weight training", "weights", "weight train":
+            return .traditionalStrengthTraining
+        case "yoga":
+            return .yoga
         case "triathlon":
             if #available(iOS 16.0, *) { return .swimBikeRun }
             return .swimming
-        default:                     return .highIntensityIntervalTraining
+        default:
+            return .highIntensityIntervalTraining
         }
     }
 }
