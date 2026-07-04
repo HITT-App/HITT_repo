@@ -4023,6 +4023,7 @@ function platformAudits() {
         /elevenlabs\.io/, /api\.push\.apple\.com/, /api\.sandbox\.push\.apple\.com/,
         /appleid\.apple\.com/, /accounts\.google\.com/, /connect\.garmin\.com/,
         /raw\.githubusercontent\.com\/HITT-App/, /localhost/, /127\.0\.0\.1/,
+        /hiituk\.com/,  // hosted Privacy Policy (referenced from in-app Terms + Privacy Markdown)
         /deno\.land\/std/, /esm\.sh/,
         /w3\.org/, /developer\.apple\.com/, /developers\.garmin\.com/,
         /docs\.supabase\.com/, /supabase\.com\/docs/,

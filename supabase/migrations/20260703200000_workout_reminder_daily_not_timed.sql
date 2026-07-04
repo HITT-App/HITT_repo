@@ -1,3 +1,6 @@
+-- Reads notify_endpoint_url + notify_service_key from Vault
+-- (placeholders created in 20260703160000_workout_reminder_push.sql).
+--
 -- Rewrite the workout reminder crons.
 --
 -- Prior model (20260703160000, 20260703170000, 20260703190000):

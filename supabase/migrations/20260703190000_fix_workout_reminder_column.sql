@@ -1,3 +1,6 @@
+-- Reads notify_endpoint_url + notify_service_key from Vault
+-- (placeholders created in 20260703160000_workout_reminder_push.sql).
+--
 -- workouts.name doesn't exist — the correct column is workouts.title.
 -- Both cron functions I wrote (fire_workout_reminders in
 -- 20260703160000 and fire_missed_workout_notifications in

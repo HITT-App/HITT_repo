@@ -1,3 +1,6 @@
+-- Reads notify_endpoint_url + notify_service_key from Vault
+-- (placeholders created in 20260703150000_community_event_push.sql).
+--
 -- Fix deep-link URLs baked into the community-notification fan-out
 -- trigger. Original migration (20260703150000) used /community-profile/
 -- and /community/chat/ paths that don't exist in App.tsx. The audit
