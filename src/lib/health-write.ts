@@ -36,9 +36,19 @@ export interface SaveWorkoutOptions {
 
 const HealthWrite = registerPlugin<HealthWritePluginInterface>("HealthWrite")
 
+// HealthWritePlugin is Swift-only. On Android the native plugin doesn't
+// exist; calls throw synchronously. The caller (ActivityLive finish path)
+// treats `ok: false` as "just skip the OS health write" — activity_logs
+// still lands via Supabase. When Android gets Health Connect wiring, this
+// module gets an Android branch calling @capgo/capacitor-health's write
+// path (which doesn't expose ExerciseRoute in v8.4 — route polylines are
+// deferred; see docs/scope-google-play-launch.md § Phase C).
+const isIOSNative = (): boolean =>
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios"
+
 export async function ensureHealthWriteAuth(): Promise<HealthWriteResult> {
-  if (!Capacitor.isNativePlatform()) {
-    return { ok: false, reason: "not_native" }
+  if (!isIOSNative()) {
+    return { ok: false, reason: "not_ios_native" }
   }
   try {
     const res = await HealthWrite.requestAuth()
@@ -51,8 +61,8 @@ export async function ensureHealthWriteAuth(): Promise<HealthWriteResult> {
 export async function saveActivityToHealth(
   params: SaveWorkoutOptions,
 ): Promise<HealthWriteResult> {
-  if (!Capacitor.isNativePlatform()) {
-    return { ok: false, reason: "not_native" }
+  if (!isIOSNative()) {
+    return { ok: false, reason: "not_ios_native" }
   }
   try {
     const res = await HealthWrite.saveWorkoutWithRoute(params)

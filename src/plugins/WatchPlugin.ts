@@ -67,8 +67,17 @@ export interface WatchWorkoutEvent {
 
 const WatchPluginImpl = registerPlugin<WatchPluginInterface>("Watch");
 
+// The Watch plugin is Swift-only. On Android the native side doesn't exist,
+// so `WatchPluginImpl.<anything>()` throws "not implemented on android"
+// synchronously — including at boot (onWatchWorkoutEvent runs from
+// watch-event-handler.ts on app init). Every export in this file must gate
+// on this predicate, NOT Capacitor.isNativePlatform() (which is true on
+// Android too).
+const isIOSNative = (): boolean =>
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+
 export const isWatchAvailable = async (): Promise<boolean> => {
-  if (!Capacitor.isNativePlatform()) return false;
+  if (!isIOSNative()) return false;
   try {
     const { available } = await WatchPluginImpl.isAvailable();
     return available;
@@ -83,9 +92,7 @@ export const isWatchAvailable = async (): Promise<boolean> => {
 // the "Launch on Watch" affordance even before the user has any recorded
 // history in activity_logs.
 export const isWatchPaired = async (): Promise<{ paired: boolean; installed: boolean }> => {
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "ios") {
-    return { paired: false, installed: false };
-  }
+  if (!isIOSNative()) return { paired: false, installed: false };
   try {
     return await WatchPluginImpl.isWatchPaired();
   } catch {
@@ -94,27 +101,27 @@ export const isWatchPaired = async (): Promise<{ paired: boolean; installed: boo
 };
 
 export const sendWorkoutToWatch = async (workout: WatchWorkout): Promise<void> => {
-  if (!Capacitor.isNativePlatform()) return;
-  await WatchPluginImpl.sendWorkout({ workout });
+  if (!isIOSNative()) return;
+  try { await WatchPluginImpl.sendWorkout({ workout }); } catch {}
 };
 
 export const clearWatchWorkout = async (): Promise<void> => {
-  if (!Capacitor.isNativePlatform()) return;
-  await WatchPluginImpl.clearWorkout();
+  if (!isIOSNative()) return;
+  try { await WatchPluginImpl.clearWorkout(); } catch {}
 };
 
 export const sendStructuredWorkoutToWatch = async (workout: WatchWorkout): Promise<void> => {
-  if (!Capacitor.isNativePlatform()) return;
-  await WatchPluginImpl.sendStructuredWorkout({ workout });
+  if (!isIOSNative()) return;
+  try { await WatchPluginImpl.sendStructuredWorkout({ workout }); } catch {}
 };
 
 export const sendTriathlonToWatch = async (plan: TriathlonPlan): Promise<void> => {
-  if (!Capacitor.isNativePlatform()) return;
-  await WatchPluginImpl.sendMessage({ message: { triathlon: plan } });
+  if (!isIOSNative()) return;
+  try { await WatchPluginImpl.sendMessage({ message: { triathlon: plan } }); } catch {}
 };
 
 export const startWorkoutMirroring = async (activityType = "hiit", workoutName = "HIIT Workout"): Promise<boolean> => {
-  if (!Capacitor.isNativePlatform()) return false;
+  if (!isIOSNative()) return false;
   try {
     const { mirroring } = await WatchPluginImpl.startMirroredWorkout({ activityType, workoutName });
     return mirroring;
@@ -122,7 +129,7 @@ export const startWorkoutMirroring = async (activityType = "hiit", workoutName =
 };
 
 export const endWorkoutMirroring = async (): Promise<void> => {
-  if (!Capacitor.isNativePlatform()) return;
+  if (!isIOSNative()) return;
   try { await WatchPluginImpl.endMirroredWorkout(); } catch {}
 };
 
@@ -130,7 +137,7 @@ export const endWorkoutMirroring = async (): Promise<void> => {
 // the user is in-app and authenticated, not at app launch before sign-in.
 // Idempotent — iOS skips the UI on types that are already determined.
 export const prepareWatchHealthAuth = async (): Promise<void> => {
-  if (!Capacitor.isNativePlatform()) return;
+  if (!isIOSNative()) return;
   try { await WatchPluginImpl.prepareHealthAuth(); } catch {}
 };
 
@@ -141,7 +148,7 @@ export const prepareWatchHealthAuth = async (): Promise<void> => {
 let isSimulatorCached: boolean | null = null;
 export const isIOSSimulator = async (): Promise<boolean> => {
   if (isSimulatorCached !== null) return isSimulatorCached;
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "ios") {
+  if (!isIOSNative()) {
     isSimulatorCached = false;
     return false;
   }
@@ -155,10 +162,12 @@ export const isIOSSimulator = async (): Promise<boolean> => {
 };
 
 export const onWatchWorkoutEvent = (handler: (event: WatchWorkoutEvent) => void) => {
-  if (!Capacitor.isNativePlatform()) return () => {};
+  // Runs at app boot from watch-event-handler.ts. Must be a total no-op on
+  // Android / web — addListener() on a nonexistent plugin throws synchronously.
+  if (!isIOSNative()) return () => {};
   let listenerHandle: { remove: () => void } | null = null;
   WatchPluginImpl.addListener("workoutEvent", handler).then((h) => {
     listenerHandle = h;
-  });
+  }).catch(() => {});
   return () => listenerHandle?.remove();
 };
