@@ -2,6 +2,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 
 interface WatchPluginInterface {
   isAvailable(): Promise<{ available: boolean }>;
+  isWatchPaired(): Promise<{ paired: boolean; installed: boolean }>;
   sendWorkout(options: { workout: WatchWorkout }): Promise<void>;
   clearWorkout(): Promise<void>;
   sendMessage(options: { message: Record<string, unknown> }): Promise<void>;
@@ -73,6 +74,22 @@ export const isWatchAvailable = async (): Promise<boolean> => {
     return available;
   } catch {
     return false;
+  }
+};
+
+// Whether an Apple Watch is paired to this iPhone AND the HITT Watch app
+// is installed on it. Durable signal (unlike isReachable) — used by the
+// wearable-detection fallback so a paired-but-idle Watch still surfaces
+// the "Launch on Watch" affordance even before the user has any recorded
+// history in activity_logs.
+export const isWatchPaired = async (): Promise<{ paired: boolean; installed: boolean }> => {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "ios") {
+    return { paired: false, installed: false };
+  }
+  try {
+    return await WatchPluginImpl.isWatchPaired();
+  } catch {
+    return { paired: false, installed: false };
   }
 };
 

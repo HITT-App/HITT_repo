@@ -106,6 +106,20 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve(["available": WatchBridge.shared.isReachable])
     }
 
+    // Pairing + install signal for the wearable-detection fallback.
+    // isReachable/isAvailable go true only when the Watch is on-wrist and
+    // reachable RIGHT NOW; a paired-but-idle Watch reads as unreachable
+    // even though the user obviously has one. WCSession exposes the
+    // durable state we actually want for the "Launch on Watch" affordance:
+    // isPaired && isWatchAppInstalled. Read once, no side effects.
+    @objc func isWatchPaired(_ call: CAPPluginCall) {
+        let session = WCSession.default
+        call.resolve([
+            "paired":    session.isPaired,
+            "installed": session.isWatchAppInstalled,
+        ])
+    }
+
     @objc func sendWorkout(_ call: CAPPluginCall) {
         guard let workout = call.getObject("workout") else {
             call.reject("Missing workout object"); return

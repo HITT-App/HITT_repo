@@ -12,6 +12,7 @@ import {
   getPrimaryWearable,
   type PrimaryWearable,
 } from "@/lib/wearable-detection";
+import { isWatchPaired } from "@/plugins/WatchPlugin";
 
 const CACHE_KEY = "hitt.primaryWearable.v1";
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -55,7 +56,17 @@ export function usePrimaryWearable() {
     queryKey: ["primaryWearable", user?.id],
     queryFn: async (): Promise<PrimaryWearable> => {
       if (!user?.id) return "phone_only";
-      const wearable = await getPrimaryWearable(supabase, user.id);
+      let wearable = await getPrimaryWearable(supabase, user.id);
+      // Fallback for the fresh-install case: activity_logs is empty so
+      // getPrimaryWearable returns phone_only, but WCSession knows a Watch
+      // is paired + has the HITT app installed. Upgrade to apple_watch so
+      // the "Launch on Watch" affordance surfaces on day one instead of
+      // waiting for the user to record two workouts. Non-Apple vendors
+      // still win when they meet the history threshold (§getPrimaryWearable).
+      if (wearable === "phone_only") {
+        const { paired, installed } = await isWatchPaired();
+        if (paired && installed) wearable = "apple_watch";
+      }
       writeCachedDecision(user.id, wearable);
       return wearable;
     },
