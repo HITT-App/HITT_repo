@@ -107,6 +107,7 @@ RESPONSE LENGTH
 • Ask ONE follow-up question at a time, never multiple at once.
 • Short, direct sentences. No walls of text.
 • When giving meal plans or workouts, use compact bullet points.
+• EXCEPTION — when a request is unrealistic, unsafe, or unusually aggressive, give it the fuller explanation it deserves: temper expectations, explain the trade-off honestly, and propose a sensible version. Do NOT compress genuine coaching or a safety conversation down to one throwaway line. Brevity is the default, not a gag on the moments that actually need words.
 
 ═══════════════════════════════════════════
 FORMATTING
@@ -391,19 +392,24 @@ DON'T recommend when:
 
 ═══ Meal plan recommendations ═══
 
-When the user asks for a meal plan, day of eating, or what to eat today, you have TWO paths and you MUST take one of them:
+You do NOT write meal plans yourself. The meal wizard collects the user's targets and pulls REAL recipes from the food database — that is the only way a meal plan is built, and it is reliable. Your job is to COACH the nutrition first, then hand off to the wizard. Never type out a meal-by-meal day yourself.
 
-1. If the user has typed explicit numbers in THIS message ("1800 cal", "150g protein") → the server's regex fast-path will already have generated a real plan from Spoonacular before you respond. Just acknowledge briefly ("Here's your plan.") — the card is already on screen. Do NOT try to invent meals or refuse.
+When the user asks for a meal plan, day of eating, or what to eat:
 
-2. If the user has NOT typed explicit numbers (e.g. "give me a meal plan", "what should I eat", "same plan as before") → call open_meal_plan_wizard. The wizard collects calorie + macro targets through buttons. Output ONLY the tool call, no text.
+1. If the user has typed explicit numbers in THIS message ("1800 cal", "150g protein") → the server's fast-path has ALREADY generated a real plan from the database before you respond. Just acknowledge briefly ("Here's your plan.") — the card is already on screen. Do NOT invent meals or refuse.
 
-NEVER:
-✗ "I can't create a meal plan with specific calorie and protein targets"
+2. If the user has NOT typed explicit numbers (e.g. "give me a meal plan", "what should I eat", "a diet plan for muscle gain") → FIRST coach in a few short lines: the calorie target, the protein target (g/kg of bodyweight), and the general approach that fits their goal. You MAY discuss strategy and numbers freely — that is good coaching. You may NOT list specific meals or a meal-by-meal day. THEN, in the SAME turn, call open_meal_plan_wizard to offer the guided builder underneath your message. Frame the hand-off in one sentence, e.g. "I can turn this into a meal plan for you — want me to open the meal builder?"
+
+You ALWAYS have a way to help with meals: either the fast-path already built the plan, or you coach and then open the wizard. There is never a case where you cannot help.
+
+NEVER say any of these — they are always false and forbidden:
+✗ "I can't create a meal plan"
 ✗ "I can't directly generate meal plans"
 ✗ "I'm unable to build a meal plan"
-✗ Any sentence implying you can't help with meals. You can — either the regex caught the numbers or the wizard collects them.
+✗ Any sentence implying you can't help with meals.
+(You never "create" a plan by typing meals out — the wizard + database does that. But you are NEVER unable to help: you coach the nutrition, then open the wizard.)
 
-If the user references a previous plan ("same as last time", "do that again") but gave no numbers in this message → call open_meal_plan_wizard. The wizard prefills from their previous targets if available.
+If the user references a previous plan ("same as last time", "do that again") but gave no numbers in this message → a brief coaching line if useful, then call open_meal_plan_wizard (it prefills their previous targets).
 
 ═══════════════════════════════════════════
 POST_PLAN_SAVED (plan wizard just completed)
@@ -438,13 +444,19 @@ RE-ONBOARDING: If the user says their goals have changed, or asks to change/upda
 ═══════════════════════════════════════════
 SAFETY RULES (CRITICAL)
 ═══════════════════════════════════════════
-A results-driven, goal-focused trainer must NEVER let the drive for results override safety. The more directive the coaching, the firmer the floor:
-• NEVER recommend extreme diets (below 1200cal women / 1500cal men)
+A results-driven, goal-focused trainer must NEVER let the drive for results override safety — but safety is not nannying. Respect a considered adult; just make sure the ask IS considered.
+
+INFORMED AUTONOMY (how to handle requests outside normal safe ranges — very low calories, very aggressive timelines):
+• Do NOT flatly refuse, and do NOT silently comply. ASK for the context first — one brief, non-judgemental question.
+• If the user gives a sensible, considered reason (a planned fasting day like 5:2 or OMAD, medical/dietitian supervision, an experienced athlete who understands the trade-off) → RESPECT IT. Give them what they asked for, with honest caveats. Don't lecture, don't gatekeep.
+• Only hold back when NO reason is given, or the reason points to harm (disordered-eating or self-harm signals) → then set the plan aside and respond with care, not a workout or a diet.
+• A sub-1200 kcal day is legitimate with a real reason (fasting, supervision) and a red flag without one. The difference is the context — so ask.
+
 • NEVER encourage overtraining
 • If user reports pain → rest, mobility, see a medical professional if severe
 • NEVER diagnose medical conditions
 • Always remind users to warm up before intense exercise
-• Prioritise long-term sustainable fitness over quick fixes
+• Prioritise long-term sustainable fitness — but "sustainable" is the default advice, not a rule you impose over a user's considered choice
 • "Get results" never overrides "don't harm the user" — always defer to rest and medical advice when warranted
 
 ═══════════════════════════════════════════
@@ -484,7 +496,7 @@ Instead, use the provided tools:
 • Use the set_goals tool instead of [SET_GOALS:{...}]
 • Use the recommend_workout tool (source-aware — see below) instead of [RECOMMEND_WORKOUT:{...}]
 • Use the recommend_recipe tool instead of [RECOMMEND_RECIPE:{...}]
-• Use the recommend_meal_plan tool instead of [MEAL_PLAN:{...}] when the user asks for a meal plan or what to eat today
+• Use the open_meal_plan_wizard tool when the user asks for a meal plan or what to eat today — you do NOT generate meal plans yourself; the wizard pulls real recipes from the database. There is no recommend_meal_plan tool for you to call (meal plans are emitted server-side only). Coach the nutrition first, then call the wizard in the same turn.
 • Use the body_scan_prompt tool instead of [BODY_SCAN_PROMPT]
 • Use the recommend_workout_plan tool when the user asks for a multi-day plan
 
@@ -673,7 +685,7 @@ const STRUCTURED_TOOLS = [
     type: "function",
     function: {
       name: "open_meal_plan_wizard",
-      description: "Open the meal plan wizard. Call this when the user asks about meals, food, what to eat, or planning their nutrition, BUT has not specified explicit calorie or macro numbers in their message. The wizard collects scope (one meal vs day), calorie target, macro targets, and protein source preference through buttons — much more reliable than asking the user to type all those details. If the user DID type explicit numbers (like '2500 calories' or '250g protein'), do NOT call this tool — the regex fast-path will handle those before you ever see them.",
+      description: "Offer the meal plan wizard. Call this AFTER you have given a short coaching answer about the user's nutrition (calorie target, protein target, general approach) — it surfaces a guided builder underneath your message so the user can generate the plan. Use it whenever the user wants a meal plan, a day of eating, or 'what to eat' and has NOT typed explicit numbers (explicit numbers are handled by the server fast-path before you ever see them). You never write the meals yourself — the wizard pulls real recipes from the database. ALWAYS pair this tool call with a brief coaching sentence in the same turn; never call it with empty text.",
       parameters: {
         type: "object",
         properties: {},
@@ -701,8 +713,9 @@ export function extractExplicitMealTargets(text: string): ExplicitMealTargets | 
   const isMealRequest = /\b(meal|meals|eat|eating|food|breakfast|lunch|dinner|snack|diet|plan my day|day of eating|days? at |daily)\b/i.test(text);
   if (!isMealRequest) return null;
 
-  // Calorie match: "2500 cal", "2500 calories", "2500kcal", "2.5k cal"
-  const calMatch = text.match(/(\d{2,5}|\d\.\d)\s*k?\s*(cal|calories|kcal)\b/i);
+  // Calorie match: "2500 cal", "2500 calorie", "2500 calories", "2500kcal", "2.5k cal"
+  // Order longest-first so "calorie"/"calories" win before the bare "cal".
+  const calMatch = text.match(/(\d{2,5}|\d\.\d)\s*k?\s*(calories|calorie|kcals|kcal|cals|cal)\b/i);
   let calories: number | null = null;
   if (calMatch) {
     let v = parseFloat(calMatch[1]);
@@ -811,6 +824,7 @@ async function fetchOwnerMealPlan(
   targets: ExplicitMealTargets,
   supabase: any,
   userId: string,
+  opts?: { prioritizeCalories?: boolean },
 ): Promise<any[] | null> {
   // 1. Load user prefs (diet, allergies, workout goal for category)
   const [prefsResp, prefsResp2] = await Promise.all([
@@ -882,8 +896,13 @@ async function fetchOwnerMealPlan(
   // 2. Split day-level targets across slots (owner used 25/40/35 in the docs).
   const targetCal = targets.calories ?? 2000;
   const targetProtein = targets.protein_g ?? 0;
-  const targetCarbs = targets.carbs_g ?? 0;
-  const targetFat = targets.fat_g ?? 0;
+  // Prioritise-calories mode: drop the carb/fat targets to 0 so their ceiling
+  // filters become unbounded (Infinity) and their scorer penalties become 0.
+  // The plan then drives calories + protein floor, letting carbs/fat land where
+  // they must to actually hit the calorie number. Used when the user replies
+  // "prioritise calories" to the flag-and-ask note on an impossible request.
+  const targetCarbs = opts?.prioritizeCalories ? 0 : (targets.carbs_g ?? 0);
+  const targetFat = opts?.prioritizeCalories ? 0 : (targets.fat_g ?? 0);
 
   const slots: Array<{ slot: 'breakfast' | 'lunch' | 'dinner'; ratio: number }> = [
     { slot: 'breakfast', ratio: 0.25 },
@@ -982,8 +1001,15 @@ async function fetchOwnerMealPlan(
     // unbounded pool, because doing so blows the day-total ceiling every time
     // the rolling budget has been eaten up by earlier slots.
     const applyCeilings = (tolerance: number): OwnerRecipeRow[] => {
-      const rawCarb = targetCarbs ? slotCarbs * tolerance : Infinity;
-      const rawFat = targetFat ? slotFat * tolerance : Infinity;
+      // Floor the per-slot limit at the day-level grace so it can't collapse to
+      // ~0 once the rolling budget is spent. Without this, a slot whose macro
+      // budget has been eaten by earlier picks gets slotMacro≈0 → rawMacro≈0 →
+      // min(0, hardMax)=0, which rejects EVERY candidate with any of that macro
+      // (kills the snack-padding pass, so the calorie target is never reached).
+      const carbGrace = targetCarbs ? Math.max(10, Math.round(targetCarbs * 0.10)) : 0;
+      const fatGrace = targetFat ? Math.max(10, Math.round(targetFat * 0.10)) : 0;
+      const rawCarb = targetCarbs ? Math.max(slotCarbs * tolerance, carbGrace) : Infinity;
+      const rawFat = targetFat ? Math.max(slotFat * tolerance, fatGrace) : Infinity;
       const carbLimit = hardMaxCarbs != null ? Math.min(rawCarb, hardMaxCarbs) : rawCarb;
       const fatLimit = hardMaxFat != null ? Math.min(rawFat, hardMaxFat) : rawFat;
       return base.filter((c) =>
@@ -1649,6 +1675,48 @@ function sseSingleAction(action: object): string {
   return `data: ${JSON.stringify({ type: 'action', action })}\n\ndata: ${JSON.stringify({ type: 'done' })}\n\n`;
 }
 
+// Emit a short lead-in text, then the action, then done. Used when we serve a
+// plan that needs a caveat (e.g. a considered sub-floor fasting day).
+function sseTextThenAction(text: string, action: object): string {
+  return `data: ${JSON.stringify({ type: 'text', delta: text })}\n\n` +
+    `data: ${JSON.stringify({ type: 'action', action })}\n\n` +
+    `data: ${JSON.stringify({ type: 'done' })}\n\n`;
+}
+
+// Flag-and-ask honesty note. Compares the built plan's totals to what the user
+// asked for and, when a target couldn't be met, says so plainly instead of
+// serving a silent mismatch. Two cases: (1) the request is internally
+// inconsistent — the macros can't sum to the calorie target; (2) the library
+// couldn't match a macro (coverage gap). Returns '' when the plan is a good fit.
+function buildMacroNote(t: ExplicitMealTargets, meals: any[]): string {
+  const g = meals.reduce((s, m) => ({
+    cal: s.cal + (+m.calories || 0), p: s.p + (+m.protein_g || 0),
+    c: s.c + (+m.carbs_g || 0), f: s.f + (+m.fat_g || 0),
+  }), { cal: 0, p: 0, c: 0, f: 0 });
+
+  const macroKcal = (t.protein_g ?? 0) * 4 + (t.carbs_g ?? 0) * 4 + (t.fat_g ?? 0) * 9;
+
+  // Case 1 — inconsistent: macros only sum to well under the calorie target.
+  if (t.calories && macroKcal > 0 && macroKcal < t.calories * 0.9) {
+    return `Quick heads-up before your plan: the macros you gave (${t.protein_g ?? 0}g protein, ${t.carbs_g ?? 0}g carbs, ${t.fat_g ?? 0}g fat) only add up to about ${Math.round(macroKcal)} kcal, but you asked for ${t.calories}. I've built to your macros — to genuinely hit ${t.calories} kcal I'd have to go well over your carb or fat numbers. Want me to prioritise the calories (I'll rebuild with more carbs/fat), or keep the macros as the limits? Just say "prioritise calories" and I'll redo it.\n\n`;
+  }
+
+  // Case 2 — consistent request, but a target missed by >25% (coverage gap).
+  const misses: string[] = [];
+  const M = (label: string, got: number, want: number | null | undefined, unit = 'g') => {
+    if (!want || want <= 0) return;
+    const d = (got - want) / want;
+    if (d > 0.25) misses.push(`${label} came in high (~${Math.round(got)}${unit} vs your ${want}${unit})`);
+    else if (d < -0.25) misses.push(`${label} came in low (~${Math.round(got)}${unit} vs your ${want}${unit})`);
+  };
+  M('calories', g.cal, t.calories, ' kcal');
+  M('protein', g.p, t.protein_g);
+  M('carbs', g.c, t.carbs_g);
+  M('fat', g.f, t.fat_g);
+  if (misses.length === 0) return '';
+  return `Honest note: I matched most of your targets, but ${misses.join(', and ')}. Our recipe library is a little thin on meals that fit that exactly, so this is the closest I could get — tweak the number (or your calorie target) and I'll rebuild, or run with this as a solid plan.\n\n`;
+}
+
 async function mapToolCallToAction(
   tc: { name: string; arguments: string },
   validWorkoutIds: Set<string>,
@@ -1863,6 +1931,8 @@ function buildStructuredStream(
   supabaseUrl: string,
   clientContext: { customMemory?: string; customResponseStyle?: string },
   retryStructured?: () => Promise<Response>,
+  mealPlanExpected?: boolean,
+  suppressMealWizard?: boolean,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -1941,11 +2011,17 @@ function buildStructuredStream(
 
         // Emit validated tool calls as action chunks after text has fully streamed.
         let actionEmitted = false;
+        let mealWizardEmitted = false;
         for (const [, tc] of toolCalls) {
           const action = await mapToolCallToAction(tc, validWorkoutIds, validRecipeIds, authHeader, supabaseUrl, clientContext);
           if (action) {
+            const isMeal = (action as any).type === "open_meal_plan_wizard" || (action as any).type === "recommend_meal_plan";
+            // Safety/context hold — never surface the planner even if the model
+            // called for it. The coach's text still streams.
+            if (isMeal && suppressMealWizard) continue;
             emit({ type: "action", action });
             actionEmitted = true;
+            if (isMeal) mealWizardEmitted = true;
           }
         }
 
@@ -1970,8 +2046,11 @@ function buildStructuredStream(
                   validWorkoutIds, validRecipeIds, authHeader, supabaseUrl, clientContext,
                 );
                 if (action) {
+                  const isMeal = (action as any).type === "open_meal_plan_wizard" || (action as any).type === "recommend_meal_plan";
+                  if (isMeal && suppressMealWizard) continue;
                   emit({ type: "action", action });
                   actionEmitted = true;
+                  if (isMeal) mealWizardEmitted = true;
                 }
               }
               // If the retry produced text instead of (or alongside) a tool
@@ -1986,6 +2065,19 @@ function buildStructuredStream(
           } catch (err) {
             console.error("[ai-coach] retry failed:", err);
           }
+        }
+
+        // Deterministic meal-wizard safety net. Under converse-first, the model
+        // streams a coaching paragraph and is supposed to also call
+        // open_meal_plan_wizard. If it coaches but forgets the tool call, the
+        // turn isn't empty, so no retry fires — the user would get coaching text
+        // with no builder button (a silent drop of the wizard). When the user
+        // clearly asked for a meal plan and no meal action was emitted, append
+        // the wizard server-side so the builder always appears.
+        if (mealPlanExpected && !mealWizardEmitted) {
+          emit({ type: "action", action: { type: "open_meal_plan_wizard", payload: {} } });
+          actionEmitted = true;
+          mealWizardEmitted = true;
         }
 
         // Universal empty-completion guard: if the stream produced no text AND
@@ -2677,7 +2769,7 @@ serve(async (req) => {
             { role: "assistant", tool_calls: [{ id: "call_ex_banana", type: "function", function: { name: "log_food", arguments: JSON.stringify({ name: "Banana", category: "snack", calories: 105, protein: 1.3, carbs: 27, fat: 0.3, fiber: 3.1 }) } }] },
             { role: "tool", tool_call_id: "call_ex_banana", content: "ok" },
             { role: "assistant", content: "Logged: 1 banana (~105 kcal)." },
-            { role: "system", content: "CRITICAL — MEAL PLAN ROUTING: ONLY call open_meal_plan_wizard when the user is EXPLICITLY asking about food, meals, eating, or nutrition planning. The trigger words are: meal, meals, eat, eating, food, breakfast, lunch, dinner, snack, recipe, diet, nutrition. DO trigger for: 'what should I eat', 'plan my meals', 'suggest meals', 'food ideas', 'meal plan', 'recipe ideas', 'what's for dinner', 'help me eat better', AND for references to a prior plan like 'same as before', 'do that again', 'the plan I asked for'. DO NOT trigger for: 'what activity', 'workout suggestion', 'plan my day' (without food context), 'something to keep me cool', 'cardio idea', general chat, questions about workouts, schedules, or any non-food topic. When the request is about workouts → answer naturally or call schedule_plan. When the request is general → answer with text. Output ONLY the tool call when calling open_meal_plan_wizard — no text. NEVER call recommend_meal_plan; that's server-side only. NEVER refuse a meal-plan request with phrases like 'I can't create a meal plan' or 'I can't directly generate meal plans' — those are forbidden. If the user wants meals, you EITHER fast-path (server already handled it) OR open the wizard. There is no third option." },
+            { role: "system", content: "CRITICAL — MEAL PLAN ROUTING: ONLY call open_meal_plan_wizard when the user is EXPLICITLY asking about food, meals, eating, or nutrition planning. The trigger words are: meal, meals, eat, eating, food, breakfast, lunch, dinner, snack, recipe, diet, nutrition. DO trigger for: 'what should I eat', 'plan my meals', 'suggest meals', 'food ideas', 'meal plan', 'recipe ideas', 'what's for dinner', 'help me eat better', AND for references to a prior plan like 'same as before', 'do that again', 'the plan I asked for'. DO NOT trigger for: 'what activity', 'workout suggestion', 'plan my day' (without food context), 'something to keep me cool', 'cardio idea', general chat, questions about workouts, schedules, or any non-food topic. When the request is about workouts → answer naturally or call schedule_plan. When the request is general → answer with text. When calling open_meal_plan_wizard: FIRST give a short coaching answer (calorie/protein targets and approach in words — NEVER a meal-by-meal list), THEN call the tool in the SAME turn to offer the builder underneath. Do NOT open the wizard with empty text, and do NOT type out the meals yourself. NEVER call recommend_meal_plan; that's server-side only. NEVER refuse a meal-plan request with phrases like 'I can't create a meal plan' or 'I can't directly generate meal plans' — those are forbidden and always false; you are never unable to help, because you coach and then the wizard builds the plan. If the user wants meals, you EITHER fast-path (server already handled it) OR coach-then-open-the-wizard. There is no third option." },
             baseStructured[lastUserIdx],
           ]
         : baseStructured;
@@ -2696,8 +2788,18 @@ serve(async (req) => {
       // asked for" — if the current message references a prior plan but has
       // no numbers, scan back through earlier user messages for the most
       // recent one with explicit targets and re-run from those.
+      // "Prioritise calories" — the user's reply to a flag-and-ask note on an
+      // impossible/mismatched request. Rebuild driving the calorie target and
+      // letting carbs/fat land where they must.
+      const prioritizeCalories =
+        /\b(priorit(is|iz)e|focus on|go (for|with)|hit|reach|just.*(the )?)\s*(the )?(calorie|calories|kcal|cals)\b|\b(calories?|kcal|cals?)\s*(over|above|first|matter|are what)\b|more (carbs|fat|calories)\s*(is|are)?\s*(fine|ok|okay|good)\b/i
+          .test(lastUserContent);
+
       let explicitMealRequest = extractExplicitMealTargets(lastUserContent);
-      if (!explicitMealRequest && /\b(again|same as before|same plan|previous|like (last|before)|last time|that meal plan|the meal plan)\b/i.test(lastUserContent)) {
+      // If the current message has no numbers but references a prior plan OR
+      // asks to prioritise calories, pull the most recent explicit target from
+      // earlier in the conversation and re-run from it.
+      if (!explicitMealRequest && (prioritizeCalories || /\b(again|same as before|same plan|previous|like (last|before)|last time|that meal plan|the meal plan)\b/i.test(lastUserContent))) {
         const priorUserMessages = (structuredMessages as any[])
           .filter(m => m.role === 'user')
           .slice(0, -1)
@@ -2707,26 +2809,69 @@ serve(async (req) => {
           if (found) { explicitMealRequest = found; break; }
         }
       }
+      // ─── Meal-request safety & context signals (four-state gate) ──────────
+      // We never block a considered adult, and we never silently serve an
+      // unwise request. State priority: safety-hold > context-hold > serve >
+      // converse+offer. See docs/scope-conversational-wizards.md.
+      const userMsgsLower = (structuredMessages as any[])
+        .filter(m => m.role === 'user')
+        .map(m => String(m.content ?? '').toLowerCase());
+      const recentUserText = userMsgsLower.slice(-6).join('\n');
+
+      const CALORIE_FLOOR = 1200;
+
+      // Disordered-eating / self-harm signal. A SUPPRESSOR: when present we
+      // never serve, offer, or open a meal plan — the coach responds with care.
+      // Keyword-based and deliberately conservative; a more robust classifier
+      // + crisis-resource surfacing is tracked as a follow-up task.
+      const safetyHold =
+        /\b(anorexi|bulimi|purge|purging|starve|starving myself|make myself sick|hate my body|hate myself|want to be skinny|need to be (thin|skinny)|self.?harm|kill myself|suicid|end it all|thinspo|pro.?ana)\b/i
+          .test(recentUserText);
+
+      // Sensible reason for an unusually low intake (fasting protocol / medical
+      // supervision) — lets us honour a considered low-calorie request.
+      const lowCalContext =
+        /\b(fast|fasting|5:2|omad|one meal a day|intermittent|water fast|refeed|dietitian|dietician|nutritionist|doctor|medically supervised|supervised|prescribed)\b/i
+          .test(recentUserText);
+
+      const belowFloor = !!(explicitMealRequest?.calories && explicitMealRequest.calories < CALORIE_FLOOR);
+      // Ask-for-context state: explicit sub-floor with no sensible reason given.
+      const contextHold = belowFloor && !lowCalContext;
+
       // Explicit macro/calorie meal-plan requests bypass the LLM entirely.
       // Order of preference:
       //   1. Owner-curated recipes (source='owner') — deterministic, fast
       //   2. Spoonacular (only if MEAL_SOURCE_SPOONACULAR_ENABLED=true)
       //   3. Fall through to the LLM (which opens the wizard as last resort)
-      if (explicitMealRequest) {
+      // Skipped entirely under safety-hold or context-hold — those must talk
+      // to the user first, never auto-serve a plan.
+      if (explicitMealRequest && !safetyHold && !contextHold) {
+        // Considered sub-floor request (fasting/supervised context present) —
+        // honour it, but lead with an honest caveat.
+        const lowCalCaveat = belowFloor
+          ? `That's a fasting-level day at ${explicitMealRequest.calories} kcal — here's a plan built to it. Keep protein and hydration up, ease off hard training, and stop if you feel unwell.\n\n`
+          : '';
+        const mealAction = (meals: any[]) => ({ type: "recommend_meal_plan", payload: { meals } });
+        // Flag-and-ask: honest note when the plan can't match the request. In
+        // prioritise-calories mode the user already accepted the trade-off, so
+        // no note — a short confirmation instead.
+        const leadIn = (meals: any[]) => {
+          if (prioritizeCalories) return `Rebuilt prioritising your ${explicitMealRequest!.calories ?? ''} kcal target — carbs and fat land where they need to.\n\n`;
+          return lowCalCaveat + buildMacroNote(explicitMealRequest!, meals);
+        };
+        const serve = (meals: any[]) => {
+          const text = leadIn(meals);
+          const body = text ? sseTextThenAction(text, mealAction(meals)) : sseSingleAction(mealAction(meals));
+          return new Response(body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+        };
+
         const ownerMeals = await fetchOwnerMealPlan(
           explicitMealRequest,
           supabaseAdmin,
           userId,
+          { prioritizeCalories },
         );
-        if (ownerMeals && ownerMeals.length > 0) {
-          const sseBody = sseSingleAction({
-            type: "recommend_meal_plan",
-            payload: { meals: ownerMeals },
-          });
-          return new Response(sseBody, {
-            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-          });
-        }
+        if (ownerMeals && ownerMeals.length > 0) return serve(ownerMeals);
         console.warn("[ai-coach] Owner meal-plan path produced no results — trying Spoonacular fallback if enabled");
 
         const spoonacularEnabled =
@@ -2737,25 +2882,28 @@ serve(async (req) => {
             supabaseAdmin,
             userId,
           );
-          if (meals && meals.length > 0) {
-            const sseBody = sseSingleAction({
-              type: "recommend_meal_plan",
-              payload: { meals },
-            });
-            return new Response(sseBody, {
-              headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-            });
-          }
+          if (meals && meals.length > 0) return serve(meals);
           console.warn("[ai-coach] Spoonacular fallback produced no results, falling back to LLM");
         }
       }
 
       const isScheduleChangeRequest = /change.*(my )?(workout|schedule|plan|program|routine)|update.*(my )?(schedule|plan|program|workout|routine)|new (plan|schedule|program|workout plan)|rebuild.*plan|redo.*schedule|reset.*plan|want a new.*plan|want to start a (new |fresh )?(plan|program|schedule)|switch.*plan/.test(lastUserContent);
 
-      const injectedMessages = isScheduleChangeRequest
+      // Build any system messages to inject just before the last user turn.
+      const preTurnInjections: any[] = [];
+      if (safetyHold) {
+        preTurnInjections.push({ role: "system", content: "CRITICAL — WELLBEING FIRST: The user's recent messages contain possible disordered-eating or self-harm signals. Do NOT build, serve, offer, or open a meal plan, calorie target, or any wizard this turn. Set the fitness task aside. Respond in a few warm, human sentences: gently acknowledge what they said, show you care, and encourage them to reach out to someone they trust or a professional. Do not be clinical, do not lecture, do not diagnose. The person matters more than the plan." });
+      } else if (contextHold) {
+        preTurnInjections.push({ role: "system", content: `CRITICAL — LOW-CALORIE CONTEXT CHECK: The user asked for about ${explicitMealRequest?.calories} kcal, which is below the usual safe floor (${CALORIE_FLOOR}). Do NOT refuse, and do NOT build or open the meal wizard this turn. Ask ONE brief, non-judgemental question about the context — e.g. is this a planned fasting day (5:2 / OMAD) or something a professional has advised? Invite them to confirm and restate their target so you can build it next turn. Keep it warm and short — a considered fasting day is completely legitimate; you're just checking, not gatekeeping.` });
+      }
+      if (isScheduleChangeRequest) {
+        preTurnInjections.push({ role: "system", content: "CRITICAL — SCHEDULE CHANGE: The user wants to change or update their workout schedule. Look at their existing preferences in the user profile block (goal, fitness level, days per week, session length). Call the schedule_plan tool immediately with those values as defaults — do NOT ask a series of clarifying questions first. If a specific preference is missing, make a sensible assumption. One short sentence acknowledging you're rebuilding their plan, then call the tool." });
+      }
+
+      const injectedMessages = preTurnInjections.length
         ? [
             ...(structuredMessages as any[]).slice(0, -1),
-            { role: "system", content: "CRITICAL — SCHEDULE CHANGE: The user wants to change or update their workout schedule. Look at their existing preferences in the user profile block (goal, fitness level, days per week, session length). Call the schedule_plan tool immediately with those values as defaults — do NOT ask a series of clarifying questions first. If a specific preference is missing, make a sensible assumption. One short sentence acknowledging you're rebuilding their plan, then call the tool." },
+            ...preTurnInjections,
             (structuredMessages as any[]).at(-1),
           ]
         : structuredMessages;
@@ -2780,7 +2928,7 @@ serve(async (req) => {
           model: "gemini-2.5-flash",
           messages: [
             ...(injectedMessages as any[]).slice(0, -1),
-            { role: "system", content: "RETRY: Your previous attempt produced no output. If the user asked about meals or food, call open_meal_plan_wizard. If they asked to log food, call log_food. If they want to schedule workouts, call schedule_plan. Output the tool call ONLY — no text. If none of those apply, respond with a brief natural-language answer." },
+            { role: "system", content: "RETRY: Your previous attempt produced no output. If the user asked about meals or food, give a one-line coaching answer and call open_meal_plan_wizard. If they asked to log food, call log_food. If they want to schedule workouts, call schedule_plan. Otherwise respond with a brief natural-language answer." },
             (injectedMessages as any[]).at(-1),
           ],
           stream: false,
@@ -2810,6 +2958,23 @@ serve(async (req) => {
         );
       }
 
+      // Meal-plan intent: a clear request for a plan / what-to-eat (NOT bare
+      // meal-time words like "breakfast", which are fine to answer inline as a
+      // single recipe). Conversation-scoped over the last few user turns so a
+      // one-word follow-up ("muscle") doesn't lose the intent. Drives the
+      // deterministic wizard safety net in buildStructuredStream so the builder
+      // button never silently drops mid-conversation.
+      const MEAL_INTENT_RE = /\b(meal plan|diet plan|eating plan|nutrition plan|day of eating|plan my meals|meal ideas|what (should|can) i eat|what to eat|give me a (meal|diet))\b/i;
+      const mealIntentRecent = userMsgsLower.slice(-3).some(t => MEAL_INTENT_RE.test(t));
+
+      // Arm the backstop only when the wizard is actually wanted: a meal-plan
+      // request is in play AND we're not holding for safety or context (those
+      // states must never surface the planner).
+      const mealPlanExpected = mealIntentRecent && !safetyHold && !contextHold;
+      // Under safety- or context-hold, also strip any wizard the LLM emits on
+      // its own — the backstop being off isn't enough if the model tool-calls.
+      const suppressMealWizard = safetyHold || contextHold;
+
       const structuredStream = buildStructuredStream(
         gatewayResponse.body!,
         validWorkoutIds,
@@ -2818,6 +2983,8 @@ serve(async (req) => {
         supabaseUrl,
         { customMemory, customResponseStyle: customResponse },
         retryStructured,
+        mealPlanExpected,
+        suppressMealWizard,
       );
       return new Response(structuredStream, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },

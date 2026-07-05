@@ -76,6 +76,45 @@ SCHEDULE_PLAN JSON shape: `{"goal":"fat loss","daysPerWeek":3,"selectedDays":[1,
 
 After schedule is created, `createScheduleFromJarvis` navigates to `/schedule` automatically.
 
+## AI coach meal flow — converse-first + informed-autonomy safety gate
+
+Decided 2026-07-05 (edge-only, deployed; no rebuild). All logic lives in
+`supabase/functions/ai-coach/index.ts`. Two hard invariants:
+
+1. **The LLM never generates a meal plan itself.** Meal plans come ONLY from the wizard →
+   food database (`fetchOwnerMealPlan` / Spoonacular) → server-emitted `recommend_meal_plan`
+   action. `recommend_meal_plan` is NOT a callable tool — the LLM only ever calls
+   `open_meal_plan_wizard`. This is deliberate: it removed the old "spinning / dropped
+   request" failure where Gemini wavered between calling a tool and writing meals inline.
+   Do not re-add meal generation to the LLM's tools.
+2. **Converse first, then offer the wizard.** The coach discusses targets/approach in words,
+   then calls `open_meal_plan_wizard` in the same turn so the builder card renders *below*
+   the message (not a bare popup). The prompt must NOT say "output only the tool call, no text".
+
+**Deterministic wizard backstop** (`buildStructuredStream`): if the user clearly asked for a
+plan (`mealPlanExpected`, conversation-scoped over the last 3 user turns) but the model coached
+without attaching the wizard, the server appends the `open_meal_plan_wizard` action so the
+builder button never silently drops. Suppressed by `suppressMealWizard` (see below).
+
+**Four-state gate for explicit-number meal requests** (priority top-down):
+1. **safety-hold** — ED / self-harm keywords in last ~6 user turns → no plan, no wizard, no
+   fast-path; supportive reply. Sets `suppressMealWizard` (strips any wizard the LLM emits).
+2. **context-hold** — explicit `< 1200 kcal` (`CALORIE_FLOOR`) with no fasting/medical reason
+   in the conversation → don't serve, don't open wizard; coach asks ONE context question.
+3. **serve** — explicit numbers, `≥ 1200` OR `< 1200` *with* a sensible reason
+   (fasting/5:2/OMAD/supervised) → fast-path serves; sub-floor gets a caveat lead-in via
+   `sseTextThenAction`.
+4. **converse + offer** — vague request → coach + wizard (backstop armed).
+
+`extractExplicitMealTargets` gates the whole cascade — it MUST parse the calorie phrasing or
+every state is bypassed. Unit-relevant: it matches `cal|cals|calorie|calories|kcal|kcals`
+(the singular "calorie" was a real bug — "500 calorie meal plan" silently skipped the gate).
+
+Live smoke test: `tests/smoke-meal-safety.ts` (5 cases, needs QA `TEST_EMAIL`/`TEST_PASSWORD`).
+Full decision record + deferred Phase-2 work: `docs/scope-conversational-wizards.md`.
+ED handling is currently a keyword suppressor only — deeper detection + crisis resources is a
+tracked follow-up.
+
 ## Sticky header pattern (Build 71)
 
 Every scrollable page must use this exact pattern on its header element:
