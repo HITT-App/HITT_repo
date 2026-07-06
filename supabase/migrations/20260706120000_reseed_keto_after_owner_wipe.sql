@@ -1,24 +1,29 @@
--- Restore the keto meal library wiped by the owner-meals seed.
+-- Restore the keto meal library that was wiped by the owner-meals seed.
 --
 -- Background: 20260701120000 seeds 165 general keto recipes and 20260701130000
 -- adds 30 vegetarian/dairy-free keto recipes (195 total). The later
 -- 20260702000001_seed_owner_meals.sql originally ran an unscoped
 -- `DELETE FROM public.recipes WHERE source = 'owner'`, which deleted every keto
 -- row on any database where migrations applied in timestamp order. That seed's
--- DELETE is now category-scoped, but databases that already applied the
--- destructive version (e.g. production) need the keto rows put back — this
--- migration does that.
+-- DELETE is now category-scoped, so fresh databases keep their keto rows — but
+-- databases that already applied the destructive version (e.g. production)
+-- need them put back.
 --
--- Content is copied verbatim from the two keto seed migrations so this restore
--- is self-contained and idempotent (each block re-deletes its own rows before
--- re-inserting). Runs after 20260702000001, so it is authoritative.
+-- Insert-only, no destructive DELETE. The whole thing is guarded: it inserts
+-- only when the database currently has zero keto recipes, so it is a no-op on
+-- fresh databases (where the keto seeds already ran) and a one-time repair on
+-- databases that lost them. Safe to re-run.
 
 BEGIN;
 
--- ── From 20260701120000_seed_owner_keto_meals.sql (165 general keto) ─────────
+DO $reseed$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.recipes WHERE category = 'keto') THEN
+    RAISE NOTICE 'Keto recipes already present — skipping keto reseed.';
+    RETURN;
+  END IF;
 
--- Cascade deletes ingredients + steps via FK ON DELETE CASCADE.
-DELETE FROM public.recipes WHERE source = 'owner' AND category = 'keto';
+-- ── From 20260701120000_seed_owner_keto_meals.sql (165 general keto) ─────────
 
 WITH new_recipe AS (
   INSERT INTO public.recipes (
@@ -5633,12 +5638,7 @@ INSERT INTO public.steps (recipe_id, step_number, instruction) VALUES
     ((SELECT id FROM new_recipe), 5, 'Plate the broccoli florets as a base, top with the pork tenderloin and celery.'),
     ((SELECT id FROM new_recipe), 6, 'Finish with 15g grated cheddar and a final crack of black pepper. Serve immediately.');
 
-
 -- ── From 20260701130000_seed_veg_df_keto_pack.sql (30 veg/dairy-free keto) ──
-
--- Cascade deletes ingredients + steps via FK ON DELETE CASCADE.
-DELETE FROM public.recipes WHERE source = 'owner' AND category = 'keto'
-  AND dietary_tags @> ARRAY['hitt_ext_v1']::TEXT[];
 
 WITH new_recipe AS (
   INSERT INTO public.recipes (
@@ -6695,5 +6695,7 @@ INSERT INTO public.steps (recipe_id, step_number, instruction) VALUES
     ((SELECT id FROM new_recipe), 4, 'Plate the mixed salad leaves and olives, top with the egg whites.'),
     ((SELECT id FROM new_recipe), 5, 'Finish with the olive oil and a final crack of black pepper. Serve immediately.');
 
+END
+$reseed$;
 
 COMMIT;

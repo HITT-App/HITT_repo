@@ -240,6 +240,31 @@ AI insight reads "42 sec" not "00:42" (which it misreads as 42 minutes).
 - `workout_preferences` — user's goal, fitness level, days/week, session duration, body areas, equipment
 - `community_posts` — user posts with optional image URLs
 
+## Recipe library maintenance
+
+The meal catalogue lives in **three tables**: `recipes` (one row per meal) plus child
+`ingredients` (`item`, `sort_order`) and `steps` (`step_number`, `instruction`), both FK'd to
+`recipes` with `ON DELETE CASCADE`. `recipes_full` is a convenience view that aggregates the
+children — but app code doesn't use it; `BrowseMeals.tsx` reads `recipes` with an embedded select
+(`select('*, ingredients(item, sort_order), instructions:steps(step_number, instruction)')`), so
+**ingredients/steps must be in the child tables, not columns on `recipes`**.
+
+**`slug` is the stable key.** Every recipe has a unique `slug` (auto-generated from `name` by the
+`recipes_set_slug` BEFORE-INSERT trigger; collisions get a `-2`, `-3` suffix). Use it to target a
+single meal — never the random UUID, and never a name (names aren't guaranteed unique).
+
+**The library is append-only and edited a row at a time — NOT regenerated as a batch.** The old
+`scripts/import_owner_meals.ts` delete-then-insert flow (wipe all `source='owner'`, re-seed
+everything) is retired: a blanket `DELETE ... WHERE source='owner'` is what wiped the keto packs
+(see `20260706120000_reseed_keto_after_owner_wipe.sql`). Going forward:
+
+- **Add a section** → new migration that only `INSERT`s. No `DELETE`. Omit `slug` and the trigger
+  fills it. Insert the recipe, then its `ingredients` + `steps` rows (mirror any seed migration).
+- **Edit one meal** → `UPDATE public.recipes SET … WHERE slug = '…'` (and/or edit its child rows).
+  Renaming does **not** change the slug — set `slug` explicitly in the UPDATE if you want it to.
+- **Remove one meal** → `DELETE FROM public.recipes WHERE slug = '…'` — children cascade.
+- **Never** scope a `DELETE` wider than the rows that migration owns.
+
 ## Automated tests
 
 Three layers:
