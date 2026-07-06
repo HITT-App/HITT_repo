@@ -1,15 +1,20 @@
 # HITT App — Claude Code Rules
 
-Capacitor 8 + React 18 + TypeScript iOS app. Supabase backend. Apple Watch companion (SwiftUI/watchOS).
+Capacitor 8 + React 18 + TypeScript iOS + Android app. Supabase backend. Apple Watch companion (SwiftUI/watchOS). Android platform added 2026-07-06 (see docs/scope-google-play-launch.md).
 
 ## Deploy
 
 ```bash
-~/bin/deploy-ios.sh hitt        # build web → cap sync → xcodebuild → upload to TestFlight
+~/bin/deploy-ios.sh hitt        # web build → cap sync → xcodebuild → TestFlight
+~/bin/deploy-android.sh hitt    # web build → cap sync → gradle bundleRelease → prints AAB path for manual Play upload
 git push origin main             # always push before deploying
 ```
 
-Build number auto-increments inside the deploy script. Watch build number increments in the Xcode project.
+- **iOS build number** auto-increments inside deploy-ios.sh. Watch build number matches the iOS app.
+- **Android versionCode** auto-increments inside deploy-android.sh (edits `android/app/build.gradle`).
+- **Android release signing** — deploy-android.sh reads the keystore password from macOS Keychain (service name `hitt-android-keystore`). Prompts + offers to save on first run. Keystore lives at `~/hitt-keys/hitt-upload-key.jks` (outside repo, alias `hitt-upload`). Google holds the app signing key via Play App Signing; we only manage the upload key.
+- **Android Gradle uses JDK 21** (pinned in `android/gradle.properties`). System default stays openjdk@17 so Maestro keeps working.
+- **AAB upload is manual for now** — deploy-android.sh opens Finder at the AAB, then you upload via Play Console → Internal testing → Create new release. Wire in the Play Developer API when we've done this a few times.
 
 ## Discord
 
