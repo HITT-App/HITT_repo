@@ -41,8 +41,24 @@ type Meal = {
 
 // ── Filter vocabularies ─────────────────────────────────────────────────────
 
-const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+const MEAL_TYPES = [
+  'breakfast', 'lunch', 'dinner', 'snack',
+  'pre_workout', 'post_workout', 'recovery',
+] as const;
 type MealType = typeof MEAL_TYPES[number];
+
+// meal_type values are snake_case in the DB; these are the human labels.
+// Without this, `pre_workout` renders as "Pre_workout" and the ~165
+// pre/post-workout + recovery recipes are unreachable from the filter.
+const MEAL_TYPE_LABEL: Record<MealType, string> = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  dinner: 'Dinner',
+  snack: 'Snack',
+  pre_workout: 'Pre-workout',
+  post_workout: 'Post-workout',
+  recovery: 'Recovery',
+};
 
 const DIETS = [
   { id: 'vegan', label: 'Vegan', emoji: '🌱' },
@@ -177,6 +193,8 @@ export default function BrowseMeals() {
       { key: 'lunch', title: 'Lunch', items: pick(m => m.meal_type === 'lunch') },
       { key: 'dinner', title: 'Dinner', items: pick(m => m.meal_type === 'dinner') },
       { key: 'snack', title: 'Snacks', items: pick(m => m.meal_type === 'snack') },
+      { key: 'fuel', title: 'Pre & post-workout', items: pick(m => m.meal_type === 'pre_workout' || m.meal_type === 'post_workout') },
+      { key: 'recovery', title: 'Recovery', items: pick(m => m.meal_type === 'recovery') },
     ].filter(s => s.items.length > 0);
   }, [meals, anyFilterActive]);
 
@@ -240,11 +258,11 @@ export default function BrowseMeals() {
               key={t}
               onClick={() => setMealType(t)}
               className={cn(
-                'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition-colors capitalize',
+                'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition-colors',
                 mealType === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border/60 text-foreground',
               )}
             >
-              {t}
+              {MEAL_TYPE_LABEL[t]}
             </button>
           ))}
           {DIETS.map((d) => (
@@ -300,7 +318,7 @@ export default function BrowseMeals() {
             <FilterGroup title="Meal type" onClear={() => setMealType('all')} hasValue={mealType !== 'all'}>
               {(['all', ...MEAL_TYPES] as const).map((t) => (
                 <FilterChip key={t} active={mealType === t} onClick={() => setMealType(t)}>
-                  {t === 'all' ? 'Any' : t.charAt(0).toUpperCase() + t.slice(1)}
+                  {t === 'all' ? 'Any' : MEAL_TYPE_LABEL[t]}
                 </FilterChip>
               ))}
             </FilterGroup>
