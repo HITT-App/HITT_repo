@@ -186,8 +186,12 @@ export default function AICoach() {
 
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-background overflow-hidden">
-      {/* Header */}
+    <div
+      className="h-[100dvh] flex flex-col bg-background overflow-hidden"
+      style={{ paddingTop: 'var(--safe-area-inset-top, 0px)' }}
+    >
+      {/* AICoach uses h-[100dvh] not `fixed inset-0`, so the global safe-top
+          rule doesn't apply here — keep the explicit paddingTop. */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-background">
         <div className="flex items-center gap-3 flex-shrink-0">
           <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] touch-manipulation" onClick={() => navigate('/')}>

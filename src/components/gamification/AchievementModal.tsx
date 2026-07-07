@@ -13,7 +13,6 @@ import {
   Share2
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import confetti from "canvas-confetti";
 
 export type AchievementType = 
   | "steps" 
@@ -69,45 +68,11 @@ export function AchievementModal({ achievement, onClose }: AchievementModalProps
   useEffect(() => {
     if (achievement) {
       setIsAnimating(true);
-      
-      // Trigger confetti celebration
-      const duration = 2000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
-
-      function randomInRange(min: number, max: number) {
-        return Math.random() * (max - min) + min;
-      }
-
-      const interval = setInterval(() => {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-          clearInterval(interval);
-          return;
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-
-        // Confetti from both sides
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        });
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        });
-      }, 250);
-
+      // Confetti removed — Android WebView froze the particle loop
+      // mid-air. The modal's own scale-in/scale-out animation is the
+      // celebration.
       const timer = setTimeout(() => setIsAnimating(false), 500);
-      
-      return () => {
-        clearTimeout(timer);
-        clearInterval(interval);
-      };
+      return () => clearTimeout(timer);
     }
   }, [achievement]);
 

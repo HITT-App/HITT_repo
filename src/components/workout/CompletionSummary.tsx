@@ -2,6 +2,9 @@ import { useState, useCallback, useRef } from 'react';
 import { X, Square, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
 import type { Json } from '@/integrations/supabase/types';
 import type { RoutePoint } from './ShareCardCanvas';
@@ -13,6 +16,23 @@ export interface CompletionStat {
   label: string;
   value: string | number;
   unit?: string;
+}
+
+// Convert a Blob to a bare base64 string (no data URL prefix) so the
+// Capacitor Filesystem plugin can write it. Native iOS / Android need
+// a file URI to hand to the OS share sheet — writing the base64 into
+// the app's cache dir gives us that with no permission prompts.
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const idx = dataUrl.indexOf(',');
+      resolve(idx >= 0 ? dataUrl.slice(idx + 1) : dataUrl);
+    };
+    reader.readAsDataURL(blob);
+  });
 }
 
 // Extract raw metric values from a formatted CompletionStat array. The new
@@ -371,6 +391,10 @@ export function CompletionSummary({
   // these; React errors 300/310 fire the moment a hook's call order shifts
   // between renders.
   const [format, setFormat]       = useState<'square' | 'story'>('square');
+  // Background variant of the share card. 'white' matches the current
+  // default (light card, dark ink). 'transparent' produces a PNG with
+  // alpha for sticker-style shares over other backgrounds.
+  const [bg, setBg]               = useState<'white' | 'transparent'>('white');
   const [isSharing, setIsSharing] = useState(false);
   // Play the HITT-hero celebratory flash on first mount, then reveal the
   // share screen. Callers get this behaviour automatically — no per-page
@@ -400,38 +424,85 @@ export function CompletionSummary({
       const blob = await generateActivityShareCardBlob({
         data: shareData,
         format,
+        bg,
+        ink: bg === 'transparent' ? 'light' : 'dark',
       });
-      const file = new File([blob], `hiit-${activityType || 'workout'}.png`, { type: 'image/png' });
       const shareText = buildShareText(sport, activityTitle, heroMetrics);
+      const fileName = `hiit-${activityType || 'workout'}.png`;
+
+      let shareOk = false;
       try {
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], title: activityTitle, text: shareText });
+        if (Capacitor.isNativePlatform()) {
+          // Native iOS + Android: write the PNG to the app's cache dir,
+          // then hand its file:// URI to the system share sheet via
+          // Capacitor Share. Web Share API is unreliable for files in
+          // Android WebView (silent no-op) and the anchor-click download
+          // fallback doesn't reach OS storage on either platform.
+          const base64 = await blobToBase64(blob);
+          const written = await Filesystem.writeFile({
+            path: fileName,
+            data: base64,
+            directory: Directory.Cache,
+          });
+          await Share.share({
+            title: activityTitle,
+            text: shareText,
+            url: written.uri,
+            dialogTitle: 'Share workout',
+          });
+          shareOk = true;
+        } else if (navigator.canShare?.({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+          await navigator.share({
+            files: [new File([blob], fileName, { type: 'image/png' })],
+            title: activityTitle,
+            text: shareText,
+          });
+          shareOk = true;
         } else if (navigator.share) {
           await navigator.share({ title: activityTitle, text: shareText });
+          shareOk = true;
         } else {
+          // Browser fallback — download the file.
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = file.name;
+          a.download = fileName;
           document.body.appendChild(a);
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
+          shareOk = true;
         }
       } catch (shareErr) {
-        if ((shareErr as Error)?.name !== 'AbortError') toast.error('Could not share');
+        const name = (shareErr as Error)?.name;
+        const msg = (shareErr as Error)?.message ?? String(shareErr);
+        // AbortError = user cancelled the share sheet. Silent.
+        if (name !== 'AbortError' && !/cancel/i.test(msg)) {
+          toast.error('Could not share');
+        }
       }
-      onDone();
-    } catch {
+      if (shareOk) onDone();
+    } catch (err) {
       toast.error('Failed to prepare image');
+      console.error('handleShare — prepare failed:', err);
     } finally {
       setIsSharing(false);
     }
-  }, [activityTitle, activityType, heroMetrics, isSharing, shareData, format, onDone]);
+  }, [activityTitle, activityType, heroMetrics, isSharing, shareData, format, bg, onDone]);
+
+  // Memoise the intro's onComplete so CompletionIntro's effect (which
+  // depends on onComplete) doesn't tear down and restart the 2s timer on
+  // every parent re-render. Bug on Android: ActivityLive's per-second
+  // elapsed timer kept ticking after Finish, forcing a CompletionSummary
+  // re-render every second → new arrow function reference → intro effect
+  // re-ran → video restarted from frame 0 → infinite loop. iOS Safari's
+  // WebView didn't trip on it as consistently, so the bug never surfaced
+  // until we ran on an Android emulator.
+  const handleIntroComplete = useCallback(() => setIntroDone(true), []);
 
   // Early return AFTER all hooks. Rules of hooks: consistent call order.
   if (!introDone) {
-    return <CompletionIntro onComplete={() => setIntroDone(true)} />;
+    return <CompletionIntro onComplete={handleIntroComplete} />;
   }
 
   const square    = format === 'square';
@@ -482,6 +553,24 @@ export function CompletionSummary({
             icon={<Smartphone size={15} color={!square ? C.cream : C.dim} strokeWidth={2.1} />}
           />
         </div>
+        <div style={{ display: 'flex', gap: 2, padding: 3, background: C.panel, border: `1px solid ${C.line}`, borderRadius: 999 }}>
+          <ControlSeg
+            active={bg === 'white'}
+            onClick={() => setBg('white')}
+            label="White"
+            icon={<span style={{ width: 12, height: 12, borderRadius: 3, background: '#fff', border: `1px solid ${C.line}` }} />}
+          />
+          <ControlSeg
+            active={bg === 'transparent'}
+            onClick={() => setBg('transparent')}
+            label="Transparent"
+            icon={<span style={{
+              width: 12, height: 12, borderRadius: 3,
+              backgroundImage: `linear-gradient(45deg, ${C.dim} 25%, transparent 25%, transparent 75%, ${C.dim} 75%, ${C.dim}), linear-gradient(45deg, ${C.dim} 25%, transparent 25%, transparent 75%, ${C.dim} 75%, ${C.dim})`,
+              backgroundSize: '6px 6px', backgroundPosition: '0 0, 3px 3px',
+            }} />}
+          />
+        </div>
       </div>
 
       {/* Preview — same source (ActivityShareCard) as what handleShare
@@ -493,7 +582,7 @@ export function CompletionSummary({
           transition: 'width 0.35s cubic-bezier(.4,0,.2,1), height 0.35s cubic-bezier(.4,0,.2,1)',
         }}>
           <div style={{ width: BASE_W, height: BASE_H, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-            <ActivityShareCard data={shareData} format={format} />
+            <ActivityShareCard data={shareData} format={format} bg={bg} ink={bg === 'transparent' ? 'light' : 'dark'} />
           </div>
         </div>
         <span style={{ fontSize: 12, color: '#6f6f6f', letterSpacing: '0.04em' }}>

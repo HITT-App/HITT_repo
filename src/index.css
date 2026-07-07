@@ -119,6 +119,17 @@
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
   }
+
+  /* Full-screen page-level wrappers (fixed inset-0 with a solid background)
+     must sit below the Android status bar and iOS notch. Fixed positioning
+     is relative to the viewport, not the WebView, so Capacitor's Android
+     `setOverlaysWebView(false)` doesn't cover this — only backdrops with
+     transparency (bg-background/80, bg-black/50, etc.) are exempt because
+     they use a different Tailwind-generated class. Applied globally so we
+     don't need to sprinkle `paddingTop` on every one of ~60 pages. */
+  .fixed.inset-0.bg-background {
+    padding-top: var(--safe-area-inset-top, 0px);
+  }
 }
 
 @layer components {

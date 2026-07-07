@@ -15,8 +15,9 @@ interface GenerateOptions {
   data: ActivityShareData;
   format?: 'story' | 'square';
   dateISO?: string;
-  bg?: 'white' | 'photo';
+  bg?: 'white' | 'photo' | 'transparent';
   photoDataUrl?: string | null;
+  ink?: 'dark' | 'light';
 }
 
 // Bail if the required web fonts haven't loaded — html2canvas would paint
@@ -44,7 +45,7 @@ async function ensureFonts(): Promise<void> {
 }
 
 async function renderCardToCanvas(opts: GenerateOptions): Promise<HTMLCanvasElement> {
-  const { data, format = 'story', dateISO, bg = 'white', photoDataUrl = null } = opts;
+  const { data, format = 'story', dateISO, bg = 'white', photoDataUrl = null, ink = 'dark' } = opts;
   const width = 1080;
   const height = format === 'square' ? 1080 : 1920;
 
@@ -67,7 +68,9 @@ async function renderCardToCanvas(opts: GenerateOptions): Promise<HTMLCanvasElem
   const host = document.createElement('div');
   host.style.width = `${width}px`;
   host.style.height = `${height}px`;
-  host.style.background = '#ffffff';
+  // Host background must not paint over the transparent variant — leave
+  // it clear and let ActivityShareCard control the fill.
+  host.style.background = bg === 'transparent' ? 'transparent' : '#ffffff';
   clip.appendChild(host);
   document.body.appendChild(clip);
 
@@ -77,7 +80,7 @@ async function renderCardToCanvas(opts: GenerateOptions): Promise<HTMLCanvasElem
     await ensureFonts();
 
     root.render(
-      createElement(ActivityShareCard, { data, format, dateISO, bg, photoDataUrl }),
+      createElement(ActivityShareCard, { data, format, dateISO, bg, photoDataUrl, ink }),
     );
 
     // Wait for React commit + at least two paint frames so the layout is
@@ -112,7 +115,10 @@ async function renderCardToCanvas(opts: GenerateOptions): Promise<HTMLCanvasElem
       // null background allows the transparency-under-photo variant to
       // preserve its own layered look. For the white variant the card
       // itself paints the background so this is still correct.
-      backgroundColor: bg === 'photo' ? null : '#ffffff',
+      // null background preserves alpha (needed for photo AND transparent
+      // variants); white variant paints its own background so this stays
+      // correct for it too.
+      backgroundColor: bg === 'photo' || bg === 'transparent' ? null : '#ffffff',
       logging: false,
     });
   } finally {

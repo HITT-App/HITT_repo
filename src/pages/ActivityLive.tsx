@@ -21,7 +21,6 @@ import { WearableLaunchCard } from "@/components/wearable/WearableLaunchCard";
 import { startWorkoutMirroring } from "@/plugins/WatchPlugin";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import confetti from "canvas-confetti";
 import { CompletionSummary } from "@/components/workout/CompletionSummary";
 import { Analytics } from "@/lib/analytics";
 import { getSportConfig } from "@/lib/sports";
@@ -434,12 +433,12 @@ const ActivityLive = () => {
     // landed. Previous version awaited 3+ Supabase round-trips before doing
     // this, so any network hang made the button look broken.
     setShowCompleted(true);
-    confetti({
-      particleCount: 120,
-      spread: 80,
-      origin: { y: 0.6 },
-      colors: ["hsl(24,95%,50%)", "#FFD700", "#FF6347", "#ffffff"],
-    });
+    // The HITT-hero mp4 intro (CompletionIntro) IS the celebration for the
+    // finish flow. We used to fire canvas-confetti here as well, but the
+    // confetti canvas sits behind the fullscreen intro so no user ever saw
+    // it working correctly — and on Android WebView its RAF loop was
+    // throttled, leaving particles frozen mid-air on the share screen.
+    // The intro is enough on its own.
 
     // Snapshot values that the background task needs — captured here so
     // they reflect end-of-session state, not whatever the next render sees.

@@ -2,7 +2,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Crown, Sparkles, Star, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
-import confetti from "canvas-confetti";
 import { cn } from "@/lib/utils";
 
 interface LevelUpModalProps {
@@ -35,48 +34,12 @@ export function LevelUpModal({
   useEffect(() => {
     if (isOpen) {
       // Delay content for dramatic effect
-      setTimeout(() => setShowContent(true), 300);
-
-      // Epic confetti celebration
-      const duration = 3000;
-      const animationEnd = Date.now() + duration;
-      const colors = ["#ff6b35", "#f7c59f", "#ffd700", "#ff4500"];
-
-      const frame = () => {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0, y: 0.8 },
-          colors,
-          zIndex: 9999,
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1, y: 0.8 },
-          colors,
-          zIndex: 9999,
-        });
-
-        if (Date.now() < animationEnd) {
-          requestAnimationFrame(frame);
-        }
-      };
-
-      frame();
-
-      // Big burst in center
-      setTimeout(() => {
-        confetti({
-          particleCount: 100,
-          spread: 100,
-          origin: { x: 0.5, y: 0.5 },
-          colors,
-          zIndex: 9999,
-        });
-      }, 500);
+      const contentTimer = setTimeout(() => setShowContent(true), 300);
+      return () => clearTimeout(contentTimer);
+      // Previously fired canvas-confetti here. Removed: on Android WebView
+      // requestAnimationFrame is aggressively throttled, so particles
+      // froze mid-air and stayed stuck on top of the modal. The modal's
+      // own animation + gold-orange colour palette is enough celebration.
     } else {
       setShowContent(false);
     }

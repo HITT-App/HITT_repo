@@ -17,7 +17,6 @@ import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import confetti from "canvas-confetti"
 import { CompletionSummary } from "@/components/workout/CompletionSummary"
 import { getSportConfig } from "@/lib/sports"
 import type { ExerciseSnapshot } from "@/integrations/supabase/types"
@@ -833,7 +832,8 @@ const GymTimer = () => {
   const finishActivity = useCallback(async () => {
     setShowCompleted(true)
     if (settings.autoVibrate) navigator.vibrate?.([100, 50, 100, 50, 200])
-    confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } })
+    // Confetti removed — froze on Android WebView. Vibrate + intro mp4 in
+    // CompletionSummary carry the celebration.
 
     const durationSecs = isAIMode ? totalElapsed : elapsed
     const finalCalories = isAIMode

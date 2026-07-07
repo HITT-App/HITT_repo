@@ -6,7 +6,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import confetti from "canvas-confetti";
 
 interface Badge {
   id: string;
@@ -34,13 +33,6 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   star: Star,
 };
 
-const categoryColors: Record<string, string[]> = {
-  streak: ["#f97316", "#ef4444", "#fb923c"],
-  workout: ["#3b82f6", "#8b5cf6", "#6366f1"],
-  nutrition: ["#22c55e", "#10b981", "#14b8a6"],
-  default: ["#f59e0b", "#fbbf24", "#d97706"],
-};
-
 export function NewBadgeModal({ badges, onClose }: NewBadgeModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(true);
@@ -50,42 +42,15 @@ export function NewBadgeModal({ badges, onClose }: NewBadgeModalProps) {
 
   useEffect(() => {
     if (!currentBadge) return;
-    
+
     // Trigger animation
     setIsAnimating(true);
     const timer = setTimeout(() => setIsAnimating(false), 500);
-    
-    // Fire confetti celebration
-    const colors = categoryColors[currentBadge.category] || categoryColors.default;
-    
-    confetti({
-      particleCount: 80,
-      spread: 100,
-      origin: { y: 0.6 },
-      colors,
-      zIndex: 9999,
-    });
-    
-    // Second burst for extra celebration
-    setTimeout(() => {
-      confetti({
-        particleCount: 40,
-        spread: 60,
-        origin: { y: 0.7, x: 0.3 },
-        colors,
-        zIndex: 9999,
-      });
-      confetti({
-        particleCount: 40,
-        spread: 60,
-        origin: { y: 0.7, x: 0.7 },
-        colors,
-        zIndex: 9999,
-      });
-    }, 200);
-    
     return () => clearTimeout(timer);
+    // Previously fired canvas-confetti here. Removed for the same reason
+    // as LevelUpModal — Android WebView froze the particles.
   }, [currentIndex, currentBadge]);
+
 
   const handleNext = () => {
     if (currentIndex < badges.length - 1) {

@@ -3,7 +3,6 @@ import { HEmoji } from "@/components/HEmoji";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Flame, Trophy, Crown, Star, Sparkles, Share2 } from "lucide-react";
-import confetti from "canvas-confetti";
 import { cn } from "@/lib/utils";
 
 export type MilestoneType = 
@@ -98,69 +97,10 @@ export function MilestoneModal({ milestone, value, onClose }: MilestoneModalProp
         audioRef.current.play().catch(() => {});
       }
       
-      // Special confetti based on milestone type
-      if (milestone === "streak_30" || milestone === "streak_100") {
-        // Gold/platinum shower effect
-        const duration = 3000;
-        const end = Date.now() + duration;
-        
-        const frame = () => {
-          confetti({
-            particleCount: 3,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0 },
-            colors: config.confettiColors,
-            zIndex: 9999,
-          });
-          confetti({
-            particleCount: 3,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1 },
-            colors: config.confettiColors,
-            zIndex: 9999,
-          });
-          
-          if (Date.now() < end) {
-            requestAnimationFrame(frame);
-          }
-        };
-        
-        frame();
-      } else if (milestone === "streak_7") {
-        // Fire burst effect
-        const colors = config.confettiColors;
-        
-        confetti({
-          particleCount: 100,
-          spread: 100,
-          origin: { y: 0.6 },
-          colors,
-          zIndex: 9999,
-          shapes: ["circle"],
-          scalar: 1.2,
-        });
-        
-        setTimeout(() => {
-          confetti({
-            particleCount: 50,
-            spread: 60,
-            origin: { y: 0.7 },
-            colors,
-            zIndex: 9999,
-          });
-        }, 200);
-      } else {
-        // Standard celebration
-        confetti({
-          particleCount: 150,
-          spread: 180,
-          origin: { y: 0.5 },
-          colors: config.confettiColors,
-          zIndex: 9999,
-        });
-      }
+      // Confetti removed — Android WebView froze the particle animation
+      // mid-air. The MilestoneBurst overlay (star/flame/trophy icons scaling
+      // from centre) still fires; that's enough celebration.
+      void config;
 
       const animTimer = setTimeout(() => setIsAnimating(false), 600);
       const burstTimer = setTimeout(() => setShowBurst(false), 1500);

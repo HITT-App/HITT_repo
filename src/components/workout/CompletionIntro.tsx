@@ -27,6 +27,12 @@ export function CompletionIntro({
   onComplete,
 }: CompletionIntroProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  // Latest-callback ref — so we can run the effect ONCE (empty deps) yet
+  // still call the freshest onComplete when the timer fires. Prevents the
+  // Android loop where a re-rendering parent's new arrow-function callback
+  // tore down and restarted the 2s timer every render.
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     const v = videoRef.current;
@@ -35,9 +41,10 @@ export function CompletionIntro({
       // If the browser blocks autoplay, keep going — the timer still hands off.
       v.play().catch(() => {});
     }
-    const timer = setTimeout(onComplete, durationMs);
+    const timer = setTimeout(() => onCompleteRef.current(), durationMs);
     return () => clearTimeout(timer);
-  }, [durationMs, playbackRate, onComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- effect runs once; freshest callback comes from the ref.
+  }, []);
 
   return (
     <div
