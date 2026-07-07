@@ -366,6 +366,24 @@ class RecordingView extends WatchUi.View {
     // Garmin Connect → Apple Health still catches this workout.
     function saveAndShowFinished() as Void {
         var totalMs = mAccumulatedMs;
+
+        // Capture the final activity metrics BEFORE stopping/saving the session,
+        // while Activity.getActivityInfo() still holds the running totals. These
+        // enrich the direct push so the app gets distance / calories / HR, not
+        // just duration. Every field can be null (no HR strap, indoor no-GPS),
+        // so each is guarded and only added to the payload when present.
+        var pushDistanceM = null;
+        var pushCalories = null;
+        var pushHrAvg = null;
+        var pushHrMax = null;
+        var actInfo = Toybox.Activity.getActivityInfo();
+        if (actInfo != null) {
+            if (actInfo.elapsedDistance != null)  { pushDistanceM = actInfo.elapsedDistance; }
+            if (actInfo.calories != null)         { pushCalories = actInfo.calories; }
+            if (actInfo.averageHeartRate != null) { pushHrAvg = actInfo.averageHeartRate; }
+            if (actInfo.maxHeartRate != null)     { pushHrMax = actInfo.maxHeartRate; }
+        }
+
         if (mSession != null) {
             if (!mPaused && mStartMs > 0) {
                 totalMs += System.getTimer() - mStartMs;
@@ -403,12 +421,19 @@ class RecordingView extends WatchUi.View {
             var now = Time.now();
             var endedAt = formatIso(now);
             var startedAt = formatIso(new Time.Moment(now.value() - durationSec));
-            PushClient.pushWorkout({
+            var payload = {
                 "workout_type"     => mName.toLower(),
                 "start_time"       => startedAt,
                 "end_time"         => endedAt,
                 "duration_seconds" => durationSec,
-            });
+            };
+            // Only include metrics we actually captured — a null would just be
+            // dropped server-side, but omitting keeps the payload honest.
+            if (pushDistanceM != null) { payload.put("distance_m", pushDistanceM); }
+            if (pushCalories != null)  { payload.put("calories", pushCalories); }
+            if (pushHrAvg != null)     { payload.put("hr_avg", pushHrAvg); }
+            if (pushHrMax != null)     { payload.put("hr_max", pushHrMax); }
+            PushClient.pushWorkout(payload);
         } catch (ex) {
             System.println("[RecordingView] push failed silently: " + ex.getErrorMessage());
         }
