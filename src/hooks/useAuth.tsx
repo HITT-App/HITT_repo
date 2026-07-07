@@ -34,19 +34,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Initialise the native social login plugin once, on mount.
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-    SocialLogin.initialize({
+    const isIOS = Capacitor.getPlatform() === "ios";
+    // On Android, @capgo/capacitor-social-login's initialize() checks Apple's
+    // native dependencies (JWT decode + CustomTabs) BEFORE registering the
+    // Google provider. Those Android libs aren't in our build.gradle, so
+    // passing `apple: {}` on Android causes the whole initialize to bail
+    // silently — leaving Google unregistered and every Google login attempt
+    // failing with "Cannot find provider 'google'". Apple Sign-In is only
+    // required on iOS (Apple's App Store rule), so on Android we just skip
+    // the Apple provider entirely — the Sign in with Apple button on the
+    // Auth screen still renders but tapping it will surface a "not
+    // available on this platform" error we can iterate on later.
+    const initConfig: Parameters<typeof SocialLogin.initialize>[0] = {
       google: {
         webClientId: GOOGLE_WEB_CLIENT_ID,
         iOSClientId: GOOGLE_IOS_CLIENT_ID,
         mode: "online",
       },
-      // iOS uses the native ASAuthorization flow keyed off the app's bundle ID,
-      // so no clientId is needed here. Empty redirectUrl keeps it fully native
-      // (no browser redirect). Web/Android would need a Services ID + redirect.
-      apple: {
-        redirectUrl: "",
-      },
-    }).catch((e) => {
+    };
+    if (isIOS) {
+      // iOS uses the native ASAuthorization flow keyed off the app's bundle
+      // ID, so no clientId is needed. Empty redirectUrl keeps it fully
+      // native (no browser redirect).
+      initConfig.apple = { redirectUrl: "" };
+    }
+    SocialLogin.initialize(initConfig).catch((e) => {
       console.error("SocialLogin init failed:", e);
     });
   }, []);
@@ -185,9 +197,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // then hand it to Supabase via signInWithIdToken. No browser redirect,
       // no deep links — entirely native.
       try {
+        // No `scopes` passed on purpose — `@capgo/capacitor-social-login`'s
+        // Android login rejects any scopes list unless MainActivity.java is
+        // extended per the plugin's docs. `email` + `profile` are OpenID
+        // Connect base scopes that Google returns by default, so omitting
+        // them costs nothing on either platform.
         const result = await SocialLogin.login({
           provider: "google",
-          options: { scopes: ["email", "profile"] },
+          options: {},
         });
 
         // The plugin returns provider-specific data under result.result.
