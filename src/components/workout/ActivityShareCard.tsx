@@ -100,6 +100,9 @@ function fmtDurationHMS(seconds: number): string {
 function fmtDurationCompact(seconds: number): { value: string; unit: string } {
   if (!Number.isFinite(seconds) || seconds < 0) return { value: '—', unit: '' };
   if (seconds >= 3600) return { value: fmtDurationHMS(seconds), unit: '' };
+  // Report sub-minute activities in seconds so a short session doesn't round to
+  // "0 min" — same "report any activity, don't round" rule as distance.
+  if (seconds < 60) return { value: String(Math.round(seconds)), unit: 'sec' };
   return { value: String(Math.round(seconds / 60)), unit: 'min' };
 }
 
@@ -112,6 +115,20 @@ function fmtPacePerKm(secondsPerKm: number): string {
 function fmtInt(n: number): string {
   return Math.round(n).toLocaleString('en-GB');
 }
+
+// Coerce a possibly-stringy numeric to a number. `activity_logs.distance_km` and
+// `total_volume_kg` are NUMERIC columns, which PostgREST returns as strings —
+// calling .toFixed() on those throws. Everywhere else in the app wraps them in
+// Number(); the share path is the one that didn't. Returns 0 for null/NaN.
+const num = (v: unknown): number => {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+// Distance in km with adaptive precision so any real activity reports
+// accurately and never rounds to "0.0": 2 decimals under 1 km (0.02 km),
+// 1 decimal at/above 1 km (5.2 km).
+const fmtKm = (km: number): string => (km < 1 ? km.toFixed(2) : km.toFixed(1));
 
 function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
   switch (key) {
@@ -136,30 +153,30 @@ function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
       ];
     }
     case 'run': {
-      const km = d.distanceKm ?? 0;
+      const km = num(d.distanceKm);
       const pace = d.paceSecondsPerKm
         ?? (km > 0 && d.durationSeconds > 0 ? d.durationSeconds / km : null);
       const dur = fmtDurationCompact(d.durationSeconds);
       return [
-        { label: 'Distance', value: km ? km.toFixed(1) : '—', unit: 'km' },
+        { label: 'Distance', value: km > 0 ? fmtKm(km) : '—', unit: 'km' },
         { label: 'Avg Pace', value: pace ? fmtPacePerKm(pace) : '—', unit: '/km' },
         { label: 'Time', value: dur.value, unit: dur.unit },
       ];
     }
     case 'bike': {
-      const km = d.distanceKm ?? 0;
+      const km = num(d.distanceKm);
       const avgSpeed = km > 0 && d.durationSeconds > 0
         ? (km / (d.durationSeconds / 3600))
         : null;
       const dur = fmtDurationCompact(d.durationSeconds);
       return [
-        { label: 'Distance', value: km ? km.toFixed(1) : '—', unit: 'km' },
+        { label: 'Distance', value: km > 0 ? fmtKm(km) : '—', unit: 'km' },
         { label: 'Avg Speed', value: avgSpeed ? avgSpeed.toFixed(1) : '—', unit: 'km/h' },
         { label: 'Time', value: dur.value, unit: dur.unit },
       ];
     }
     case 'swim': {
-      const meters = (d.distanceKm ?? 0) * 1000;
+      const meters = num(d.distanceKm) * 1000;
       // Derive per-100m pace from total distance + duration when absent.
       const per100 = d.swimPacePer100m
         ?? (meters > 0 && d.durationSeconds > 0 ? d.durationSeconds / (meters / 100) : null);
@@ -173,8 +190,9 @@ function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
     case 'strength': {
       // If volume was tracked, show it; otherwise fall back to duration so we
       // don't show a wrong "0 kg" volume.
-      const volumeMetric: Metric = d.volumeKg && d.volumeKg > 0
-        ? { label: 'Volume', value: fmtInt(d.volumeKg), unit: 'kg' }
+      const vol = num(d.volumeKg);
+      const volumeMetric: Metric = vol > 0
+        ? { label: 'Volume', value: fmtInt(vol), unit: 'kg' }
         : (() => {
             const dur = fmtDurationCompact(d.durationSeconds);
             return { label: 'Duration', value: dur.value, unit: dur.unit };
@@ -195,12 +213,12 @@ function buildMetrics(key: ActivityKey, d: ActivityShareData): Metric[] {
     }
     case 'walk':
     case 'hike': {
-      const km = d.distanceKm ?? 0;
+      const km = num(d.distanceKm);
       const pace = d.paceSecondsPerKm
         ?? (km > 0 && d.durationSeconds > 0 ? d.durationSeconds / km : null);
       const dur = fmtDurationCompact(d.durationSeconds);
       return [
-        { label: 'Distance', value: km ? km.toFixed(1) : '—', unit: 'km' },
+        { label: 'Distance', value: km > 0 ? fmtKm(km) : '—', unit: 'km' },
         { label: 'Avg Pace', value: pace ? fmtPacePerKm(pace) : '—', unit: '/km' },
         { label: 'Time', value: dur.value, unit: dur.unit },
       ];
