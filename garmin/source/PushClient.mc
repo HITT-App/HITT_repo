@@ -63,6 +63,9 @@ module PushClient {
             :method       => Communications.HTTP_REQUEST_METHOD_POST,
             :headers      => headers,
             :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON,
+            // Carry the payload into the callback so a failed send can be
+            // re-queued (Garmin passes :context back as the 3rd callback arg).
+            :context      => payload,
         };
         Communications.makeWebRequest(
             BASE_URL + PUSH_PATH,
@@ -72,10 +75,13 @@ module PushClient {
         );
     }
 
-    // Web request completion. On 401 (token invalid or pairing revoked),
-    // clear the JWT so next launch prompts re-pair. On any other failure
-    // we queue for retry.
-    function onPushResponse(responseCode as Number, data as Dictionary or String or Null) as Void {
+    // Web request completion. On 200 we drain any backlog. On 401 (token
+    // invalid or pairing revoked) we clear the JWT so next launch prompts
+    // re-pair. On ANY non-200 — including a negative code when the phone is
+    // out of range (no connectivity to push through) — we queue the workout
+    // so it retries on the next successful push or app open, instead of being
+    // silently lost. `context` is the original payload (see :context above).
+    function onPushResponse(responseCode as Number, data as Dictionary or String or Null, context as Object) as Void {
         if (responseCode == 200) {
             drainPendingIfAny();
             return;
@@ -83,8 +89,9 @@ module PushClient {
         if (responseCode == 401) {
             clearToken();
         }
-        // Non-fatal — the Fit-file path still catches this workout.
-        // No user-facing error surface on the watch.
+        if (context != null) {
+            queuePending(context as Dictionary);
+        }
     }
 
     // Retry queue ────────────────────────────────────────────────────────
@@ -120,12 +127,15 @@ module PushClient {
             :method       => Communications.HTTP_REQUEST_METHOD_POST,
             :headers      => headers,
             :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON,
+            // Carry the drained item so a failed drain re-queues it instead of
+            // dropping it (we already sliced it off the queue above).
+            :context      => next,
         };
         Communications.makeWebRequest(
             BASE_URL + PUSH_PATH,
             next,
             options,
-            new Lang.Method(PushClient, :onPushResponse)  // recursion via 200 chain
+            new Lang.Method(PushClient, :onPushResponse)  // 200 → drain next; failure → re-queue
         );
     }
 

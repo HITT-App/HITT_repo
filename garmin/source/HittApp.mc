@@ -19,6 +19,10 @@ class HittApp extends Application.AppBase {
 
     // Cold start, resume from background, from-glance launch — all land here.
     function onStart(state as Dictionary?) as Void {
+        // Flush any workouts that couldn't push last time (e.g. the phone was
+        // out of range mid-run). Safe no-op when the queue is empty or there's
+        // no token / no connectivity; a failed drain re-queues itself.
+        PushClient.drainPendingIfAny();
     }
 
     function onStop(state as Dictionary?) as Void {
