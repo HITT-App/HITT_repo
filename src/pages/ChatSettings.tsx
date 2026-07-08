@@ -110,9 +110,12 @@ export default function ChatSettings() {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="shrink-0 bg-background border-b border-border/60 flex items-center gap-3 px-4 py-3">
+      <header
+        className="sticky top-0 z-20 bg-background border-b border-border/60 flex items-center gap-3 px-4 pb-3"
+        style={{ paddingTop: '12px' }}
+      >
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -122,7 +125,6 @@ export default function ChatSettings() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
       <div className="p-4 pb-28">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -251,7 +253,6 @@ export default function ChatSettings() {
             </Button>
           </TabsContent>
         </Tabs>
-      </div>
       </div>
     </div>
   );
