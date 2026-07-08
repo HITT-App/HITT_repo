@@ -36,7 +36,7 @@ serve(async (req) => {
     }
 
     // Fetch user data in parallel
-    const [preferencesResult, goalsResult, logsResult] = await Promise.all([
+    const [preferencesResult, goalsResult, logsResult, consentResult] = await Promise.all([
       supabase
         .from("activity_preferences")
         .select("*")
@@ -53,11 +53,24 @@ serve(async (req) => {
         .eq("user_id", user.id)
         .order("started_at", { ascending: false })
         .limit(20),
+      supabase
+        .from("profiles")
+        .select("ai_health_consent")
+        .eq("user_id", user.id)
+        .maybeSingle(),
     ]);
 
     const preferences = preferencesResult.data;
     const goals = goalsResult.data;
-    const recentLogs = logsResult.data || [];
+    // Only send HealthKit-sourced activities to the AI with explicit consent (5.1.3).
+    const aiHealthConsent = (consentResult.data as any)?.ai_health_consent === true;
+    const HEALTHKIT_SOURCES = new Set([
+      "apple_watch", "apple_health_native", "healthkit", "healthkit_other",
+      "garmin", "fitbit", "whoop", "oura", "polar", "suunto", "coros", "wahoo",
+    ]);
+    const recentLogs = aiHealthConsent
+      ? (logsResult.data || [])
+      : (logsResult.data || []).filter((a: any) => !HEALTHKIT_SOURCES.has(a.source_platform));
 
     // Calculate weekly stats
     const now = new Date();

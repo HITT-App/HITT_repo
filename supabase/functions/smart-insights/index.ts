@@ -53,22 +53,32 @@ serve(async (req) => {
     const today = now.toISOString().split("T")[0];
 
     const [profileRes, streakRes, workoutsRes, sleepRes, moodRes, activityRes, mealsRes] = await Promise.all([
-      supabase.from("profiles").select("display_name, fitness_level, goals").eq("user_id", userId).maybeSingle(),
+      supabase.from("profiles").select("display_name, fitness_level, goals, ai_health_consent").eq("user_id", userId).maybeSingle(),
       supabase.from("streaks").select("current_streak, longest_streak").eq("user_id", userId).maybeSingle(),
       supabase.from("workout_progress").select("workout_id, duration_seconds, completed_at, created_at").eq("user_id", userId).gte("created_at", weekAgo),
       supabase.from("health_metrics").select("value, recorded_at").eq("user_id", userId).eq("metric_type", "sleep").gte("recorded_at", weekAgo).order("recorded_at", { ascending: false }).limit(7),
       supabase.from("daily_checkins").select("mood, energy, date").eq("user_id", userId).order("date", { ascending: false }).limit(3),
-      supabase.from("activity_logs").select("activity_type, duration_seconds, calories_burned, distance_km, started_at").eq("user_id", userId).gte("started_at", weekAgo).order("started_at", { ascending: false }),
+      supabase.from("activity_logs").select("activity_type, duration_seconds, calories_burned, distance_km, started_at, source_platform").eq("user_id", userId).gte("started_at", weekAgo).order("started_at", { ascending: false }),
       supabase.from("meal_logs").select("calories, protein_grams, carbs_grams, fat_grams, logged_at").eq("user_id", userId).gte("logged_at", weekAgo),
     ]);
 
     const profile = profileRes.data;
     const streak = streakRes.data;
     const workouts = workoutsRes.data || [];
-    const sleepData = sleepRes.data || [];
     const moods = moodRes.data || [];
-    const activities = activityRes.data || [];
     const meals = mealsRes.data || [];
+
+    // HealthKit / Apple Health consent gate (App Store 5.1.3): only send sleep
+    // and HealthKit-sourced activities to the AI provider with explicit consent.
+    const aiHealthConsent = (profileRes.data as any)?.ai_health_consent === true;
+    const HEALTHKIT_SOURCES = new Set([
+      "apple_watch", "apple_health_native", "healthkit", "healthkit_other",
+      "garmin", "fitbit", "whoop", "oura", "polar", "suunto", "coros", "wahoo",
+    ]);
+    const sleepData = aiHealthConsent ? (sleepRes.data || []) : [];
+    const activities = aiHealthConsent
+      ? (activityRes.data || [])
+      : (activityRes.data || []).filter((a: any) => !HEALTHKIT_SOURCES.has(a.source_platform));
 
     const avgSleep = sleepData.length > 0 ? (sleepData.reduce((a, s) => a + (s.value || 0), 0) / sleepData.length).toFixed(1) : null;
     const totalWorkouts = workouts.length;

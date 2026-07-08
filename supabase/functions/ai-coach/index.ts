@@ -2167,15 +2167,15 @@ serve(async (req) => {
       { data: streaks },
       { data: recentCheckin },
       { data: recentCheckins },
-      { data: recentSleep },
+      { data: rawSleep },
       { data: recentWorkouts },
-      { data: recentActivities },
+      { data: rawActivities },
       { data: scheduledWorkouts },
       { data: planItems },
       { data: activityGoals },
       { data: latestWeight },
-      { data: latestHeartRate },
-      { data: latestSteps },
+      { data: rawHeartRate },
+      { data: rawSteps },
       { data: userWorkoutPrefs },
       { data: workoutsCatalogue },
       { data: recipesCatalogue },
@@ -2189,7 +2189,7 @@ serve(async (req) => {
       supabaseAdmin.from('daily_checkins').select('mood, energy, date').eq('user_id', userId).order('date', { ascending: false }).limit(7),
       supabaseAdmin.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('workout_progress').select('completed_at, duration_seconds, workouts(title, category)').eq('user_id', userId).order('completed_at', { ascending: false }).limit(10),
-      supabaseAdmin.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
+      supabaseAdmin.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km, source_platform').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
       supabaseAdmin.from('scheduled_workouts').select('scheduled_date, status, completed_at, duration_minutes, calories_burned, workout_source, workout_title, workout_description, exercises_snapshot, workouts(title, category, difficulty, body_areas, equipment)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
       supabaseAdmin.from('user_workout_plan_items').select('scheduled_date, status, completed_at, workouts(title, duration_minutes)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
       supabaseAdmin.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
@@ -2205,6 +2205,24 @@ serve(async (req) => {
       supabaseAdmin.from('recipes').select('id, name, category, meal_type, calories, protein_g, carbs_g, fat_g, dietary_tags, allergens, source').order('source', { ascending: false }).limit(50),
       supabaseAdmin.from('body_scans').select('estimated_body_fat, confidence_level, scanned_at, analysis').eq('user_id', userId).order('scanned_at', { ascending: false }).limit(2),
     ]);
+
+    // ─── HealthKit / Apple Health consent gate (App Store Guideline 5.1.3) ───
+    // Heart rate, steps, sleep, and HealthKit-sourced activities are only sent
+    // to the third-party AI provider (Google Gemini) with the user's explicit
+    // in-app consent. Without it, blank them so the coaching prompt carries no
+    // Apple Health data. Manual / phone / direct-push activities are not
+    // HealthKit-sourced and are kept.
+    const aiHealthConsent = (profile as any)?.ai_health_consent === true;
+    const HEALTHKIT_SOURCES = new Set([
+      'apple_watch', 'apple_health_native', 'healthkit', 'healthkit_other',
+      'garmin', 'fitbit', 'whoop', 'oura', 'polar', 'suunto', 'coros', 'wahoo',
+    ]);
+    const recentSleep = aiHealthConsent ? rawSleep : null;
+    const latestHeartRate = aiHealthConsent ? rawHeartRate : null;
+    const latestSteps = aiHealthConsent ? rawSteps : null;
+    const recentActivities = aiHealthConsent
+      ? rawActivities
+      : (rawActivities ?? []).filter((a: any) => !HEALTHKIT_SOURCES.has(a.source_platform));
 
     // Fetch active goal separately so errors are visible and we can fall back gracefully.
     // First try: is_active=true (current goal). Fallback: most recent goal regardless of flag.

@@ -285,11 +285,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         return { error: null };
       } catch (e: unknown) {
-        const msg = (e as Error)?.message ?? String(e);
-        if (msg.includes("cancel") || msg.includes("CANCEL")) {
+        const err = e as { message?: string; code?: string | number };
+        const msg = err?.message ?? String(e);
+        const lower = msg.toLowerCase();
+        const code = String(err?.code ?? "");
+        // Tapping Cancel on Apple's sheet is ASAuthorizationError.canceled
+        // (code 1001). Its message is "…AuthorizationError error 1001." — it
+        // does NOT contain the word "cancel", so we must also match the code /
+        // "1001", otherwise cancelling surfaces as an on-screen error. This
+        // also covers the web-auth-session cancel and any plain "cancel" text.
+        // Treat both as a silent "the user didn't complete Apple sign-in":
+        //  • 1001 = ASAuthorizationError.canceled (tapped Cancel on the sheet)
+        //  • 1000 = unknown — fires when there's no Apple ID and the user
+        //    dismisses the "sign in to Apple in Settings" prompt (and on the
+        //    Simulator, which has no Apple ID). Either way they chose not to
+        //    proceed, so we should NOT surface an error.
+        if (
+          code === "1001" || code === "1000" ||
+          lower.includes("1001") || lower.includes("1000") ||
+          lower.includes("cancel")
+        ) {
           return { error: new Error("USER_CANCELLED") };
         }
-        return { error: new Error(`Apple sign-in failed: ${msg}`) };
+        // Any other genuine failure: keep the raw Apple error in the logs, but
+        // show a clean, friendly message rather than the raw string.
+        console.error("Apple sign-in error:", msg, "code:", code);
+        return { error: new Error("Apple sign-in couldn't be completed. Please try again, or use another sign-in method.") };
       }
     }
 

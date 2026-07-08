@@ -89,7 +89,9 @@ With your permission, we connect to:
 - **Google Fit** — if you connect it, we store the access tokens needed to read your fitness data.
 - **Other wearables** — the app may detect which fitness apps or brands are installed on your device (for example Fitbit, Whoop, Oura, Polar, Suunto, Coros, Wahoo, or Strava) so it can offer the right integration. Data from these platforms reaches us only through the connections you approve (for example via Apple Health).
 
-**Health-platform data-use commitment.** Data obtained from **Apple Health / HealthKit** and **Google Fit** is used **only to provide health and fitness features to you**. We do **not** use it for advertising, we do **not** sell it, and we do **not** share it with third parties for their own purposes. Apple Health data is not shared with third-party analytics providers.
+**Health-platform data-use commitment.** Data obtained from **Apple Health / HealthKit** and **Google Fit** is used **only to provide health and fitness features to you**. We do **not** use it for advertising, we do **not** sell it, we do **not** share it with third parties for their own purposes, and it is **not** shared with third-party analytics providers.
+
+**AI personalisation (opt-in).** Only if you turn on *"Use my health data for AI coaching"* in Settings, your health and fitness data — including activity, heart rate, and sleep from **Apple Health** — is sent to our AI provider, **Google LLC** (Gemini API), solely to personalise your coaching and insights. Google processes it to return results to us and, under its API terms, does **not** use it to train its general models. This setting is **off by default**; you can turn it off at any time, after which no Apple Health data is sent to the AI.
 
 ---
 
@@ -134,7 +136,7 @@ We share personal information only with providers who process it **on our behalf
 | **Supabase** | Cloud database, authentication, file storage, and backend functions (our core infrastructure) | Account, profile, health/fitness, content, tokens | EU (West EU region) |
 | **PostHog** | Product analytics | User ID, email, feature-usage events | EU (`eu.i.posthog.com`) |
 | **Sentry** | Crash and error monitoring | Diagnostic/error data | EU |
-| **Google LLC** (Gemini API) | AI coaching, workout/plan generation, and body, food, and form analysis | The inputs you provide (e.g. goals, profile memory, body-scan and food data) | Global (Google data centres) |
+| **Google LLC** (Gemini API) | AI coaching, workout/plan generation, and body, food, and form analysis | Inputs you provide (goals, profile memory, body-scan and food photos, text) and — only if you opt in — your health/fitness metrics including activity, heart rate, and sleep from Apple Health | Global (Google data centres) |
 | **ElevenLabs** | Voice (text-to-speech and speech-to-text) for the AI coach | Voice/text input and generated audio | US |
 | **Spoonacular** and **Open Food Facts** | Food and barcode nutrition lookup | The food/barcode you scan or search | US / EU |
 | **Apple** | App distribution, push notifications (APNs), Apple Health, Apple Watch | Push tokens; Health data you authorise | Global |
@@ -147,7 +149,7 @@ We keep the current list of sub-processors up to date. We may also disclose info
 
 ## 7. AI features
 
-Some features use artificial intelligence to generate workout plans, coaching, insights, and analysis of food and body images. When you use these features, the relevant inputs (such as your profile memory, goals, and the photos or text you submit) are sent to our AI provider, **Google LLC** (Gemini API), to generate a response. Google processes the data to return results to us and, under its API terms, does not use this data to train its general models. AI-generated content is for general fitness and wellness guidance only and is **not medical advice** (see Section 15).
+Some features use artificial intelligence to generate workout plans, coaching, insights, and analysis of food and body images. When you use these features, the relevant inputs (such as your profile memory, goals, and the photos or text you submit) are sent to our AI provider, **Google LLC** (Gemini API), to generate a response. **If you opt in** via *"Use my health data for AI coaching"* in Settings, your activity, heart rate, and sleep data — including data from **Apple Health** — is also included so coaching can be personalised; this is off by default and can be revoked at any time. Google processes the data to return results to us and, under its API terms, does not use this data to train its general models. AI-generated content is for general fitness and wellness guidance only and is **not medical advice** (see Section 15).
 
 ---
 

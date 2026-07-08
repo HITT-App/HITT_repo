@@ -86,14 +86,14 @@ serve(async (req) => {
 
     // ── AI insight — user has meaningful data ────────────────────────────────
     const [
-      { data: recentActivities },
+      { data: rawActivities },
       { data: recentWorkouts },
       { data: scoreHistory },
       { data: profile },
     ] = await Promise.all([
       admin
         .from("activity_logs")
-        .select("activity_type, duration_seconds, calories_burned, ended_at")
+        .select("activity_type, duration_seconds, calories_burned, ended_at, source_platform")
         .eq("user_id", user.id)
         .gte("ended_at", thirtyDaysAgo)
         .order("ended_at", { ascending: false })
@@ -114,10 +114,21 @@ serve(async (req) => {
         .limit(30),
       admin
         .from("profiles")
-        .select("display_name, fitness_goal, fitness_level")
+        .select("display_name, fitness_goal, fitness_level, ai_health_consent")
         .eq("id", user.id)
         .maybeSingle(),
     ]);
+
+    // HealthKit / Apple Health consent gate (App Store 5.1.3): only include
+    // HealthKit-sourced activities in the AI summary with explicit consent.
+    const aiHealthConsent = (profile as any)?.ai_health_consent === true;
+    const HEALTHKIT_SOURCES = new Set([
+      "apple_watch", "apple_health_native", "healthkit", "healthkit_other",
+      "garmin", "fitbit", "whoop", "oura", "polar", "suunto", "coros", "wahoo",
+    ]);
+    const recentActivities = aiHealthConsent
+      ? rawActivities
+      : (rawActivities ?? []).filter((a: any) => !HEALTHKIT_SOURCES.has(a.source_platform));
 
     const totalSessions = (recentActivities?.length ?? 0) + (recentWorkouts?.length ?? 0);
     const totalCalories = [

@@ -11,6 +11,7 @@ import { useTTS } from '@/contexts/TTSContext';
 import { useAI } from '@/hooks/useAI';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { AIWorkoutCard } from './AIWorkoutCard';
+import { HealthConsentPrompt } from './HealthConsentPrompt';
 import { AIWorkoutPlanCard } from './AIWorkoutPlanCard';
 import { FoodConfirmCard } from './FoodConfirmCard';
 import { GoalConfirmCard } from './GoalConfirmCard';
@@ -877,6 +878,8 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
 
   return (
     <div className="fixed inset-0 z-[100] bg-background flex flex-col">
+      {/* First-use Apple Health → AI consent (App Store 5.1.3) */}
+      <HealthConsentPrompt />
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0"

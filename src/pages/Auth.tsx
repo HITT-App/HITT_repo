@@ -219,7 +219,7 @@ const Auth = () => {
   const AppleButton = ({ label }: { label: string }) => (
     <Button
       variant="outline"
-      className="w-full bg-black text-white hover:bg-neutral-800 hover:text-white border-black flex items-center justify-center gap-2"
+      className="w-full bg-white text-black hover:bg-neutral-100 hover:text-black border border-black/10 shadow-sm font-medium flex items-center justify-center gap-2"
       onClick={handleAppleSignIn}
       disabled={isLoading}
     >
@@ -358,7 +358,7 @@ const Auth = () => {
       {/* Apple Sign In (native iOS only) */}
       {showAppleSignIn && (
         <div className="mt-3 animate-fade-up" style={{ animationDelay: "0.38s" }}>
-          <AppleButton label="Sign In With Apple" />
+          <AppleButton label="Sign in with Apple" />
         </div>
       )}
 
@@ -587,7 +587,7 @@ const Auth = () => {
       {/* Apple Sign Up (native iOS only) */}
       {showAppleSignIn && (
         <div className="mt-3 animate-fade-up" style={{ animationDelay: "0.48s" }}>
-          <AppleButton label="Sign Up With Apple" />
+          <AppleButton label="Sign up with Apple" />
         </div>
       )}
 

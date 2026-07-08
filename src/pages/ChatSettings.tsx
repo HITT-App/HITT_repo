@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -26,9 +26,29 @@ export default function ChatSettings() {
   const [activeTab, setActiveTab] = useState('general');
 
   const [customResponse, setCustomResponse] = useState(() => localStorage.getItem('hiit-ai-custom-response') ?? '');
-  const [shareData, setShareData] = useState(true);
+  // Explicit, opt-in consent to send Apple Health / HealthKit data to the AI
+  // provider for coaching (App Store 5.1.3). Loaded from and saved to the DB.
+  const [aiHealthConsent, setAiHealthConsent] = useState(false);
   const [customMemory, setCustomMemory] = useState(() => localStorage.getItem('hiit-ai-custom-memory') ?? '');
   const [insightSuggestions, setInsightSuggestions] = useState(INSIGHT_SUGGESTIONS);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('profiles').select('ai_health_consent').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => setAiHealthConsent((data as any)?.ai_health_consent === true));
+  }, [user]);
+
+  const handleHealthConsentChange = async (val: boolean) => {
+    if (!user) return;
+    setAiHealthConsent(val);
+    const { error } = await supabase.from('profiles').update({ ai_health_consent: val }).eq('user_id', user.id);
+    if (error) {
+      setAiHealthConsent(!val);
+      toast({ title: "Couldn't update", description: 'Please try again.', variant: 'destructive' });
+    } else {
+      toast({ title: val ? 'Health data sharing on' : 'Health data sharing off', description: val ? 'Your Apple Health data will personalise AI coaching.' : 'Apple Health data will no longer be sent to the AI.' });
+    }
+  };
 
   const handleSave = () => {
     localStorage.setItem('hiit-ai-custom-response', customResponse.trim());
@@ -131,10 +151,15 @@ export default function ChatSettings() {
                 <p className="text-xs text-muted-foreground">{customResponse.length}/300 — this is added to every conversation with your AI coach</p>
               </div>
 
-              {/* Share Data Toggle */}
-              <div className="flex items-center justify-between py-2">
-                <Label>Share data to HIIT</Label>
-                <Switch checked={shareData} onCheckedChange={setShareData} />
+              {/* Apple Health → AI consent (App Store 5.1.3) */}
+              <div className="flex items-start justify-between gap-4 py-2">
+                <div className="space-y-1">
+                  <Label>Use my health data for AI coaching</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Allow HIIT to send your activity, heart rate, and sleep — including data from Apple Health — to our AI provider (Google) to personalise your coaching. It is never used to train their models or for advertising. Off by default; you can turn it off anytime.
+                  </p>
+                </div>
+                <Switch checked={aiHealthConsent} onCheckedChange={handleHealthConsentChange} />
               </div>
 
               {/* Custom Memory */}
