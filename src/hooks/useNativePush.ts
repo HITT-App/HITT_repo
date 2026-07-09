@@ -41,6 +41,9 @@ export function useNativePush() {
         { onConflict: "token" }
       );
     });
+    const errorListener = PushNotifications.addListener("registrationError", (err) => {
+      console.error('[useNativePush] registrationError:', JSON.stringify(err));
+    });
 
     // Handle remote push tapped while app is in background/closed
     const actionListener = PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
@@ -58,6 +61,7 @@ export function useNativePush() {
 
     return () => {
       tokenListener.then((l) => l.remove());
+      errorListener.then((l) => l.remove());
       actionListener.then((l) => l.remove());
       localActionListener.then((l) => l.remove());
     };

@@ -38,4 +38,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+ requires runtime POST_NOTIFICATIONS permission. Without
+         this declaration `PushNotifications.requestPermissions()` silently
+         returns "denied" without ever prompting the user. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

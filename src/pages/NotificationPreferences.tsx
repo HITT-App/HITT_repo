@@ -7,6 +7,34 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
+import { App as CapApp } from "@capacitor/app";
+
+// OS-specific label + settings-URI for the "enable notifications" nudge.
+// iOS: app-settings: jumps straight to the app's own settings screen.
+// Android: package: URI opens the app's info page inside Android Settings,
+// where the user can toggle "Notifications" back on.
+const settingsCopy = (): { label: string; uri: string } => {
+  const platform = Capacitor.getPlatform();
+  if (platform === 'android') {
+    return {
+      label: 'Android Settings → Apps → HIIT Fitness → Notifications',
+      uri: 'package:com.hiitfitness.app',
+    };
+  }
+  return {
+    label: 'iOS Settings → HIIT → Notifications',
+    uri: 'app-settings:',
+  };
+};
+
+async function openOsNotificationSettings() {
+  const { uri } = settingsCopy();
+  try {
+    await CapApp.openUrl({ url: uri });
+  } catch {
+    // Fallback: nothing else we can do; user has to go manually.
+  }
+}
 
 interface Prefs {
   push_enabled: boolean;
@@ -122,7 +150,7 @@ export default function NotificationPreferences() {
       if (receive !== "granted") {
         toast({
           title: "Permission required",
-          description: "Enable notifications in iOS Settings → HIIT.",
+          description: `Enable notifications in ${settingsCopy().label}.`,
           variant: "destructive",
         });
         return;
@@ -156,8 +184,14 @@ export default function NotificationPreferences() {
               <p className="text-sm font-semibold text-destructive">Notifications blocked</p>
             </div>
             <p className="text-xs text-muted-foreground">
-              Go to <strong>iOS Settings → HIIT → Notifications</strong> and turn them on.
+              Go to <strong>{settingsCopy().label}</strong> and turn them on.
             </p>
+            <button
+              onClick={openOsNotificationSettings}
+              className="mt-3 text-xs font-semibold text-primary underline underline-offset-2"
+            >
+              Open Settings
+            </button>
           </div>
         )}
 
