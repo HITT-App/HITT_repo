@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "669743846703",
+    "project_id": "hiit-fitness-494906",
+    "storage_bucket": "hiit-fitness-494906.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:669743846703:android:abdd4eeabdf562b5a33dda",
+        "android_client_info": {
+          "package_name": "com.hiitfitness.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "669743846703-h7q4uocjgk2oc6qo0rb2lak197h5qist.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDx3BCIlJCsMxJmYqZ54-obeAYPlC8Kal8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "669743846703-h7q4uocjgk2oc6qo0rb2lak197h5qist.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "669743846703-uvnt80o7etiqai1ggodla7k3eqd1bddv.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.hiitfitness.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
