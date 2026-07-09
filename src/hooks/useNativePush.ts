@@ -27,10 +27,17 @@ export function useNativePush() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !user) return;
 
-    // Save device token to DB when APNs issues one
+    // Save device token to DB when APNs / FCM issues one. Capacitor's
+    // PushNotifications plugin transparently talks to whichever gateway
+    // matches the OS; the token STRING differs (iOS is a hex APNs device
+    // token, Android is an FCM registration token) and the server-side
+    // notify-user function routes on the `platform` column to pick which
+    // gateway to POST to. Never hardcode 'ios' here — Android tokens
+    // would fail APNs delivery silently and get evicted as stale.
+    const tokenPlatform = Capacitor.getPlatform() === 'android' ? 'android' : 'ios';
     const tokenListener = PushNotifications.addListener("registration", async (token) => {
       await supabase.from("device_push_tokens").upsert(
-        { user_id: user.id, token: token.value, platform: "ios", updated_at: new Date().toISOString() },
+        { user_id: user.id, token: token.value, platform: tokenPlatform, updated_at: new Date().toISOString() },
         { onConflict: "token" }
       );
     });
