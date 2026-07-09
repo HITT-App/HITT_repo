@@ -31,7 +31,7 @@ To use most features, you need to create an account. You can sign up with email 
 - keeping your login credentials confidential;
 - everything that happens under your account.
 
-Tell us at [hiit.co.uk@gmail.com](mailto:hiit.co.uk@gmail.com) as soon as you think your account has been compromised. You can delete your account at any time from the app's Settings screen.
+Tell us at [casey@hiituk.com](mailto:casey@hiituk.com) as soon as you think your account has been compromised. You can delete your account at any time from the app's Settings screen.
 
 ---
 
@@ -89,7 +89,7 @@ When you post, comment, message, share a workout, or otherwise submit content to
 
 You keep ownership of your User Content, but you grant us a **worldwide, royalty-free, non-exclusive licence** to host, store, reproduce, adapt (for formatting/moderation), publish, and display it within the Service and in related promotional materials, for as long as you keep an account with us. This licence ends when you delete the content or your account, except to the extent we need to retain copies for legal, safety, or backup purposes.
 
-You are responsible for your User Content. We may remove content or restrict, suspend, or terminate accounts that break these rules, without prior notice. Report anything that concerns you to [hiit.co.uk@gmail.com](mailto:hiit.co.uk@gmail.com).
+You are responsible for your User Content. We may remove content or restrict, suspend, or terminate accounts that break these rules, without prior notice. Report anything that concerns you to [casey@hiituk.com](mailto:casey@hiituk.com).
 
 ---
 
@@ -186,6 +186,6 @@ Questions about these Terms, or reports of abuse or safety concerns:
 
 - **HIITFITNESS LTD** (company number 16893850)
 - 14 Highland Avenue, Bryncethin, Bridgend, Wales, CF32 9YH, United Kingdom
-- Email: **[hiit.co.uk@gmail.com](mailto:hiit.co.uk@gmail.com)**
+- Email: **[casey@hiituk.com](mailto:casey@hiituk.com)**
 
 Our [Privacy Policy](https://www.hiituk.com/privacy) explains how we handle your personal information.

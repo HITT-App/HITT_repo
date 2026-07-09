@@ -23,7 +23,7 @@ The data controller responsible for your personal information is:
 
 - **HIITFITNESS LTD** (registered in England & Wales, company number **16893850**)
 - 14 Highland Avenue, Bryncethin, Bridgend, Wales, CF32 9YH, United Kingdom
-- Email: **Hiit.co.uk@gmail.com**
+- Email: **casey@hiituk.com**
 
 ---
 
@@ -201,7 +201,7 @@ If you are in the EU, UK, or a region with comparable laws, you have the right t
 - **Withdraw consent** at any time; and
 - **Lodge a complaint** with your local data-protection authority (in the UK, the Information Commissioner's Office, ico.org.uk).
 
-To exercise these rights, contact us at **Hiit.co.uk@gmail.com**. We will respond within the timeframes required by law. We may need to verify your identity first.
+To exercise these rights, contact us at **casey@hiituk.com**. We will respond within the timeframes required by law. We may need to verify your identity first.
 
 ---
 
@@ -214,13 +214,13 @@ If you are a resident of California (CCPA/CPRA) or another US state with a priva
 - **Opt out** of the "sale" or "sharing" of personal information and of targeted advertising — **note: we do not sell or share your personal information for these purposes, and we do not engage in cross-context behavioural advertising**; and
 - **Non-discrimination** for exercising your rights.
 
-We collect the categories of personal information described in Section 3, for the purposes in Section 4. We do not knowingly process the sensitive personal information of consumers for purposes that require a right-to-limit disclosure. To exercise your rights, contact **Hiit.co.uk@gmail.com**. You may use an authorised agent, subject to verification.
+We collect the categories of personal information described in Section 3, for the purposes in Section 4. We do not knowingly process the sensitive personal information of consumers for purposes that require a right-to-limit disclosure. To exercise your rights, contact **casey@hiituk.com**. You may use an authorised agent, subject to verification.
 
 ---
 
 ## 14. Other regions
 
-Depending on where you live, you may have additional or similar rights under laws such as Australia's Privacy Act, Canada's PIPEDA, Brazil's LGPD, and others. We honour valid requests under applicable law. Contact us at **Hiit.co.uk@gmail.com**.
+Depending on where you live, you may have additional or similar rights under laws such as Australia's Privacy Act, Canada's PIPEDA, Brazil's LGPD, and others. We honour valid requests under applicable law. Contact us at **casey@hiituk.com**.
 
 ---
 
@@ -232,7 +232,7 @@ HIIT Fitness provides general fitness and wellness information and tools. It is 
 
 ## 16. Children's privacy
 
-The Service is not directed to children under **16**, and we do not knowingly collect personal information from them. If you believe a child has provided us with personal information, contact us at **Hiit.co.uk@gmail.com** and we will delete it.
+The Service is not directed to children under **16**, and we do not knowingly collect personal information from them. If you believe a child has provided us with personal information, contact us at **casey@hiituk.com** and we will delete it.
 
 ---
 
@@ -248,6 +248,6 @@ Questions or requests about this policy or your data:
 
 - **HIITFITNESS LTD** (company number 16893850)
 - 14 Highland Avenue, Bryncethin, Bridgend, Wales, CF32 9YH, United Kingdom
-- Email: **Hiit.co.uk@gmail.com**
+- Email: **casey@hiituk.com**
 
 Our Terms of Service are available in the app under Settings → Legal.
