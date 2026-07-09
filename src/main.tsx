@@ -8,10 +8,21 @@ import { initAnalytics } from "./lib/analytics";
 // `window.__hittDebug.mic` in Safari Web Inspector on a device build.
 // Safe to fail — installMicDebug is instrumentation, not a required feature.
 try { installMicDebug(); } catch (e) { console.warn('[mic-debug] install failed', e); }
+import { Capacitor } from "@capacitor/core";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initNativePlugins } from "./lib/native";
+
+// Tag <html> with the runtime platform so platform-scoped CSS rules can
+// activate synchronously before React mounts. iOS handles safe-area via
+// the WebView's contentInset='automatic', so applying our
+// .fixed.inset-0.bg-background safe-area padding on iOS double-pads
+// the notch. Scope that rule to .platform-android only. Set as early as
+// possible so the initial paint already has the class in place.
+try {
+  document.documentElement.classList.add(`platform-${Capacitor.getPlatform()}`);
+} catch { /* Capacitor not yet ready — non-native rendering falls through */ }
 import { LiveActivity } from "./lib/live-activity";
 import {
   CACHE_VERSION_KEY,

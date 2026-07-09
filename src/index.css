@@ -121,13 +121,20 @@
   }
 
   /* Full-screen page-level wrappers (fixed inset-0 with a solid background)
-     must sit below the Android status bar and iOS notch. Fixed positioning
-     is relative to the viewport, not the WebView, so Capacitor's Android
+     must sit below the Android status bar. Fixed positioning is relative
+     to the viewport, not the WebView, so Capacitor's Android
      `setOverlaysWebView(false)` doesn't cover this — only backdrops with
      transparency (bg-background/80, bg-black/50, etc.) are exempt because
      they use a different Tailwind-generated class. Applied globally so we
-     don't need to sprinkle `paddingTop` on every one of ~60 pages. */
-  .fixed.inset-0.bg-background {
+     don't need to sprinkle `paddingTop` on every one of ~60 pages.
+
+     Scoped to .platform-android specifically. iOS handles the notch via
+     the WebView's `contentInset='automatic'` — adding CSS safe-area
+     padding on top of that would double-pad every page (as it did on
+     Chat Settings before the sticky-header conversion). The
+     `.platform-android` class is added synchronously in main.tsx before
+     React mounts. */
+  .platform-android .fixed.inset-0.bg-background {
     padding-top: var(--safe-area-inset-top, 0px);
   }
 }
