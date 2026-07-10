@@ -14,6 +14,19 @@ interface GenerateRequest {
   sessions_per_week?: number;
   duration_minutes?: number;
   title?: string;
+  // Optional body-scan context — passed by JarvisMode when the user
+  // did a body scan during onboarding and tapped "Add these to my
+  // plan". If present, the prompt appends these observations and
+  // recommendations so the generated plan is tailored to what the
+  // scan surfaced (imbalances, weak areas, body-type-appropriate
+  // programming, etc.).
+  body_scan?: {
+    scannedAt?: string;
+    estimatedBodyFat?: number | null;
+    bodyType?: string;
+    recommendations?: string[];
+    keyObservations?: string[];
+  } | null;
 }
 
 interface ExerciseItem {
@@ -89,6 +102,7 @@ serve(async (req) => {
       days,
       targetBodyAreas: prefs?.target_body_areas ?? [],
       availableEquipment: prefs?.available_equipment ?? [],
+      bodyScan: body.body_scan ?? null,
     });
 
     await admin.from("ai_generation_log").insert({
@@ -265,8 +279,29 @@ function buildUserPrompt(input: {
   days: number;
   targetBodyAreas: string[];
   availableEquipment: string[];
+  bodyScan?: {
+    estimatedBodyFat?: number | null;
+    bodyType?: string;
+    recommendations?: string[];
+    keyObservations?: string[];
+  } | null;
 }): string {
   const totalSessions = input.sessionsPerWeek * Math.ceil(input.days / 7);
+
+  const bodyScanLines: (string | null)[] = [];
+  if (input.bodyScan) {
+    const bs = input.bodyScan;
+    bodyScanLines.push("", "The user just completed a body scan. Factor these findings into the plan you build:");
+    if (bs.bodyType) bodyScanLines.push(`- Body type: ${bs.bodyType}`);
+    if (bs.estimatedBodyFat != null) bodyScanLines.push(`- Estimated body fat: ${bs.estimatedBodyFat}%`);
+    if (bs.keyObservations?.length) {
+      bodyScanLines.push(`- Key observations: ${bs.keyObservations.slice(0, 3).join("; ")}`);
+    }
+    if (bs.recommendations?.length) {
+      bodyScanLines.push(`- Recommendations to act on: ${bs.recommendations.slice(0, 5).join("; ")}`);
+    }
+    bodyScanLines.push("Weight the plan toward the scan's findings — e.g. if it flagged upper-body underdevelopment, bias toward pull / press movements; if it flagged posture / core, prioritise stability and mobility work.");
+  }
 
   return [
     `Build a ${input.days}-day workout plan for this user:`,
@@ -280,6 +315,7 @@ function buildUserPrompt(input: {
     input.availableEquipment.length
       ? `- Available equipment: ${input.availableEquipment.join(", ")}`
       : `- Equipment: bodyweight only`,
+    ...bodyScanLines,
     "",
     `Create ${totalSessions} workout sessions spread across ${input.days} days (day_index 0 = today). Omit rest days — just don't include them. Avoid back-to-back sessions targeting the same muscle group.`,
     "",

@@ -147,6 +147,10 @@ const BodyScan = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const returnTo = (location.state as any)?.returnTo as string | undefined
+  // 'onboarding' when entered from JarvisMode's plan-generation flow;
+  // undefined when entered from Home. Determines what "Add these to my
+  // plan" does — see the button's onClick handler.
+  const flow = (location.state as any)?.flow as string | undefined
   const { user } = useAuth()
   const { logMetric } = useHealthMetrics()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -884,7 +888,51 @@ const BodyScan = () => {
                       </div>
                     ))}
                   </div>
-                  <Button className="w-full mt-3 gap-1.5 h-11">
+                  <Button
+                    className="w-full mt-3 gap-1.5 h-11"
+                    onClick={() => {
+                      if (!analysis) return;
+                      // Persist the fresh recommendations for the
+                      // plan-generation step to pick up. sessionStorage
+                      // (not localStorage) so a stray navigation to
+                      // /body-scan later doesn't accidentally re-inject
+                      // stale scan data into a new plan. Cleared by
+                      // JarvisMode.createScheduleFromJarvis once the
+                      // plan lands.
+                      try {
+                        sessionStorage.setItem(
+                          'hiit-body-scan-pending-for-plan',
+                          JSON.stringify({
+                            scannedAt: new Date().toISOString(),
+                            estimatedBodyFat: analysis.estimatedBodyFat ?? null,
+                            bodyType: analysis.bodyType,
+                            recommendations: analysis.recommendations ?? [],
+                            keyObservations: analysis.keyObservations ?? [],
+                          })
+                        );
+                      } catch { /* private mode / storage full */ }
+                      if (flow === 'onboarding') {
+                        // Route back into the Jarvis modal so it can
+                        // finish the plan step. Home is the safe target
+                        // — Jarvis renders on top of any route via
+                        // VoiceController.
+                        toast.success('Adding these to your plan…');
+                        navigate('/');
+                      } else {
+                        // Home entry — Path B (route through Jarvis with
+                        // comparison + choice card) is still to build.
+                        // Interim behaviour: same as onboarding — feed
+                        // the recs into a fresh plan-generation. Once
+                        // Path B ships this branch flips to the compare
+                        // + [Update] / [Stick] flow.
+                        toast.success('Sending to your HIIT coach…');
+                        window.dispatchEvent(new CustomEvent('hitt:open-jarvis', {
+                          detail: { prefillMessage: 'I just did a body scan — please turn these into a plan.' }
+                        }));
+                        navigate('/');
+                      }
+                    }}
+                  >
                     <CalendarPlus className="w-4 h-4" /> Add these to my plan
                   </Button>
                 </Card>

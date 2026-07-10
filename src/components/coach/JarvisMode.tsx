@@ -497,6 +497,18 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) throw new Error('Not authenticated');
 
+      // Pick up any pending body-scan recommendations written by
+      // BodyScan.tsx during the onboarding flow. If the user did a
+      // scan on the way to plan generation, its recs get folded
+      // silently into the prompt. Cleared after use so a subsequent
+      // plan-generation call (e.g. user asks for a new plan tomorrow)
+      // doesn't re-inject stale recs.
+      let bodyScanContext: unknown = undefined;
+      try {
+        const raw = sessionStorage.getItem('hiit-body-scan-pending-for-plan');
+        if (raw) bodyScanContext = JSON.parse(raw);
+      } catch { /* ignore malformed JSON */ }
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-workout-plan`,
         {
@@ -508,6 +520,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
             sessions_per_week: params.daysPerWeek,
             duration_minutes: params.sessionMinutes,
             title: `${params.goal} Plan`,
+            body_scan: bodyScanContext,
           }),
         }
       );
@@ -540,6 +553,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       // user closes before the navigate fires (narrows the race window).
       localStorage.setItem(skipKey('plan', userId), 'true');
       localStorage.setItem('hiit-plan-onboarding-done', 'true');
+      // Body-scan recs, if any, have now been folded into the generated
+      // plan — clear so a later plan-generation call doesn't re-inject
+      // a stale scan.
+      try { sessionStorage.removeItem('hiit-body-scan-pending-for-plan'); } catch {}
       await ai.appendAssistantMessage('✅ Your schedule is set! Taking you there now…');
 
       setTimeout(() => {
@@ -1040,7 +1057,11 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
                   setPendingBodyScan(false);
                   ai.abort();
                   tts.cancel();
-                  navigate('/body-scan');
+                  // Tag the navigation as onboarding so BodyScan's
+                  // "Add these to my plan" button knows to save the
+                  // recommendations for pickup by the plan-generation
+                  // step, instead of routing back to a conversation.
+                  navigate('/body-scan', { state: { flow: 'onboarding' } });
                 }}
               >
                 Open Body Scan →
