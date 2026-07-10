@@ -6,6 +6,7 @@
 // does a single Apple Watch walk doesn't get yanked between flows.
 
 import { useQuery } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -66,6 +67,17 @@ export function usePrimaryWearable() {
       if (wearable === "phone_only") {
         const { paired, installed } = await isWatchPaired();
         if (paired && installed) wearable = "apple_watch";
+      }
+      // Android can never legitimately be an Apple Watch user — Apple Watch
+      // requires an iPhone to pair. If the history-based detector returned
+      // "apple_watch" because activity_logs happens to contain rows with
+      // source_platform='apple_watch' (e.g. seeded rows for demo, or the
+      // user's iOS phone previously wrote to their account and they're now
+      // on Android), fall back to phone_only. This stops the wearable
+      // launch card from suggesting "Launch on Apple Watch" on a device
+      // that cannot possibly reach one.
+      if (Capacitor.getPlatform() === "android" && wearable === "apple_watch") {
+        wearable = "phone_only";
       }
       writeCachedDecision(user.id, wearable);
       return wearable;
