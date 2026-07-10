@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Camera, Loader2, User, Target, Shield, Mic, Sun, Moon,
-  Pencil, Check, X, Calendar, Lock, Globe, Trash2, Bell, ChevronRight, Upload, Watch, Mail,
+  Pencil, Check, X, Calendar, Lock, Globe, Trash2, Bell, ChevronRight, Upload, Watch, Mail, Info,
 } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 
@@ -663,6 +663,21 @@ export default function Profile() {
               </div>
             )}
           </div>
+
+          {/* About */}
+          <button
+            onClick={() => navigate('/about')}
+            className="w-full flex items-center justify-between p-4 bg-secondary rounded-xl active:opacity-70 transition-opacity"
+          >
+            <div className="flex items-center gap-3">
+              <Info className="w-4 h-4 text-muted-foreground" />
+              <div className="text-left">
+                <p className="font-medium text-sm">About HIIT Fitness</p>
+                <p className="text-xs text-muted-foreground">Version, contact, legal &amp; more</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
 
           <div className="pt-2">
             <Button

@@ -123,6 +123,7 @@ const MealDetail = lazy(() => import("./pages/MealDetail"));
 const NotificationDemo = lazy(() => import("./pages/NotificationDemo"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const About = lazy(() => import("./pages/About"));
 const CommunityChatroom = lazy(() => import("./pages/CommunityChatroom"));
 const RoutesExplorer = lazy(() => import("./pages/RoutesExplorer"));
 const RouteDetail = lazy(() => import("./pages/RouteDetail"));
@@ -188,6 +189,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/about" element={<About />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/ai-coach" element={<ProtectedRoute><AICoach /></ProtectedRoute>} />
             <Route path="/ai" element={<ProtectedRoute><AISurface /></ProtectedRoute>} />
