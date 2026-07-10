@@ -27,3 +27,8 @@ verify_jwt = false
 # via _shared/healthkit-device-jwt.ts.
 [functions.sync-healthkit-background]
 verify_jwt = false
+
+# Owner analytics digest — invoked by pg_cron (Authorization: Bearer <DIGEST_CRON_SECRET>)
+# or manually with x-digest-secret. Auth is a shared secret checked inside the function.
+[functions.analytics-digest]
+verify_jwt = false
