@@ -59,14 +59,15 @@ export default function ChatSettings() {
   const handleClearHistory = async () => {
     if (!user) return;
 
-    // 1. Find ALL Jarvis conversations (history may have multiple if older
-    //    deletes only nuked messages without the row). Delete messages, then
-    //    the conversation rows themselves so useAI creates a fresh one.
+    // 1. Find ALL AI-coach conversations (history may have multiple if older
+    //    deletes only nuked messages without the row, or user was signed up
+    //    before the Jarvis→HIIT Coach rename). Delete messages, then the
+    //    conversation rows themselves so useAI creates a fresh one.
     const { data: convs } = await supabase
       .from('conversations')
       .select('id')
       .eq('user_id', user.id)
-      .eq('title', 'Jarvis');
+      .in('title', ['HIIT Coach', 'Jarvis']);
     if (convs && convs.length > 0) {
       const ids = convs.map(c => c.id);
       await supabase.from('messages').delete().in('conversation_id', ids);

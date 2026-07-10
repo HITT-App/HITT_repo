@@ -41,7 +41,7 @@ HIIT Fitness helps you plan and track fitness activity. Depending on the feature
 
 - **Workouts and schedules** — a library of high-intensity workouts, a workout scheduler, GPS activity tracking, and share cards for completed workouts and personal bests.
 - **Wearable integrations** — the HIIT Apple Watch app, the HIIT Garmin Connect IQ app, and background reads from Apple Health for supported wearables (Apple Watch, Garmin, Fitbit, Whoop, Oura and others). We use these to record your workouts and health metrics; we never write to Apple Health without your permission.
-- **AI coach ("Jarvis")** — conversational AI that can suggest workouts, build training plans, log meals, and give general fitness guidance based on what you tell it and what your account data shows.
+- **AI coach ("HIIT coach")** — conversational AI that can suggest workouts, build training plans, log meals, and give general fitness guidance based on what you tell it and what your account data shows.
 - **Meals and nutrition** — meal logging, nutrition tracking, and AI-assisted food estimation from free-text or photo input.
 - **Sleep and health metrics** — read-only summaries of the health data you or your wearables provide.
 - **Community features** — public posts, comments, reactions, direct messages, follows, and notifications between users.
@@ -65,7 +65,7 @@ You use the Service at your own risk. We do not guarantee any particular fitness
 
 ## 5. AI-generated content
 
-Parts of the Service use large-language and generative-AI models (for example, the Jarvis coach, AI workout plans, nutrition estimation, and daily briefings). AI output:
+Parts of the Service use large-language and generative-AI models (for example, the HIIT coach, AI workout plans, nutrition estimation, and daily briefings). AI output:
 
 - can be inaccurate, incomplete, or out of date;
 - is not personalised medical, nutritional, or safety advice;

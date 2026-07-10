@@ -34,7 +34,7 @@ export function FloatingActionButton({ onClick }: FloatingActionButtonProps) {
     <button
       onClick={onClick}
       className="fixed bottom-32 right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 transition-transform touch-manipulation"
-      aria-label="Open Jarvis"
+      aria-label="Open HIIT coach"
       data-tutorial="fab"
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

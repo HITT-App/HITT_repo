@@ -21,7 +21,7 @@ export const BottomNav = ({ onHIITClick, onQuickAddClick, quickAddOpen }: Bottom
   const navItems = [
     { id: "home",      label: "Home",      path: "/" },
     { id: "quickadd",  label: "Quick Add", path: null as string | null },
-    { id: "center",    label: "Jarvis",    path: null as string | null },
+    { id: "center",    label: "Coach",     path: null as string | null },
     { id: "schedule",  label: "Schedule",  path: "/workout-schedule" },
     ...(flags.community_enabled ? [{ id: "community", label: "Social", path: "/community/feed" }] : []),
   ];

@@ -48,7 +48,7 @@ We collect the following categories of information. Not all of it applies to eve
 - If you sign in with **Google** or **Apple**, we receive an account identifier and basic profile information (such as name and email) as permitted by that provider. If you use **Sign in with Apple** and choose to hide your email, Apple provides us with a private relay address instead of your real one.
 - **Display name** and **profile photo / avatar** (optional).
 - **Fitness goal**, selected **wearable type**, and app preferences.
-- **"Jarvis" AI memory:** a stored summary of facts you share with our in-app AI assistant to personalise coaching — for example your goal summary, physique notes, injuries, preferences, and lifestyle context.
+- **HIIT coach memory:** a stored summary of facts you share with our in-app AI assistant to personalise coaching — for example your goal summary, physique notes, injuries, preferences, and lifestyle context.
 
 ### 3.2 Health, fitness, and wellness data (sensitive)
 Depending on the features and integrations you enable, this can include:
@@ -100,7 +100,7 @@ With your permission, we connect to:
 We use your information to:
 
 1. **Provide the Service** — create and secure your account, record and display your workouts, routes, and metrics, and sync data across your phone, watch, and wearables.
-2. **Personalise your experience** — generate AI workout plans, coaching, insights, body-composition and food analysis, and maintain the "Jarvis" assistant's memory of your preferences and goals.
+2. **Personalise your experience** — generate AI workout plans, coaching, insights, body-composition and food analysis, and maintain the HIIT coach's memory of your preferences and goals.
 3. **Nutrition features** — look up foods and barcodes and calculate nutrition, taking your stated allergies and preferences into account.
 4. **Notifications** — send workout reminders, insights, and updates you've enabled. You can turn these off in your device settings.
 5. **Support** — respond to your questions and troubleshoot issues.

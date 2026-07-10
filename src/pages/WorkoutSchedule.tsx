@@ -471,20 +471,24 @@ export default function WorkoutSchedule() {
               )}
             </>
           ) : (
-            /* Empty state */
+            /* Empty state — no future uncompleted scheduled_workouts.
+               NB: a user can be highly active (activity_logs full) yet have
+               no scheduled_workouts if they've been logging spontaneously
+               via GPS, Garmin, HealthKit sync, etc. So this branch means
+               specifically "no future schedule set", not "no activity ever". */
             <div className="flex flex-col items-center text-center py-12 gap-4">
               <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
                 <Dumbbell className="w-9 h-9 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-xl font-bold">Nothing scheduled yet.</p>
-                <p className="text-muted-foreground text-sm mt-1">Ask Jarvis to build you a plan.</p>
+                <p className="text-xl font-bold">No workouts scheduled</p>
+                <p className="text-muted-foreground text-sm mt-1">Ask your HIIT coach to build you a plan.</p>
               </div>
               <Button
                 onClick={() => window.dispatchEvent(new CustomEvent('hitt:open-jarvis', { detail: { prefillMessage: "Can you suggest a workout for me to schedule?" } }))}
                 className="gap-2"
               >
-                Ask Jarvis
+                Ask HIIT coach
               </Button>
             </div>
           )}

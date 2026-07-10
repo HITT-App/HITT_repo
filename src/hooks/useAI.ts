@@ -96,11 +96,17 @@ export function useAI(): UseAIReturn {
 
     const init = async () => {
       try {
+        // The AI-coach conversation title is user-visible (shown in
+        // MyConversations.tsx as `{conv.title}`). Match both the current
+        // "HIIT Coach" title AND the legacy "Jarvis" title so users who
+        // signed up before the rename don't get a duplicate conversation
+        // spun up. Legacy rows are also renamed lazily on first hit —
+        // see the UPDATE below.
         const { data: existing } = await supabase
           .from('conversations')
-          .select('id')
+          .select('id, title')
           .eq('user_id', user.id)
-          .eq('title', 'Jarvis')
+          .in('title', ['HIIT Coach', 'Jarvis'])
           .order('created_at', { ascending: true })
           .limit(1)
           .maybeSingle();
@@ -109,14 +115,21 @@ export function useAI(): UseAIReturn {
 
         if (existing) {
           conversationId = existing.id;
+          if (existing.title === 'Jarvis') {
+            // Lazy rename — nothing else changes on the row.
+            await supabase
+              .from('conversations')
+              .update({ title: 'HIIT Coach' })
+              .eq('id', existing.id);
+          }
         } else {
           const { data: newConv, error: createError } = await supabase
             .from('conversations')
-            .insert({ user_id: user.id, title: 'Jarvis' })
+            .insert({ user_id: user.id, title: 'HIIT Coach' })
             .select('id')
             .single();
           if (createError || !newConv) {
-            console.error('[useAI] Failed to create Jarvis conversation:', createError);
+            console.error('[useAI] Failed to create HIIT Coach conversation:', createError);
             return;
           }
           conversationId = newConv.id;

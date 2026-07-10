@@ -23,24 +23,24 @@
 
 > **HIIT Fitness — Train smarter with your AI coach**
 >
-> HIIT Fitness is the all-in-one fitness app that adapts to you. High-intensity workouts, nutrition tracking, sleep and recovery insights, and a supportive community — all coached by Jarvis, your personal AI trainer.
+> HIIT Fitness is the all-in-one fitness app that adapts to you. High-intensity workouts, nutrition tracking, sleep and recovery insights, and a supportive community — all coached by your personal AI trainer.
 >
 >
 > **What you can do**
 >
 > • **Follow expert HIIT workouts** — a growing library of structured sessions from strength to cardio to mobility, filtered by duration, equipment and body area.
 >
-> • **Get a training plan that fits your life** — Jarvis builds a weekly schedule around your goal, your fitness level, and the days you actually have free. Change your mind? Ask for a new one.
+> • **Get a training plan that fits your life** — the HIIT coach builds a weekly schedule around your goal, your fitness level, and the days you actually have free. Change your mind? Ask for a new one.
 >
 > • **Log meals in seconds** — snap a photo, describe what you ate, or scan a barcode. Get calories, protein, carbs and fats without the tedious database search.
 >
-> • **Track sleep, heart rate and recovery** — connect Apple Health, Google Fit, Garmin Connect, Fitbit or your Apple Watch and Jarvis sees the full picture. Better sleep last night? You get a slightly harder session today.
+> • **Track sleep, heart rate and recovery** — connect Apple Health, Google Fit, Garmin Connect, Fitbit or your Apple Watch and the HIIT coach sees the full picture. Better sleep last night? You get a slightly harder session today.
 >
 > • **Record outdoor activity with GPS** — runs, walks, cycles and hikes with route mapping, pace and distance. Everything syncs back to your fitness dashboards.
 >
 > • **Celebrate wins with your people** — join the community feed, share personal bests, comment on friends' workouts, and DM your training buddies. Optional; the app is fully useful without it.
 >
-> • **Voice or text with your coach** — Jarvis talks back. Ask for a workout when you're getting changed, log a meal from the kitchen, or vent about a bad session. It listens.
+> • **Voice or text with your coach** — the HIIT coach talks back. Ask for a workout when you're getting changed, log a meal from the kitchen, or vent about a bad session. It listens.
 >
 >
 > **Who it's for**
