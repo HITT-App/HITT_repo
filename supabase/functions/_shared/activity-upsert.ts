@@ -89,10 +89,12 @@ export async function activityFingerprint(
 
 export interface InsertedSummary {
   id: string;
+  user_id: string;
   activity_type: string;
   started_at: string;
   ended_at?: string | null;
   duration_seconds: number;
+  distance_km?: number | null;
   calories_burned?: number | null;
   source_platform: string;
 }
@@ -267,7 +269,7 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
       onConflict: "user_id, source_platform, source_platform_id",
       ignoreDuplicates: true,
     })
-    .select("id, activity_type, started_at, ended_at, duration_seconds, calories_burned, source_platform");
+    .select("id, user_id, activity_type, started_at, ended_at, duration_seconds, distance_km, calories_burned, source_platform");
 
   if (error) {
     console.error("[activity-upsert] insert error:", JSON.stringify({
@@ -280,10 +282,138 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
   }
 
   const insertedRows = (insertedData ?? []) as InsertedSummary[];
+
+  // ── PB detection + share-reminder scheduling ───────────────────────
+  // For every newly-inserted activity row, check whether it's a personal
+  // best (longest duration OR greatest distance for that user's history
+  // of the same canonical activity_type). If so, drop a workout_progress
+  // row so the existing fire_pb_share_reminders_5min cron picks it up
+  // and delivers the "🏆 New PB!" push ~5 minutes later.
+  //
+  // Only runs on GENUINELY new inserts (not on winner-selection upgrades
+  // of an existing workout, which would double-fire pushes) — insertedRows
+  // is exactly the set of new-in-DB rows.
+  //
+  // Guards:
+  //  - Skip rows shorter than 60 seconds (HealthKit sometimes fragments).
+  //  - Skip if the source_platform is our own in-app path (hitt_phone) —
+  //    WorkoutPlayer.tsx already handles PB detection client-side and
+  //    duplicating here would fire two pushes for the same workout.
+  //
+  // Failures are logged and swallowed — the upsert itself always returns
+  // successfully so an ingest can't be blocked by PB-detection issues.
+  for (const row of insertedRows) {
+    try {
+      await maybeScheduleExternalPBReminder(admin, row);
+    } catch (e) {
+      console.error("[activity-upsert] PB detection failed:", e);
+    }
+  }
+
   return {
     inserted: insertedRows.length,
     skipped: skipped + (toInsert.length - insertedRows.length),
     upgraded,
     insertedRows,
   };
+}
+
+// ── PB helpers ────────────────────────────────────────────────────────
+
+// Human-facing title mapping for canonical activity types. Keeps the push
+// body ("Your XXX was a personal best") readable — "Your Cycling ride was
+// …" beats "Your cycling was …".
+const PB_TITLES: Record<string, string> = {
+  running: "Run",
+  walking: "Walk",
+  hiking: "Hike",
+  cycling: "Cycling ride",
+  swimming: "Swim",
+  rowing: "Row",
+  hiit: "HIIT session",
+  strength: "Strength session",
+  pilates: "Pilates session",
+  yoga: "Yoga session",
+  cross_training: "Cross-training session",
+  elliptical: "Elliptical session",
+  stairs: "Stair session",
+  triathlon: "Triathlon",
+  other: "Workout",
+};
+
+async function maybeScheduleExternalPBReminder(
+  admin: any,
+  row: InsertedSummary,
+): Promise<void> {
+  // Guard: too short — likely fragmented HealthKit sample.
+  if (!row.duration_seconds || row.duration_seconds < 60) return;
+
+  // Guard: our own in-app path handles PBs client-side (WorkoutPlayer.tsx).
+  // Duplicating server-side would fire two pushes for the same workout.
+  if (row.source_platform === "hitt_phone") return;
+
+  const canonicalType = normaliseActivityType(row.activity_type);
+  const newDuration = row.duration_seconds;
+  const newDistance = row.distance_km ?? 0;
+
+  // Fetch prior duration + distance samples for this user × canonical
+  // type, EXCLUDING this row. Limit 200 is generous — a user with more
+  // than 200 prior activities of the SAME type is unusual and 200 is
+  // still enough to compute the correct max.
+  const { data: userPrior } = await admin
+    .from("activity_logs")
+    .select("duration_seconds, distance_km")
+    .eq("user_id", row.user_id)
+    .eq("activity_type", row.activity_type)
+    .neq("id", row.id)
+    .limit(200);
+
+  const prior = (userPrior ?? []) as Array<{ duration_seconds: number | null; distance_km: number | null }>;
+
+  // If there's no prior activity of this type, first one doesn't count
+  // as a PB (nothing to beat) — otherwise every fresh user would get
+  // one push per activity type on day one.
+  if (prior.length === 0) return;
+
+  const prevMaxDuration = prior.reduce((m, r) => Math.max(m, r.duration_seconds ?? 0), 0);
+  const prevMaxDistance = prior.reduce((m, r) => Math.max(m, r.distance_km ?? 0), 0);
+
+  const isDurationPB = newDuration > prevMaxDuration;
+  const isDistancePB = newDistance > 0 && newDistance > prevMaxDistance;
+
+  if (!isDurationPB && !isDistancePB) return;
+
+  const title = PB_TITLES[canonicalType] ?? PB_TITLES.other;
+  const reminderAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+  const { error: wpError } = await admin
+    .from("workout_progress")
+    .insert({
+      user_id: row.user_id,
+      workout_id: null,           // external workout — no library row
+      workout_title: title,
+      completed_at: row.ended_at ?? row.started_at,
+      duration_seconds: newDuration,
+      pb_share_reminder_at: reminderAt,
+      pb_share_notified_at: null,
+    });
+  if (wpError) {
+    console.error("[activity-upsert] workout_progress insert failed:", wpError.message);
+    return;
+  }
+
+  console.log(
+    "[activity-upsert] PB detected — reminder scheduled",
+    JSON.stringify({
+      user_id: row.user_id,
+      activity_type: canonicalType,
+      duration_pb: isDurationPB,
+      distance_pb: isDistancePB,
+      new_duration: newDuration,
+      prev_max_duration: prevMaxDuration,
+      new_distance: newDistance,
+      prev_max_distance: prevMaxDistance,
+      reminder_at: reminderAt,
+    }),
+  );
 }
