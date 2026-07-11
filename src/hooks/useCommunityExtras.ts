@@ -355,3 +355,65 @@ export const useBrowseUsers = () => {
 
   return { users, loading };
 };
+
+// =============== CONTENT REPORTS (App Store Guideline 1.2) ===============
+export type ReportContentType = 'post' | 'comment' | 'story' | 'dm' | 'chatroom' | 'profile';
+export type ReportReason =
+  | 'spam' | 'harassment' | 'hate' | 'nudity' | 'violence' | 'self_harm' | 'scam' | 'other';
+
+export const REPORT_REASONS: { value: ReportReason; label: string }[] = [
+  { value: 'spam', label: 'Spam' },
+  { value: 'harassment', label: 'Harassment or bullying' },
+  { value: 'hate', label: 'Hate speech' },
+  { value: 'nudity', label: 'Nudity or sexual content' },
+  { value: 'violence', label: 'Violence' },
+  { value: 'self_harm', label: 'Self-harm or suicide' },
+  { value: 'scam', label: 'Scam or misinformation' },
+  { value: 'other', label: 'Something else' },
+];
+
+export const useReports = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const reportContent = async (args: {
+    contentType: ReportContentType;
+    contentId: string;
+    reportedUserId?: string | null;
+    reason: ReportReason;
+    details?: string;
+  }): Promise<boolean> => {
+    if (!user) {
+      toast({ title: 'Sign in required', description: 'Please sign in to report content.', variant: 'destructive' });
+      return false;
+    }
+    try {
+      const { error } = await supabase.from('content_reports').insert({
+        reporter_id: user.id,
+        reported_user_id: args.reportedUserId ?? null,
+        content_type: args.contentType,
+        content_id: args.contentId,
+        reason: args.reason,
+        details: args.details?.trim() || null,
+      });
+      // A duplicate (same user, same item) is fine — they've already reported it.
+      if (error && !String(error.message).toLowerCase().includes('duplicate')) throw error;
+
+      // Best-effort owner notification; never blocks the user.
+      supabase.functions
+        .invoke('notify-report', {
+          body: { contentType: args.contentType, contentId: args.contentId, reason: args.reason },
+        })
+        .catch(() => {});
+
+      toast({ title: 'Report received', description: 'Thanks — our team will review this within 24 hours.' });
+      return true;
+    } catch (e) {
+      console.error('Error reporting content:', e);
+      toast({ title: 'Error', description: 'Could not submit your report. Please try again.', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  return { reportContent };
+};

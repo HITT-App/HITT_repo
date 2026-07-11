@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Heart, Send, Paperclip, Smile, Mic, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, Send, Paperclip, Smile, Mic, Loader2, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCommunityComments } from "@/hooks/useCommunity";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
+import { ReportSheet } from "@/components/community/ReportSheet";
 
 const PostComments = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const PostComments = () => {
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [likingComments, setLikingComments] = useState<string[]>([]);
+  const [reportTarget, setReportTarget] = useState<{ contentId: string; reportedUserId: string | null } | null>(null);
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
@@ -125,6 +127,15 @@ const PostComments = () => {
                         💬 {comment.replies.length} replies
                       </span>
                     )}
+                    {comment.user_id !== user?.id && (
+                      <button
+                        className="flex items-center gap-1 transition-colors hover:text-foreground"
+                        onClick={() => setReportTarget({ contentId: comment.id, reportedUserId: comment.user_id })}
+                      >
+                        <Flag className="w-3.5 h-3.5" />
+                        Report
+                      </button>
+                    )}
                   </div>
                   
                   {/* Replies */}
@@ -192,6 +203,17 @@ const PostComments = () => {
           </Button>
         </div>
       </div>
+
+      {/* Report comment dialog */}
+      {reportTarget && (
+        <ReportSheet
+          open={!!reportTarget}
+          onOpenChange={(o) => { if (!o) setReportTarget(null); }}
+          contentType="comment"
+          contentId={reportTarget.contentId}
+          reportedUserId={reportTarget.reportedUserId}
+        />
+      )}
     </div>
   );
 };

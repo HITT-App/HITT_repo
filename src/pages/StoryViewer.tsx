@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { X, ChevronLeft, ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Trash2, Loader2, Flag } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useStories, StoryGroup } from "@/hooks/useStories";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
+import { ReportSheet } from "@/components/community/ReportSheet";
 
 const StoryViewer = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const StoryViewer = () => {
   const [storyIndex, setStoryIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ contentId: string; reportedUserId: string | null } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const touchStartRef = useRef<{ x: number; time: number } | null>(null);
 
@@ -173,7 +175,7 @@ const StoryViewer = () => {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {isOwn && (
+          {isOwn ? (
             <Button
               variant="ghost"
               size="icon"
@@ -181,6 +183,18 @@ const StoryViewer = () => {
               onClick={handleDelete}
             >
               <Trash2 className="w-5 h-5" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/10"
+              onClick={() => {
+                setPaused(true);
+                setReportTarget({ contentId: currentStory.id, reportedUserId: currentGroup.user_id });
+              }}
+            >
+              <Flag className="w-5 h-5" />
             </Button>
           )}
           <Button
@@ -238,6 +252,17 @@ const StoryViewer = () => {
           </div>
         )}
       </div>
+
+      {/* Report story dialog */}
+      {reportTarget && (
+        <ReportSheet
+          open={!!reportTarget}
+          onOpenChange={(o) => { if (!o) { setReportTarget(null); setPaused(false); } }}
+          contentType="story"
+          contentId={reportTarget.contentId}
+          reportedUserId={reportTarget.reportedUserId}
+        />
+      )}
     </div>
   );
 };

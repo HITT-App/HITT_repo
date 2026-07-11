@@ -41,6 +41,7 @@ export const useStories = () => {
       const { data: stories, error } = await supabase
         .from("community_stories")
         .select("*")
+        .eq("moderation_hidden", false)
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: true });
 

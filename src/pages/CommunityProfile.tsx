@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, Settings, UserPlus, UserCheck, UserMinus, MessageSquare,
-  Calendar, Heart, Loader2, ImageIcon, Pencil, Lock,
+  Calendar, Heart, Loader2, ImageIcon, Pencil, Lock, Flag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +13,7 @@ import { useFriends } from "@/hooks/useFriends";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
+import { ReportSheet } from "@/components/community/ReportSheet";
 
 const presetAvatar = (seed: string | null | undefined) => {
   const s = seed || '';
@@ -34,6 +35,7 @@ const CommunityProfile = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (profile) setIsFollowing(!!profile.is_following);
@@ -274,6 +276,16 @@ const CommunityProfile = () => {
             >
               <MessageSquare className="w-4 h-4" />
             </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-xl shrink-0 h-11 w-11"
+              onClick={() => setReportOpen(true)}
+              aria-label="Report user"
+            >
+              <Flag className="w-4 h-4" />
+            </Button>
           </>
         )}
       </div>
@@ -378,6 +390,17 @@ const CommunityProfile = () => {
         </TabsContent>
       </Tabs>
       </div>
+
+      {/* Report user dialog */}
+      {!isOwnProfile && targetUserId && (
+        <ReportSheet
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          contentType="profile"
+          contentId={targetUserId}
+          reportedUserId={targetUserId}
+        />
+      )}
     </div>
   );
 };

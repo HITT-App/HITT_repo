@@ -79,6 +79,7 @@ async function fetchPostsPage(
   let query = supabase
     .from('community_posts')
     .select('*')
+    .eq('moderation_hidden', false)
     .order('created_at', { ascending: false })
     .limit(PAGE_SIZE);
 
@@ -711,6 +712,7 @@ export const useCommunityComments = (postId: string) => {
           .from('community_comments')
           .select('*')
           .eq('post_id', postId)
+          .eq('moderation_hidden', false)
           .order('created_at', { ascending: true }),
         user
           ? supabase

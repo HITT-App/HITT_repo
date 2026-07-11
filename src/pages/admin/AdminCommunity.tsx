@@ -23,6 +23,9 @@ export default function AdminCommunity() {
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reports, setReports] = useState<any[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [actioningId, setActioningId] = useState<string | null>(null);
 
   const fetchPosts = async () => {
     const { data } = await supabase.from("community_posts").select("*").order("created_at", { ascending: false }).limit(100);
@@ -30,7 +33,14 @@ export default function AdminCommunity() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchPosts(); }, []);
+  const fetchReports = async () => {
+    setReportsLoading(true);
+    const { data } = await supabase.from("content_reports").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(100);
+    setReports(data || []);
+    setReportsLoading(false);
+  };
+
+  useEffect(() => { fetchPosts(); fetchReports(); }, []);
 
   const handleDelete = async () => {
     if (!selectedPost || !user) return;
@@ -43,6 +53,33 @@ export default function AdminCommunity() {
       fetchPosts();
     } catch { toast({ variant: "destructive", title: "Error deleting" }); }
     finally { setDeleting(false); }
+  };
+
+  const CONTENT_TABLE: Record<string, string> = {
+    post: "community_posts", comment: "community_comments", story: "community_stories",
+    chatroom: "chatroom_messages", dm: "community_messages",
+  };
+
+  const dismissReport = async (report: any) => {
+    if (!user) return;
+    setActioningId(report.id);
+    await supabase.from("content_reports").update({ status: "dismissed", reviewed_at: new Date().toISOString(), reviewed_by: user.id }).eq("id", report.id);
+    setActioningId(null);
+    toast({ title: "Report dismissed" });
+    fetchReports();
+  };
+
+  const actionReport = async (report: any) => {
+    if (!user) return;
+    setActioningId(report.id);
+    try {
+      const table = CONTENT_TABLE[report.content_type];
+      if (table) await supabase.from(table).update({ moderation_hidden: true }).eq("id", report.content_id);
+      await supabase.from("content_reports").update({ status: "actioned", reviewed_at: new Date().toISOString(), reviewed_by: user.id }).eq("id", report.id);
+      await supabase.from("moderation_logs").insert({ moderator_id: user.id, action_type: "hide_content", target_type: report.content_type, target_id: report.content_id, reason: report.reason });
+      toast({ title: "Content removed" });
+    } catch { toast({ variant: "destructive", title: "Error actioning report" }); }
+    finally { setActioningId(null); fetchReports(); }
   };
 
   const filteredPosts = posts.filter((p) => p.content?.toLowerCase().includes(search.toLowerCase()));
@@ -72,7 +109,25 @@ export default function AdminCommunity() {
             </Table>
           </div>
         </TabsContent>
-        <TabsContent value="reports" className="space-y-4"><div className="text-center py-12 text-muted-foreground"><Flag className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>No reports to review</p></div></TabsContent>
+        <TabsContent value="reports" className="space-y-4">
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Reason</TableHead><TableHead className="hidden md:table-cell">Reported</TableHead><TableHead className="w-[180px]">Actions</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {reportsLoading ? <TableRow><TableCell colSpan={4} className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                : reports.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center py-12 text-muted-foreground"><Flag className="h-10 w-10 mx-auto mb-3 opacity-50" />No reports to review</TableCell></TableRow>
+                : reports.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell><Badge variant="outline">{r.content_type}</Badge></TableCell>
+                    <TableCell className="text-sm">{r.reason}{r.details ? <p className="text-xs text-muted-foreground truncate max-w-[220px]">{r.details}</p> : null}</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</TableCell>
+                    <TableCell><div className="flex gap-2"><Button size="sm" variant="destructive" disabled={actioningId === r.id} onClick={() => actionReport(r)}>Remove</Button><Button size="sm" variant="outline" disabled={actioningId === r.id} onClick={() => dismissReport(r)}>Dismiss</Button></div></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
       </Tabs>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>

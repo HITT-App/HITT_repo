@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, Paperclip, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Loader2, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +9,7 @@ import { useMessages, useDirectMessageActions, useConversations } from "@/hooks/
 import { useCommunityProfile } from "@/hooks/useCommunity";
 import { useAuth } from "@/hooks/useAuth";
 import { format, isToday, isYesterday } from "date-fns";
+import { ReportSheet } from "@/components/community/ReportSheet";
 
 const CommunityChat = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const CommunityChat = () => {
   const [newMessage, setNewMessage] = useState("");
   const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationId || null);
   const [sending, setSending] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ contentId: string; reportedUserId: string | null } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const { messages, loading: messagesLoading } = useMessages(activeConversationId);
@@ -154,11 +156,11 @@ const CommunityChat = () => {
                   {dateMessages.map((message) => {
                     const isOwn = message.sender_id === user?.id;
                     return (
-                      <div 
+                      <div
                         key={message.id}
-                        className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                        className={`flex items-center gap-1.5 ${isOwn ? "justify-end" : "justify-start"}`}
                       >
-                        <div 
+                        <div
                           className={`max-w-[75%] rounded-2xl px-4 py-3 ${
                             isOwn
                               ? "bg-primary text-primary-foreground rounded-br-sm"
@@ -169,10 +171,19 @@ const CommunityChat = () => {
                           <p className={`text-[10px] mt-1 ${
                             isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
                           }`}>
-                            {formatMessageTime(message.created_at)} 
+                            {formatMessageTime(message.created_at)}
                             {isOwn && (message.is_read ? " ✓✓" : " ✓")}
                           </p>
                         </div>
+                        {!isOwn && (
+                          <button
+                            className="shrink-0 p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                            aria-label="Report message"
+                            onClick={() => setReportTarget({ contentId: message.id, reportedUserId: message.sender_id })}
+                          >
+                            <Flag className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -212,6 +223,17 @@ const CommunityChat = () => {
           </Button>
         </div>
       </div>
+
+      {/* Report message dialog */}
+      {reportTarget && (
+        <ReportSheet
+          open={!!reportTarget}
+          onOpenChange={(o) => { if (!o) setReportTarget(null); }}
+          contentType="dm"
+          contentId={reportTarget.contentId}
+          reportedUserId={reportTarget.reportedUserId}
+        />
+      )}
     </div>
   );
 };

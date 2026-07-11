@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Heart, MessageCircle, Bookmark, MoreHorizontal,
   Flame, Users, TrendingUp, Loader2, Sparkles,
-  Send, Pencil, Trash2, EyeOff, Bell, Trophy, Ban,
+  Send, Pencil, Trash2, EyeOff, Bell, Trophy, Ban, Flag,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import DeletePostDialog from "@/components/community/DeletePostDialog";
+import { ReportSheet } from "@/components/community/ReportSheet";
 
 const CommunityFeed = () => {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ const CommunityFeed = () => {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingBlock, setPendingBlock] = useState<{ userId: string; displayName: string } | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ contentId: string; reportedUserId: string | null } | null>(null);
   const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { is_liked: boolean; likes_count: number }>>({});
   // postId -> the option index the user voted for (set from DB on mount, then optimistically on click).
   const [pollVotes, setPollVotes] = useState<Record<string, number>>({});
@@ -532,6 +534,11 @@ const CommunityFeed = () => {
                           <EyeOff className="w-4 h-4 mr-2" /> Hide
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          onClick={() => setReportTarget({ contentId: post.id, reportedUserId: post.user_id })}
+                        >
+                          <Flag className="w-4 h-4 mr-2" /> Report
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => setPendingBlock({
                             userId: post.user_id,
@@ -780,6 +787,17 @@ const CommunityFeed = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Report content dialog */}
+      {reportTarget && (
+        <ReportSheet
+          open={!!reportTarget}
+          onOpenChange={(o) => { if (!o) setReportTarget(null); }}
+          contentType="post"
+          contentId={reportTarget.contentId}
+          reportedUserId={reportTarget.reportedUserId}
+        />
+      )}
     </div>
   );
 };

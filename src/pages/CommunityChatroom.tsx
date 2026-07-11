@@ -5,7 +5,7 @@ import {
   ArrowLeft, ArrowRight, Send, Loader2, ChevronDown, MessageCircle, Users,
   Plus, Image as ImageIcon, Smile, X, Reply, Play, Pause,
   Shield, Trash2, Pin, MoreVertical, PinOff, Settings, Megaphone,
-  Paintbrush, Check, ArrowDown,
+  Paintbrush, Check, ArrowDown, Flag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,6 +34,7 @@ import GifPicker from "@/components/chatroom/GifPicker";
 import VoiceRecorder from "@/components/chatroom/VoiceRecorder";
 import ImageLightbox from "@/components/chatroom/ImageLightbox";
 import ReplyPreview from "@/components/chatroom/ReplyPreview";
+import { ReportSheet } from "@/components/community/ReportSheet";
 
 interface ChatMessage {
   id: string;
@@ -208,6 +209,7 @@ export default function CommunityChatroom() {
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [adminUserIds, setAdminUserIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ contentId: string; reportedUserId: string | null } | null>(null);
   const [onlineCount, setOnlineCount] = useState(1);
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
   const [showUserList, setShowUserList] = useState(false);
@@ -1002,6 +1004,14 @@ export default function CommunityChatroom() {
                           >
                             <Reply className="h-3 w-3 text-muted-foreground" />
                           </button>
+                          {!isOwn && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setReportTarget({ contentId: msg.id, reportedUserId: msg.user_id }); setTappedMessageId(null); }}
+                              className="h-7 w-7 rounded-full bg-secondary border border-border/50 flex items-center justify-center shadow-sm"
+                            >
+                              <Flag className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                          )}
                           {isAdmin && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1360,6 +1370,17 @@ export default function CommunityChatroom() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Report message dialog */}
+      {reportTarget && (
+        <ReportSheet
+          open={!!reportTarget}
+          onOpenChange={(o) => { if (!o) setReportTarget(null); }}
+          contentType="chatroom"
+          contentId={reportTarget.contentId}
+          reportedUserId={reportTarget.reportedUserId}
+        />
+      )}
 
       {/* Lightbox */}
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
