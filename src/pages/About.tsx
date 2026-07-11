@@ -18,7 +18,7 @@ const APP_STORE_URL = 'https://apps.apple.com/app/hiit-fitness/id0000000000' // 
 
 export default function About() {
   const navigate = useNavigate()
-  const [appVersion, setAppVersion] = useState<string>('1.0.1')
+  const [appVersion, setAppVersion] = useState<string>('1.0.2')
   const [appBuild, setAppBuild] = useState<string>('—')
   const [copied, setCopied] = useState(false)
 
