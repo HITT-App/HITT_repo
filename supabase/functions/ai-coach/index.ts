@@ -2206,6 +2206,7 @@ serve(async (req) => {
       supabaseAdmin.from('body_scans').select('estimated_body_fat, confidence_level, scanned_at, analysis').eq('user_id', userId).order('scanned_at', { ascending: false }).limit(2),
     ]);
 
+
     // ─── HealthKit / Apple Health consent gate (App Store Guideline 5.1.3) ───
     // Heart rate, steps, sleep, and HealthKit-sourced activities are only sent
     // to the third-party AI provider (Google Gemini) with the user's explicit
@@ -2596,6 +2597,19 @@ serve(async (req) => {
       || null;
     if (goalForMemory) memoryParts.push(`Current goal: ${goalForMemory}`);
     if (rawMemory.physique) memoryParts.push(`Body scan — ${rawMemory.physique}`);
+    // Real body_scans data belongs in the recall turn too (not just the system
+    // block) — Gemini deflects body-composition questions when the value is only
+    // in an injected system message, but states it when it's its own "recall".
+    {
+      const latestBodyScan = recentBodyScans?.[0];
+      if (latestBodyScan?.estimated_body_fat != null) {
+        memoryParts.push(
+          `Latest body scan: body fat ${latestBodyScan.estimated_body_fat}%` +
+          (latestBodyScan.confidence_level ? ` (${latestBodyScan.confidence_level} confidence)` : '') +
+          (latestBodyScan.scanned_at ? `, scanned ${String(latestBodyScan.scanned_at).slice(0, 10)}` : '')
+        );
+      }
+    }
     if (rawMemory.injuries) memoryParts.push(`Physical notes: ${rawMemory.injuries}`);
     if (rawMemory.preferences) memoryParts.push(`Preferences: ${rawMemory.preferences}`);
     if (rawMemory.lifestyle)   memoryParts.push(`Lifestyle: ${rawMemory.lifestyle}`);
@@ -2777,7 +2791,7 @@ serve(async (req) => {
       const structuredMessages = lastUserIdx !== -1
         ? [
             ...baseStructured.slice(0, lastUserIdx),
-            { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the user asks about their weight and the Body Metrics section contains 'Current weight' → state the value directly. If Body Metrics is absent, say 'I don't see a weight logged yet — add one in the Weight tab and I can personalise things'. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them." },
+            { role: "system", content: "CRITICAL — DATA ACCESS: You have already received the user's full profile in the system prompt above. NEVER say you 'cannot access', 'don't have access to', or 'can't see' user data. If the user asks about their weight and the Body Metrics section contains 'Current weight' → state the value directly. If Body Metrics is absent, say 'I don't see a weight logged yet — add one in the Weight tab and I can personalise things'. If the data section is empty or absent, say what you found ('no activities logged recently', 'no calorie target set') and then help: give an estimate, ask for missing input, or suggest next steps. For calorie questions with no saved target: give a starting range (1800–2200 kcal for most adults) and ask their weight to personalise it. For activity questions with no logged data: say 'I don't see any recent activities logged' — never say you cannot retrieve them. BODY SCAN / BODY COMPOSITION: If the USER PROFILE / MEMORY block contains a 'Latest body scan' line with a body-fat %, that value is authoritative — state it directly when the user asks about their body fat, body composition, physique, or their latest scan. NEVER reply that you 'don't have access' to their body scan, don't have it 'in this conversation', or that they should 'check the app' — the scan result is already in your context above. If there is no 'Latest body scan' line (or it says 'no scan on record yet'), say they haven't done a body scan yet and offer to start one." },
             { role: "system", content: "CRITICAL: When the user describes a food they've eaten and asks to log it (\"log an apple\", \"I ate 200g of chicken\", \"add a cup of rice to my log\", \"just had toast with peanut butter\", etc), you MUST call the log_food tool IMMEDIATELY. Do NOT ask the user for calories, protein, carbs, fat, or fiber — you know these values for common foods. Estimate them yourself from typical serving sizes. Do NOT ask for the meal category — infer it from time of day (breakfast 5–10 AM / lunch 12–3 PM / dinner 6–9 PM / else snack) or default to snack. Output ONLY the tool call; a very brief confirmation message like \"Logged: 1 apple (~95 kcal)\" is fine but never a question. If the food is genuinely unusual (a specific commercial product with weird ingredients), still call log_food with your best guess — a confirmation card lets the user correct it. Asking clarifying questions here defeats the point of the tool." },
             // One-shot example: user asks to log a food → assistant calls
             // log_food immediately with estimated values. Text-only prompts
