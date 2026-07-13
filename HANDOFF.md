@@ -9,8 +9,9 @@ The **Apple side transferred to Casey's account** (team `5933246NY5`) on 2026-07
 - ✅ **Apple Developer / App Store Connect** — transferred (2026-07-11).
 - ✅ **APNs push key** — new key under Casey's team, secrets swapped + verified (2026-07-13). See table below.
 - ✅ **ElevenLabs** — Casey's Google account, ownership transferred (2026-07-13).
+- ✅ **Spoonacular** — Casey's account (`caseysonnekus1@gmail.com`), free tier; key swapped + verified (2026-07-13). Secondary meal source, likely to be retired.
 - 🔄 **Google Cloud `hiit-fitness-494906`** (Gemini + Google Sign-In + Firebase/FCM) — Casey added as **Owner**; **pending his billing account** + a fresh Gemini API key (then swap `AI_API_KEY`), then Vanessa steps off. **Do not detach Vanessa's billing until Casey's is linked** or AI features go down. Recommendation: transfer this project rather than recreate it — the Google Sign-In iOS client ID is hardcoded in the app, so a new project would force an app rebuild.
-- ⬜ **Supabase, GitHub, Spoonacular, PostHog, Sentry, Gmail SMTP** — still to do.
+- ⬜ **Supabase, GitHub, PostHog, Sentry, Gmail SMTP** — still to do.
 
 ---
 
@@ -37,6 +38,7 @@ These live in Supabase edge function secrets (Settings → Edge Functions → Se
 | `AI_GATEWAY_URL` | Points to Gemini direct endpoint — no account tied, stays the same | Nothing, unless they switch AI provider |
 | `ELEVENLABS_API_KEY` | ✅ **Casey's (2026-07-13)** | Account was **signed up with Casey's Google account**; workspace ownership transferred to Casey. The existing `ELEVENLABS_API_KEY` in Supabase stays valid — no swap needed unless Casey chooses to regenerate it under his own login. Used for: "Ok HIIT" wake word, AI coach voice responses, home-screen greeting. |
 | `APNS_KEY` + `APNS_KEY_ID` + `APNS_TEAM_ID` | ✅ **Done (2026-07-13)** | New APNs auth key **`S2F735Z4UB`** created under **Casey's team `5933246NY5`** (Sandbox & Production, team-scoped). Supabase secrets `APNS_KEY` / `APNS_KEY_ID` / `APNS_TEAM_ID` swapped and **verified against Apple's production server**. `.p8` stored in `~/.appstoreconnect/private_keys/`. Needed after the app transfer changed the team ID (old key was team-mismatched → push was silently failing). |
+| `SPOONACULAR_API_KEY` | ✅ **Casey's (2026-07-13)** | Spoonacular account signed up under **caseysonnekus1@gmail.com** (Casey's Gmail — password NOT stored here; he can reset via his own email). **Free tier, 50 calls/day.** New key swapped into the Supabase secret + verified live. **Secondary source only** — the app prefers the owner recipe DB and gates Spoonacular behind `MEAL_SOURCE_SPOONACULAR_ENABLED`; likely to be retired now the DB is primary, so the free tier is fine. |
 | Google OAuth Client ID + Secret | Vanessa's Google Cloud project (`hiit-fitness-oauth`) | Owner creates their own Google Cloud project → OAuth consent screen → Web client → adds Supabase callback URL → pastes new Client ID + Secret into Supabase Auth → Providers → Google |
 | `VITE_SENTRY_DSN` | Vanessa's Sentry | Replace after Sentry account transfer above |
 | `VITE_POSTHOG_KEY` | Vanessa's PostHog | Replace after PostHog account transfer above |
