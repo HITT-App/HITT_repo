@@ -11,8 +11,8 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 - **App Store + Apple Developer ownership transferred to Casey** (team `5933246NY5`). Backend (Supabase) + GitHub stay with Vanessa. Build pipeline re-pointed (see `CLAUDE.md` → Deploy → "iOS signing"). v1.0.2 / build 328 shipped to Casey's TestFlight.
 - **In-app content reporting shipped** (App Store Guideline 1.2) so the app can honestly declare social media — report + auto-hide + block + moderation queue + contact.
 - **DSA trader status = TRADER.** HIIT is distributed commercially in the EU, so Casey declares as a trader and provides a public **business** address + phone + `casey@hiituk.com` on the App Store page (display-only). Use a business/registered address, not a home address.
-- **Age Rating questionnaire:** **Social Media = Yes**; **Social Media Disabled for Under-13 = No** (the app has no age gate and doesn't call the Declared Age Range API). This lands the rating at ~17+, which is accurate for the current app.
-- **DECISION NEEDED — age gate:** to flip "Under-13 disabled" to Yes (and lower the rating), the app needs an **age-gate feature** using Apple's **Declared Age Range API** to check age before enabling the community. Currently **deferred**. Owner to decide whether the lower rating is worth building it.
+- **Age Rating questionnaire:** **Social Media = Yes**; **Social Media Disabled for Under-13 = No** (the app has no age gate and doesn't call the Declared Age Range API). Rating **16+ — accepted** (that was always the target), so the age-gate / Declared Age Range API feature is **not being built** unless Apple's rules force it later.
+- **1.0.2 submitted and LIVE on the App Store** (ASC listing name corrected "HITT Fitness" → "HIIT Fitness").
 
 ### ✅ Calorie goal setting in Nutrition Dashboard (2026-06-01, Build 116)
 
