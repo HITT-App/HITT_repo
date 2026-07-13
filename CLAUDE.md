@@ -16,6 +16,16 @@ git push origin main             # always push before deploying
 - **Android Gradle uses JDK 21** (pinned in `android/gradle.properties`). System default stays openjdk@17 so Maestro keeps working.
 - **AAB upload is manual for now** — deploy-android.sh opens Finder at the AAB, then you upload via Play Console → Internal testing → Create new release. Wire in the Play Developer API when we've done this a few times.
 
+### iOS signing — app transferred to Casey's account (2026-07-11)
+
+The App Store app + Apple Developer ownership were **transferred to Casey's account (team `5933246NY5`)**. This is baked into the repo/deploy:
+
+- **All 3 targets (App, Watch, Live Activity) use Automatic signing** under team `5933246NY5`. The old manual named profiles ("HIIT App/Watch/LiveActivity Distribution Manual", team 9VH3JDWRMF) are gone — do NOT reintroduce them. Release configs sign as **"Apple Development"** (automatic swaps to distribution at archive/export).
+- **deploy-ios.sh has a per-project override** (keyed on `hitt`): Casey's `TEAM_ID=5933246NY5`, `ASC_KEY_ID=W49C5L34UA`, issuer `63b081ef-…`; every other app keeps Vanessa's `FWYNXS9TG6`/`9VH3JDWRMF`.
+- **The archive uses the Xcode account session, NOT the API key.** Casey's Apple ID must be signed into Xcode → Settings → Accounts. (API-key `-allowProvisioningUpdates` forced *development* profiles needing devices and failed with "Authentication failed"; the account session does device-free distribution correctly.) The API key is still used for `-exportArchive` + altool upload.
+- **One-time transfer gotchas** (already done, documented for the next transfer): the app transfer moved `com.hiitfitness.app` but **left the child identifiers behind** in Vanessa's account — the Watch + Live Activity **bundle IDs** and the **App Group `group.com.hiitfitness.app.liveactivity`** had to be deleted from her account so Xcode could recreate them under Casey's. Also **≥1 device must be registered** in Casey's account (archive builds dev profiles first). The `com.hiitfitness.signin` Services ID is not needed for the build.
+- **ITMS-90076 keychain warning** on the first post-transfer build is **benign + one-time** (team-prefix change). HIIT keeps its auth session in `localStorage` (not the keychain) and uses no secure-storage plugin, so users stay logged in. Ignore it.
+
 ## Discord
 
 **Never print responses to the terminal — they don't reach the user.**
@@ -119,6 +129,35 @@ Live smoke test: `tests/smoke-meal-safety.ts` (5 cases, needs QA `TEST_EMAIL`/`T
 Full decision record + deferred Phase-2 work: `docs/scope-conversational-wizards.md`.
 ED handling is currently a keyword suppressor only — deeper detection + crisis resources is a
 tracked follow-up.
+
+## AI coach — user data must be in the "memory recall" turn, not just a system block
+
+Gemini **deflects user-specific data** ("I don't have access… check the app") when the value only
+appears in an injected **system** message. `ai-coach` defeats this for goal / activities / diet /
+body-scan by ALSO pushing the value into a synthetic **assistant** turn at position 1
+(`memoryParts` → `userMemoryTurn`) that the model treats as its own recall, not as cautious
+injected data. **When you add a new user-data field the coach must state on request, push it into
+`memoryParts` — not only `userMD`.** (2026-07-11: the body-fat % from `body_scans` was only in
+`userMD`, so the coach denied having it despite the value being in the prompt. Fix added it to the
+recall turn. Regression test: `tests/smoke-body-scan-prompt.ts`.)
+
+## Community content reporting (App Store Guideline 1.2)
+
+UGC surfaces — posts, comments, stories, DMs, chatroom messages, profiles — each have a **Report**
+action wired to the shared `src/components/community/ReportSheet.tsx` (reason picker) →
+`useReports()` in `useCommunityExtras.ts` → `content_reports` table (RLS: reporter inserts/reads/
+retracts own; admin/moderator via `has_role` reads + updates all).
+
+- **Auto-hide**: an `AFTER INSERT` trigger (`auto_hide_reported_content`) sets `moderation_hidden = true`
+  on the content once **≥3 distinct users** report the same item. List queries in `useCommunity.ts`
+  (posts, comments) and `useStories.ts` filter `moderation_hidden = false`.
+- **Moderation queue**: Admin → Community → **Reports** tab (`pages/admin/AdminCommunity.tsx`) —
+  staff **Remove** (hides content) or **Dismiss**; actions logged to `moderation_logs`.
+- **notify-report** edge function emails `casey@hiituk.com` per report (reuses analytics-digest SMTP
+  secrets). Blocking (`useBlockedUsers`) + the Community Guidelines onboarding pre-date this.
+- The complete Guideline 1.2 toolkit is now: filter/auto-hide + report + block + published contact +
+  guidelines + moderation queue. Smoke test: `tests/smoke-content-reports.ts` (the 3-reporter
+  auto-hide needs 3 users / service role — verify manually).
 
 ## Sticky header pattern (Build 71)
 
@@ -462,6 +501,8 @@ current work). Enforces structural contracts by regex-grepping source files. Gro
 **3. Live smoke tests** (require TEST_EMAIL + TEST_PASSWORD):
 - `tests/test-wearable-endpoints.ts` — 15 checks against `log-watch-workout` + `sync-healthkit`
   covering auth gating, single-source dedupe, cross-source fingerprint dedupe
+- `tests/smoke-content-reports.ts` — reporting pipeline: file / read-back / dedupe / invalid-reason / retract
+- `tests/smoke-body-scan-prompt.ts` — inserts a body scan, asks the coach its body-fat %, asserts the reply reflects it (guards the "recall turn" fix above)
 
 ```bash
 npx tsx tests/run.ts                                            # ~150 tests, ~18 pre-existing fails

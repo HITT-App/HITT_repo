@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-07-11] — v1.0.2 / Build 328: app transferred to Casey's account, in-app reporting, body-scan coaching fix
+
+- **App Store app transferred to Casey's Apple Developer account** (team `5933246NY5`). Build pipeline re-pointed: all targets → automatic signing under the new team, `deploy-ios.sh` per-project override, archives sign via Casey's Apple ID in Xcode. One-time transfer gotchas handled (freed the Watch/Live Activity bundle IDs + `group.com.hiitfitness.app.liveactivity` App Group from the old account so Xcode recreates them; registered a device). Full playbook in `CLAUDE.md` → Deploy → "iOS signing". The ITMS-90076 keychain warning on the first post-transfer build is benign + one-time (session lives in localStorage, not the keychain)
+- **In-app content reporting** (App Store Guideline 1.2) — every community surface (posts, comments, stories, DMs, chatroom messages, profiles) now has a **Report** action with a reason picker. Reports land in `content_reports`; content **auto-hides once 3 distinct users report it**; staff review + action in **Admin → Community → Reports**; the owner is emailed per report. Users can retract their own report. Rounds out the moderation toolkit (filter + report + block + contact + guidelines) ahead of declaring social media in the age-rating questionnaire
+- **AI coach now uses your latest body scan** — asking the coach about body fat / composition returned "I don't have access" even when a scan existed. The scan value was only in an injected system message, which Gemini deflects; it's now also placed in the coach's synthetic "recall" turn (the same mechanism goal/activities use), so it states the value directly. Edge-function fix — live for all versions
+- **Business contact email → casey@hiituk.com** across the Privacy Policy, Terms of Service, and About screen (was `hiit.co.uk@gmail.com`)
+- **Chat Settings header** no longer floats with a large gap — it was getting the notch inset applied twice; converted to a normal-flow sticky header
+- **Marketing version bumped to 1.0.2** (1.0.1 was approved/live; App Store requires a higher version for the next submission)
+
 ## [2026-07-04] — Terms of Service rewritten to match the app, contact + privacy URL tightened
 
 - **New Terms of Service** — replaced the January placeholder ToS with copy that reflects what the app actually does: HIIT workouts, the Apple Watch and Garmin CIQ companions, wearable and HealthKit integrations, the Jarvis AI coach, meal logging, community features (posts, comments, DMs, follows), and notifications. Age minimum lowered from 18 to **16** in line with the Privacy Policy. Adds explicit AI-content, health-not-medical-advice, community-conduct, and Apple App Store EULA clauses. Governing law: England & Wales. Now rendered from `src/content/terms-of-service.md` via the same react-markdown pipeline as the Privacy Policy
