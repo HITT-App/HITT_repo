@@ -12,7 +12,8 @@ The **Apple side transferred to Casey's account** (team `5933246NY5`) on 2026-07
 - ✅ **Spoonacular** — Casey's account (`caseysonnekus1@gmail.com`), free tier; key swapped + verified (2026-07-13). Secondary meal source, likely to be retired.
 - ✅ **PostHog** — project `169007` (EU) transferred to Casey (org owner); client key + history preserved (no rebuild). Digest personal key swapped + verified (2026-07-13).
 - 🔄 **Google Cloud `hiit-fitness-494906`** (Gemini + Google Sign-In + Firebase/FCM) — Casey added as **Owner**; **pending his billing account** + a fresh Gemini API key (then swap `AI_API_KEY`), then Vanessa steps off. **Do not detach Vanessa's billing until Casey's is linked** or AI features go down. Recommendation: transfer this project rather than recreate it — the Google Sign-In iOS client ID is hardcoded in the app, so a new project would force an app rebuild.
-- ⬜ **Supabase, GitHub, Sentry, Gmail SMTP** — still to do.
+- ⏸ **Sentry** — **parked until the next app build** (2026-07-15). Transferring the project changes the DSN (`VITE_SENTRY_DSN`), which needs a rebuild — so do it alongside the next build to avoid an error-monitoring gap. Plan: Casey makes a free Sentry org → you **Transfer Project** → he sends the new DSN + an auth token (`org:read`/`project:read`/`event:read`) → swap `VITE_SENTRY_DSN` (client) + `SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_HOST` (digest).
+- ⬜ **Supabase, GitHub, Gmail SMTP** — still to do.
 
 ---
 
@@ -23,7 +24,7 @@ These are currently under Vanessa's personal accounts. The owner needs their own
 | Service | What to do | Effort | Status |
 |---|---|---|---|
 | **Supabase** | Settings → Team → Invite owner as Owner role. Owner accepts, Vanessa removes herself. All data, secrets, and edge functions transfer automatically. | 5 min | ⬜ Pending |
-| **Sentry** | Owner creates account at sentry.io → new React project → copies DSN → Vanessa updates `VITE_SENTRY_DSN` in `.env` and redeploys | 10 min | ⬜ Pending |
+| **Sentry** | ⏸ **Parked until next build (2026-07-15)** — can't add members without a paid plan, so use **Transfer Project** to Casey's own free org. That changes the DSN → needs a rebuild, so bundle it with the next app build. Casey then provides the new DSN + an auth token (`org:read`/`project:read`/`event:read`). | 10 min | ⏸ Parked |
 | **PostHog** | ✅ **Done (2026-07-13)** — project `169007` (EU) transferred to Casey as org owner. Client key + all history preserved, so no `.env` change / no rebuild. Only the digest's `POSTHOG_PERSONAL_API_KEY` was swapped to Casey's personal key (yours would die when you leave the org) + verified. | — | ✅ Done |
 | **GitHub repo** | Repo is at `https://github.com/HITT-App/HITT_repo`. Owner needs to be added as org owner or repo transferred to their GitHub account | 5 min | ⬜ Pending |
 
