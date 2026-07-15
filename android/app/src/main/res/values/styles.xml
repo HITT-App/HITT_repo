@@ -16,7 +16,16 @@
     </style>
 
 
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+    <!-- Launch theme: shows @drawable/splash as the window background
+         while the WebView is loading. Inherits from AppTheme.NoActionBar
+         so no title/action bar appears above the WebView once loaded.
+         (Previously inherited from Theme.SplashScreen, which requires
+         installSplashScreen() to be called from onCreate to transition
+         to a post-splash theme. Capacitor's BridgeActivity doesn't call
+         it, so the theme stayed on the AppCompat default with an action
+         bar — hidden pre-Android-15 by setOverlaysWebView(false), but
+         exposed once we moved to edge-to-edge.) -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
         <item name="android:background">@drawable/splash</item>
     </style>
 </resources>

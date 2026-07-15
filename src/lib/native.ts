@@ -9,13 +9,14 @@ export async function initNativePlugins() {
   try {
     const { StatusBar, Style } = await import('@capacitor/status-bar');
     await StatusBar.setStyle({ style: Style.Dark });
-    await StatusBar.setBackgroundColor({ color: '#0a0a0a' });
-    // Android-only: stop the WebView spanning under the status bar. Default
-    // is overlay=true, which pushes app headers under the notification /
-    // battery indicators (back-arrow untappable). iOS handles the notch
-    // separately via env(safe-area-inset-top) so we don't call this there.
-    if (platform === 'android') {
-      await StatusBar.setOverlaysWebView({ overlay: false });
+    // Android 15 (SDK 35+) enforces edge-to-edge — the system bars are
+    // transparent and the WebView draws underneath them. MainActivity calls
+    // EdgeToEdge.enable() for backward-compat on older Androids. The
+    // status-bar plugin's setBackgroundColor + setOverlaysWebView both wrap
+    // deprecated Window APIs that Play Console flags on target SDK 35+,
+    // so skip them on Android and let env(safe-area-inset-*) do the work.
+    if (platform === 'ios') {
+      await StatusBar.setBackgroundColor({ color: '#0a0a0a' });
     }
   } catch {
     // Status bar not available

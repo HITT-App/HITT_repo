@@ -120,16 +120,13 @@
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
   }
 
-  /* Page-level wrappers with a solid background must sit below the
-     Android status bar. Two shapes are common across the app:
+  /* Android 15+ edge-to-edge: system bars are transparent and the WebView
+     draws underneath them. Two page-wrapper shapes need explicit top
+     padding so their content isn't hidden by the status bar:
        - `fixed inset-0 bg-background` (full-screen overlays)
        - `min-h-screen bg-background` (normal-flow pages)
-     Neither pattern gets safe-area padding from Capacitor's Android
-     `setOverlaysWebView(false)` reliably (fixed positioning is relative
-     to viewport, and min-h-screen still spans under the status bar on
-     some devices). Only backdrops with transparency
-     (`bg-background/80`, `bg-black/50`, etc.) are exempt because they
-     use a different Tailwind-generated class.
+     Backdrops with transparency (`bg-background/80`, `bg-black/50`, ...)
+     are exempt because they use a different Tailwind class.
 
      Scoped to .platform-android specifically. iOS handles the notch via
      the WebView's `contentInset='automatic'` — adding CSS safe-area

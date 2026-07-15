@@ -1,6 +1,6 @@
 # HITT — Google Play Launch Scope
 
-**Status:** Scoping (2026-07-04, revised after review-agent pass)
+**Status:** Phases A–D shipped, closed testing live (2026-07-11). Health Connect declaration + Data Safety + FOREGROUND_SERVICE_LOCATION forms submitted; awaiting Play review. See CHANGELOG entries 2026-07-06 → 2026-07-10 for what actually landed. Retained here for reference.
 **Estimated size:** Large. 5–6 sprints of engineering + a 14-day elapsed-time gate before production.
 
 ## ⚠️ Do these three things NOW, before anything else

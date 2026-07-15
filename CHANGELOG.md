@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-07-15] — Android 15 edge-to-edge fix (Play Console pre-launch warning)
+
+- **Android 15 (SDK 35+) edge-to-edge properly handled** — Play Console flagged HITT for using deprecated `Window.setStatusBarColor()` / `setNavigationBarColor()` APIs. Root cause: the app was calling `StatusBar.setOverlaysWebView({ overlay: false })` + `setBackgroundColor()` on Android to push the WebView below the status bar. Both wrap Window APIs that Android 15 deprecates. Fixed by moving to the AndroidX pattern:
+  - `MainActivity.java` — calls `EdgeToEdge.enable(this)` in `onCreate` for backward compatibility (Google's recommended fix)
+  - `src/lib/native.ts` — no longer calls `setOverlaysWebView` or `setBackgroundColor` on Android; iOS path unchanged
+  - `styles.xml` — launch splash theme now inherits from `AppTheme.NoActionBar` instead of `Theme.SplashScreen` (which needs `installSplashScreen()` to transition, which BridgeActivity doesn't call — so the theme was falling back to the AppCompat default with an action bar, previously hidden by the now-removed overlay call)
+  - CSS `env(safe-area-inset-*)` handling already in place from the earlier Android launch prep — the existing `.platform-android` rules for `.fixed.inset-0.bg-background` and `.min-h-screen.bg-background` now reliably get accurate insets because the WebView draws under the transparent system bars
+- Verified visually on Pixel 8 emulator (Android 17 preview / API 37): identical layout to the pre-fix state — status bar area transparent on the app's dark background, content clears the top, bottom nav area clears the gesture pill — but without the deprecated API calls
+
 ## [2026-07-11] — v1.0.2 / Build 328: app transferred to Casey's account, in-app reporting, body-scan coaching fix
 
 - **App Store app transferred to Casey's Apple Developer account** (team `5933246NY5`). Build pipeline re-pointed: all targets → automatic signing under the new team, `deploy-ios.sh` per-project override, archives sign via Casey's Apple ID in Xcode. One-time transfer gotchas handled (freed the Watch/Live Activity bundle IDs + `group.com.hiitfitness.app.liveactivity` App Group from the old account so Xcode recreates them; registered a device). Full playbook in `CLAUDE.md` → Deploy → "iOS signing". The ITMS-90076 keychain warning on the first post-transfer build is benign + one-time (session lives in localStorage, not the keychain)
@@ -8,6 +17,57 @@
 - **Business contact email → casey@hiituk.com** across the Privacy Policy, Terms of Service, and About screen (was `hiit.co.uk@gmail.com`)
 - **Chat Settings header** no longer floats with a large gap — it was getting the notch inset applied twice; converted to a normal-flow sticky header
 - **Marketing version bumped to 1.0.2** (1.0.1 was approved/live; App Store requires a higher version for the next submission)
+
+## [2026-07-10] — About page, "Jarvis" renamed to "HIIT Coach", Body Scan add-to-plan wired, external-workout PB reminders, analytics digest
+
+- **New About page** (Profile → About) — version + build number (tap to copy for support), contact email, website, Terms + Privacy links, company block (HIITFITNESS LTD, company no. 16893850), Rate HIIT / Share HIIT, and a "Built by Shamalama" credit that opens shamalama.co.uk
+- **User-visible "Jarvis" renamed to "HIIT Coach" everywhere** — bottom nav, floating action button aria-label, chat conversation title, ToS + Privacy copy, Play Store listing draft. Existing "Jarvis" conversations are matched on both titles and lazily renamed on read; a one-shot SQL migration renames the canonical row. Internal code + docs still use "Jarvis" — only the user-facing label changed
+- **Schedule empty state fixed** — copy is now "No workouts scheduled" (was "Nothing scheduled yet.") and the "Ask HIIT coach" quick-action replaces the old "Ask Jarvis". The stale "Nothing scheduled" flag that fired for weeks *after* the plan's start week is gone — the predicate now uses the correct anchor week
+- **Body Scan "Add these to my plan" button now works (Path A)** — the button on the Body Scan analysis screen was dead in the onboarding flow. It now navigates back to Home with a session flag that primes the workout-plan generator with 4–6 lines of scan context (estimated body fat, body type, muscle development, recommendations), so the first generated plan is informed by the scan. Path B (Home comparison card) is scoped in `docs/scope-body-scan-add-to-plan.md`, deferred to next release
+- **External workouts (Garmin, HealthKit) now trigger PB share reminders** — the reminder ping ("share your PB?") previously only fired for HITT-native workouts. `_shared/activity-upsert.ts` now checks external inserts against the user's prior bests for the same canonical activity type and schedules the reminder inline. Guards against noise: skips workouts under 60 s, skips `hitt_phone` source (that's the direct-app path), skips the first-ever activity of a type
+- **Owner analytics digest** — new `analytics-digest` edge function assembles a daily email covering Postgres user/workout/meal counts, PostHog top events, and Sentry error volume; delivered via Gmail SMTP (Spacemail blocks cloud IPs); scheduled via `pg_cron` + `pg_net.http_post`. Live from 2026-07-10
+- **Android wearable guard** — Apple Watch never shown as detected on Android; falls back to phone_only when the seeded activity_logs suggested apple_watch on an Android session
+- **Widened Android safe-area padding** — the `.min-h-screen.bg-background` layout was leaking under the status bar on some screens; the padding rule scoped to `.platform-android` now catches both `.fixed.inset-0` and `.min-h-screen` roots
+- **iOS Build 325 + Android AAB v8 shipped with everything above**
+
+## [2026-07-09] — Firebase / FCM push on Android, Health Connect declared, Play Store listing drafted
+
+- **Android push notifications live end-to-end** — Firebase project linked (`google-services.json`), FCM registration wired into the platform-aware notification settings, `notify-user` edge function branches by platform and calls the FCM HTTP v1 API with the correct message shape. Verified with a test push to a Pixel 8 emulator
+- **14 Health Connect permissions declared** (11 read + 3 write, covering steps, heart rate, weight, sleep, exercise sessions, distance, calories, elevation, VO₂ max, hydration, nutrition; writes for exercise sessions, workouts, and heart rate) — required to keep the Play Console Health Connect declaration truthful and to unblock the read/write sync surface
+- **27 unused permissions stripped from `AndroidManifest.xml`** — every Capacitor plugin declares its default permission set on install; `tools:node="remove"` cleans out the ones we don't use so the Play install prompt doesn't lie about what HITT wants. Also stripped `com.google.android.gms.permission.AD_ID` + 4 `ACCESS_ADSERVICES_*` permissions (we don't run ads, Privacy Sandbox not applicable)
+- **Marketing version bumped to 1.0.1 for App Store resubmission**; builds 322 → 324
+- **Draft Play Store listing** — short description (≤80 chars) + full description with feature bullets under `docs/play-store-listing.md`
+- **Hosted account-deletion page now covers partial data deletion** — the Play Console Data Safety form requires disclosure of what the user can delete individually vs the whole-account "delete my account" flow; page at hiituk.com/delete-account now spells both out
+- **Android-only safe-area padding CSS** — the earlier untargeted rule was over-padding iOS screens on notched phones; now scoped to `.platform-android` (set in `main.tsx` based on `Capacitor.getPlatform()`)
+
+## [2026-07-08] — Apple App Review resubmission fixes
+
+- **Sign In with Apple, Watch app icon, and AI-generated-content consent screen** — three of App Review's rejection reasons addressed in one build. SIWA now hits Apple correctly (bundle-id + capability alignment); the Watch app icon is present in the built asset catalog (was missing); a first-run AI consent sheet explains that Jarvis / meal generation use LLM output so users acknowledge before use
+- Build bump 321 → 322
+
+## [2026-07-07] — Android launch prep: native share, drop canvas-confetti, external-source share cards
+
+- **Android native share sheet** replaces canvas-confetti — Android WebView aggressively throttles requestAnimationFrame during background/foreground transitions and the confetti animation was getting stuck on-screen. It was decorative; removed from all 5 callers (workout complete, meal log, PB reveal, etc.) and swapped to the platform native share on the moments that already invited sharing
+- **Share cards now show correct metrics for external (Garmin / HealthKit) runs** — the generator was reading distance/pace/duration from `workout_progress` even for externally-sourced activities where those columns are null; now reads from `activity_logs` when the source is external
+- **Google Sign-In works on Android** — the Capacitor social-login plugin was crashing at init with "Cannot find provider 'google'" because we were also passing an apple config which is iOS-only. Fixed to only pass apple config on iOS. Also dropped `scopes: ["email", "profile"]` — plugin errored "CANNOT use scopes without modifying main activity"; profile scope is granted by default
+- **StatusBar overlap fix** on Android home screen; iOS build bumps 318 → 320; Android versionCode 3
+
+## [2026-07-06] — Android platform added
+
+- **Capacitor Android platform added** under `~/hitt-app/android/` — Gradle 8.x, JDK 21 pinned in `gradle.properties`; system default JDK stays 17 so Maestro keeps working
+- **`~/bin/deploy-android.sh hitt`** — mirrors deploy-ios.sh: web build → cap sync → `./gradlew bundleRelease` → prints AAB path + opens Finder for manual Play Console upload. Auto-increments `versionCode` in `android/app/build.gradle`
+- **Release signing wired** — upload keystore at `~/hitt-keys/hitt-upload-key.jks` (outside repo), alias `hitt-upload`; deploy script reads the password from macOS Keychain (service `hitt-android-keystore`); Google holds the app signing key via Play App Signing, we only manage the upload key
+- **Docs** — Android deploy + Play signing section added to `CLAUDE.md`; full sprint plan under `docs/scope-google-play-launch.md`
+
+## [2026-07-05] — AI coach meal safety gates + wizard backstop
+
+- **Four-state safety gate for explicit-number meal requests** — the AI coach used to occasionally hallucinate a full meal plan mid-conversation, or "spin" between calling the wizard and writing meals inline. Fixed by making meal generation impossible for the LLM (the wizard is the only path), and layering a four-state gate:
+  1. **safety-hold** — ED / self-harm keywords in the last ~6 user turns → supportive reply, no plan, no wizard
+  2. **context-hold** — explicit `< 1200 kcal` with no fasting/medical reason present → ask one context question, don't serve
+  3. **serve** — explicit numbers `≥ 1200` (or sub-floor with a sensible reason like 5:2/OMAD/supervised) → fast-path serves with a caveat lead-in for sub-floor
+  4. **converse + offer** — vague request → coach chats then attaches the wizard below the message
+- **Deterministic wizard backstop** — if the user clearly asked for a plan but the model coached without attaching the wizard, the server appends `open_meal_plan_wizard` so the builder button never silently drops
+- Live smoke test: `tests/smoke-meal-safety.ts` (5 cases). ED handling is a keyword suppressor only for now — deeper detection + crisis resources is a tracked follow-up
 
 ## [2026-07-04] — Terms of Service rewritten to match the app, contact + privacy URL tightened
 
