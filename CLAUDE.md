@@ -176,6 +176,34 @@ Native browser scroll is better for Capacitor on iOS.
 Pages confirmed with sticky headers: WorkoutDetail, WorkoutSchedule, ChatSettings, HealthMetrics,
 NutritionDashboard, WorkoutLibrary, Profile, BodyScan.
 
+## Android 15 edge-to-edge — do NOT re-add the deprecated StatusBar calls
+
+Android 15 (target SDK 35+) forces every app edge-to-edge — system bars are transparent and the
+WebView draws underneath them. HITT targets SDK 36. Layout is handled by:
+
+1. **`MainActivity.java` calls `androidx.activity.EdgeToEdge.enable(this)`** in `onCreate()` — the
+   backward-compat path Google explicitly recommends. Do not remove.
+2. **`src/lib/native.ts` does NOT call `StatusBar.setOverlaysWebView` or `StatusBar.setBackgroundColor`
+   on Android.** Both plugin methods wrap `Window.setStatusBarColor()` / `setDecorFitsSystemWindows()`
+   which are deprecated in SDK 35. Play Console's pre-launch scan flags every use. `setStyle` is fine
+   — it uses the modern `WindowInsetsController` under the hood. iOS still calls
+   `setBackgroundColor` (harmless there).
+3. **`env(safe-area-inset-*)` handles the padding** via `--safe-area-inset-top` / `-bottom` CSS vars
+   and the `.platform-android .fixed.inset-0.bg-background` / `.min-h-screen.bg-background`
+   `padding-top` rule in `index.css`. Under edge-to-edge these values are reliable — before, we were
+   compensating for `setOverlaysWebView(false)` inconsistency.
+4. **`AppTheme.NoActionBarLaunch` inherits from `AppTheme.NoActionBar`, NOT `Theme.SplashScreen`.**
+   Theme.SplashScreen needs `installSplashScreen()` called from `onCreate` to transition to a
+   post-splash theme. Capacitor's `BridgeActivity` doesn't call it, so the theme silently fell back
+   to the AppCompat default (with an action bar), which was previously hidden by the
+   now-removed `setOverlaysWebView(false)`. Under edge-to-edge that action bar surfaces as a white
+   strip with the truncated activity label. If you swap the launch theme parent, keep it under an
+   `AppTheme.NoActionBar` ancestor.
+
+If someone re-adds `overlay: false` because "the status bar is white / content is under the notch",
+they're diagnosing wrong. The fix is a missing `env(safe-area-inset-top)` on the offending element,
+not fighting the system window.
+
 ## Live Activity widget extension
 
 **Location:** `ios/App/HIITLiveActivity/`. Runs as a separate `HIITLiveActivityExtension.appex`
