@@ -11,9 +11,10 @@ The **Apple side transferred to Casey's account** (team `5933246NY5`) on 2026-07
 - ✅ **ElevenLabs** — Casey's Google account, ownership transferred (2026-07-13).
 - ✅ **Spoonacular** — Casey's account (`caseysonnekus1@gmail.com`), free tier; key swapped + verified (2026-07-13). Secondary meal source, likely to be retired.
 - ✅ **PostHog** — project `169007` (EU) transferred to Casey (org owner); client key + history preserved (no rebuild). Digest personal key swapped + verified (2026-07-13).
+- ✅ **Gmail SMTP** — the sending account (`SMTP_USER`/`SMTP_PASSWORD`/`DIGEST_FROM_EMAIL`) is **already Casey's**; nothing to transfer (confirmed 2026-07-15).
 - 🔄 **Google Cloud `hiit-fitness-494906`** (Gemini + Google Sign-In + Firebase/FCM) — Casey added as **Owner**; **pending his billing account** + a fresh Gemini API key (then swap `AI_API_KEY`), then Vanessa steps off. **Do not detach Vanessa's billing until Casey's is linked** or AI features go down. Recommendation: transfer this project rather than recreate it — the Google Sign-In iOS client ID is hardcoded in the app, so a new project would force an app rebuild.
 - ⏸ **Sentry** — **parked until the next app build** (2026-07-15). Transferring the project changes the DSN (`VITE_SENTRY_DSN`), which needs a rebuild — so do it alongside the next build to avoid an error-monitoring gap. Plan: Casey makes a free Sentry org → you **Transfer Project** → he sends the new DSN + an auth token (`org:read`/`project:read`/`event:read`) → swap `VITE_SENTRY_DSN` (client) + `SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_HOST` (digest).
-- ⬜ **Supabase, GitHub, Gmail SMTP** — still to do.
+- ⬜ **Supabase, GitHub** — still to do.
 
 ---
 
