@@ -642,6 +642,15 @@ export default function WorkoutPlayer() {
   const [cuesOpen, setCuesOpen] = useState(false)
   const prevView = useRef<WPView>('ready')
 
+  // Wall-clock duration. totalElapsed is a per-second tick counter that only
+  // advances during active exercise — it stalls through rests, manual pauses,
+  // and (the big one) whenever iOS suspends the JS timer on lock/background, so
+  // a 60-min session could save as ~30. The saved duration instead measures
+  // real elapsed time from these timestamps, subtracting only user-paused spans.
+  const startedAtRef = useRef<number | null>(null)
+  const pausedAccumMsRef = useRef(0)
+  const pauseStartedRef = useRef<number | null>(null)
+
   // completion
   const [rating, setRating] = useState(0)
   const [showCompleted, setShowCompleted] = useState(false)
@@ -668,6 +677,7 @@ export default function WorkoutPlayer() {
     if (countdown <= 0) {
       setView('active')
       setPlaying(true)
+      if (startedAtRef.current === null) startedAtRef.current = Date.now()
       return
     }
     const h = setTimeout(() => setCountdown(c => c - 1), 850)
@@ -693,6 +703,18 @@ export default function WorkoutPlayer() {
     const h = setInterval(() => setTotalElapsed(t => t + 1), 1000)
     return () => clearInterval(h)
   }, [view, playing, idx, currentEx])
+
+  // pause accounting — accumulate time spent with the workout manually paused,
+  // so it's subtracted from the wall-clock duration at completion.
+  useEffect(() => {
+    if (startedAtRef.current === null) return
+    if (!playing) {
+      pauseStartedRef.current = Date.now()
+    } else if (pauseStartedRef.current !== null) {
+      pausedAccumMsRef.current += Date.now() - pauseStartedRef.current
+      pauseStartedRef.current = null
+    }
+  }, [playing])
 
   // rest timer
   useEffect(() => {
@@ -756,6 +778,10 @@ export default function WorkoutPlayer() {
 
   // ── transitions ───────────────────────────────────────────────────────────
   const startWorkout = () => {
+    startedAtRef.current = null
+    pausedAccumMsRef.current = 0
+    pauseStartedRef.current = null
+    setTotalElapsed(0)
     setIdx(0)
     setView('getready')
   }
@@ -818,6 +844,20 @@ export default function WorkoutPlayer() {
   const completeWorkout = async () => {
     setShowCompleted(true)
     endWorkoutMirroring()
+
+    // Real elapsed time from the wall clock, minus any manually-paused spans —
+    // not the tick counter, which stalls during rests/background (see refs above).
+    const endMs = Date.now()
+    let pausedMs = pausedAccumMsRef.current
+    if (pauseStartedRef.current !== null) pausedMs += endMs - pauseStartedRef.current
+    const startMs = startedAtRef.current ?? endMs
+    const measuredSec = Math.round((endMs - startMs - pausedMs) / 1000)
+    // Never save less than the ticked active time — guards against clock skew.
+    const finalSec = Math.max(0, totalElapsed, measuredSec)
+    const finalMin = Math.floor(finalSec / 60)
+    const finalCalories = workout?.calories_burned || Math.round(metValue * userWeightKg * (finalMin / 60))
+    setTotalElapsed(finalSec)
+
     if (user && workout) {
       try {
         const snapshot = exercises.map(ex => ({
@@ -832,11 +872,11 @@ export default function WorkoutPlayer() {
           workout_title: workout.title, workout_description: workout.description ?? null,
           exercises_snapshot: snapshot, estimated_duration_minutes: workout.duration_minutes ?? null,
           estimated_calories: workout.calories_burned ?? null,
-          duration_seconds: totalElapsed, calories_burned: workoutCalories,
+          duration_seconds: finalSec, calories_burned: finalCalories,
         }).select('id').single()
         const pts = await recordWorkout()
         setPointsEarned(pts)
-        const pbs = await detectPBs(user.id, totalElapsed, workoutCalories)
+        const pbs = await detectPBs(user.id, finalSec, finalCalories)
         setDetectedPBs(pbs)
         if (pbs.length > 0 && progressRow?.id) {
           const nid = await schedulePBShareReminder(progressRow.id, pbs.map(pb => ({ kind: pb.kind, label: pb.label, value: pb.value })))
@@ -848,8 +888,8 @@ export default function WorkoutPlayer() {
             detail: {
               workoutId: workout.id,
               workoutTitle: workout.title,
-              durationMin: workoutDurationMin,
-              calories: workoutCalories,
+              durationMin: finalMin,
+              calories: finalCalories,
               // Structured HIIT — force the hiit template (intervals curve).
               activityType: 'hiit',
               startedAt: new Date().toISOString(),

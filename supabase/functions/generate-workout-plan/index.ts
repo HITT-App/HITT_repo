@@ -10,6 +10,12 @@ const corsHeaders = {
 
 interface GenerateRequest {
   goal?: string;
+  // Training styles to blend across the week, e.g. ["HIIT", "Pilates"].
+  // Empty/absent falls back to the user's saved preference, then a general mix.
+  styles?: string[];
+  // Available equipment, e.g. ["dumbbells", "bands"] or ["none"] for bodyweight.
+  // When present, overrides the saved workout_preferences value.
+  equipment?: string[];
   days?: number;
   sessions_per_week?: number;
   duration_minutes?: number;
@@ -86,9 +92,17 @@ serve(async (req) => {
     const days = clamp(body.days ?? 7, 1, 28);
     const title = body.title ?? `${capitalise(goal)} Plan`;
 
+    // Styles to blend, from the request (the modify-plan flow always sends them).
+    // Empty = general mix. Not persisted — workout_preferences has no styles column.
+    const styles = body.styles ?? [];
+    // Equipment (request wins; else saved preference). 'none' → bodyweight only.
+    const equipmentInput = body.equipment?.length ? body.equipment : (prefs?.available_equipment ?? []);
+    const availableEquipment = equipmentInput.filter((e: string) => e && e !== "none");
+
     const systemPrompt = [
-      "You are a certified fitness coach building a personalised HIIT workout plan.",
+      "You are a certified fitness coach building a personalised workout plan.",
       "Generate complete workout sessions with specific exercises — do NOT reference any external workout library.",
+      "Honour the requested training styles: a Pilates session must contain genuine Pilates movements (mat-based core, control, stability), a Yoga & Mobility session flows and stretches, a Strength session resistance sets+reps, a HIIT session high-intensity intervals.",
       "Each exercise must have a title, description (1 short sentence on how to do it), and either sets+reps OR duration_seconds (not both).",
       "Adapt difficulty to the user's fitness level: beginners get simpler movements, fewer sets, longer rest.",
       "You MUST return valid JSON matching the schema exactly. No prose, no markdown fences.",
@@ -96,14 +110,23 @@ serve(async (req) => {
 
     const userPrompt = buildUserPrompt({
       goal,
+      styles,
       fitnessLevel,
       sessionsPerWeek,
       targetDuration,
       days,
       targetBodyAreas: prefs?.target_body_areas ?? [],
-      availableEquipment: prefs?.available_equipment ?? [],
+      availableEquipment,
       bodyScan: body.body_scan ?? null,
     });
+
+    // Persist equipment so it sticks for future plans and other surfaces.
+    if (body.equipment?.length) {
+      await admin
+        .from("workout_preferences")
+        .update({ available_equipment: body.equipment })
+        .eq("user_id", user.id);
+    }
 
     await admin.from("ai_generation_log").insert({
       user_id: user.id,
@@ -273,6 +296,7 @@ function capitalise(s: string): string {
 
 function buildUserPrompt(input: {
   goal: string;
+  styles: string[];
   fitnessLevel: string;
   sessionsPerWeek: number;
   targetDuration: number;
@@ -306,6 +330,9 @@ function buildUserPrompt(input: {
   return [
     `Build a ${input.days}-day workout plan for this user:`,
     `- Goal: ${input.goal}`,
+    input.styles.length
+      ? `- Training styles to blend across the week: ${input.styles.join(", ")}`
+      : null,
     `- Fitness level: ${input.fitnessLevel}`,
     `- Sessions per week: ${input.sessionsPerWeek}`,
     `- Target session duration: ~${input.targetDuration} minutes`,
@@ -318,8 +345,13 @@ function buildUserPrompt(input: {
     ...bodyScanLines,
     "",
     `Create ${totalSessions} workout sessions spread across ${input.days} days (day_index 0 = today). Omit rest days — just don't include them. Avoid back-to-back sessions targeting the same muscle group.`,
+    input.styles.length > 1
+      ? `Distribute the ${input.styles.join(", ")} styles roughly evenly across the sessions — every week should include each selected style at least once. Make each session's workout_title reflect its style (e.g. "Pilates Core Flow", "HIIT Burner").`
+      : input.styles.length === 1
+        ? `Every session must be in the ${input.styles[0]} style; reflect that in each workout_title.`
+        : null,
     "",
-    "For each session, create 5–8 exercises tailored to the user's goal and fitness level.",
+    "For each session, create 5–8 exercises tailored to the user's goal, styles and fitness level.",
     "Use sets+reps for strength exercises (e.g. squats, push-ups) and duration_seconds for cardio/timed exercises (e.g. plank, mountain climbers). Never set both.",
     "",
     "Return ONLY a JSON object with this exact schema:",

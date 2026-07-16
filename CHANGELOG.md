@@ -1,5 +1,12 @@
 # HITT App Changelog
 
+## [2026-07-16] — v1.0.3 / Build 329: accurate workout times, "no equipment" option, workout-style picker
+
+- **Accurate workout times** — a workout's saved duration now comes from a wall-clock measurement (start → finish, minus any manual pauses) instead of a per-second tick counter. The old counter only advanced during active exercise and stalled through rest periods, pauses, and — the big one — whenever iOS suspended the JS timer while the phone was locked or the app was backgrounded, so a genuine 60+ min session could save as ~30 min. Fix in `src/pages/WorkoutPlayer.tsx`: `startedAtRef`/pause-accounting refs drive the saved `duration_seconds`, calories, PB detection and share card; the tick counter is kept only for the live on-screen display. Already-saved records aren't retroactively corrected (the lost seconds were never recorded); going forward they're right
+- **"No equipment" option in "Modify your training plan"** — the modify-plan flow (`OnboardingFlow`) had no equipment step at all, so there was no way to say "bodyweight only". Added a multi-select equipment step (No equipment / Dumbbells / Bands / Barbell / Full gym) where "No equipment" is mutually exclusive with the rest; wired through `useOnboardingPlan` → `generate-workout-plan` and persisted to `available_equipment`
+- **Workout-style picker** — added a multi-select style step (HIIT, Strength, Pilates, Yoga & Mobility) to the modify-plan flow; the generated plan now blends the chosen styles across the week. Removed the hard-coded "HIIT" bias in the `generate-workout-plan` prompt so the AI produces genuine per-style movements (real Pilates mat/core work, Yoga flows, strength sets/reps, HIIT intervals) and labels each session accordingly. Since generation is AI-based, Pilates sessions appear immediately — no new library content needed. Edge-function change is backward-compatible (styles/equipment optional) and deployed alongside the build
+- **Marketing version bumped to 1.0.3** across all targets (App, Watch, Live Activity)
+
 ## [2026-07-15] — Android 15 edge-to-edge fix (Play Console pre-launch warning)
 
 - **Android 15 (SDK 35+) edge-to-edge properly handled** — Play Console flagged HITT for using deprecated `Window.setStatusBarColor()` / `setNavigationBarColor()` APIs. Root cause: the app was calling `StatusBar.setOverlaysWebView({ overlay: false })` + `setBackgroundColor()` on Android to push the WebView below the status bar. Both wrap Window APIs that Android 15 deprecates. Fixed by moving to the AndroidX pattern:

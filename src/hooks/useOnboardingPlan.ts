@@ -24,9 +24,11 @@ function friendlyError(err: unknown): string {
 
 export interface OnboardingAnswers {
   goal: string;
+  styles: string[];         // e.g. ['HIIT', 'Pilates'] — blended across the week
   experience: string;
   daysPerWeek: number;
   selectedDays: number[];   // 0=Sun, 1=Mon … 6=Sat
+  equipment: string[];      // e.g. ['none'] or ['dumbbells', 'bands']
   sessionMinutes: number;
 }
 
@@ -108,6 +110,8 @@ export function useOnboardingPlan() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             goal: answers.goal,
+            styles: answers.styles,
+            equipment: answers.equipment,
             days: answers.daysPerWeek * 4,
             sessions_per_week: answers.daysPerWeek,
             duration_minutes: answers.sessionMinutes,

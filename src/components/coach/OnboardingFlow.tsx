@@ -45,7 +45,24 @@ const SESSION_LENGTHS = [
   { id: 60,  label: '60+ min', desc: 'Go deep' },
 ];
 
-const TOTAL_STEPS = 5;
+// Multi-select — the plan blends the chosen styles across the week.
+const STYLES = [
+  { id: 'HIIT',            emoji: '🔥', desc: 'High-intensity intervals' },
+  { id: 'Strength',        emoji: '🏋️', desc: 'Weights / resistance' },
+  { id: 'Pilates',         emoji: '🧘', desc: 'Core, control & stability' },
+  { id: 'Yoga & Mobility', emoji: '🤸', desc: 'Flexibility & flow' },
+];
+
+// Multi-select. 'none' is mutually exclusive with the rest.
+const EQUIPMENT_OPTS = [
+  { id: 'none',       label: 'No equipment', desc: 'Bodyweight only' },
+  { id: 'dumbbells',  label: 'Dumbbells / kettlebells' },
+  { id: 'bands',      label: 'Resistance bands' },
+  { id: 'barbell',    label: 'Barbell + rack' },
+  { id: 'gym',        label: 'Full gym access' },
+];
+
+const TOTAL_STEPS = 7;
 
 export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) {
   const navigate = useNavigate();
@@ -58,9 +75,11 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
   const [conflictCount, setConflictCount] = useState(0);
 
   const [goal, setGoal] = useState('');
+  const [styles, setStyles] = useState<string[]>([]);
   const [experience, setExperience] = useState('');
   const [daysPerWeek, setDaysPerWeek] = useState(3);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [equipment, setEquipment] = useState<string[]>([]);
   const [sessionMinutes, setSessionMinutes] = useState(30);
 
   const toggleDay = (d: number) => {
@@ -69,12 +88,26 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
     );
   };
 
+  const toggleStyle = (id: string) => {
+    setStyles(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleEquipment = (id: string) => {
+    setEquipment(prev => {
+      if (id === 'none') return prev.includes('none') ? [] : ['none'];
+      const next = prev.filter(x => x !== 'none');
+      return next.includes(id) ? next.filter(x => x !== id) : [...next, id];
+    });
+  };
+
   const canNext = () => {
     if (step === 0) return !!goal;
-    if (step === 1) return !!experience;
-    if (step === 2) return daysPerWeek > 0;
-    if (step === 3) return selectedDays.length === daysPerWeek;
-    if (step === 4) return sessionMinutes > 0;
+    if (step === 1) return styles.length > 0;
+    if (step === 2) return !!experience;
+    if (step === 3) return daysPerWeek > 0;
+    if (step === 4) return selectedDays.length === daysPerWeek;
+    if (step === 5) return equipment.length > 0;
+    if (step === 6) return sessionMinutes > 0;
     return false;
   };
 
@@ -83,7 +116,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
       setStep(s => s + 1);
     } else {
       // Last step — generate plan
-      await generatePlan({ goal, experience, daysPerWeek, selectedDays, sessionMinutes });
+      await generatePlan({ goal, styles, experience, daysPerWeek, selectedDays, equipment, sessionMinutes });
       setStep(TOTAL_STEPS); // move to review step
     }
   };
@@ -160,7 +193,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
               <p className="text-sm text-foreground max-w-xs">{error}</p>
               <Button
                 className="w-full h-12 rounded-2xl"
-                onClick={() => generatePlan({ goal, experience, daysPerWeek, selectedDays, sessionMinutes })}
+                onClick={() => generatePlan({ goal, styles, experience, daysPerWeek, selectedDays, equipment, sessionMinutes })}
               >
                 Try again
               </Button>
@@ -273,6 +306,22 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
         )}
 
         {step === 1 && (
+          <Step title="What kind of training?" subtitle="Pick one or more — we'll mix them across your week.">
+            <div className="grid grid-cols-1 gap-3">
+              {STYLES.map(s => (
+                <Chip key={s.id} selected={styles.includes(s.id)} onClick={() => toggleStyle(s.id)}>
+                  <span className="text-2xl">{s.emoji}</span>
+                  <div>
+                    <p className="font-medium">{s.id}</p>
+                    <p className="text-xs text-muted-foreground">{s.desc}</p>
+                  </div>
+                </Chip>
+              ))}
+            </div>
+          </Step>
+        )}
+
+        {step === 2 && (
           <Step title="How experienced are you?" subtitle="Be honest — we'll calibrate the difficulty.">
             <div className="grid grid-cols-1 gap-3">
               {EXPERIENCE.map(e => (
@@ -287,7 +336,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
           </Step>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <Step title="How many days per week?" subtitle="Pick what's realistic, not ideal.">
             <div className="grid grid-cols-2 gap-3">
               {DAYS_PER_WEEK.map(d => (
@@ -300,7 +349,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
           </Step>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <Step
             title={`Pick your ${daysPerWeek} training days`}
             subtitle={`${selectedDays.length} of ${daysPerWeek} selected`}
@@ -328,7 +377,22 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
           </Step>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
+          <Step title="What equipment do you have?" subtitle="Pick all that apply — we'll build around it.">
+            <div className="grid grid-cols-1 gap-3">
+              {EQUIPMENT_OPTS.map(eq => (
+                <Chip key={eq.id} selected={equipment.includes(eq.id)} onClick={() => toggleEquipment(eq.id)}>
+                  <div>
+                    <p className="font-medium">{eq.label}</p>
+                    {eq.desc && <p className="text-xs text-muted-foreground">{eq.desc}</p>}
+                  </div>
+                </Chip>
+              ))}
+            </div>
+          </Step>
+        )}
+
+        {step === 6 && (
           <Step title="How long per session?" subtitle="We'll pick workouts that fit.">
             <div className="grid grid-cols-2 gap-3">
               {SESSION_LENGTHS.map(s => (
