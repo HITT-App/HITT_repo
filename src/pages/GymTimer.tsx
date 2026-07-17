@@ -692,6 +692,15 @@ const GymTimer = () => {
   const startTimeRef = useRef(Date.now())
   const pausedAtRef = useRef(0)
 
+  // AI-mode wall-clock duration. totalElapsed is a tick counter that only advances
+  // during active exercise — it stalls through rests, pauses and iOS lock/background
+  // suspension, undercounting long sessions. The saved AI duration is derived from
+  // these timestamps (now - start - pausedTime) instead. (Mode C already uses
+  // startTimeRef wall-clock, so only AI mode needs this.)
+  const aiStartedAtRef = useRef<number | null>(null)
+  const aiPausedAccumMsRef = useRef(0)
+  const aiPauseStartedRef = useRef<number | null>(null)
+
   const calories = isAIMode
     ? Math.round(((aiContent?.estimated_calories ?? 200) / ((aiContent?.estimated_duration_minutes ?? 30) * 60)) * totalElapsed)
     : Math.round((sport.met * DEFAULT_WEIGHT_KG * elapsed) / 3600)
@@ -727,6 +736,7 @@ const GymTimer = () => {
     if (countdown <= 0) {
       setView('active')
       setPlaying(true)
+      if (aiStartedAtRef.current === null) aiStartedAtRef.current = Date.now()
       return
     }
     const h = setTimeout(() => setCountdown(c => c - 1), 850)
@@ -753,6 +763,17 @@ const GymTimer = () => {
     return () => clearInterval(h)
   }, [view, playing, idx, currentEx, isAIMode])
 
+  // ─── AI mode: pause accounting (excluded from wall-clock duration) ───────
+  useEffect(() => {
+    if (!isAIMode || aiStartedAtRef.current === null) return
+    if (!playing) {
+      if (aiPauseStartedRef.current === null) aiPauseStartedRef.current = Date.now()
+    } else if (aiPauseStartedRef.current !== null) {
+      aiPausedAccumMsRef.current += Date.now() - aiPauseStartedRef.current
+      aiPauseStartedRef.current = null
+    }
+  }, [isAIMode, playing])
+
   // ─── AI mode: rest timer ─────────────────────────────────────────────────
   useEffect(() => {
     if (!isAIMode || view !== 'rest') return
@@ -774,6 +795,10 @@ const GymTimer = () => {
 
   // ─── AI mode transitions ─────────────────────────────────────────────────
   const startWorkout = () => {
+    aiStartedAtRef.current = null
+    aiPausedAccumMsRef.current = 0
+    aiPauseStartedRef.current = null
+    setTotalElapsed(0)
     setIdx(0)
     setView('getready')
   }
@@ -835,9 +860,21 @@ const GymTimer = () => {
     // Confetti removed — froze on Android WebView. Vibrate + intro mp4 in
     // CompletionSummary carry the celebration.
 
-    const durationSecs = isAIMode ? totalElapsed : elapsed
+    // AI mode: real elapsed from the wall clock (minus paused spans), not the
+    // tick counter that stalls on rest/pause/background. Mode C already uses
+    // startTimeRef wall-clock via `elapsed`.
+    const aiWallSecs = (() => {
+      const start = aiStartedAtRef.current
+      if (start === null) return totalElapsed
+      let pausedMs = aiPausedAccumMsRef.current
+      if (aiPauseStartedRef.current !== null) pausedMs += Date.now() - aiPauseStartedRef.current
+      return Math.max(totalElapsed, Math.floor((Date.now() - start - pausedMs) / 1000))
+    })()
+    if (isAIMode) setTotalElapsed(aiWallSecs)
+
+    const durationSecs = isAIMode ? aiWallSecs : elapsed
     const finalCalories = isAIMode
-      ? Math.round(((aiContent?.estimated_calories ?? 200) / ((aiContent?.estimated_duration_minutes ?? 30) * 60)) * totalElapsed)
+      ? Math.round(((aiContent?.estimated_calories ?? 200) / ((aiContent?.estimated_duration_minutes ?? 30) * 60)) * aiWallSecs)
       : Math.round((sport.met * DEFAULT_WEIGHT_KG * elapsed) / 3600)
 
     try {

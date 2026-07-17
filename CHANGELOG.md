@@ -1,5 +1,15 @@
 # HITT App Changelog
 
+## [2026-07-17] — v1.0.4 / Build 330: accurate workout times everywhere (walks, runs, gym, triathlon)
+
+- **More accurate workout times across every activity** — walks, runs, cycles, AI gym sessions and triathlons are now timed by the clock, so time spent with your phone locked or in your pocket is counted correctly. Previously a long session could be logged as much shorter than it really was (e.g. a 1h27m walk saving as 44m)
+- Extends the v1.0.3 fix (which covered structured HIIT workouts) to the remaining timer screens. Root cause was identical: `duration_seconds` came from a per-second `setInterval` tick counter that iOS suspends while the app is backgrounded / the phone is locked, so real elapsed time was lost. Each screen now derives duration from wall-clock timestamps (`now − start − pausedTime`):
+  - `src/pages/ActivityLive.tsx` (GPS walks / runs / cycles) — wall-clock `duration_seconds`; the on-screen timer self-corrects on foreground via `visibilitychange`; manual + auto-pause spans excluded
+  - `src/pages/GymTimer.tsx` — AI-workout mode now wall-clock with pause accounting (free/counter mode already used `startTimeRef` wall-clock and was unaffected)
+  - `src/pages/Triathlon.tsx` — per-leg tick counters converted to wall-clock; pause, leg transitions and finish each fold the active leg's real elapsed before saving totals
+- Already-saved records aren't retroactively corrected (the lost seconds were never recorded); durations are accurate for workouts done on this build onward
+- **Marketing version bumped to 1.0.4** across all targets (App, Watch, Live Activity)
+
 ## [2026-07-16] — v1.0.3 / Build 329: accurate workout times, "no equipment" option, workout-style picker
 
 - **Accurate workout times** — a workout's saved duration now comes from a wall-clock measurement (start → finish, minus any manual pauses) instead of a per-second tick counter. The old counter only advanced during active exercise and stalled through rest periods, pauses, and — the big one — whenever iOS suspended the JS timer while the phone was locked or the app was backgrounded, so a genuine 60+ min session could save as ~30 min. Fix in `src/pages/WorkoutPlayer.tsx`: `startedAtRef`/pause-accounting refs drive the saved `duration_seconds`, calories, PB detection and share card; the tick counter is kept only for the live on-screen display. Already-saved records aren't retroactively corrected (the lost seconds were never recorded); going forward they're right

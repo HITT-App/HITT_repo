@@ -199,22 +199,55 @@ const Triathlon = () => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<string>(new Date().toISOString());
 
-  // Timer
+  // Wall-clock duration accounting. Each leg's `elapsed` was a setInterval tick
+  // counter that freezes when iOS suspends the JS timer (lock/background), so a
+  // long leg undercounts. The active leg's time is now derived from a segment
+  // start timestamp; these refs let pause/leg-switch/finish fold the real value.
+  const legDataRef = useRef(legData);
+  legDataRef.current = legData;
+  const segStartMsRef = useRef<number | null>(null);
+  const segBaseSecsRef = useRef(0);
+
+  // Timer — the active leg's elapsed is derived from the wall clock each tick
+  // (not += 1), so it self-corrects after any lock/background suspension.
   useEffect(() => {
     if (running && screen === 'race') {
+      segStartMsRef.current = Date.now();
+      segBaseSecsRef.current = legDataRef.current[activeLeg].elapsed;
       timerRef.current = setInterval(() => {
+        const add = Math.floor((Date.now() - (segStartMsRef.current ?? Date.now())) / 1000);
         setLegData((prev) => {
           const next = [...prev];
           const leg = { ...next[activeLeg] };
-          leg.elapsed += 1;
+          leg.elapsed = segBaseSecsRef.current + add;
           leg.calories = Math.round(LEGS[activeLeg].met * weightKg * (leg.elapsed / 3600));
           next[activeLeg] = leg;
           return next;
         });
       }, 1000);
+    } else {
+      // Not actively running (paused / transition / finished) — no live segment.
+      segStartMsRef.current = null;
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [running, activeLeg, screen]);
+
+  // Commit the active leg's real wall-clock elapsed (used on pause-to-next-leg
+  // and finish so the banked value includes the final, possibly-backgrounded span).
+  const foldActiveLeg = useCallback(() => {
+    if (segStartMsRef.current === null) return;
+    const add = Math.floor((Date.now() - segStartMsRef.current) / 1000);
+    const finalSecs = segBaseSecsRef.current + add;
+    segStartMsRef.current = null;
+    setLegData((prev) => {
+      const next = [...prev];
+      const leg = { ...next[activeLeg] };
+      leg.elapsed = Math.max(leg.elapsed, finalSecs);
+      leg.calories = Math.round(LEGS[activeLeg].met * weightKg * (leg.elapsed / 3600));
+      next[activeLeg] = leg;
+      return next;
+    });
+  }, [activeLeg]);
 
   // GPS for bike & run legs
   useEffect(() => {
@@ -256,6 +289,7 @@ const Triathlon = () => {
 
   const handleNextLeg = useCallback(() => {
     if (activeLeg >= 2) return;
+    foldActiveLeg();
     setRunning(false);
     gpsWatchRef.current?.stop();
     setTransitioning(true);
@@ -264,14 +298,24 @@ const Triathlon = () => {
       setTransitioning(false);
       setRunning(true);
     }, 1500);
-  }, [activeLeg]);
+  }, [activeLeg, foldActiveLeg]);
 
   const handleFinish = useCallback(async () => {
+    // Fold the active leg's final wall-clock segment synchronously so the saved
+    // totals include it (setState wouldn't reflect in time for the reduce below).
+    const add = segStartMsRef.current !== null ? Math.floor((Date.now() - segStartMsRef.current) / 1000) : 0;
+    segStartMsRef.current = null;
+    const finalLegData = legDataRef.current.map((l, i) => {
+      if (i !== activeLeg) return l;
+      const elapsed = Math.max(l.elapsed, segBaseSecsRef.current + add);
+      return { ...l, elapsed, calories: Math.round(LEGS[i].met * weightKg * (elapsed / 3600)) };
+    });
+    setLegData(finalLegData);
     setRunning(false);
     setScreen('finished');
     gpsWatchRef.current?.stop();
     if (!user) return;
-    const totals = legData.reduce(
+    const totals = finalLegData.reduce(
       (acc, l) => ({ elapsed: acc.elapsed + l.elapsed, distance: acc.distance + l.distance, calories: acc.calories + l.calories }),
       { elapsed: 0, distance: 0, calories: 0 },
     );
@@ -286,10 +330,10 @@ const Triathlon = () => {
         distance_km: Math.round(totals.distance * 100) / 100,
         calories_burned: totals.calories,
         status: 'completed',
-        notes: `Swim: ${fmt(legData[0].elapsed)} | Bike: ${fmt(legData[1].elapsed)} ${legData[1].distance.toFixed(2)}km | Run: ${fmt(legData[2].elapsed)} ${legData[2].distance.toFixed(2)}km`,
+        notes: `Swim: ${fmt(finalLegData[0].elapsed)} | Bike: ${fmt(finalLegData[1].elapsed)} ${finalLegData[1].distance.toFixed(2)}km | Run: ${fmt(finalLegData[2].elapsed)} ${finalLegData[2].distance.toFixed(2)}km`,
       },
     });
-  }, [user, legData]);
+  }, [user, activeLeg]);
 
   const sendToWatch = async () => {
     setWatchSending(true);

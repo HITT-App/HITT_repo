@@ -112,6 +112,12 @@ const ActivityLive = () => {
 
   // Crash-recovery: tracks the live session's epoch start so persistence has a stable key.
   const sessionStartedAtRef = useRef<number>(0);
+  // Wall-clock duration accounting. `elapsed` was a setInterval tick counter that
+  // freezes whenever iOS suspends the JS timer (phone locked / app backgrounded —
+  // routine on a walk), so a 1h27m walk saved as ~44m. Duration is now derived from
+  // (now - start - pausedTime); these refs track the paused spans to exclude.
+  const pausedAccumMsRef = useRef<number>(0);
+  const pauseStartedAtRef = useRef<number | null>(null);
   const lastPersistAtRef = useRef<number>(0);
   // Gate writes until recovery check completes, so we don't overwrite a recoverable workout.
   const persistReadyRef = useRef(false);
@@ -164,6 +170,16 @@ const ActivityLive = () => {
   const met = getMET(activityType);
   const calories = Math.round(met * DEFAULT_WEIGHT_KG * (elapsed / 3600));
   const pace = distanceKm > 0.01 ? (elapsed / 60 / distanceKm).toFixed(1) : "--";
+
+  // Real elapsed seconds from the wall clock, excluding paused/auto-paused spans.
+  // Reads only refs, so it stays correct even after the tick timer was suspended.
+  const computeElapsedSecs = useCallback((): number => {
+    const start = sessionStartedAtRef.current;
+    if (!start) return 0;
+    let pausedMs = pausedAccumMsRef.current;
+    if (pauseStartedAtRef.current !== null) pausedMs += Date.now() - pauseStartedAtRef.current;
+    return Math.max(0, Math.floor((Date.now() - start - pausedMs) / 1000));
+  }, []);
 
   const formatTime = (secs: number) => {
     const h = Math.floor(secs / 3600);
@@ -271,14 +287,39 @@ const ActivityLive = () => {
     };
   }, []);
 
+  // --- Pause accounting — accumulate paused/auto-paused spans to exclude them ---
+  useEffect(() => {
+    if (!started) return;
+    if (isPaused) {
+      if (pauseStartedAtRef.current === null) pauseStartedAtRef.current = Date.now();
+    } else if (pauseStartedAtRef.current !== null) {
+      pausedAccumMsRef.current += Date.now() - pauseStartedAtRef.current;
+      pauseStartedAtRef.current = null;
+    }
+  }, [started, isPaused]);
+
   // --- Timer — only runs after user taps Start ---
+  // Recomputes from the wall clock each tick (not p+1), so the displayed time
+  // self-corrects the moment the app returns to the foreground after suspension.
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (started && !isPaused && !showCompleted) {
-      interval = setInterval(() => setElapsed((p) => p + 1), 1000);
+      setElapsed(computeElapsedSecs());
+      interval = setInterval(() => setElapsed(computeElapsedSecs()), 1000);
     }
     return () => clearInterval(interval);
-  }, [started, isPaused, showCompleted]);
+  }, [started, isPaused, showCompleted, computeElapsedSecs]);
+
+  // Re-sync immediately when the app returns to the foreground.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && startedRef.current) {
+        setElapsed(computeElapsedSecs());
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [computeElapsedSecs]);
 
   // --- Wake Lock ---
   useEffect(() => {
@@ -442,10 +483,14 @@ const ActivityLive = () => {
 
     // Snapshot values that the background task needs — captured here so
     // they reflect end-of-session state, not whatever the next render sees.
-    const finalElapsed = elapsed;
+    // Wall-clock duration, not the tick counter — the counter undercounts after
+    // any lock/background suspension (the 1h27m-walk-saved-as-44m bug).
+    const finalElapsed = computeElapsedSecs() || elapsed;
+    // Sync the display so the completion / share screen reflects the true duration.
+    setElapsed(finalElapsed);
     const finalDistanceKm = Number(distanceKm.toFixed(2));
     const finalDistanceMeters = totalDistance;
-    const finalCalories = calories;
+    const finalCalories = Math.round(met * DEFAULT_WEIGHT_KG * (finalElapsed / 3600));
     const finalActivityType = activityType;
     const finalPositions = positionsRef.current.map((p) => ({
       lat: p.lat,
