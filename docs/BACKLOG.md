@@ -320,6 +320,70 @@ Re-check against the Android 15 edge-to-edge rules in `CLAUDE.md`.
 
 ---
 
+## #118 — Body-scan progress photos: before/after comparison
+
+**Type:** Feature — **not a bug** · **Status: investigated 2026-07-29, needs building** · **Est:** Medium
+
+Reported as "not working". It isn't broken — **the photos are never saved anywhere, and no
+comparison screen exists.** There is nothing to repair; this is a feature to build.
+
+### What actually happens today
+
+1. **Photos live in React state only.** `BodyScan.tsx:165` holds them as
+   `capturedImages: Record<number, string>` — base64 data URLs in memory.
+2. **They're sent for analysis, then discarded.** Line 394 posts them to the `analyze-body`
+   edge function. When the component unmounts they're gone. There is **no upload call
+   anywhere in the file**.
+3. **No database column exists.** Verified against production — `body_scans` has
+   `id, user_id, scanned_at, estimated_body_fat, confidence_level, analysis, created_at,
+   deleted_at`. No image column. The insert at `BodyScan.tsx:455` writes only the numbers
+   and the analysis JSON.
+4. **No storage bucket exists** for scans. Production has `activity-images`, `app-assets`,
+   `avatars`, `community-images`, `meal-images`, `workout-thumbnails`, `workout-videos`.
+5. **Nothing reads scans back for display.** `body_scans` is written in exactly one place
+   and otherwise only read server-side by `ai-coach`. No screen renders scan history.
+   (`before_image_url` / `after_image_url` exist, but they belong to **community posts** —
+   a different feature.)
+6. **The code says so.** `BodyScan.tsx:923`: *"Path B (route through Jarvis with comparison
+   + choice card) is still to build."*
+
+### What building it involves
+
+1. **A private storage bucket** — e.g. `body-scans`, **not public**. Every other image
+   bucket except `activity-images` is public; these must not be. RLS scoped so a user can
+   only read their own objects, pathed `{user_id}/{scan_id}/{pose_index}.jpg`.
+2. **Upload on capture**, then store the returned paths on the scan row (a `image_paths
+   text[]`, or a `body_scan_photos` child table if poses need individual metadata).
+3. **A comparison screen** — first scan vs latest, pose-matched, with a date and the body-fat
+   delta. Needs a scan-history read, which doesn't exist yet either.
+4. **Serve via signed URLs**, since the bucket is private.
+
+### Decide before building — this is sensitive personal data
+
+Body photos are a significantly higher bar than the meal images and workout thumbnails
+already in the app:
+
+- **Explicit opt-in.** Users currently take these expecting a body-fat estimate, not a
+  stored photo library. Saving them silently would be a genuine privacy breach. Needs a
+  clear "save this photo to track progress" consent, defaulting to **off**, and it should
+  be possible to use body scan without ever storing an image.
+- **Deletion.** `delete-account/index.ts:30` already clears the `body_scans` **table**, but
+  it does **not** touch storage — no bucket cleanup exists in that function at all. A new
+  bucket must be added there or deleted accounts would leave body photos behind. That is
+  the kind of gap that turns into a GDPR problem.
+- **Retention + individual delete** — a user should be able to remove a single progress
+  photo without deleting the whole scan.
+- **Privacy policy** almost certainly needs updating to cover storing body imagery.
+- **App Store / Play** data-safety declarations both list what's collected and stored;
+  adding stored body photos changes those answers.
+
+**Recommendation:** worth building — it's a genuinely motivating feature for a fitness app —
+but the consent and deletion design should be agreed **before** any code, not retrofitted.
+The cheapest first version is: opt-in toggle, private bucket, first-vs-latest comparison
+only, and wire the bucket into account deletion in the same PR.
+
+---
+
 ## #117 — AI-generated workouts run a fraction of their stated duration
 
 **Type:** Bug · **Status: all three defects FIXED 2026-07-29 — needs a device check**
