@@ -14,7 +14,7 @@ Database migrations are applied to production and the edge functions are deploye
 | Task | State | What's left |
 |---|---|---|
 | **#111** external share → feed | Shipped (332) | Device check; only the `CompletionSummary` share path is wired |
-| **#112** like notifications | **Diagnosed** | QA account had `push_enabled=false`; needs a 2-device check |
+| **#112** like notifications | **Likely a non-bug** | Only 1 like has ever occurred app-wide; Casey's pushes work |
 | **#113** keyboard covers composer | Shipped (332) | Device check on iOS **and** Android |
 | **#114** Health Connect | **Decided, not built** | ~80% already exists; workout ingest is the gap |
 | **#115** recipe nutrition | Shipped (332) + data live | — |
@@ -174,7 +174,48 @@ would silently disable every push on a fresh project or after a DB reset, and it
 having fixed — but it is **not** why likes aren't notifying on this project. My earlier
 "this is the whole bug" call was wrong.
 
-### Diagnosed 2026-07-30 — second QA account created, chain traced end to end
+### Likely resolved 2026-07-30 — there was almost nothing to notify about
+
+Checked Casey's account after he reported *workout* notifications arriving normally.
+
+**Casey's setup is correct and working.** `caseysonnekus1@gmail.com` — 1 iOS device token,
+**no `notification_preferences` row** (so push is allowed by the `if (prefs && ...)` guard),
+and **3 `follow` notifications** received. Follows and workout reminders both reach him, which
+proves the whole chain — trigger → fan-out → pg_net → `notify-user` → APNs — works for a real
+user on a real device.
+
+**He has 1 post with 0 likes.** There has never been a like notification to send him.
+
+**Across the entire production history there has been exactly ONE post like:**
+
+| Type | Count | First | Latest |
+|---|---|---|---|
+| follow | 26 | 2026-07-02 | 2026-07-27 |
+| friend_request | 3 | 2026-07-27 | 2026-07-27 |
+| comment | 2 | 2026-06-18 | 2026-07-03 |
+| **like** | **1** | **2026-07-26** | **2026-07-26** |
+| message | 1 | 2026-07-03 | 2026-07-03 |
+| friend_accept | 1 | 2026-07-27 | 2026-07-27 |
+
+7 posts, 1 like, in two months. That single like **did** correctly produce a notification —
+for `jon.latchem@me.com`, who has a device token and no preferences row, so the push should
+have been sent.
+
+**Conclusion: this is most likely not a bug.** The two confirmed contributors were the QA
+account's `push_enabled = false` (now fixed) and the near-total absence of like activity to
+observe. The trigger, fan-out and delivery path are all demonstrably working.
+
+**The one thing still unproven:** whether the APNs push for that single like actually landed
+on Jon's device. Only he can say. If you want certainty, like a post between two TestFlight
+devices — that is now easy with the second QA account.
+
+**Worth doing regardless:** `notify-user` returns 200 whether it sends or skips, so nothing
+in the logs distinguishes a delivered push from a dropped one. Fix that and the next question
+like this takes minutes instead of a day.
+
+---
+
+### Investigation 2026-07-30 — second QA account created, chain traced end to end
 
 A second QA account now exists (`hitt.qa.test+2@gmail.com`; credentials in the gitignored
 `.claude/qa-credentials.md`), so the smoke test can finally run — the like trigger skips
