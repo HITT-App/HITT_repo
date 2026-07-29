@@ -1,5 +1,17 @@
 # HITT App Changelog
 
+## [2026-07-30] — v1.0.6 / Build 332: body-scan progress photos (opt-in)
+
+- **Progress photos on the body scan** — the Progress tab's "Visual progress" card has always had **First** and **Latest** slots, but there was nowhere to keep a photo, so both showed a placeholder outline. Photos were held in memory during the scan, sent for analysis, then discarded. They can now be saved and compared:
+  - When you save a scan you're asked whether to **save the photo to track progress**. It's **off by default** — leave it alone and nothing is stored, and the scan works exactly as before
+  - Opt in and your front photo is kept, so the Progress tab shows your first and latest side by side with the dates and how many weeks apart they are
+  - Photos are stored **privately**. The bucket is not public, access is scoped to your own account at the database level, and images are shown through short-lived signed links. Nobody else can see them — including HITT staff
+  - The empty slots now explain why they're empty rather than just showing a blank outline
+- **Deleting your account now removes your photos too** — account deletion cleared your data rows but performed no storage cleanup at all, so any saved image would have been left behind. It now removes every stored object belonging to the account. Live for all versions (server-side fix)
+- **Marketing version bumped to 1.0.6** across all targets (App, Watch, Live Activity) for a new App Store submission
+
+> **Before submitting for review:** the App Privacy questionnaire in App Store Connect and the published privacy policy both need updating to declare that body photos may be stored, since this build can store them for the first time.
+
 ## [2026-07-29] — v1.0.5 / Build 331: workouts run their full length, keyboard fix, real recipe data, branded launch
 
 - **AI-generated workouts now last as long as they say** — a "30 minute" generated workout was finishing in about 4 minutes. Three separate faults compounded, all fixed:
