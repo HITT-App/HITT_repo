@@ -173,8 +173,48 @@ would silently disable every push on a fresh project or after a DB reset, and it
 having fixed — but it is **not** why likes aren't notifying on this project. My earlier
 "this is the whole bug" call was wrong.
 
-**So #112 is still open, with the top suspect eliminated.** Remaining causes, in order of
-likelihood:
+### Diagnosed 2026-07-30 — second QA account created, chain traced end to end
+
+A second QA account now exists (`hitt.qa.test+2@gmail.com`; credentials in the gitignored
+`.claude/qa-credentials.md`), so the smoke test can finally run — the like trigger skips
+self-likes, so one account could never produce a notification.
+
+**`tests/smoke-like-notification.ts` Tier 1: 8/8 passing.** The in-app half is entirely
+healthy — row created, correct type and actor, unread, `likes_count` incremented, self-like
+correctly suppressed. The fault is purely in the device-push half.
+
+**Cause found for the test account: `push_enabled = false`.** `notify-user/index.ts:278`
+skips whenever `push_enabled` is false *or* the category column is false. The QA account had
+2 device tokens and `community_notifications = true`, but the master toggle off — so every
+push it should have received was silently dropped. Flipping it to true was verified to let
+the chain proceed.
+
+**The bigger finding — only 2 of 61 users have a `notification_preferences` row at all:**
+
+| | |
+|---|---|
+| Users | 61 |
+| With a device push token | 40 |
+| With a `notification_preferences` row | **2** |
+
+The two are the QA account (was `push_enabled = false`) and Vanessa's own
+(`push_enabled = true`). The other **38 token-holding users have no row**, which by
+`notify-user`'s logic means push is *allowed* (the guard is `if (prefs && ...)`, so a null
+row falls through to sending). So most users should be receiving pushes — meaning the
+original report may have come from testing on the QA account specifically.
+
+**Real observability gap worth fixing:** `notify-user` returns **200 for both "sent" and
+"skipped: user preference"**. `net._http_response` therefore shows 200 either way, so the
+pg_net log cannot distinguish a delivered push from a silently-dropped one. That is why this
+went unnoticed. Worth returning a distinct status or logging the outcome.
+
+**What could not be verified from here:** whether APNs actually delivers for a user with
+`push_enabled = true`. That needs the function logs (no `functions logs` on CLI v2.90.0) or
+a real device. Test on the TestFlight build with a second device.
+
+---
+
+### Earlier analysis — remaining causes, in order of likelihood:
 
 1. **No `device_push_tokens` row** for the recipient — push permission never granted on a
    real device. Nothing downstream can work without one, and it's invisible from the
