@@ -4,16 +4,38 @@ Open tasks not yet scoped into their own `docs/scope-*.md`. Numbering continues 
 `#107–#110` series from `scope-android-launch-followups.md`. Move an item into its own
 scope doc once it's big enough to need one; strike it here and link the doc.
 
-**Added 2026-07-29** (owner request): #111–#115.
+**Added 2026-07-29** (owner request): #111–#115. #116–#118 added the same day.
 
-**Status at 2026-07-29** — code for #111, #112, #113 and #115 is written and verified
-(build passes, no new type errors against the 88-error baseline, audit suite unchanged at
-167 passed / 9 pre-existing failures). None of it is committed, and **none of it has run on
-a real device**. Two items still need action that isn't code:
+## Status at 2026-07-30 — v1.0.6 / Build 332 submitted for App Store review
 
-- **#112 needs a Vault change in Studio** — the migration makes the failure visible but
-  cannot configure push. Until both secrets are set, community pushes stay off.
-- **#114 is a decision, not a fix** — nothing implemented, awaiting owner sign-off.
+Everything below is committed, pushed, and shipped in **Build 332** unless stated otherwise.
+Database migrations are applied to production and the edge functions are deployed.
+
+| Task | State | What's left |
+|---|---|---|
+| **#111** external share → feed | Shipped (332) | Device check; only the `CompletionSummary` share path is wired |
+| **#112** like notifications | **STILL BROKEN** | Top suspect eliminated — see below |
+| **#113** keyboard covers composer | Shipped (332) | Device check on iOS **and** Android |
+| **#114** Health Connect | **Decided, not built** | ~80% already exists; workout ingest is the gap |
+| **#115** recipe nutrition | Shipped (332) + data live | — |
+| **#116** Capacitor splash | Shipped (332) | Device check |
+| **#117** workout duration | Shipped (332) | Device check — time a 15/30/60 min plan |
+| **#118** progress photos | Shipped (332) | Device check; privacy declarations |
+
+**The three things that genuinely need someone's attention:**
+
+1. **#112 is still open and I was wrong about the cause.** The vault placeholder was a real
+   trap in the code but *not* why likes don't notify here — both secrets already held real
+   values. Remaining suspects, in order: no `device_push_tokens` row for the recipient, the
+   `notification_preferences` gate, then `notify-user` itself. `tests/smoke-like-notification.ts`
+   checks all three but **needs a second QA account** (the trigger skips self-likes).
+2. **Privacy declarations for #118.** Build 332 is the first that can store body photos. The
+   App Privacy questionnaire and the published privacy policy both need to say so. See
+   `OWNER_DECISIONS.md`.
+3. **Nothing below has been verified on a physical device.** Every "shipped" item was checked
+   by build, typecheck, unit tests and reasoning only. Build 332 on TestFlight is the first
+   real test — particularly #117 (needs a stopwatch), #113 and #118 (need a real keyboard and
+   camera), and #111's cold path (needs iOS to actually reclaim the WebView).
 
 ---
 

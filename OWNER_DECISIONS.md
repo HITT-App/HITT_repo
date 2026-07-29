@@ -6,6 +6,30 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
+### 🔄 v1.0.6 / Build 332 submitted for App Store review (2026-07-30)
+
+Submitted 2026-07-30. **This is the first submission since 1.0.2**, so it carries four
+versions of change at once — 1.0.3, 1.0.4 and 1.0.5 all went to TestFlight and were never
+submitted. Review notes and "What's New" should cover the whole span, not just the newest
+build. See `CHANGELOG.md` for the per-version detail.
+
+**Open compliance item — verify this was done before review completes:**
+
+Build 332 is the **first build that can store body photos** (body-scan progress photos,
+opt-in). Two declarations should have been updated to match:
+
+1. **App Privacy questionnaire** in App Store Connect — needs to declare photo storage.
+2. **Published privacy policy** (hiituk.com/privacy) — should state that body photos may be
+   stored, that it's optional, and that they're deleted with the account.
+
+Apple checks declarations against actual behaviour, so a mismatch is a plausible rejection.
+If either was missed, expect a Guideline 5.1.1 flag and fix it in the review response
+rather than resubmitting.
+
+**Also worth knowing for the review:** the photo feature stores nothing by default. A
+reviewer who runs a body scan without ticking the consent box will see the Progress tab's
+slots stay empty — that's correct behaviour, not a bug, and the empty state says so.
+
 ### ✅ App transferred to Casey + App Store compliance decisions (2026-07-11, v1.0.2 / Build 328)
 
 - **App Store + Apple Developer ownership transferred to Casey** (team `5933246NY5`). Backend (Supabase) + GitHub stay with Vanessa. Build pipeline re-pointed (see `CLAUDE.md` → Deploy → "iOS signing"). v1.0.2 / build 328 shipped to Casey's TestFlight.

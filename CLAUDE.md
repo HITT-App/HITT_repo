@@ -41,6 +41,8 @@ src/
   components/wearable/WearableLaunchCard.tsx  # vendor-aware launch UI (all 4 activity types)
   pages/                              # one file per screen
   hooks/usePrimaryWearable.ts         # React Query + localStorage-cached wearable detection
+  lib/pending-share.ts                # external-share record (localStorage + IndexedDB) → feed prompt
+  components/share/ShareToFeedPrompt.tsx  # restores route on return, offers a feed post
   lib/native-gps.ts                   # Capacitor GPS abstraction
   lib/gps-filter.ts                   # Kalman filter for GPS smoothing
   lib/wearable-detection.ts           # pure getPrimaryWearable(supabase, userId) function
@@ -68,6 +70,11 @@ tests/
   test-wearable-detection.ts        # pure unit tests for getPrimaryWearable (mocked supabase)
   test-wearable-launch-copy.ts      # unit tests for activity × wearable copy matrix
   test-wearable-endpoints.ts        # live smoke tests for log-watch-workout + sync-healthkit
+  test-workout-duration.ts          # session-duration model; mirrors WorkoutPlayer constants
+  smoke-like-notification.ts        # splits like → in-app row → device push, to isolate failures
+scripts/
+  recipe-nutrition/                 # recipe macros derived from ingredients; USDA-reconciled
+  gen-splash.py                     # regenerates all 14 launch splashes from the app icon
 .maestro/                       # UI automation flows (see Maestro section below)
 ```
 
@@ -472,6 +479,53 @@ mount so it's ready by the time the user taps Start, but position recording and 
 begin after `setStarted(true)`. Duration stats use `formatDuration()` not `formatTime()` so the
 AI insight reads "42 sec" not "00:42" (which it misreads as 42 minutes).
 
+## Workout duration — the player and the generator share one model
+
+A "30 minute" AI workout used to finish in ~4 minutes. Three things had to agree and didn't;
+if you touch any one of them, check the other two.
+
+1. **`WorkoutPlayer.tsx` honours `sets` for BOTH modes.** Timed exercises used to call
+   `goNext()` when the countdown hit zero — which advances to the next *exercise* and resets
+   `setNum` — so a "3 sets × 45s" exercise ran once for 45s. Both modes now go through
+   `advanceAfterSet()`. Don't reintroduce a direct `goNext()` from the timer.
+2. **`generate-workout-plan` derives the exercise count from the target** via
+   `suggestedExerciseCount()`, and the prompt states the cost arithmetic explicitly. The
+   model treats duration as decoration when it's phrased as a hint — it needs the sums.
+3. **`fitSessionToTarget()` enforces the contract server-side** by adjusting `sets` (bounded
+   1–5) before persisting. Prompting alone never guarantees it. Don't remove this on the
+   grounds that "the prompt handles it".
+
+**The estimate must mirror the player's real constants** — `REST_SECS = 30`, and the 45s
+fallback for a timed exercise with no `duration_seconds`. An estimate that disagrees with
+what the player actually does is worse than none: it produces a confident wrong number.
+`tests/test-workout-duration.ts` (14 cases) fails if they drift apart — that coupling is the
+point of the test, not an accident.
+
+## Body-scan progress photos — private by default, opt-in per scan
+
+`body_scans.photo_path` + the `body-scan-photos` bucket (migration `20260729170000`).
+
+- **The bucket is PRIVATE and must stay that way.** Every other image bucket except
+  `activity-images` is public; these must never be. Reads go through short-lived signed URLs
+  (`createSignedUrl`), never a public URL.
+- **RLS scopes objects to `{user_id}/...` by first folder.** There is deliberately **no admin
+  or staff read path** — nobody but the owner sees these, including moderators.
+- **Storage is opt-in per scan.** `photo_path` stays NULL unless the user ticks the consent
+  box on that scan. Body scan must keep working fully when they decline. Don't add a
+  "remember my choice" default that silently turns it on.
+- **`delete-account` clears storage by prefix.** It previously did **no storage cleanup at
+  all** — deleting the `body_scans` row left the image in the bucket. Any *new* user-scoped
+  bucket must be added to `USER_STORAGE_BUCKETS` in that function, or deleted accounts leak
+  files. Nothing else cleans them up.
+- **Adding photo storage changes compliance answers** — the App Privacy questionnaire and the
+  published privacy policy both have to declare it.
+
+## `body_scans` isn't in the generated Supabase types
+
+`src/integrations/supabase/types.ts` predates the table, which is why `BodyScan.tsx` uses a
+single `const db = supabase as any` shim at the top rather than casting at each call site.
+If you regenerate types, delete the shim rather than adding more casts around it.
+
 ## Key Supabase tables
 
 - `scheduled_workouts` — `{ user_id, workout_id, scheduled_date }`
@@ -480,6 +534,8 @@ AI insight reads "42 sec" not "00:42" (which it misreads as 42 minutes).
 - `workouts` — library of 28 workouts (seed data; real content from owner pending)
 - `workout_preferences` — user's goal, fitness level, days/week, session duration, body areas, equipment
 - `community_posts` — user posts with optional image URLs
+- `body_scans` — `{ user_id, scanned_at, estimated_body_fat, confidence_level, analysis, photo_path }`; `photo_path` NULL unless the user opted into storing a progress photo
+- `recipes` + `ingredients` + `steps` — the ~957 owner recipes behind Browse Meals. Macros are **derived from the ingredients** (see `scripts/recipe-nutrition/`), not authored separately; regenerate rather than hand-editing them
 
 ## Automated tests
 
@@ -525,6 +581,8 @@ current work). Enforces structural contracts by regex-grepping source files. Gro
 - `tests/test-garmin-pairing.ts` — 8 cases for JWT sign/verify + code hashing (Garmin CIQ push auth)
 - `tests/test-wearable-detection.ts` — 11 cases for `getPrimaryWearable` decision rules
 - `tests/test-wearable-launch-copy.ts` — 32 cases for the activity × wearable copy matrix
+- `tests/test-workout-duration.ts` — 14 cases for the session-duration model + target fitting
+  (deliberately mirrors `WorkoutPlayer`'s constants; see the duration section above)
 
 **3. Live smoke tests** (require TEST_EMAIL + TEST_PASSWORD):
 - `tests/test-wearable-endpoints.ts` — 15 checks against `log-watch-workout` + `sync-healthkit`
