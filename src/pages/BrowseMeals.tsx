@@ -36,6 +36,7 @@ type Meal = {
   instructions: Instruction[] | null;
   prep_time_minutes: number | null;
   cook_time_minutes: number | null;
+  servings: number | null;
 };
 
 // ── Filter vocabularies ─────────────────────────────────────────────────────
@@ -436,6 +437,13 @@ export default function BrowseMeals() {
                       <div className="bg-secondary rounded-full px-3 py-1 text-xs font-medium">🧈 {selectedRecipe.fat_g}g fat</div>
                     )}
                   </div>
+
+                  {selectedRecipe.calories != null && (
+                    <p className="text-xs text-muted-foreground">
+                      Per serving · ingredients below make{' '}
+                      {(selectedRecipe.servings ?? 1) === 1 ? '1 serving' : `${selectedRecipe.servings} servings`}
+                    </p>
+                  )}
 
                   <Tabs defaultValue="ingredients">
                     <TabsList className="w-full">
