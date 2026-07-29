@@ -10,6 +10,7 @@ import type { Json } from '@/integrations/supabase/types';
 import type { RoutePoint } from './ShareCardCanvas';
 import { ActivityShareCard } from './ActivityShareCard';
 import { generateActivityShareCardBlob } from '@/lib/generate-activity-share-card';
+import { recordPendingShare, clearPendingShare } from '@/lib/pending-share';
 import { CompletionIntro } from './CompletionIntro';
 
 export interface CompletionStat {
@@ -430,6 +431,11 @@ export function CompletionSummary({
       const shareText = buildShareText(sport, activityTitle, heroMetrics);
       const fileName = `hiit-${activityType || 'workout'}.png`;
 
+      // Task #111 — must be written BEFORE the share sheet opens. Handing a large PNG
+      // to Instagram often gets the WebView reclaimed by iOS, and nothing after this
+      // point would run on that path. Read back by <ShareToFeedPrompt /> on return.
+      await recordPendingShare({ activityTitle, activityType, shareText, image: blob });
+
       let shareOk = false;
       try {
         if (Capacitor.isNativePlatform()) {
@@ -480,6 +486,8 @@ export function CompletionSummary({
         if (name !== 'AbortError' && !/cancel/i.test(msg)) {
           toast.error('Could not share');
         }
+        // The share never happened, so don't ask about the feed on return (#111).
+        await clearPendingShare();
       }
       if (shareOk) onDone();
     } catch (err) {

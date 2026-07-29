@@ -11,6 +11,7 @@ import { AdminRoute } from "@/components/admin/AdminRoute";
 import { PushPermissionBanner } from "@/components/notifications/PushPermissionBanner";
 import { VerificationBanner } from "@/components/auth/VerificationBanner";
 import { VoiceController } from "@/components/coach/VoiceController";
+import { ShareToFeedPrompt } from "@/components/share/ShareToFeedPrompt";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppLayout } from "@/components/AppLayout";
@@ -181,6 +182,7 @@ const App = () => (
           <NativePushRegistrar />
           <VerificationBanner />
           <VoiceController />
+          <ShareToFeedPrompt />
           <AppLayout>
           <Suspense fallback={<PageLoader />}>
           <Routes>

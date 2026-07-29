@@ -6,6 +6,7 @@ import { SocialLogin } from "@capgo/capacitor-social-login";
 import { supabase } from "@/integrations/supabase/client";
 import { log, logSecurityEvent, SecurityEventTypes, generateCorrelationId } from "@/lib/security-logger";
 import { identifyUser, resetAnalyticsUser } from "@/lib/analytics";
+import { clearPendingShare } from "@/lib/pending-share";
 
 const GOOGLE_WEB_CLIENT_ID = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID as string;
 const GOOGLE_IOS_CLIENT_ID = "669743846703-uvnt80o7etiqai1ggodla7k3eqd1bddv.apps.googleusercontent.com";
@@ -363,6 +364,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ];
       for (const k of KEYS) localStorage.removeItem(k);
       sessionStorage.removeItem('hiit_welcomed');
+      // Pending external share (#111) — also drops the card blob from IndexedDB,
+      // so the next user of the device is never offered someone else's workout.
+      void clearPendingShare();
     }
 
     setUser(null);
