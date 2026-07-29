@@ -46,6 +46,15 @@ const MEASUREMENT_FIELDS = [
   { key: "neck", label: "Neck", unit: "cm", icon: "📏" },
 ]
 
+/**
+ * `body_scans` (and its new `photo_path` column) aren't in the generated Database
+ * types — src/integrations/supabase/types.ts predates them, which is also why the
+ * repo carries pre-existing type errors against it. Cast once here rather than
+ * sprinkling `as any` across every call site.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any
+
 const POSE_GUIDES = [
   { label: "Front", instruction: "Stand facing the camera, arms slightly away from body" },
   { label: "Side", instruction: "Stand sideways, arms relaxed at your side" },
@@ -180,8 +189,18 @@ const BodyScan = () => {
   const [countdown, setCountdown] = useState<number | null>(null)
   const shouldCaptureRef = useRef(false)
 
+  // Progress-photo consent (#118). Opt-in per scan, defaulting to OFF: users take
+  // these expecting a body-fat estimate, not a stored photo library. Declining leaves
+  // the scan working exactly as before, just without a picture in the compare card.
+  const [savePhoto, setSavePhoto] = useState(false)
+
   // Progress data
   const [progressData, setProgressData] = useState<any[]>([])
+  /** First + latest scans that actually have a stored photo, with signed URLs. */
+  const [photoCompare, setPhotoCompare] = useState<{
+    first: { url: string; date: string } | null
+    latest: { url: string; date: string } | null
+  }>({ first: null, latest: null })
   const [previousScans, setPreviousScans] = useState<any[]>([])
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
@@ -210,6 +229,38 @@ const BodyScan = () => {
     }
     loadProgress()
   }, [user])
+
+  // First + latest stored progress photos (#118). Only scans the user consented to
+  // save have a photo_path, so this naturally shows nothing until they opt in.
+  // The bucket is private, so display needs short-lived signed URLs.
+  const loadPhotoCompare = useCallback(async () => {
+    if (!user) return
+    const { data } = await db
+      .from("body_scans")
+      .select("id, photo_path, scanned_at")
+      .eq("user_id", user.id)
+      .not("photo_path", "is", null)
+      .is("deleted_at", null)
+      .order("scanned_at", { ascending: true })
+    if (!data?.length) { setPhotoCompare({ first: null, latest: null }); return }
+
+    const sign = async (row: { photo_path: string; scanned_at: string }) => {
+      const { data: signed } = await supabase.storage
+        .from("body-scan-photos")
+        .createSignedUrl(row.photo_path, 60 * 60)
+      return signed?.signedUrl
+        ? { url: signed.signedUrl, date: format(new Date(row.scanned_at), "MMM d") }
+        : null
+    }
+
+    const first = await sign(data[0])
+    // With a single stored scan there is no "latest" to compare against yet — show
+    // it as the first shot and leave the other slot empty rather than duplicating it.
+    const latest = data.length > 1 ? await sign(data[data.length - 1]) : null
+    setPhotoCompare({ first, latest })
+  }, [user])
+
+  useEffect(() => { loadPhotoCompare() }, [loadPhotoCompare])
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop())
@@ -452,13 +503,35 @@ const BodyScan = () => {
         })
       }
       if (analysis) {
-        const { error: scanError } = await (supabase as any).from("body_scans").insert({
-          user_id: user.id,
-          estimated_body_fat: analysis.estimatedBodyFat ?? null,
-          confidence_level: analysis.confidenceLevel,
-          analysis,
-        })
+        const { data: scanRow, error: scanError } = await db
+          .from("body_scans")
+          .insert({
+            user_id: user.id,
+            estimated_body_fat: analysis.estimatedBodyFat ?? null,
+            confidence_level: analysis.confidenceLevel,
+            analysis,
+          })
+          .select("id")
+          .single()
         if (scanError) throw scanError
+
+        // Store the front pose only if the user opted in on this scan (#118).
+        // Best-effort: a failed upload must never lose the scan itself, which is
+        // the part the user actually came for.
+        if (savePhoto && scanRow?.id && capturedImages[0]) {
+          try {
+            const blob = await (await fetch(capturedImages[0])).blob()
+            const path = `${user.id}/${scanRow.id}/front.jpg`
+            const { error: upErr } = await supabase.storage
+              .from("body-scan-photos")
+              .upload(path, blob, { contentType: "image/jpeg", upsert: true })
+            if (upErr) throw upErr
+            await db.from("body_scans").update({ photo_path: path }).eq("id", scanRow.id)
+          } catch (photoErr) {
+            console.error("Progress photo upload failed", photoErr)
+            toast.error("Scan saved, but the progress photo couldn't be stored.")
+          }
+        }
         recordActiveDay(supabase, user.id).catch(() => {})
 
         const scanDate = format(new Date(), "yyyy-MM-dd")
@@ -473,7 +546,7 @@ const BodyScan = () => {
           mdSummary ? `muscle development: ${mdSummary}` : null,
           obs ? `key observation: ${obs}` : null,
         ].filter(Boolean)
-        await (supabase as any).rpc("upsert_user_memory_key", {
+        await db.rpc("upsert_user_memory_key", {
           p_user_id: user.id,
           p_key: "physique",
           p_value: physiqueParts.join(". "),
@@ -482,6 +555,8 @@ const BodyScan = () => {
       toast.success("Measurements saved!")
       setMeasurements({})
       setIsSaved(true)
+      // Pick up a photo just stored, so the Progress tab is right without a reload.
+      loadPhotoCompare()
       if (returnTo) {
         setTimeout(() => navigate(returnTo), 800)
       }
@@ -1037,6 +1112,35 @@ const BodyScan = () => {
                   </div>
                 </Card>
 
+                {/* Progress-photo consent (#118) — asked at the point of saving, opt-in,
+                    and hidden once saved so it can't imply the choice is still live. */}
+                {!isSaved && capturedImages[0] && (
+                  <button
+                    type="button"
+                    onClick={() => setSavePhoto(v => !v)}
+                    aria-pressed={savePhoto}
+                    className="w-full flex items-start gap-3 text-left border border-border bg-card rounded-xl px-3.5 py-3"
+                  >
+                    <span
+                      className={`mt-0.5 w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center shrink-0 transition-colors ${
+                        savePhoto ? "bg-primary border-primary" : "border-border bg-background"
+                      }`}
+                    >
+                      {savePhoto && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-semibold text-foreground">
+                        Save this photo to track progress
+                      </span>
+                      <span className="block text-[11.5px] text-muted-foreground/80 leading-relaxed mt-0.5">
+                        Keeps your front photo so the Progress tab can show your first and
+                        latest side by side. Private to you, and you can delete it any time.
+                        Leave this off and no photo is stored.
+                      </span>
+                    </span>
+                  </button>
+                )}
+
                 {/* Share + Save */}
                 <div className="flex gap-2.5">
                   <button
@@ -1101,17 +1205,27 @@ const BodyScan = () => {
                     background: "repeating-linear-gradient(135deg, hsl(var(--card)) 0 9px, hsl(var(--background)) 9px 18px)",
                   }}
                 >
-                  <div className="p-2">
+                  {photoCompare.first && (
+                    <img
+                      src={photoCompare.first.url}
+                      alt="First progress photo"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+                  <div className="relative p-2">
                     <span className="font-mono text-[9.5px] tracking-wide text-muted-foreground bg-black/45 border border-border/40 px-1.5 py-0.5 rounded-md uppercase">
-                      {previousScans.length > 0
-                        ? format(new Date(previousScans[0].recorded_at), "MMM d")
-                        : "—"}
+                      {photoCompare.first?.date
+                        ?? (previousScans.length > 0
+                          ? format(new Date(previousScans[0].recorded_at), "MMM d")
+                          : "—")}
                     </span>
                   </div>
-                  <div className="flex-1 flex items-center justify-center">
-                    <User className="w-8 h-8 text-muted-foreground/30" strokeWidth={1.5} />
-                  </div>
-                  <div className="p-2 text-center">
+                  {!photoCompare.first && (
+                    <div className="flex-1 flex items-center justify-center">
+                      <User className="w-8 h-8 text-muted-foreground/30" strokeWidth={1.5} />
+                    </div>
+                  )}
+                  <div className="relative p-2 text-center">
                     <span className="font-mono text-[9px] text-muted-foreground/60 tracking-wide">FIRST</span>
                   </div>
                 </div>
@@ -1123,24 +1237,48 @@ const BodyScan = () => {
                     background: "repeating-linear-gradient(135deg, hsl(var(--card)) 0 9px, hsl(var(--background)) 9px 18px)",
                   }}
                 >
-                  <div className="p-2">
+                  {photoCompare.latest && (
+                    <img
+                      src={photoCompare.latest.url}
+                      alt="Latest progress photo"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+                  <div className="relative p-2">
                     <span
                       className="font-mono text-[9.5px] tracking-wide bg-black/45 border border-border/40 px-1.5 py-0.5 rounded-md uppercase"
                       style={{ color: "hsl(var(--primary))" }}
                     >
-                      {previousScans.length > 0
-                        ? format(new Date(previousScans[previousScans.length - 1].recorded_at), "MMM d")
-                        : "—"}
+                      {photoCompare.latest?.date
+                        ?? (previousScans.length > 0
+                          ? format(new Date(previousScans[previousScans.length - 1].recorded_at), "MMM d")
+                          : "—")}
                     </span>
                   </div>
-                  <div className="flex-1 flex items-center justify-center">
-                    <User className="w-8 h-8 text-muted-foreground/30" strokeWidth={1.5} />
-                  </div>
-                  <div className="p-2 text-center">
+                  {!photoCompare.latest && (
+                    <div className="flex-1 flex items-center justify-center">
+                      <User className="w-8 h-8 text-muted-foreground/30" strokeWidth={1.5} />
+                    </div>
+                  )}
+                  <div className="relative p-2 text-center">
                     <span className="font-mono text-[9px] text-muted-foreground/60 tracking-wide">LATEST</span>
                   </div>
                 </div>
               </div>
+
+              {/* Tell the user why the slots are empty — the photos are opt-in, so a
+                  blank card would otherwise read as a bug rather than a choice (#118). */}
+              {!photoCompare.first && (
+                <p className="mt-3 text-[11.5px] text-muted-foreground/70 text-center leading-relaxed">
+                  Photos appear here once you tick “Save this photo to track progress” when
+                  saving a scan. Nothing is stored unless you do.
+                </p>
+              )}
+              {photoCompare.first && !photoCompare.latest && (
+                <p className="mt-3 text-[11.5px] text-muted-foreground/70 text-center leading-relaxed">
+                  Save a photo with your next scan to compare against this one.
+                </p>
+              )}
 
               {/* Delta summary */}
               {previousScans.length >= 2 && (() => {

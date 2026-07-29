@@ -152,6 +152,40 @@ serve(async (req) => {
       failures.push("profiles");
     }
 
+    // Step 1b: remove the user's stored objects. Deleting the body_scans ROW does
+    // not touch storage, so without this a deleted account would leave its body
+    // photos sitting in the bucket indefinitely (#118).
+    //
+    // Buckets are pathed {user_id}/... so a user's objects are listable by prefix.
+    // Add any future user-scoped bucket here — nothing else cleans them up.
+    const USER_STORAGE_BUCKETS = ["body-scan-photos"];
+    for (const bucket of USER_STORAGE_BUCKETS) {
+      try {
+        // list() is not recursive, so walk the per-scan folders under {uid}/.
+        const { data: folders } = await admin.storage.from(bucket).list(uid);
+        const paths: string[] = [];
+        for (const entry of folders ?? []) {
+          if (entry.id === null) {
+            // A folder — descend one level for its objects.
+            const { data: inner } = await admin.storage.from(bucket).list(`${uid}/${entry.name}`);
+            for (const f of inner ?? []) paths.push(`${uid}/${entry.name}/${f.name}`);
+          } else {
+            paths.push(`${uid}/${entry.name}`);
+          }
+        }
+        if (paths.length) {
+          const { error: rmErr } = await admin.storage.from(bucket).remove(paths);
+          if (rmErr) {
+            console.error(`[delete-account] storage ${bucket}:`, rmErr.message);
+            failures.push(`storage:${bucket}`);
+          }
+        }
+      } catch (e) {
+        console.error(`[delete-account] storage ${bucket}:`, (e as Error).message);
+        failures.push(`storage:${bucket}`);
+      }
+    }
+
     // Step 2: drop the auth.users row. Frees the email + kills every
     // active session. Idempotent on already-deleted UIDs.
     const { error: authErr } = await admin.auth.admin.deleteUser(uid);

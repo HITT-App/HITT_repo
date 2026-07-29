@@ -322,10 +322,41 @@ Re-check against the Android 15 edge-to-edge rules in `CLAUDE.md`.
 
 ## #118 — Body-scan progress photos: before/after comparison
 
-**Type:** Feature — **not a bug** · **Status: investigated 2026-07-29, needs building** · **Est:** Medium
+**Type:** Feature · **Status: BUILT 2026-07-29 — needs a device check**
 
-Reported as "not working". It isn't broken — **the photos are never saved anywhere, and no
-comparison screen exists.** There is nothing to repair; this is a feature to build.
+### Correction to the first investigation
+
+The first pass said "no comparison screen exists". **That was wrong.** The Progress tab's
+**"Visual progress" card already had FIRST and LATEST slots**, with dates and a
+"N weeks apart" label — it rendered a placeholder person icon because there was no photo to
+show. The original keyword search missed it (the card is titled "Visual progress", and the
+slots are inline markup rather than anything named "compare"). The intended design was
+built; only the storage half was missing.
+
+### What shipped
+
+- **`20260729170000_body_scan_photos.sql`** (applied) — `photo_path` on `body_scans`, plus a
+  **private** `body-scan-photos` bucket with RLS scoping every object to its owner's folder.
+  No admin or shared read path: nobody but the user, including staff, can read these.
+- **Consent at the point of saving** — an opt-in tick above "Save Scan Results":
+  *"Save this photo to track progress"*, defaulting to **off**, stating plainly that nothing
+  is stored otherwise. Declining leaves body scan working exactly as before.
+- **Upload on consent only** — the front pose goes to `{user_id}/{scan_id}/front.jpg`.
+  Best-effort: a failed upload never loses the scan itself.
+- **Progress tab renders the photos** — first vs latest, via short-lived signed URLs
+  (the bucket is private). Empty states explain *why* a slot is blank, so it reads as a
+  choice rather than a bug.
+- **`delete-account` now clears storage.** It previously did **no storage cleanup at all** —
+  deleting the `body_scans` row left any photo in the bucket. It now walks and removes the
+  user's objects by prefix. Deployed.
+
+### Still to do before this is really finished
+
+1. **Device check** — camera capture and upload can't be verified in a browser.
+2. **Individual photo deletion** — a user can currently delete a scan, but there's no
+   "remove just this photo" control. The RLS delete policy is in place for it.
+3. **Privacy policy + store data-safety declarations** — both need updating to say body
+   photos may be stored. **Do this before the feature reaches production users.**
 
 ### What actually happens today
 
