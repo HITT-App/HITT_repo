@@ -137,13 +137,34 @@ same "create a feed post" path.
    Body is otherwise byte-identical to `20260703180000_fix_community_deep_links.sql` —
    deep-link routes preserved.
 
-**This does not turn push on.** It makes the broken state loud and inspectable. Someone must
-still set `notify_endpoint_url` and `notify_service_key` to real values in
-**Studio → Project Settings → Vault**. Until then community pushes and workout reminders
-remain off — as they have been, silently, all along.
+### ⚠ Correction after applying (2026-07-29): the placeholder was NOT the cause here
 
-**Order of operations:** apply the migration → run `select * from public.check_push_config();`
-→ set both secrets in Studio → re-run the smoke test.
+Migration applied to production, then `check_push_config()` run against it:
+
+```
+notify_endpoint_url  → ok
+notify_service_key   → ok
+```
+
+**Both secrets already held real values.** The placeholder trap is real in the code — it
+would silently disable every push on a fresh project or after a DB reset, and it's worth
+having fixed — but it is **not** why likes aren't notifying on this project. My earlier
+"this is the whole bug" call was wrong.
+
+**So #112 is still open, with the top suspect eliminated.** Remaining causes, in order of
+likelihood:
+
+1. **No `device_push_tokens` row** for the recipient — push permission never granted on a
+   real device. Nothing downstream can work without one, and it's invisible from the
+   in-app inbox, which keeps working regardless.
+2. **`notification_preferences` gate** — `notify-user` maps community/social to a column;
+   false silently drops the push.
+3. **`notify-user` itself failing** (APNs key, bundle mismatch after the Casey transfer).
+   Worth checking the function logs and `net._http_response` for the POST's status code.
+
+**`tests/smoke-like-notification.ts` is now the tool for this** — Tier 2 checks exactly
+these three in order. It needs a second QA account, since the trigger deliberately skips
+self-likes.
 
 ---
 
