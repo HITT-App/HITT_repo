@@ -229,6 +229,28 @@ serve(async (req) => {
       return json({ error: "Could not save generated plan" }, 500);
     }
 
+    // Enforce the duration contract before persisting (#117). The model treats the
+    // target as a hint however firmly it's prompted, so the fit is applied here and
+    // the before/after is logged — a silently-short plan is what shipped the bug.
+    const targetSeconds = targetDuration * 60;
+    for (const item of validation.items) {
+      const before = estimateSessionSeconds(item.exercises);
+      fitSessionToTarget(item.exercises, targetSeconds);
+      const after = estimateSessionSeconds(item.exercises);
+      if (Math.abs(before - after) > 30) {
+        console.log(
+          `[generate-workout-plan] "${item.workout_title}" fitted ` +
+          `${Math.round(before / 60)}min → ${Math.round(after / 60)}min (target ${targetDuration}min)`,
+        );
+      }
+      if (Math.abs(after - targetSeconds) / targetSeconds > 0.25) {
+        console.warn(
+          `[generate-workout-plan] "${item.workout_title}" still off target after fitting: ` +
+          `${Math.round(after / 60)}min vs ${targetDuration}min`,
+        );
+      }
+    }
+
     const itemsToInsert = validation.items.map((item) => ({
       plan_id: planRow.id,
       user_id: user.id,
@@ -311,6 +333,7 @@ function buildUserPrompt(input: {
   } | null;
 }): string {
   const totalSessions = input.sessionsPerWeek * Math.ceil(input.days / 7);
+  const exCount = suggestedExerciseCount(input.targetDuration);
 
   const bodyScanLines: (string | null)[] = [];
   if (input.bodyScan) {
@@ -351,8 +374,17 @@ function buildUserPrompt(input: {
         ? `Every session must be in the ${input.styles[0]} style; reflect that in each workout_title.`
         : null,
     "",
-    "For each session, create 5–8 exercises tailored to the user's goal, styles and fitness level.",
+    `For each session, create ${exCount.min}–${exCount.max} exercises tailored to the user's goal, styles and fitness level.`,
     "Use sets+reps for strength exercises (e.g. squats, push-ups) and duration_seconds for cardio/timed exercises (e.g. plank, mountain climbers). Never set both.",
+    "",
+    // Without spelling out the arithmetic the model treats the duration as decoration:
+    // a 30-minute request came back as ~7 minutes of actual work (#117).
+    `DURATION IS A HARD REQUIREMENT. Each session must total about ${input.targetDuration} minutes of wall-clock time. Work it out explicitly:`,
+    `- Every exercise runs for ALL of its sets, and there is a ${REST_SECONDS}-second rest after every set.`,
+    `- A timed exercise costs sets x duration_seconds, plus sets x ${REST_SECONDS}s rest.`,
+    `- A reps exercise costs roughly sets x reps x ${SECONDS_PER_REP}s, plus sets x ${REST_SECONDS}s rest.`,
+    `- Sum every exercise. The total must land within 15% of ${input.targetDuration} minutes (${Math.round(input.targetDuration * 60)} seconds).`,
+    "- Use 3-4 sets per exercise as your default, and raise sets or duration_seconds if the total falls short. Do not pad with extra rest.",
     "",
     "Return ONLY a JSON object with this exact schema:",
     JSON.stringify({
@@ -404,6 +436,95 @@ function parseLLMJSON(text: string): { items?: AIPlanItem[] } | null {
   } catch {
     return null;
   }
+}
+
+// ── Session duration model (#117) ────────────────────────────────────────────
+// These MUST mirror src/pages/WorkoutPlayer.tsx or the estimate is fiction:
+//   REST_SECS = 30, and a timed exercise with no duration_seconds falls back to 45s.
+// The player rests after every set (including the last, which doubles as the rest
+// before the next exercise), and repeats timed exercises for their `sets`.
+const REST_SECONDS = 30;
+const DEFAULT_WORK_SECONDS = 45;
+/** Rough tempo for a rep-based set — 3s per rep covers the concentric + eccentric. */
+const SECONDS_PER_REP = 3;
+
+type PlanExercise = {
+  sets: number | null;
+  reps: number | null;
+  duration_seconds: number | null;
+};
+
+/** Seconds of work for ONE set of this exercise. */
+function setWorkSeconds(ex: PlanExercise): number {
+  if (typeof ex.duration_seconds === "number" && ex.duration_seconds > 0) {
+    return ex.duration_seconds;
+  }
+  if (typeof ex.reps === "number" && ex.reps > 0) {
+    return ex.reps * SECONDS_PER_REP;
+  }
+  return DEFAULT_WORK_SECONDS;
+}
+
+/** Wall-clock seconds a session will actually take in the player. */
+function estimateSessionSeconds(exercises: PlanExercise[]): number {
+  let total = 0;
+  for (const ex of exercises) {
+    const sets = Math.max(1, ex.sets ?? 1);
+    total += sets * setWorkSeconds(ex) + sets * REST_SECONDS;
+  }
+  // No rest after the final set of the final exercise.
+  return Math.max(0, total - REST_SECONDS);
+}
+
+/**
+ * Nudge a session towards its target by adjusting `sets`, which is the only lever
+ * that doesn't change what the exercises ARE.
+ *
+ * This exists because the model treats the duration as a hint no matter how the
+ * prompt is worded — a 30-minute request was coming back as roughly 7 minutes of
+ * work. Prompting alone can't guarantee the contract, so it's enforced here.
+ * Bounded to 1..5 sets so a wildly short plan gets closer without becoming absurd.
+ */
+function fitSessionToTarget(exercises: PlanExercise[], targetSeconds: number): void {
+  if (!exercises.length) return;
+  const tolerance = 0.15;
+
+  // Worst case every exercise walks the full 1..5 sets range, so bound the loop by
+  // the work actually available rather than a flat number — a flat 20 silently gave
+  // up on long sessions and left a 60-minute plan at 43 minutes.
+  const maxSteps = exercises.length * 4 + 10;
+  for (let guard = 0; guard < maxSteps; guard++) {
+    const estimate = estimateSessionSeconds(exercises);
+    if (estimate === 0) return;
+    const ratio = estimate / targetSeconds;
+    if (Math.abs(1 - ratio) <= tolerance) return;
+
+    if (ratio < 1) {
+      // Too short — add a set to the exercise with the fewest, keeping sets even.
+      const candidate = exercises
+        .filter((e) => (e.sets ?? 1) < 5)
+        .sort((a, b) => (a.sets ?? 1) - (b.sets ?? 1))[0];
+      if (!candidate) return; // everything already at the cap
+      candidate.sets = (candidate.sets ?? 1) + 1;
+    } else {
+      const candidate = exercises
+        .filter((e) => (e.sets ?? 1) > 1)
+        .sort((a, b) => (b.sets ?? 1) - (a.sets ?? 1))[0];
+      if (!candidate) return;
+      candidate.sets = (candidate.sets ?? 1) - 1;
+    }
+  }
+}
+
+/**
+ * How many exercises a session of this length should have, so the prompt asks for a
+ * count that can actually fill the time instead of a fixed 5–8 regardless of target.
+ * Assumes a typical block of 3 sets x 45s work + 3 x 30s rest = 225s.
+ */
+function suggestedExerciseCount(targetMinutes: number): { min: number; max: number } {
+  const perExercise = 225;
+  const centre = Math.round((targetMinutes * 60) / perExercise);
+  return { min: Math.max(3, centre - 1), max: Math.max(4, centre + 2) };
 }
 
 function validatePlan(

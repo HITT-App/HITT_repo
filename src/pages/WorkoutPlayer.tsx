@@ -501,8 +501,10 @@ function ActiveScreen({ exercise, idx, total, setNum, playing, timeLeft, cuesOpe
   )
 }
 
-function RestScreen({ exercise, idx, total, restLeft, onAddTime, onSkip, onBack, onList }: {
+function RestScreen({ exercise, idx, total, restLeft, upNextLabel, onAddTime, onSkip, onBack, onList }: {
   exercise: Exercise; idx: number; total: number; restLeft: number
+  /** Distinguishes a between-sets rest from a between-exercises one. */
+  upNextLabel: string
   onAddTime: () => void; onSkip: () => void; onBack: () => void; onList: () => void
 }) {
   const cues = exCues(exercise)
@@ -545,7 +547,7 @@ function RestScreen({ exercise, idx, total, restLeft, onAddTime, onSkip, onBack,
       {/* up next */}
       <div style={{ padding: '0 18px', paddingBottom: 'calc(var(--safe-area-inset-bottom, 16px) + 16px)', flexShrink: 0 }}>
         <div style={{ fontSize: 11.5, color: WP.dim, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>
-          Up next · {idx + 1} of {total}
+          {upNextLabel}
         </div>
         <div style={{ background: WP.surface, border: `1px solid ${WP.line}`, borderRadius: 18, padding: 14, display: 'flex', gap: 14 }}>
           <ExerciseThumb exercise={exercise} style={{ width: 84, height: 84, borderRadius: 14 }} />
@@ -689,13 +691,16 @@ export default function WorkoutPlayer() {
     if (view !== 'active' || !playing || !currentEx || exMode(currentEx) !== 'time') return
     const h = setInterval(() => {
       setTimeLeft(t => {
-        if (t <= 1) { goNext(); return currentEx.duration_seconds || 45 }
+        // Was goNext() — which skipped straight to the NEXT EXERCISE and reset
+        // setNum, so a "3 sets x 45s" exercise ran once for 45s. Timed work now
+        // repeats for its sets, like reps mode already did (#117).
+        if (t <= 1) { advanceAfterSet(); return currentEx.duration_seconds || 45 }
         return t - 1
       })
       setTotalElapsed(t => t + 1)
     }, 1000)
     return () => clearInterval(h)
-  }, [view, playing, idx, currentEx])
+  }, [view, playing, idx, currentEx, setNum])
 
   // elapsed ticker (reps-based — count total time)
   useEffect(() => {
@@ -796,13 +801,20 @@ export default function WorkoutPlayer() {
     setView('rest')
   }
 
-  const completeSet = () => {
-    if (setNum + 1 >= (currentEx?.sets || 1)) {
-      goNext()
-    } else {
-      setSetNum(s => s + 1)
-    }
+  /**
+   * End of a set: either rest and run the next set of the SAME exercise, or move on.
+   * Used by both modes so a set means the same thing whether it's timed or reps —
+   * previously only reps honoured `sets` at all.
+   */
+  const advanceAfterSet = () => {
+    if (setNum + 1 >= (currentEx?.sets || 1)) { goNext(); return }
+    setSetNum(s => s + 1)
+    setTimeLeft(currentEx?.duration_seconds || 45)
+    setRestLeft(REST_SECS)
+    setView('rest')
   }
+
+  const completeSet = () => advanceAfterSet()
 
   const openList = () => {
     prevView.current = view === 'playlist' ? 'active' : view
@@ -999,6 +1011,11 @@ export default function WorkoutPlayer() {
         <RestScreen
           exercise={currentEx} idx={idx} total={exercises.length}
           restLeft={restLeft}
+          upNextLabel={
+            setNum > 0
+              ? `Up next · set ${setNum + 1} of ${currentEx.sets || 1}`
+              : `Up next · ${idx + 1} of ${exercises.length}`
+          }
           onAddTime={() => setRestLeft(s => s + 20)}
           onSkip={() => { setView('active'); setPlaying(true) }}
           onBack={() => setView('ready')} onList={openList}

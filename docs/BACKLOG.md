@@ -322,7 +322,43 @@ Re-check against the Android 15 edge-to-edge rules in `CLAUDE.md`.
 
 ## #117 — AI-generated workouts run a fraction of their stated duration
 
-**Type:** Bug · **Status: scoped 2026-07-29, not fixed** · **Est:** Medium
+**Type:** Bug · **Status: all three defects FIXED 2026-07-29 — needs a device check**
+
+**What shipped:**
+
+1. **Player set handling** — `WorkoutPlayer.tsx`. The timed-exercise countdown now calls a
+   shared `advanceAfterSet()` instead of `goNext()`, so timed work repeats for its `sets`
+   with a rest between, exactly as reps mode did. A "3 sets × 45s" exercise now runs
+   3 × 45s, not 45s. Reps mode routes through the same helper, so it also gets an
+   inter-set rest it previously lacked — **a deliberate behaviour change**, and a real
+   contributor to the shortfall. The rest screen distinguishes "set 2 of 3" from the
+   next exercise.
+2. **Prompt** — `generate-workout-plan/index.ts`. The exercise count is now derived from
+   the target via `suggestedExerciseCount()` (15 min → 3–6, 60 min → 15–18) instead of a
+   fixed 5–8, and the prompt spells out the cost arithmetic — rest after every set, work
+   per set, sum it, land within 15% — rather than offering the duration as a hint.
+3. **Server-side enforcement** — `fitSessionToTarget()` adjusts `sets` (bounded 1–5) until
+   the estimate is within 15% of target, applied to every session before persisting, with
+   before/after logged and a warning when a session is still >25% off. Prompting alone
+   can't guarantee the contract; this makes a silently-short plan impossible.
+
+The duration model deliberately mirrors the player's real constants (`REST_SECS = 30`,
+45s fallback). An estimate that doesn't match what the player actually does is worse than
+no estimate, because it produces a confident wrong number.
+
+**Tests:** `tests/test-workout-duration.ts` — 14 cases, all passing. Includes a
+regression test reproducing the reported ~7 min for a "30 minute" plan, and checks that
+15/30/45/60-minute targets each land within 25%.
+
+**Still needs a real-device check.** The fix is verified by unit tests and reasoning, not
+by a stopwatch. Generate 15, 30 and 60-minute plans and time them end to end — they should
+now differ substantially. Note `deno` isn't installed locally, so the edge function was
+parse-checked but not fully typechecked; deploy with
+`supabase functions deploy generate-workout-plan` and watch the logs for the fitting lines.
+
+---
+
+### Original scope
 
 Reported: a user's **30-minute** AI-generated workout finished in about **4 minutes**.
 
