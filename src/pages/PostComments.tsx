@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCommunityComments } from "@/hooks/useCommunity";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { ReportSheet } from "@/components/community/ReportSheet";
@@ -14,6 +15,7 @@ const PostComments = () => {
   const navigate = useNavigate();
   const { postId } = useParams();
   const { user } = useAuth();
+  const keyboardHeight = useKeyboardHeight();
   const { comments, loading, addComment, likeComment, unlikeComment } = useCommunityComments(postId || "");
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -170,7 +172,14 @@ const PostComments = () => {
       </div>
 
       {/* Add Comment Input */}
-      <div className="shrink-0 p-4 border-t border-border bg-background pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div
+        className="shrink-0 p-4 border-t border-border bg-background"
+        style={{
+          paddingBottom: keyboardHeight > 0
+            ? `${keyboardHeight + 8}px`
+            : "calc(1rem + env(safe-area-inset-bottom))",
+        }}
+      >
         <div className="flex items-center gap-2 max-w-md mx-auto">
           <Button variant="ghost" size="icon" className="shrink-0">
             <Smile className="w-5 h-5 text-muted-foreground" />

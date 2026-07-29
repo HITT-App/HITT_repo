@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useProfile } from "@/hooks/useProfile";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { Slider } from "@/components/ui/slider";
@@ -189,6 +190,7 @@ function GuidelinesGate({ onAccept, onBack }: { onAccept: () => void; onBack: ()
 export default function CommunityChatroom() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const keyboardHeight = useKeyboardHeight();
   const { profile } = useProfile();
   const { uploadImage, uploading } = useImageUpload();
   const { isAdmin } = useAdminRole();
@@ -1413,7 +1415,14 @@ export default function CommunityChatroom() {
       <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleImageUpload} />
 
       {/* Input bar */}
-      <div className="border-t border-border/60 bg-card/80 backdrop-blur-xl px-3 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shrink-0">
+      <div
+        className="border-t border-border/60 bg-card/80 backdrop-blur-xl px-3 py-2.5 shrink-0"
+        style={{
+          paddingBottom: keyboardHeight > 0
+            ? `${keyboardHeight + 8}px`
+            : "calc(0.625rem + env(safe-area-inset-bottom))",
+        }}
+      >
         <div className="flex items-center gap-2">
           {!recording && (
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => setShowAttachments(!showAttachments)}>

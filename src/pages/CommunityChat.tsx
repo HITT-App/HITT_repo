@@ -4,9 +4,9 @@ import { ArrowLeft, Send, Paperclip, Loader2, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMessages, useDirectMessageActions, useConversations } from "@/hooks/useDirectMessages";
 import { useCommunityProfile } from "@/hooks/useCommunity";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useAuth } from "@/hooks/useAuth";
 import { format, isToday, isYesterday } from "date-fns";
 import { ReportSheet } from "@/components/community/ReportSheet";
@@ -15,6 +15,7 @@ const CommunityChat = () => {
   const navigate = useNavigate();
   const { conversationId, userId } = useParams();
   const { user } = useAuth();
+  const keyboardHeight = useKeyboardHeight();
   const [newMessage, setNewMessage] = useState("");
   const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationId || null);
   const [sending, setSending] = useState(false);
@@ -94,7 +95,7 @@ const CommunityChat = () => {
   const isLoading = messagesLoading || profileLoading;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-[100svh] bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header
         className="sticky top-0 z-20 flex items-center gap-3 px-4 py-3 bg-background/90 backdrop-blur-sm border-b border-border/40"
@@ -123,7 +124,10 @@ const CommunityChat = () => {
       </header>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      {/* Native scroll, not ScrollArea — the ref must land on the actual scroller for
+          the scroll-to-bottom in the effect above to work, and Radix puts the scroller
+          on an inner viewport element the ref never reaches. */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-4">
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -192,10 +196,17 @@ const CommunityChat = () => {
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-border bg-background">
+      <div
+        className="shrink-0 p-4 border-t border-border bg-background"
+        style={{
+          paddingBottom: keyboardHeight > 0
+            ? `${keyboardHeight + 8}px`
+            : "calc(1rem + env(safe-area-inset-bottom))",
+        }}
+      >
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
             <Input
