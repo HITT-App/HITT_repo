@@ -14,7 +14,7 @@ Database migrations are applied to production and the edge functions are deploye
 | Task | State | What's left |
 |---|---|---|
 | **#111** external share → feed | Shipped (332) | Device check; only the `CompletionSummary` share path is wired |
-| **#112** like notifications | **STILL BROKEN** | Top suspect eliminated — see below |
+| **#112** like notifications | **Diagnosed** | QA account had `push_enabled=false`; needs a 2-device check |
 | **#113** keyboard covers composer | Shipped (332) | Device check on iOS **and** Android |
 | **#114** Health Connect | **Decided, not built** | ~80% already exists; workout ingest is the gap |
 | **#115** recipe nutrition | Shipped (332) + data live | — |
@@ -24,11 +24,12 @@ Database migrations are applied to production and the edge functions are deploye
 
 **The three things that genuinely need someone's attention:**
 
-1. **#112 is still open and I was wrong about the cause.** The vault placeholder was a real
-   trap in the code but *not* why likes don't notify here — both secrets already held real
-   values. Remaining suspects, in order: no `device_push_tokens` row for the recipient, the
-   `notification_preferences` gate, then `notify-user` itself. `tests/smoke-like-notification.ts`
-   checks all three but **needs a second QA account** (the trigger skips self-likes).
+1. **#112 diagnosed (2026-07-30).** A second QA account now exists so the smoke test runs —
+   Tier 1 passes 8/8, so the in-app half is fine. The test account had **`push_enabled = false`**,
+   which `notify-user:278` treats as a hard skip. Two caveats: only **2 of 61 users have a
+   preferences row at all** (the other 38 token-holders fall through to *allowed*), and
+   `notify-user` returns **200 whether it sends or skips**, so the pg_net log can't tell them
+   apart. Confirm on TestFlight with two real devices.
 2. **Privacy declarations for #118.** Build 332 is the first that can store body photos. The
    App Privacy questionnaire and the published privacy policy both need to say so. See
    `OWNER_DECISIONS.md`.
