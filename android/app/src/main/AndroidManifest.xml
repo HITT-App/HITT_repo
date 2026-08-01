@@ -59,7 +59,6 @@
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
 
     <!-- Health Connect (write) — matches the iOS HealthWritePlugin.swift
          surface for GPS activity write-back (Apple Fitness / Google Fit
@@ -97,6 +96,14 @@
     <uses-permission android:name="android.permission.health.WRITE_OXYGEN_SATURATION" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" tools:node="remove" />
+    <!-- READ_HEART_RATE_VARIABILITY removed 2026-08-01 after a Play rejection
+         under the Health Connect "Minimum Scope" policy. It was declared and
+         requested, but nothing ever wrote HRV to health_metrics (METRIC_MAP in
+         useHealthSync.ts has no entry for it), so no feature consumed it —
+         Google was correct. The plugin still injects it, so it needs an explicit
+         remove, not just deletion of our declaration. Do not re-add without a
+         visible feature and a matching Play Console justification. -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_BLOOD_PRESSURE" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE" tools:node="remove" />

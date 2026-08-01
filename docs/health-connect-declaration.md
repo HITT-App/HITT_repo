@@ -3,6 +3,16 @@
 **Filed via:** Play Console → App content → Health Connect permissions declaration
 **Reviewer wait:** typically 2–6 weeks per Google Play policy. File as soon as an AAB with these permissions is uploaded (versionCode 6 or later).
 
+> **Rejected 2026-08-01 — `HeartRateVariabilityRmssd` removed.** Google Play rejected the
+> declaration under the Health Connect **Minimum Scope** policy: HRV was requested but no
+> feature consumed it. The justification previously written here claimed it fed a "daily
+> recovery / readiness score shown on the health metrics dashboard" — **that screen does not
+> exist**, and nothing ever wrote HRV to `health_metrics`. It has been removed from the
+> manifest, from the app's permission request, and from this document.
+>
+> **The lesson: every permission below must map to a screen a reviewer can actually open.**
+> Do not write a justification for a feature that is planned rather than shipped.
+
 For each permission below, paste the answer into the corresponding form field. Google's questions vary slightly; use the "Purpose" as your primary answer and "Data flow" if a follow-up asks about processing/storage.
 
 ---
@@ -89,17 +99,9 @@ For each permission below, paste the answer into the corresponding form field. G
 
 ---
 
-### 11. `READ_HEART_RATE_VARIABILITY`
-
-**Purpose:** Contribute HRV to the daily recovery / readiness score shown on the health metrics dashboard. Used by the AI Coach as a signal for recovery-day recommendations.
-
-**Data flow:** Stored server-side in health_metrics. Personal to the signed-in user. Not shared.
-
----
-
 ## Writes
 
-### 12. `WRITE_EXERCISE`
+### 11. `WRITE_EXERCISE`
 
 **Purpose:** When a user records a GPS activity (run, walk, cycle) directly in HIIT Fitness, write it back to Health Connect so it appears in Google Fit's activity ring alongside workouts from other apps.
 
@@ -107,7 +109,7 @@ For each permission below, paste the answer into the corresponding form field. G
 
 ---
 
-### 13. `WRITE_DISTANCE`
+### 12. `WRITE_DISTANCE`
 
 **Purpose:** Attach the GPS-measured distance to the exercise session written above so Google Fit shows the correct distance value.
 
@@ -115,7 +117,7 @@ For each permission below, paste the answer into the corresponding form field. G
 
 ---
 
-### 14. `WRITE_ACTIVE_CALORIES_BURNED`
+### 13. `WRITE_ACTIVE_CALORIES_BURNED`
 
 **Purpose:** Attach the calorie estimate for the completed exercise session so Google Fit's daily calorie burn total reflects the HIIT-recorded activity.
 

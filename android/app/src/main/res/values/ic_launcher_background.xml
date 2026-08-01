@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- #0a0a0a, matching the splash and the app background. Was #FFFFFF, which put
+         the mark on a white tile — part of the Play rejection for the app not looking
+         like "HIIT Fitness". -->
+    <color name="ic_launcher_background">#0a0a0a</color>
 </resources>

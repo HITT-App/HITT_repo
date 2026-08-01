@@ -424,6 +424,61 @@ Re-check against the Android 15 edge-to-edge rules in `CLAUDE.md`.
 
 ---
 
+## #119 — Google Play rejection: Capacitor branding + excessive Health Connect scope
+
+**Type:** Compliance · **Status: both fixed 2026-08-01, needs a new AAB**
+
+Play rejected the listing at **version 9 (1.0)** on two grounds.
+
+### 1. "Capacitor logo loading first, did not match the name of the app"
+
+Two causes, and **only one had been fixed**:
+
+- The **splash** was the stock Capacitor logo — fixed in #116.
+- **All 15 Android launcher icons were also the stock Capacitor "X"**, on a white
+  adaptive-icon background. An app called "HIIT Fitness" was shipping a Capacitor logo on
+  the home screen. This was almost certainly what the reviewer actually saw, since the
+  launcher icon is far more prominent than a splash frame — **the #116 splash fix alone
+  would not have cleared this rejection.**
+
+Fixed by `scripts/gen-android-icons.py`, which regenerates all 15 from the app icon
+(adaptive foreground kept inside the 66% safe zone; legacy square and pre-masked round),
+plus `ic_launcher_background` changed from `#FFFFFF` to `#0a0a0a`. Verified programmatically:
+zero Capacitor-blue pixels remain in any launcher asset.
+
+### 2. Health Connect "Minimum Scope" — `HeartRateVariabilityRmssd`
+
+Google was right, and the cause is instructive. HRV was declared in the manifest and
+requested in `useHealthProfile.ts`, but **nothing ever wrote it** — `METRIC_MAP` in
+`useHealthSync.ts` has no `heartRateVariability` entry, so the consumer at
+`useHealthProfile.ts:126` read a value that could never exist.
+
+Worse, the justification in `docs/health-connect-declaration.md` claimed HRV fed a
+*"daily recovery / readiness score shown on the health metrics dashboard"* — **a screen
+that does not exist.** That invented rationale is what got caught.
+
+Removed from: the manifest (with an explicit `tools:node="remove"`, since the plugin still
+injects it), the permission request, the dead consumer, and the declaration doc.
+**Verified against the merged build artifact**, not just the source — the plugin injects
+permissions at merge time, so the source file is not proof:
+
+```
+./gradlew :app:processReleaseMainManifest
+→ 13 health permissions in the merged manifest, HRV absent
+```
+
+The other 12 were audited at the same time and each maps to a real screen.
+
+### Still to do
+
+1. **Update the Play Console declaration form** — remove HRV there too. The manifest and the
+   form are separate; fixing only the manifest will fail again.
+2. **Upload a new AAB.** The current one predates both fixes.
+3. **Do not re-add a permission without a shipped screen behind it.** The declaration doc now
+   carries this warning at the top.
+
+---
+
 ## #118 — Body-scan progress photos: before/after comparison
 
 **Type:** Feature · **Status: BUILT 2026-07-29 — needs a device check**

@@ -58,9 +58,10 @@ export function useHealthProfile() {
         // Request authorization before querying — without this, iOS silently
         // returns empty results even when data exists in Apple Health.
         await Health.requestAuthorization({
+          // No heartRateVariability — removed 2026-08-01 after a Play rejection
+          // under Health Connect's "Minimum Scope" policy. Nothing consumed it.
           read: ['workouts', 'steps', 'heartRate', 'restingHeartRate',
-                 'sleep', 'weight', 'bodyFat', 'totalCalories',
-                 'heartRateVariability'],
+                 'sleep', 'weight', 'bodyFat', 'totalCalories'],
         }).catch(() => {}); // non-fatal if already granted or denied
 
         const res = await Health.queryWorkouts({
@@ -109,7 +110,7 @@ export function useHealthProfile() {
         .select('metric_type, value, recorded_at')
         .eq('user_id', user.id)
         .gte('recorded_at', d(30).toISOString())
-        .in('metric_type', ['steps', 'resting_heart_rate', 'heart_rate_variability', 'weight', 'body_fat']);
+        .in('metric_type', ['steps', 'resting_heart_rate', 'weight', 'body_fat']);
 
       const byType = (type: string) => (metrics ?? []).filter(m => m.metric_type === type);
       const avg = (arr: typeof metrics) =>
@@ -123,9 +124,10 @@ export function useHealthProfile() {
       if (hrAvg !== null)
         lines.push(`RESTING HEART RATE: ${Math.round(hrAvg)} bpm`);
 
-      const hrvAvg = avg(byType('heart_rate_variability'));
-      if (hrvAvg !== null)
-        lines.push(`HRV: ${Math.round(hrvAvg)} ms`);
+      // HRV block removed 2026-08-01. It read a metric_type that nothing ever
+      // wrote — useHealthSync's METRIC_MAP has no heartRateVariability entry —
+      // so this was always null. Its only effect was to justify a Health Connect
+      // permission that Google then rejected as out of scope.
 
       const weights = byType('weight').sort(
         (a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime()
