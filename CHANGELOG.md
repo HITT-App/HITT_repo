@@ -1,5 +1,16 @@
 # HITT App Changelog
 
+## [2026-08-01] — v1.0.7 / Build 333: comment reactions fixed, error monitoring moved to the owner's account
+
+- **Reacting to a comment now works properly.** Someone reacting to your comment sent you a notification, but the reaction never appeared on the comment and tapping the notification landed on a "not found" page. Two separate faults, both specific to comments — reacting to a *post* was always fine, which is why it went unnoticed:
+  - The reaction count was never being kept. The database counter that runs whenever anyone reacts only ever updated posts, so a comment's count sat at zero permanently while the screen faithfully displayed that zero. There is now a counter for comments too, and **every existing comment has had its real count restored**
+  - The notification's link was missing the post it belonged to, producing a malformed address (`/community/post//comments`) that matched no screen. Comment reactions now carry their parent post, and **existing notifications have been backfilled — old ones in your inbox will open correctly too**
+  - Both fixes are server-side and already live on every version; this build is not needed for them
+- **Error monitoring transferred to the owner's account** — HIIT's crash and error reporting (Sentry) has moved from Vanessa's account to Casey's, part of the ongoing handover. The project moved intact, so the full error history came with it. **This build is what switches it over**: the reporting address is compiled into the app, so installed apps keep reporting to the old account until they update to this version. No user-visible change
+- **Marketing version bumped to 1.0.7** across all targets (App, Watch, Live Activity)
+
+> **Note:** 1.0.6 was in App Store review when this build was made. App Store Connect only holds one version in review at a time — submitting 1.0.7 means withdrawing 1.0.6 first.
+
 ## [2026-07-30] — v1.0.6 / Build 332: body-scan progress photos (opt-in)
 
 - **Progress photos on the body scan** — the Progress tab's "Visual progress" card has always had **First** and **Latest** slots, but there was nowhere to keep a photo, so both showed a placeholder outline. Photos were held in memory during the scan, sent for analysis, then discarded. They can now be saved and compared:
