@@ -9,8 +9,6 @@
 - **Error monitoring transferred to the owner's account** — HIIT's crash and error reporting (Sentry) has moved from Vanessa's account to Casey's, part of the ongoing handover. The project moved intact, so the full error history came with it. **This build is what switches it over**: the reporting address is compiled into the app, so installed apps keep reporting to the old account until they update to this version. No user-visible change
 - **Marketing version bumped to 1.0.7** across all targets (App, Watch, Live Activity)
 
-> **Note:** 1.0.6 was in App Store review when this build was made. App Store Connect only holds one version in review at a time — submitting 1.0.7 means withdrawing 1.0.6 first.
-
 ## [2026-07-30] — v1.0.6 / Build 332: body-scan progress photos (opt-in)
 
 - **Progress photos on the body scan** — the Progress tab's "Visual progress" card has always had **First** and **Latest** slots, but there was nowhere to keep a photo, so both showed a placeholder outline. Photos were held in memory during the scan, sent for analysis, then discarded. They can now be saved and compared:

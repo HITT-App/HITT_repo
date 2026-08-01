@@ -6,12 +6,16 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
-### 🔄 v1.0.6 / Build 332 submitted for App Store review (2026-07-30)
+### ✅ v1.0.6 / Build 332 APPROVED on the App Store (2026-07-30, approved 2026-08-01)
 
-Submitted 2026-07-30. **This is the first submission since 1.0.2**, so it carries four
-versions of change at once — 1.0.3, 1.0.4 and 1.0.5 all went to TestFlight and were never
-submitted. Review notes and "What's New" should cover the whole span, not just the newest
-build. See `CHANGELOG.md` for the per-version detail.
+**Approved.** 1.0.6 supersedes 1.0.2 as the live App Store version — it carried four
+versions of change at once, since 1.0.3, 1.0.4 and 1.0.5 all went to TestFlight and were
+never submitted. See `CHANGELOG.md` for the per-version detail.
+
+**v1.0.7 / Build 333** (2026-08-01) is on TestFlight and free to submit whenever wanted —
+nothing is blocking it now 1.0.6 has cleared. Its only user-visible content is the
+comment-reaction fix, which is server-side and already live regardless of build; the build
+itself exists to move Sentry reporting to Casey's account.
 
 **Open compliance item — verify this was done before review completes:**
 
