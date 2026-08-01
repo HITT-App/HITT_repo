@@ -13,7 +13,7 @@ The **Apple side transferred to Casey's account** (team `5933246NY5`) on 2026-07
 - ✅ **PostHog** — project `169007` (EU) transferred to Casey (org owner); client key + history preserved (no rebuild). Digest personal key swapped + verified (2026-07-13).
 - ✅ **Gmail SMTP** — the sending account (`SMTP_USER`/`SMTP_PASSWORD`/`DIGEST_FROM_EMAIL`) is **already Casey's**; nothing to transfer (confirmed 2026-07-15).
 - 🔄 **Google Cloud `hiit-fitness-494906`** (Gemini + Google Sign-In + Firebase/FCM) — Casey added as **Owner**; **pending his billing account** + a fresh Gemini API key (then swap `AI_API_KEY`), then Vanessa steps off. **Do not detach Vanessa's billing until Casey's is linked** or AI features go down. Recommendation: transfer this project rather than recreate it — the Google Sign-In iOS client ID is hardcoded in the app, so a new project would force an app rebuild.
-- ⏸ **Sentry** — **parked until the next app build** (2026-07-15). Transferring the project changes the DSN (`VITE_SENTRY_DSN`), which needs a rebuild — so do it alongside the next build to avoid an error-monitoring gap. Plan: Casey makes a free Sentry org → you **Transfer Project** → he sends the new DSN + an auth token (`org:read`/`project:read`/`event:read`) → swap `VITE_SENTRY_DSN` (client) + `SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_HOST` (digest).
+- ✅ **Sentry** — transferred to Casey's org **2026-08-01**. EU region preserved (`de.sentry.io`), and the project ID is unchanged (`4511303494795344`), so all error history came across. Org `hiit-fitness`, project `hitt-fitness` (note the differing spellings — both are correct). `VITE_SENTRY_DSN` swapped in `.env` (ships in the next iOS build); `SENTRY_HOST`/`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` set as Supabase secrets and the digest redeployed + verified against the live API (HTTP 200). The auth token is Casey's user token, not Vanessa's — hers would die when she leaves the org.
 - ⬜ **Supabase, GitHub** — still to do.
 
 ---
@@ -25,7 +25,7 @@ These are currently under Vanessa's personal accounts. The owner needs their own
 | Service | What to do | Effort | Status |
 |---|---|---|---|
 | **Supabase** | Settings → Team → Invite owner as Owner role. Owner accepts, Vanessa removes herself. All data, secrets, and edge functions transfer automatically. | 5 min | ⬜ Pending |
-| **Sentry** | ⏸ **Parked until next build (2026-07-15)** — can't add members without a paid plan, so use **Transfer Project** to Casey's own free org. That changes the DSN → needs a rebuild, so bundle it with the next app build. Casey then provides the new DSN + an auth token (`org:read`/`project:read`/`event:read`). | 10 min | ⏸ Parked |
+| **Sentry** | ✅ **Done (2026-08-01)** — Transfer Project to Casey's own free EU org. Project ID preserved so history is intact. DSN swapped (needs the next build to take effect on devices); digest secrets swapped to Casey's user auth token + verified. | — | ✅ Done |
 | **PostHog** | ✅ **Done (2026-07-13)** — project `169007` (EU) transferred to Casey as org owner. Client key + all history preserved, so no `.env` change / no rebuild. Only the digest's `POSTHOG_PERSONAL_API_KEY` was swapped to Casey's personal key (yours would die when you leave the org) + verified. | — | ✅ Done |
 | **GitHub repo** | Repo is at `https://github.com/HITT-App/HITT_repo`. Owner needs to be added as org owner or repo transferred to their GitHub account | 5 min | ⬜ Pending |
 
@@ -43,7 +43,7 @@ These live in Supabase edge function secrets (Settings → Edge Functions → Se
 | `APNS_KEY` + `APNS_KEY_ID` + `APNS_TEAM_ID` | ✅ **Done (2026-07-13)** | New APNs auth key **`S2F735Z4UB`** created under **Casey's team `5933246NY5`** (Sandbox & Production, team-scoped). Supabase secrets `APNS_KEY` / `APNS_KEY_ID` / `APNS_TEAM_ID` swapped and **verified against Apple's production server**. `.p8` stored in `~/.appstoreconnect/private_keys/`. Needed after the app transfer changed the team ID (old key was team-mismatched → push was silently failing). |
 | `SPOONACULAR_API_KEY` | ✅ **Casey's (2026-07-13)** | Spoonacular account signed up under **caseysonnekus1@gmail.com** (Casey's Gmail — password NOT stored here; he can reset via his own email). **Free tier, 50 calls/day.** New key swapped into the Supabase secret + verified live. **Secondary source only** — the app prefers the owner recipe DB and gates Spoonacular behind `MEAL_SOURCE_SPOONACULAR_ENABLED`; likely to be retired now the DB is primary, so the free tier is fine. |
 | Google OAuth Client ID + Secret | Vanessa's Google Cloud project (`hiit-fitness-oauth`) | Owner creates their own Google Cloud project → OAuth consent screen → Web client → adds Supabase callback URL → pastes new Client ID + Secret into Supabase Auth → Providers → Google |
-| `VITE_SENTRY_DSN` | Vanessa's Sentry | Replace after Sentry account transfer above |
+| `VITE_SENTRY_DSN` | ✅ **Casey's (2026-08-01)** | Swapped in `.env`. Takes effect on devices only once the next build ships — the DSN is compiled into the JS bundle. |
 | `VITE_POSTHOG_KEY` | Vanessa's PostHog | Replace after PostHog account transfer above |
 
 ---
@@ -79,7 +79,7 @@ The `.env` file is gitignored and never committed. The owner needs a copy of all
 **Send securely (not email) — use 1Password, Bitwarden, or a secure note:**
 
 ```
-VITE_SENTRY_DSN=            ← replace with owner's own key at handoff
+VITE_SENTRY_DSN=            ← Casey's (swapped 2026-08-01)
 VITE_POSTHOG_KEY=           ← replace with owner's own key at handoff
 VITE_POSTHOG_HOST=https://eu.i.posthog.com
 VITE_SUPABASE_URL=https://pbrqdlkjoxvglcdlixbi.supabase.co

@@ -1,5 +1,9 @@
 # Sentry handover — steps for Casey
 
+> ✅ **COMPLETED 2026-08-01.** Kept for reference / as a template for the remaining
+> Supabase and GitHub transfers. Org `hiit-fitness`, project `hitt-fitness`, EU region,
+> project ID `4511303494795344` preserved so error history survived the move.
+
 Sentry is the crash / error monitoring behind HIIT Fitness. It currently sits in Vanessa's
 Sentry account and needs to move to Casey's, like the App Store, PostHog and Spoonacular
 accounts already have.
