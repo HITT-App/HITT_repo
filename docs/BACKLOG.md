@@ -424,6 +424,50 @@ Re-check against the Android 15 edge-to-edge rules in `CLAUDE.md`.
 
 ---
 
+## #120 — Comment reactions: count never showed, notification 404'd
+
+**Type:** Bug · **Status: FIXED + backfilled 2026-08-01 (live)**
+
+Reacting to a **comment** sent a push, but the reaction never appeared on screen and tapping
+the notification 404'd. Two independent bugs, both specific to comments — post likes were
+fine, which is why it went unnoticed. Everything around likes was written for posts and the
+comment case was left half-wired.
+
+**Bug 1 — the count never showed.** `update_post_likes_count()` fires on every
+`community_likes` insert/delete but **only ever updates `community_posts`**. Nothing
+maintained `community_comments.likes_count`, so it sat at 0 forever while
+`PostComments.tsx` faithfully rendered that 0. Proven in production — comments with one
+real like each, all storing `likes_count = 0`.
+
+**Bug 2 — the 404.** `create_like_notification()` inserted `comment_like` rows with only
+`comment_id`, leaving `post_id` NULL. The fan-out then built:
+
+```sql
+'/community/post/' || COALESCE(NEW.post_id::text,'') || '/comments'
+```
+
+`COALESCE(NULL,'')` turned "no id" into a valid-looking empty string, producing
+**`/community/post//comments`** — a double slash matching no route. All 3 live
+`comment_like` notifications resolved to exactly that.
+
+**Fixed in `20260801120000_fix_comment_reactions.sql` (applied):**
+1. New `update_comment_likes_count()` trigger on insert/delete, with `GREATEST(...,0)` so a
+   double-delete can't drive the count negative. Existing counts backfilled from the real
+   like rows.
+2. `create_like_notification()` now carries `post_id` from the parent comment. Existing
+   `comment_like` and `comment` rows backfilled, so **old notifications stop 404ing too**.
+3. The fan-out no longer emits a malformed path — a missing `post_id` falls back to
+   `/notifications` rather than a route that cannot resolve. `COALESCE(id,'')` in a URL is
+   the bug pattern here: it manufactures a broken path instead of failing visibly.
+
+**Verified live:** counts now match (`stored 1 / actual 1`), all 5 `comment_like`
+notifications carry a real `post_id`, the route `/community/post/:postId/comments` exists
+(`App.tsx:238`), and a like→unlike cycle moves the counter 0 → 1 → 0.
+
+**Note:** entirely server-side. Live for every build already installed — no app update needed.
+
+---
+
 ## #119 — Google Play rejection: Capacitor branding + excessive Health Connect scope
 
 **Type:** Compliance · **Status: both fixed 2026-08-01, needs a new AAB**
