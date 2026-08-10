@@ -944,7 +944,13 @@ async function fetchOwnerMealPlan(
         .eq('source', 'owner')
         .eq('meal_type', slot)
         .limit(300);
-      if (withCategory && goalCategory) q = q.eq('category', goalCategory);
+      // Goal lives in `category` on the pre-2026-08 rows and in the `goals` array on the
+      // owner pack, whose `category` holds a dish type instead. Match either, or the pack
+      // is invisible whenever a goal is set — the no-results retry below never fires,
+      // because the older rows alone satisfy the strict query.
+      if (withCategory && goalCategory) {
+        q = q.or(`category.eq.${goalCategory},goals.cs.{${goalCategory}}`);
+      }
       return q;
     };
 

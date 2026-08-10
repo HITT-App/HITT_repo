@@ -1,0 +1,19 @@
+id	name	field	issue
+BRK-003	Honey Vanilla Greek Yoghurt Bowl	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+BRK-007	Green Machine Protein Smoothie	dietary_tags	removed 'nut_free' — contradicted by ingredients
+BRK-017	Vegan Overnight Chia Pudding	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+BRK-024	Summer Berry & Mint Smoothie Bowl	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+BRK-050	Summer Fruit & Yoghurt Parfait	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+BRK-106	Budget Peanut Butter Oats	dietary_tags	removed 'vegan' — contradicted by ingredients
+CHT-055	Homemade Loaded Chicken Katsu Curry Fries	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+DES-012	Chocolate Avocado Mousse	dietary_tags	removed 'nut_free' — contradicted by ingredients
+DES-021	Baked Cinnamon Pears	dietary_tags	removed 'vegan' — contradicted by ingredients
+DES-029	Warm Spiced Poached Pears	dietary_tags	removed 'vegan' — contradicted by ingredients
+DES-031	Baked Protein Stuffed Apples	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+DES-034	Vegan Chocolate Chia Pudding	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+DES-091	Protein Crab-Free Vanilla Panna Cotta	dietary_tags	removed 'vegetarian' — contradicted by ingredients
+DES-104	Protein Honey Vanilla Panna Cotta	dietary_tags	removed 'vegetarian' — contradicted by ingredients
+DIN-046	Family Fish Pie	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+DIN-167	Vegan Chocolate Oat Porridge Dinner Bowl	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+DIN-173	Summer Fruit Smoothie Bowl Dinner	dietary_tags	removed 'gluten-free' — contradicted by ingredients
+SNK-005	No-Bake Peanut Butter Energy Balls	dietary_tags	removed 'vegan' — contradicted by ingredients

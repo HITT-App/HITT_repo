@@ -1,0 +1,974 @@
+id	name	applied	reason	kcal_before	kcal_after	delta_pct
+BRK-001	Berry Bliss Overnight Oats	true	ok	465	419	-10
+BRK-002	Peanut Butter Power Overnight Oats	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	610	356	-42
+BRK-003	Honey Vanilla Greek Yoghurt Bowl	false	1 unresolved: 50g Strawberries, sliced	320	377	18
+BRK-004	Classic Protein Pancakes	false	2 unresolved: 40g Self-Raising Flour	480	337	-30
+BRK-005	Belgian-Style Protein Waffles	false	2 unresolved: 150g Self-Raising Flour	520	238	-54
+BRK-006	Peanut Butter Banana Protein Smoothie	false	1 unresolved: 1 scoop (30g) Chocolate Protein Powder	470	298	-37
+BRK-007	Green Machine Protein Smoothie	true	ok	260	288	11
+BRK-008	Chicken & Avocado Breakfast Wrap	false	2 unresolved: 1 Gluten-Free Wrap	490	362	-26
+BRK-009	Spinach, Feta & Tomato Omelette	false	1 unresolved: Salt and Pepper, to taste	380	354	-7
+BRK-010	Ham & Cheese Egg Muffins	false	2 unresolved: 80g Lean Ham, diced	260	219	-16
+BRK-011	The Lean Fry Up	false	1 unresolved: 2 Turkey Rashers	420	313	-25
+BRK-012	Vegan Tofu Scramble	false	3 unresolved: 5g Nutritional Yeast	250	276	10
+BRK-013	Smoked Salmon & Cream Cheese Bagel	false	3 unresolved: 1 Wholemeal Bagel	400	5	-99
+BRK-014	Sausage & Egg Breakfast Muffin	false	3 unresolved: 1 English Muffin	460	112	-76
+BRK-015	High-Protein Cereal Bowl	false	1 unresolved: 50g High-Protein Cereal	420	197	-53
+BRK-016	Full English Turkey Rasher Fry Up	false	2 unresolved: 3 Turkey Rashers	540	269	-50
+BRK-017	Vegan Overnight Chia Pudding	true	ok	280	304	9
+BRK-018	Smoked Salmon Scrambled Eggs	false	2 unresolved: 60g Smoked Salmon, sliced	380	224	-41
+BRK-019	Breakfast Burrito with Chorizo	false	2 unresolved: 1 Large Wholemeal Tortilla	520	203	-61
+BRK-020	Cottage Cheese & Fruit Bowl	false	2 unresolved: 80g Pineapple, diced	260	183	-30
+BRK-021	Shakshuka	false	1 unresolved: 200g Chopped Tomatoes	260	242	-7
+BRK-022	Blueberry Protein Muffins	false	2 unresolved: 150g Self-Raising Flour	210	79	-62
+BRK-023	Budget Porridge with Banana	true	ok	380	261	-31
+BRK-024	Summer Berry & Mint Smoothie Bowl	true	ok	300	284	-5
+BRK-025	Scrambled Tofu Breakfast Burrito	false	2 unresolved: 1 Large Wholemeal Tortilla	420	320	-24
+BRK-026	Steak & Eggs	true	ok	460	517	12
+BRK-027	Low Carb Egg & Cheese Muffins	false	1 unresolved: Salt and Pepper, to taste	220	214	-3
+BRK-028	Winter Spiced Porridge	false	1 unresolved: 2g Nutmeg	400	211	-47
+BRK-029	Family Pancake Stack	false	2 unresolved: 150g Self-Raising Flour	280	184	-34
+BRK-030	Mushroom & Halloumi Omelette	true	ok	420	398	-5
+BRK-031	Budget Egg on Toast	false	1 unresolved: 5g Butter	380	295	-22
+BRK-032	Cinnamon Raisin Overnight Oats	true	ok	440	311	-29
+BRK-033	Prawn & Avocado Breakfast Toast	true	ok	380	370	-3
+BRK-034	Meal Prep Egg Bites	false	1 unresolved: Salt and Pepper, to taste	150	143	-5
+BRK-035	Turkey Sausage & Sweet Potato Hash	false	1 unresolved: 2 Turkey Sausages, sliced	380	203	-47
+BRK-036	Low Carb Smoked Salmon & Avocado Stack	false	1 unresolved: 80g Smoked Salmon	300	127	-58
+BRK-037	Bacon & Egg Breakfast Bagel	false	2 unresolved: 1 Wholemeal Bagel	420	147	-65
+BRK-038	Winter Warming Porridge with Stewed Apple	true	ok	400	262	-34
+BRK-039	Cottage Cheese Pancakes	false	1 unresolved: 5g Butter (for frying)	380	313	-18
+BRK-040	Family Breakfast Burritos	false	1 unresolved: 4 Large Wholemeal Tortillas	420	341	-19
+BRK-041	Kedgeree with Smoked Haddock	false	2 unresolved: 5g Curry Powder	460	402	-13
+BRK-042	Budget Jam on Toast with Protein Yoghurt	true	ok	340	345	1
+BRK-043	High Fibre Bran Overnight Oats	false	1 unresolved: 20g Wheat Bran	400	274	-31
+BRK-044	Chorizo & Egg Hash	false	2 unresolved: 40g Chorizo, diced	480	203	-58
+BRK-045	Tempeh & Mushroom Breakfast Hash	false	1 unresolved: 150g Potato, diced	400	408	2
+BRK-046	Peach & Yoghurt Granola Bowl	false	1 unresolved: 1 Peach, sliced	300	327	9
+BRK-047	Spinach & Ricotta Omelette	false	1 unresolved: 40g Ricotta	380	268	-29
+BRK-048	Meal Prep Overnight Oats (Batch of 4)	true	ok	440	294	-33
+BRK-049	Budget Cereal & Milk	false	1 unresolved: 40g Bran Flakes	260	84	-68
+BRK-050	Summer Fruit & Yoghurt Parfait	false	2 unresolved: 60g Strawberries, sliced	260	216	-17
+BRK-051	Turkey Bacon & Avocado Egg Cups	false	2 unresolved: 3 Turkey Rashers, chopped	210	183	-13
+BRK-052	Budget Porridge with Peanut Butter	true	ok	420	229	-45
+BRK-053	Prawn & Chilli Scrambled Eggs	false	2 unresolved: 80g Cooked Prawns	340	237	-30
+BRK-054	Meal Prep Breakfast Burrito Batch	false	1 unresolved: 4 Large Wholemeal Tortillas	440	360	-18
+BRK-055	Chorizo & Sweetcorn Breakfast Muffins	false	2 unresolved: 50g Chorizo, diced	260	197	-24
+BRK-056	Mango & Coconut Smoothie	true	ok	260	203	-22
+BRK-057	Budget Fried Egg Sandwich	false	2 unresolved: 5g Butter	380	291	-23
+BRK-058	Turkey Rasher Breakfast Wrap	false	3 unresolved: 3 Turkey Rashers	380	75	-80
+BRK-059	Baked Beans & Turkey Rasher Bowl	false	1 unresolved: 3 Turkey Rashers	340	260	-24
+BRK-060	Blueberry Protein Overnight Oats	false	1 unresolved: 80g Blueberries	420	231	-45
+BRK-061	Chicken Sausage & Egg Muffins	false	2 unresolved: 2 Chicken Sausages, cooked and sliced	240	197	-18
+BRK-062	Raspberry & Almond Yoghurt Bowl	false	1 unresolved: 60g Raspberries	260	267	3
+BRK-063	Steak Breakfast Burrito	false	1 unresolved: 1 Large Wholemeal Tortilla	480	337	-30
+BRK-064	Coconut Yoghurt & Granola Bowl (Vegan)	false	1 unresolved: 200g Coconut Yoghurt	300	148	-51
+BRK-065	Pork Sausage & Bean Breakfast Bowl	false	1 unresolved: 3 Pork Sausages	440	206	-53
+BRK-066	Tropical Protein Smoothie Bowl	false	2 unresolved: 100g Frozen Pineapple	340	236	-31
+BRK-067	Salmon & Cream Cheese Bagel	false	3 unresolved: 1 Wholemeal Bagel	380	2	-99
+BRK-068	Budget Scrambled Egg & Beans	false	1 unresolved: 5g Butter	340	360	6
+BRK-069	Cheese & Ham Omelette	false	1 unresolved: 40g Lean Ham, diced	400	379	-5
+BRK-070	Budget Beans & Toast	true	ok	340	336	-1
+BRK-071	Lamb Merguez Breakfast Skillet	false	1 unresolved: 100g Lamb Merguez Sausage, sliced	420	202	-52
+BRK-072	Simple Fruit & Nut Overnight Oats	true	ok	460	323	-30
+BRK-073	Cod & Egg Breakfast Bowl	true	ok	320	288	-10
+BRK-074	Budget Cheese Omelette	false	1 unresolved: 5g Butter	380	375	-1
+BRK-075	Turkey & Spinach Breakfast Wrap	false	1 unresolved: 1 Gluten-Free Wrap	340	170	-50
+BRK-076	Pineapple & Coconut Overnight Oats	false	2 unresolved: 60g Pineapple, diced	380	111	-71
+BRK-078	Bacon & Mushroom Omelette	true	ok	380	345	-9
+BRK-079	Turkey Chilli Breakfast Bowl	true	ok	340	304	-11
+BRK-080	Simple Granola with Milk	true	ok	380	367	-3
+BRK-081	Turkey Ham & Cheese Croissant	false	2 unresolved: 1 Croissant	380	80	-79
+BRK-082	Strawberry Banana Protein Smoothie	false	1 unresolved: 80g Strawberries	320	302	-6
+BRK-083	Buffalo Chicken Breakfast Bowl	false	1 unresolved: 10g Buffalo Hot Sauce	340	324	-5
+BRK-084	Family Cheese & Ham Croissants	false	2 unresolved: 4 Croissants	400	151	-62
+BRK-085	Turkey Meatball Breakfast Bowl	true	ok	300	274	-9
+BRK-086	Simple Milk & Honey Porridge	true	ok	380	171	-55
+BRK-087	Duck Egg & Asparagus	true	ok	300	207	-31
+BRK-088	Budget Overnight Oats with Jam	true	ok	340	171	-50
+BRK-089	Salmon & Scrambled Egg Bagel	false	3 unresolved: 1 Wholemeal Bagel	460	143	-69
+BRK-090	Simple Fried Egg & Avocado Toast	true	ok	320	282	-12
+BRK-091	Ham & Mushroom Omelette	false	1 unresolved: 40g Lean Ham, diced	340	270	-21
+BRK-092	Family Cheese Omelette Muffins	false	1 unresolved: Salt and Pepper, to taste	170	153	-10
+BRK-093	Venison Sausage Breakfast Bowl	false	1 unresolved: 3 Venison Sausages	440	205	-53
+BRK-094	Simple Peanut Butter Banana Toast	true	ok	460	430	-7
+BRK-095	Rabbit & Herb Breakfast Hash	false	2 unresolved: 120g Cooked Rabbit, shredded	380	102	-73
+BRK-096	Meal Prep Protein Pancake Batch	false	2 unresolved: 160g Self-Raising Flour	280	159	-43
+BRK-097	Guinea Fowl & Egg Breakfast Plate	false	1 unresolved: 100g Cooked Guinea Fowl, sliced	340	206	-39
+BRK-099	Partridge & Mushroom Breakfast Skillet	false	2 unresolved: 1 Partridge Breast (120g), sliced	300	62	-79
+BRK-100	Classic English Muffin with Butter & Jam	false	2 unresolved: 1 English Muffin	300	52	-83
+BRK-101	Crayfish & Scrambled Egg Toast	false	2 unresolved: 80g Cooked Crayfish Tails	360	221	-39
+BRK-102	Simple Cheese Toastie Breakfast	false	1 unresolved: 5g Butter	420	349	-17
+BRK-103	Wild Boar Sausage Breakfast Bowl	false	1 unresolved: 3 Wild Boar Sausages	440	157	-64
+BRK-104	Crab Omelette	false	1 unresolved: 80g White Crab Meat	360	260	-28
+BRK-105	Scallop & Bacon Breakfast Skewers	false	1 unresolved: 100g Scallops	260	119	-54
+BRK-106	Budget Peanut Butter Oats	true	ok	380	168	-56
+BRK-107	Quail Egg & Asparagus Salad	true	ok	220	493	124
+BRK-108	Simple Ham & Egg Cups	false	1 unresolved: 4 Slices Lean Ham	180	143	-21
+BRK-109	Simple Toast & Marmalade	false	1 unresolved: 20g Marmalade	220	148	-33
+BRK-110	Duck Egg Florentine	false	1 unresolved: 5g Butter	320	161	-50
+BRK-111	Turkey Rasher & Tomato Wrap	false	3 unresolved: 3 Turkey Rashers	300	9	-97
+BRK-112	Meal Prep Overnight Oats Peanut Butter Batch	false	1 unresolved: 4 scoops (120g) Chocolate Protein Powder	480	244	-49
+BRK-113	Prawn & Chive Scrambled Eggs	false	1 unresolved: 80g Cooked Prawns	320	222	-31
+BRK-114	Budget Toast with Baked Beans & Cheese	true	ok	420	457	9
+BRK-115	Turkey & Egg Muffin Sandwich	false	2 unresolved: 1 English Muffin	320	72	-77
+BRK-116	Simple Fruit Salad Bowl	false	2 unresolved: 80g Strawberries, halved	150	105	-30
+BRK-117	Chorizo & Egg Muffins	false	2 unresolved: 50g Chorizo, diced	220	143	-35
+BRK-118	Simple Porridge with Raisins	true	ok	380	200	-47
+BRK-119	Salmon & Cream Cheese Omelette	false	2 unresolved: 50g Smoked Salmon	400	259	-35
+BRK-120	Budget Bran Flakes with Banana	false	1 unresolved: 40g Bran Flakes	300	189	-37
+BRK-121	Lamb Merguez & Egg Wrap	false	1 unresolved: 80g Lamb Merguez Sausage, sliced	420	162	-61
+BRK-122	Budget Toast with Marmite & Egg	false	1 unresolved: 10g Marmite	360	291	-19
+BRK-123	Chicken Sausage Breakfast Bowl	false	1 unresolved: 3 Chicken Sausages	380	155	-59
+BRK-124	Simple Weetabix with Milk	false	1 unresolved: 3 Wheat Biscuits	280	105	-62
+BRK-125	Beef Breakfast Hash	false	1 unresolved: 150g Potato, diced	460	487	6
+BRK-126	Fruit & Nut Yoghurt Bowl	true	ok	320	376	18
+BRK-127	Turkey & Pepper Breakfast Skillet	true	ok	340	353	4
+BRK-128	Family French Toast	false	1 unresolved: 15g Butter	280	148	-47
+BRK-129	Smoked Haddock & Poached Egg	true	ok	260	222	-15
+BRK-130	Budget Toast & Peanut Butter	true	ok	340	295	-13
+BRK-131	Pork Sausage & Beans Bowl	false	1 unresolved: 3 Pork Sausages	420	188	-55
+BRK-132	Simple Scrambled Egg Wrap	false	1 unresolved: 10g Hot Sauce	320	235	-27
+BRK-133	Cottage Cheese & Egg Scramble	true	ok	320	283	-12
+BRK-134	Meal Prep Turkey Sausage Breakfast Boxes	false	1 unresolved: 8 Turkey Sausages	320	152	-52
+BRK-135	Halloumi & Egg Breakfast Plate	true	ok	420	414	-1
+BRK-136	Meal Prep Bircher Muesli	false	1 unresolved: 2 Apples, grated	320	135	-58
+BRK-137	Bacon & Baked Bean Bowl	true	ok	340	263	-23
+BRK-138	Simple Milk & Cereal Bowl	false	1 unresolved: 50g High-Protein Cereal	320	84	-74
+BRK-139	Prawn & Avocado Egg Cups	false	1 unresolved: 80g Cooked Prawns, chopped	190	183	-4
+BRK-140	Budget Toast with Nutella-Style Spread	false	1 unresolved: 25g Chocolate Hazelnut Spread	340	148	-56
+BRK-141	Cod & Poached Egg Breakfast	true	ok	300	243	-19
+BRK-142	Meal Prep Egg White Bites	true	ok	80	87	9
+BRK-143	Steak & Mushroom Breakfast	true	ok	460	457	-1
+BRK-144	Family Cinnamon French Toast Sticks	false	1 unresolved: 15g Butter	280	148	-47
+BRK-145	Turkey & Cheese Omelette	true	ok	380	425	12
+BRK-146	Budget Porridge with Sultanas	false	1 unresolved: 20g Sultanas	380	141	-63
+BRK-147	Butternut Squash & Feta Frittata	false	1 unresolved: 150g Butternut Squash, roasted	260	267	3
+BRK-148	Simple Marmalade Porridge	false	1 unresolved: 15g Marmalade	360	141	-61
+BRK-149	Chicken Sausage & Sweet Potato Hash	false	1 unresolved: 2 Chicken Sausages, sliced	360	187	-48
+BRK-150	Meal Prep Chia & Berry Pots	false	implausible portion: 100g Chia Seeds (100g)	220	257	17
+BRK-151	Chorizo & Halloumi Breakfast Plate	false	1 unresolved: 40g Chorizo, sliced	420	266	-37
+BRK-152	Budget Fruit & Yoghurt Pot	true	ok	260	281	8
+BRK-153	Turkey Breakfast Patty & Egg	false	1 unresolved: 5g Sage	280	252	-10
+BRK-154	Simple Rye Toast with Avocado	true	ok	300	291	-3
+BRK-155	Prawn & Sweetcorn Fritters	false	3 unresolved: 100g Cooked Prawns, chopped	300	72	-76
+BRK-156	Meal Prep Rye Toast Egg Boxes	true	ok	320	199	-38
+BRK-157	Beef & Egg Breakfast Wrap	false	1 unresolved: 1 Large Wholemeal Tortilla	440	329	-25
+BRK-158	Budget Overnight Oats Marmalade	false	1 unresolved: 15g Marmalade	320	120	-62
+BRK-159	Chicken & Halloumi Breakfast Skewers	true	ok	320	372	16
+BRK-160	Simple Overnight Oats Cocoa	false	1 unresolved: 10g Cocoa Powder	380	157	-59
+BRK-161	Sausage & Mushroom Skillet	false	1 unresolved: 3 Pork Sausages	420	62	-85
+BRK-162	Meal Prep Cocoa Chia Pots	false	1 unresolved: 40g Cocoa Powder	230	232	1
+BRK-163	Beef Bacon & Egg Bowl	true	ok	320	227	-29
+BRK-164	Budget Cinnamon Porridge	true	ok	380	183	-52
+BRK-165	Prawn & Chorizo Breakfast Skillet	false	2 unresolved: 100g Cooked Prawns	280	9	-97
+BRK-166	Budget Fruit Smoothie	true	ok	180	155	-14
+BRK-167	Duck & Orange Breakfast Plate	false	2 unresolved: 1 Duck Breast (150g), sliced	420	15	-96
+BRK-168	Simple Wholegrain Toast & Eggs	true	ok	420	369	-12
+BRK-169	Turkey & Tomato Frittata	true	ok	220	267	21
+BRK-170	Simple Milk & Berries	true	ok	140	186	33
+BRK-171	Salmon & Poached Egg Muffin	false	2 unresolved: 60g Smoked Salmon	320	72	-77
+BRK-172	Budget Cereal Bar & Milk	false	1 unresolved: 1 Cereal Bar	260	84	-68
+BRK-173	Pork & Apple Breakfast Patty	false	2 unresolved: 120g Pork Mince	280	94	-66
+BRK-174	Simple Overnight Oats Apple	true	ok	380	233	-39
+BRK-175	Chicken & Sweetcorn Breakfast Bowl	false	1 unresolved: 50g Sweetcorn	340	308	-9
+BRK-177	Steak & Egg Breakfast Tacos	true	ok	420	354	-16
+BRK-178	Meal Prep Peanut Butter Rice Cake Boxes	false	1 unresolved: 2 Bananas, sliced	220	108	-51
+BRK-179	Lamb & Mint Breakfast Patty	false	1 unresolved: 120g Lamb Mince (10% fat)	320	74	-77
+BRK-180	Simple Toast with Honey	true	ok	260	209	-20
+BRK-181	Turkey & Cranberry Breakfast Wrap	false	1 unresolved: 10g Cranberry Sauce	320	182	-43
+BRK-182	Meal Prep Honey Nut Yoghurt Pots	true	ok	260	323	24
+BRK-183	Crab & Avocado Toast	false	1 unresolved: 60g White Crab Meat	300	195	-35
+BRK-184	Meal Prep Turkey Cranberry Wraps	false	2 unresolved: 4 Wholemeal Wraps	320	94	-71
+BRK-185	Scallop & Bacon Skewer Breakfast	false	1 unresolved: 100g Scallops	260	75	-71
+BRK-186	Budget Rice Cakes & Jam	true	ok	220	155	-30
+BRK-187	Pea & Mint Omelette	true	ok	280	265	-5
+BRK-188	Meal Prep Rice Cake & Jam Snack Packs	true	ok	220	97	-56
+BRK-189	Turkey Rasher Bagel	false	3 unresolved: 1 Wholemeal Bagel	380	72	-81
+BRK-190	Simple Peanut Butter Oats	true	ok	440	244	-45
+BRK-191	Beetroot & Feta Omelette	false	1 unresolved: 40g Cooked Beetroot, diced	320	294	-8
+BRK-192	Budget Toast with Marmite & Cheese	false	1 unresolved: 10g Marmite	380	269	-29
+BRK-193	Goats Cheese & Spinach Omelette	false	1 unresolved: 30g Goats Cheese, crumbled	340	268	-21
+BRK-194	Simple Banana Porridge	true	ok	400	246	-38
+BRK-195	Chicken Chorizo Breakfast Skillet	false	1 unresolved: 30g Chorizo, diced	380	275	-28
+BRK-196	Meal Prep Goats Cheese Egg Muffins	false	1 unresolved: 80g Goats Cheese, crumbled	170	98	-42
+BRK-197	Ham & Sweetcorn Frittata	false	2 unresolved: 80g Lean Ham, diced	240	215	-10
+BRK-198	Budget Cereal with Banana	false	1 unresolved: 40g Bran Flakes	380	189	-50
+BRK-199	Chicken Chorizo Egg Cups	false	1 unresolved: 40g Chorizo, diced	230	176	-23
+BRK-200	Simple Toast with Nut Butter & Banana	false	1 unresolved: 20g Almond Butter	420	253	-40
+BRK-201	Turkey Bacon Waffle Sandwich	false	2 unresolved: 2 Frozen Waffles	420	98	-77
+BRK-202	Meal Prep Almond Butter Toast Packs	false	1 unresolved: 80g Almond Butter	340	49	-86
+BRK-203	Pesto Egg Scramble	true	ok	320	217	-32
+BRK-204	Meal Prep Turkey Waffle Breakfast Batch	false	2 unresolved: 8 Frozen Waffles	420	72	-83
+BRK-205	Spinach & Ricotta Egg Muffins	false	1 unresolved: 60g Ricotta	170	149	-12
+BRK-206	Simple Overnight Oats Vanilla	true	ok	420	239	-43
+BRK-207	Smoked Salmon Ricotta Bagel	false	3 unresolved: 1 Wholemeal Bagel	380	0	-100
+BRK-208	Meal Prep Chicken Quinoa Spinach Breakfast Bowls	true	ok	320	280	-12
+BRK-209	Chicken Sausage Ricotta Skillet	false	2 unresolved: 2 Chicken Sausages, sliced	360	9	-97
+BRK-210	Budget Honey Yoghurt Bowl	true	ok	120	176	47
+BRK-211	Chicken & Sweet Potato Breakfast Hash	true	ok	340	352	4
+BRK-212	Meal Prep Honey Vanilla Oats Batch	true	ok	460	270	-41
+BRK-213	Turkey & Sweet Potato Hash with Egg	true	ok	380	395	4
+BRK-214	Simple Wedge Breakfast Bowl	true	ok	180	179	-1
+BRK-215	Feast Breakfast Burrito	false	1 unresolved: 1 Large Wholemeal Tortilla	380	207	-46
+BRK-216	Breakfast Skillet	true	ok	360	245	-32
+CHT-001	Skinny Big Mac Style Burger	false	6 unresolved: 2x 80g Lean Beef Patties (5% fat)	520	3	-99
+CHT-002	Lean Double Cheeseburger	false	5 unresolved: 2x 100g Lean Beef Patties (5% fat)	640	8	-99
+CHT-003	Baked Dirty Fries with Beef & Cheese	false	2 unresolved: 200g Potato, cut into fries	620	504	-19
+CHT-004	Loaded Nacho Chicken Bowl	false	2 unresolved: 40g Baked Tortilla Chips	540	488	-10
+CHT-005	Crispy Baked Chicken Burger	false	3 unresolved: 30g Panko Breadcrumbs	480	322	-33
+CHT-006	Southern Fried Chicken (Air Fryer)	false	3 unresolved: 150ml Buttermilk	420	91	-78
+CHT-007	Lean Steak Burrito	false	1 unresolved: 1 Large Wholemeal Tortilla	620	642	4
+CHT-008	Chicken Doner-Style Kebab	false	1 unresolved: 1 Wholemeal Flatbread	440	309	-30
+CHT-009	Skinny Chicken Alfredo	false	1 unresolved: 150ml Light Single Cream	650	719	11
+CHT-010	Homemade Chicken Sushi Bowl	true	ok	520	602	16
+CHT-011	Teriyaki Chicken Rice Bowl	true	ok	540	579	7
+CHT-012	Healthy Chinese Chow Mein	false	1 unresolved: 100g Beansprouts	480	435	-9
+CHT-013	BBQ Pizza with Chicken	false	3 unresolved: 1 Wholemeal Flatbread Base	520	173	-67
+CHT-014	Korean Fried Chicken Bites	false	2 unresolved: 20g Cornflour	400	378	-5
+CHT-015	Healthy Chicken Mexican Bowl	false	2 unresolved: 50g Sweetcorn	600	643	7
+CHT-016	Homemade Chicken Kebab Skewers with Flatbread	false	2 unresolved: 5g Kebab Seasoning	420	281	-33
+CHT-017	Skinny Carbonara	false	1 unresolved: 3 Turkey Rashers, chopped	560	492	-12
+CHT-018	Healthy Mac & Cheese	false	3 unresolved: 90g Dried Macaroni	620	285	-54
+CHT-019	Budget Beef Burrito	false	1 unresolved: 1 Large Tortilla	560	602	8
+CHT-020	Family Fried Chicken Bucket (Air Fryer)	false	3 unresolved: 600ml Buttermilk	420	37	-91
+CHT-021	Turkey Sweet & Sour Stir Fry	false	1 unresolved: 80g Pineapple Chunks	500	438	-12
+CHT-022	Loaded Chicken Nachos	false	2 unresolved: 50g Baked Tortilla Chips	580	462	-20
+CHT-023	Homemade Chinese Beef & Black Bean	false	2 unresolved: 150g Beef Strips (lean)	500	258	-48
+CHT-024	Healthy Chicken Fajita Pizza	false	2 unresolved: 1 Wholemeal Flatbread Base	500	198	-60
+CHT-025	Homemade Chicken Wings (Air Fryer)	false	2 unresolved: 8 Chicken Wings	380	22	-94
+CHT-026	Healthy Homemade Doner Kebab Box	false	2 unresolved: 150g Lamb Mince (10% fat)	580	229	-61
+CHT-027	Healthy Chicken Burrito	false	1 unresolved: 1 Large Wholemeal Tortilla	560	562	0
+CHT-028	Healthy Chinese Salt & Pepper Chicken	false	2 unresolved: 20g Cornflour	360	319	-11
+CHT-029	Homemade Chicken Shawarma Wrap	false	1 unresolved: 5g Shawarma Seasoning	420	369	-12
+CHT-030	Skinny Chicken Katsu Curry	false	2 unresolved: 30g Panko Breadcrumbs	560	565	1
+CHT-031	Loaded Chilli Beef Fries	true	ok	600	760	27
+CHT-032	Lean BBQ Ribs with Corn	false	2 unresolved: 300g Pork Ribs	560	52	-91
+CHT-033	Healthy Chow Mein with Prawns	false	1 unresolved: 100g Beansprouts	420	315	-25
+CHT-034	Lean Beef Tacos	true	ok	480	575	20
+CHT-035	Healthy Chicken Parmigiana	false	2 unresolved: 30g Panko Breadcrumbs	560	483	-14
+CHT-036	Homemade Chip Shop Curry Sauce with Chicken	false	2 unresolved: 10g Mild Curry Powder	440	449	2
+CHT-037	Homemade Pizza Pockets	false	2 unresolved: 1 Wholemeal Flatbread	460	152	-67
+CHT-038	Homemade Chicken Chow Mein Box	false	1 unresolved: 100g Beansprouts	460	435	-5
+CHT-039	Chicken Tikka Pizza	false	3 unresolved: 1 Wholemeal Flatbread Base	520	173	-67
+CHT-040	Homemade Beef Burrito Bowl (Chipotle Style)	false	1 unresolved: 5g Chipotle Seasoning	620	770	24
+CHT-041	Homemade Chinese Sesame Chicken	false	1 unresolved: 20g Cornflour	400	414	4
+CHT-042	Lean Lamb Kebab Wrap	true	ok	460	406	-12
+CHT-043	Healthy Homemade Chicken Chow Mein Noodles	true	ok	440	460	5
+CHT-044	Healthy Chicken Tikka Skewers with Naan	false	2 unresolved: 15g Tikka Masala Paste	480	276	-42
+CHT-045	Lean Loaded Chicken Quesadilla	false	1 unresolved: 2 Small Tortillas	500	416	-17
+CHT-046	Homemade Peri-Peri Chicken Burger	false	3 unresolved: 15g Peri-Peri Seasoning	440	251	-43
+CHT-048	Lean Beef Chow Mein	false	2 unresolved: 150g Beef Strips (lean)	460	187	-59
+CHT-049	Homemade BBQ Pulled Pork Bun	false	3 unresolved: 150g Cooked Pulled Pork	500	6	-99
+CHT-050	Homemade Chicken Tikka Naan Pizza	false	3 unresolved: 1 Naan Bread	520	165	-68
+CHT-051	Skinny Chicken Fried Rice Takeaway Style	true	ok	500	554	11
+CHT-052	Healthy Homemade Meat Feast Pizza	false	3 unresolved: 1 Wholemeal Flatbread Base	540	70	-87
+CHT-053	Homemade Chicken Balti	false	1 unresolved: 15g Balti Curry Paste	500	501	0
+CHT-054	Lean Sausage & Mash with Onion Gravy	false	3 unresolved: 4 Reduced-Fat Pork Sausages	560	61	-89
+CHT-055	Homemade Loaded Chicken Katsu Curry Fries	false	3 unresolved: 200g Potato, cut into fries	620	370	-40
+CHT-056	Homemade Steak Burrito Bowl	true	ok	620	710	15
+CHT-057	Homemade Wild Boar Burger	false	3 unresolved: 150g Wild Boar Mince	500	8	-98
+CHT-058	Homemade Duck Spring Rolls	false	3 unresolved: 100g Duck Breast, shredded	420	49	-88
+CHT-059	Homemade Venison Burger	false	2 unresolved: 150g Venison Mince	420	11	-97
+CHT-060	Homemade Quail Skewers with Rice	false	1 unresolved: 2 Whole Quail, spatchcocked	480	209	-56
+CHT-062	Homemade Chicken Balti Naan Wrap	false	2 unresolved: 15g Balti Curry Paste	460	299	-35
+CHT-063	Homemade Pork Belly Ramen	true	ok	620	1147	85
+CHT-064	Homemade Pork Belly Bao Buns	false	1 unresolved: 3 Bao Buns	580	824	42
+CHT-066	Homemade Lamb Doner Wrap	false	2 unresolved: 150g Lamb Mince (10% fat)	480	112	-77
+CHT-067	Homemade Lamb Curry with Naan	false	2 unresolved: 15g Curry Paste	560	345	-38
+CHT-068	Homemade Chicken Caesar Pizza	false	3 unresolved: 1 Wholemeal Flatbread Base	540	208	-61
+CHT-069	Homemade Beef Stroganoff Bowl	false	2 unresolved: 150g Beef Strips (lean)	540	213	-61
+CHT-070	Homemade Chicken Ratatouille Flatbread	false	2 unresolved: 1 Wholemeal Flatbread Base	500	179	-64
+CHT-071	Homemade BBQ Brisket Sandwich	false	2 unresolved: 150g Cooked BBQ Beef Brisket, shredded	460	6	-99
+CHT-073	Homemade Meatball Sub	false	2 unresolved: 1 Sub Roll	520	402	-23
+CHT-074	Homemade Halloumi Fries	false	1 unresolved: 200g Potato, cut into fries	560	417	-26
+CHT-075	Homemade Pork Belly Tacos	true	ok	540	859	59
+CHT-076	Homemade Prawn Fried Rice Takeaway Style	true	ok	440	434	-1
+CHT-077	Homemade Turkey Meatball Sub Deluxe	false	2 unresolved: 1 Sub Roll	500	324	-35
+CHT-078	Homemade Steak & Ale Pasty	false	3 unresolved: 150g Diced Beef	520	22	-96
+CHT-079	Homemade Turkey Fajita Quesadilla	false	2 unresolved: 10g Fajita Seasoning	520	332	-36
+CHT-080	Homemade Squash & Chicken Curry Naan Wrap	false	3 unresolved: 100g Butternut Squash, cubed	480	299	-38
+CHT-081	Homemade Chicken Sausage Hot Dog	false	4 unresolved: 2 Chicken Sausages	420	0	-100
+CHT-082	Homemade Halloumi Fajita Wrap	false	1 unresolved: 60g Peppers, sliced	460	416	-10
+CHT-083	Homemade Turkey Sloppy Joe	false	2 unresolved: 1 Burger Bun	440	276	-37
+CHT-084	Homemade Paella Rice Bowl	false	1 unresolved: 40g Chorizo, sliced	460	292	-37
+CHT-085	Homemade Beef Enchilada Bowl	true	ok	560	725	29
+CHT-086	Homemade Chicken & Halloumi Pitta	false	1 unresolved: 1 Pitta Bread	480	365	-24
+CHT-087	Homemade Sausage & Mash Pie	false	2 unresolved: 4 Pork Sausages, sliced	600	142	-76
+CHT-088	Homemade Bacon Cheeseburger	false	2 unresolved: 150g Lean Beef Patty (5% fat)	580	155	-73
+CHT-089	Homemade Prawn & Chorizo Skewers	false	1 unresolved: 40g Chorizo, sliced	460	323	-30
+CHT-090	Homemade Crispy Duck Pancakes	false	2 unresolved: 150g Duck Breast, shredded	480	57	-88
+CHT-091	Homemade Turkey Frittata Muffins Loaded	true	ok	340	482	42
+CHT-092	Homemade Fish Finger Sandwich Deluxe	false	2 unresolved: 4 Fish Fingers	420	151	-64
+CHT-093	Homemade Pork & Apple Sausage Rolls	false	3 unresolved: 150g Pork Mince	220	47	-79
+CHT-094	Homemade Peanut Chicken Noodles	true	ok	540	529	-2
+CHT-096	Homemade Honey Glazed Lamb Chops	false	1 unresolved: 2 Lamb Chops (approx. 200g)	480	169	-65
+CHT-097	Homemade Honey Garlic Wings	false	1 unresolved: 8 Chicken Wings	420	79	-81
+CHT-098	Homemade Crab Cakes with Fries	false	3 unresolved: 150g White Crab Meat	460	160	-65
+CHT-099	Homemade Rice Cake Pizza Bites	false	1 unresolved: 60g Reduced-Fat Mozzarella, grated	320	98	-69
+CHT-100	Homemade Chicken & Pea Pot Pie	false	3 unresolved: 15g Flour	560	375	-33
+CHT-101	Homemade Peanut Chicken Wrap	true	ok	480	463	-4
+CHT-102	Homemade Marmite Cheese Pizza	false	2 unresolved: 1 Wholemeal Flatbread Base	460	8	-98
+CHT-103	Homemade Banana Chicken Skewers	true	ok	480	525	9
+CHT-104	Homemade Chicken Chorizo Paella Bowl	false	1 unresolved: 40g Chorizo, sliced	540	319	-41
+CHT-105	Homemade Ham & Cheese Quesadilla	false	2 unresolved: 80g Lean Ham, chopped	460	161	-65
+CHT-106	Homemade Chorizo Chicken Quesadilla	false	2 unresolved: 30g Chorizo, diced	520	286	-45
+CHT-107	Homemade Almond Crusted Chicken Goujons	true	ok	380	493	30
+CHT-108	Homemade Pesto Chicken Pizza	false	2 unresolved: 1 Wholemeal Flatbread Base	540	170	-69
+CHT-109	Homemade Spinach & Ricotta Stuffed Flatbread	false	3 unresolved: 1 Wholemeal Flatbread	420	9	-98
+CHT-110	Homemade Spinach & Ricotta Stuffed Chicken Parmigiana	false	3 unresolved: 30g Ricotta	540	360	-33
+CHT-111	Homemade Honey Glazed Chicken Sausage Skewers	false	1 unresolved: 3 Chicken Sausages, chunked	460	241	-48
+CHT-112	Homemade Honey Salmon Poke Bowl	true	ok	560	663	18
+CHT-113	Homemade Loaded Sweet Potato Skins	true	ok	460	437	-5
+CHT-114	Homemade Loaded Nachos Supreme	false	1 unresolved: 50g Baked Tortilla Chips	600	590	-2
+CHT-115	Homemade Chicken Tikka Masala Feast	false	1 unresolved: 15g Tikka Masala Paste	560	523	-7
+DES-001	No-Bake Protein Cheesecake Pot	false	2 unresolved: 100g Light Cream Cheese	320	176	-45
+DES-002	Fudgy Protein Brownies	false	4 unresolved: 100g Self-Raising Flour	170	53	-69
+DES-003	Chewy Protein Cookies	false	1 unresolved: 30g Dark Chocolate Chips	190	99	-48
+DES-004	Protein Nice Cream (Chocolate)	false	2 unresolved: 2 Frozen Bananas, sliced	320	13	-96
+DES-005	Vanilla Protein Mug Cake	false	1 unresolved: 20g Self-Raising Flour	280	216	-23
+DES-006	Moist Banana Protein Bread	false	2 unresolved: 3 Ripe Bananas, mashed	190	60	-68
+DES-007	Chocolate Protein Overnight Oats Pudding	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	380	126	-67
+DES-008	Berry Yoghurt Bark	false	1 unresolved: 10g Dark Chocolate, shaved	90	94	4
+DES-009	Protein Cheesecake Pot (Strawberry)	false	4 unresolved: 100g Light Cream Cheese	310	49	-84
+DES-010	Protein Ice Cream (Peanut Butter)	false	1 unresolved: 2 Frozen Bananas, sliced	380	213	-44
+DES-011	Baked Cinnamon Apple Crumble	false	3 unresolved: 3 Apples, peeled and sliced	260	64	-75
+DES-012	Chocolate Avocado Mousse	false	2 unresolved: 2 Ripe Avocados	280	60	-79
+DES-013	Budget Rice Pudding	false	1 unresolved: 2g Nutmeg	260	237	-9
+DES-014	Vegan Chocolate Brownies	false	4 unresolved: 150g Self-Raising Flour	210	38	-82
+DES-015	Protein Chocolate Chip Blondies	false	2 unresolved: 150g Self-Raising Flour	180	79	-56
+DES-016	Peanut Butter Protein Cheesecake Pot	false	3 unresolved: 100g Light Cream Cheese	380	137	-64
+DES-017	Vanilla Protein Ice Cream	false	1 unresolved: 2 Frozen Bananas, sliced	300	125	-58
+DES-018	Summer Fruit Salad with Mint	false	3 unresolved: 150g Watermelon, cubed	90	2	-98
+DES-019	Mini Protein Chocolate Puddings	false	3 unresolved: 1 scoop (30g) Chocolate Protein Powder	270	88	-67
+DES-020	Protein Chocolate Cookies (Double Choc)	false	3 unresolved: 2 scoops (60g) Chocolate Protein Powder	190	39	-79
+DES-021	Baked Cinnamon Pears	false	1 unresolved: 2 Pears, halved and cored	100	21	-79
+DES-022	Protein Banana Ice Cream Sundae	false	2 unresolved: 2 Frozen Bananas, sliced	340	125	-63
+DES-023	Chocolate Protein Truffles	false	3 unresolved: 2 scoops (60g) Chocolate Protein Powder	90	8	-91
+DES-024	Chocolate Peanut Butter Protein Bars	false	2 unresolved: 2 scoops (60g) Chocolate Protein Powder	210	95	-55
+DES-025	Protein Waffles with Chocolate Drizzle	false	2 unresolved: 60g Self-Raising Flour	420	226	-46
+DES-026	Protein Coconut Bounty Bites	false	3 unresolved: 80g Desiccated Coconut	110	22	-80
+DES-027	Baked Protein Doughnuts	false	1 unresolved: 150g Self-Raising Flour	170	83	-51
+DES-028	Frozen Greek Yoghurt Bites	true	ok	90	116	29
+DES-029	Warm Spiced Poached Pears	false	1 unresolved: 2 Pears, peeled and halved	100	19	-81
+DES-030	Protein Chocolate Fudge Pot	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	220	146	-34
+DES-031	Baked Protein Stuffed Apples	false	1 unresolved: 2 Apples, cored	220	92	-58
+DES-032	Lemon Protein Cheesecake Pot	false	2 unresolved: 100g Light Cream Cheese	310	162	-48
+DES-033	Salted Caramel Protein Pudding	true	ok	210	258	23
+DES-034	Vegan Chocolate Chia Pudding	false	1 unresolved: 10g Cocoa Powder	220	232	5
+DES-035	Chocolate Orange Protein Mousse	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	210	146	-30
+DES-036	Baked Protein Apple Crumble Pots	false	2 unresolved: 2 Apples, diced	230	77	-67
+DES-037	Protein Custard	false	1 unresolved: 10g Cornflour	280	233	-17
+DES-038	Chocolate Hazelnut Protein Spread & Rice Cakes	false	1 unresolved: 20g Chocolate Hazelnut Spread	200	77	-61
+DES-039	Cherry Chocolate Protein Pot	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	230	146	-37
+DES-040	Vanilla Protein Rice Krispie Treats	false	2 unresolved: 80g Butter	200	44	-78
+DES-042	Strawberry Protein Ice Lollies	false	2 unresolved: 1 scoop (30g) Strawberry Protein Powder	90	88	-2
+DES-043	Protein Custard Tart Pot	false	2 unresolved: 10g Cornflour	270	218	-19
+DES-044	Protein Tiramisu Pot	false	2 unresolved: 5g Instant Coffee	210	258	23
+DES-045	Baked Protein Pear & Ginger Crumble	false	2 unresolved: 2 Pears, diced	220	72	-67
+DES-046	Protein White Chocolate Blondie Bites	false	3 unresolved: 150g Self-Raising Flour	210	69	-67
+DES-047	Protein Snickerdoodle Bites	false	1 unresolved: 60g Light Cream Cheese	90	32	-64
+DES-048	Vegan Protein Chocolate Pudding	false	3 unresolved: 1 scoop (30g) Vegan Chocolate Protein Powder	200	0	-100
+DES-049	Baked Protein Cinnamon Rolls	false	2 unresolved: 200g Self-Raising Flour	210	46	-78
+DES-050	Protein Neapolitan Ice Cream	false	3 unresolved: 3 Frozen Bananas, sliced	220	46	-79
+DES-051	Protein Chocolate Orange Truffles	false	3 unresolved: 2 scoops (60g) Chocolate Protein Powder	90	8	-91
+DES-052	Vegan Coconut Rice Pudding	true	ok	320	211	-34
+DES-053	Fig & Honey Protein Yoghurt Pot	false	1 unresolved: 2 Figs, quartered	220	176	-20
+DES-054	Protein Marmalade Yoghurt Pot	false	1 unresolved: 15g Marmalade	230	258	12
+DES-056	Protein Banana Split	false	2 unresolved: 10g Dark Chocolate, melted	300	218	-27
+DES-057	Vegan Protein Peanut Butter Cups	false	1 unresolved: 40g Dark Chocolate, melted	150	82	-45
+DES-058	Raspberry Ripple Protein Yoghurt	false	1 unresolved: 40g Raspberries, mashed	220	258	17
+DES-059	Baked Protein Rice Pudding Pots	true	ok	280	244	-13
+DES-060	Mint Chocolate Protein Mousse	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	210	146	-30
+DES-061	Baked Protein Peach Cobbler	false	2 unresolved: 2 Peaches, sliced	220	77	-65
+DES-062	Protein Toffee Apple Pudding	false	1 unresolved: 1 scoop (30g) Caramel Protein Powder	230	251	9
+DES-063	Vegan Peanut Butter Protein Balls	true	ok	140	77	-45
+DES-064	Chocolate Hazelnut Protein Mousse	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	260	146	-44
+DES-065	Protein Chocolate Fudge Cake Slice	false	3 unresolved: 150g Self-Raising Flour	170	53	-69
+DES-066	Protein Christmas Pudding Bites	false	3 unresolved: 60g Light Cream Cheese	110	23	-79
+DES-067	Honeycomb Protein Bites	false	2 unresolved: 60g Light Cream Cheese	110	31	-72
+DES-068	Vegan Protein Chocolate Fudge	false	3 unresolved: 1 scoop (30g) Vegan Chocolate Protein Powder	150	13	-91
+DES-069	Protein Chai Spiced Latte Pudding	false	1 unresolved: 3g Chai Spice Mix	230	288	25
+DES-070	Protein Coconut Ice Lollies	false	1 unresolved: 20g Desiccated Coconut	100	116	16
+DES-071	Protein Blueberry Cheesecake Bites	false	3 unresolved: 100g Light Cream Cheese	110	27	-75
+DES-072	Butternut Squash Protein Muffins	false	2 unresolved: 150g Butternut Squash, roasted and mashed	180	63	-65
+DES-073	Protein Carrot Cake Bites	false	1 unresolved: 60g Light Cream Cheese	100	35	-65
+DES-075	Protein Vanilla Cheesecake Bites	false	2 unresolved: 100g Light Cream Cheese	100	27	-73
+DES-076	Protein Chocolate Avocado Pudding	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	220	159	-28
+DES-078	Protein Vanilla Bean Custard	false	1 unresolved: 10g Cornflour	270	218	-19
+DES-079	Protein Chocolate Oat Cookie Dough Bites	false	3 unresolved: 1 scoop (30g) Chocolate Protein Powder	120	20	-83
+DES-080	Protein Cocoa Banana Bread	false	4 unresolved: 3 Ripe Bananas, mashed	180	29	-84
+DES-081	Protein Cinnamon Roll Overnight Oats	true	ok	400	266	-33
+DES-082	Frozen Banana & Berry Protein Bark	true	ok	100	137	37
+DES-083	Orange Protein Cheesecake Pot	false	3 unresolved: 100g Light Cream Cheese	310	161	-48
+DES-084	Berry Protein Frozen Bark	true	ok	90	113	26
+DES-085	Protein Cereal Bar Bites	false	1 unresolved: 60g Light Cream Cheese	110	42	-62
+DES-086	Baked Apple with Protein Custard	true	ok	280	312	11
+DES-088	Protein Chocolate Peanut Butter Cups	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	150	63	-58
+DES-089	Protein Honey Nut Yoghurt Bowl	true	ok	260	323	24
+DES-090	Protein Cranberry Cheesecake Bites	false	3 unresolved: 100g Light Cream Cheese	120	27	-77
+DES-091	Protein Vanilla Panna Cotta	false	1 unresolved: 5g Gelatine	170	134	-21
+DES-092	Protein Vanilla Rice Cake Treats	false	1 unresolved: 20g Light Cream Cheese	180	108	-40
+DES-093	Protein Mint Choc Chip Ice Cream	false	3 unresolved: 2 Frozen Bananas, sliced	310	113	-64
+DES-094	Protein Peanut Butter Cookies	true	ok	140	100	-29
+DES-095	Protein Red Velvet Bites	false	3 unresolved: 1 scoop (30g) Chocolate Protein Powder	100	16	-84
+DES-096	Protein Banana Bread Bites	false	2 unresolved: 2 Ripe Bananas, mashed	150	40	-73
+DES-097	Protein Beetroot Chocolate Brownie Bites	false	4 unresolved: 1 scoop (30g) Chocolate Protein Powder	100	16	-84
+DES-098	Protein Vanilla Fudge Bars	false	1 unresolved: 80g Light Cream Cheese	110	38	-65
+DES-099	Protein Almond Butter Blondies	false	1 unresolved: 60g Almond Butter	190	120	-37
+DES-100	Protein Almond Cookies	true	ok	130	118	-9
+DES-101	Protein Vanilla Berry Parfait	true	ok	230	288	25
+DES-102	Protein Ricotta Cheesecake Pot	false	2 unresolved: 80g Ricotta	280	161	-42
+DES-103	Protein Vanilla Ricotta Mousse	false	1 unresolved: 80g Ricotta	240	143	-40
+DES-104	Protein Honey Vanilla Panna Cotta	false	1 unresolved: 5g Gelatine	180	142	-21
+DES-105	Baked Sweet Potato Protein Brownies	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	110	55	-50
+DES-106	Protein Sweet Potato Pie Bites	false	1 unresolved: 60g Light Cream Cheese	100	41	-59
+DES-107	Celebration Protein Chocolate Cake Bites	false	3 unresolved: 1 scoop (30g) Chocolate Protein Powder	150	49	-67
+DES-108	Vanilla Protein Celebration Pudding	true	ok	230	298	30
+DIN-001	Chicken & Veg Stir Fry	false	1 unresolved: 150g Mixed Stir Fry Vegetables	460	442	-4
+DIN-002	Chicken Tikka Masala	false	1 unresolved: 10g Tikka Masala Paste	560	505	-10
+DIN-003	Turkey Burger with Sweet Potato Fries	false	2 unresolved: 5g Cajun Seasoning	540	470	-13
+DIN-004	Beef Chilli Con Carne	false	1 unresolved: 1 Can (400g) Chopped Tomatoes	520	792	52
+DIN-005	Creamy Chicken & Mushroom Pasta	false	1 unresolved: 100ml Light Single Cream	640	686	7
+DIN-006	Homestyle Beef Lasagne	false	4 unresolved: 1 Can (400g) Chopped Tomatoes	560	426	-24
+DIN-007	Healthy Homemade Pepperoni Pizza	false	3 unresolved: 1 Wholemeal Flatbread Base	480	34	-93
+DIN-008	Loaded BBQ Chicken Sweet Potato	false	1 unresolved: 20g BBQ Sauce	460	547	19
+DIN-009	Singapore-Style Chicken Noodles	false	2 unresolved: 80g Beansprouts	480	444	-7
+DIN-010	One-Pan Salmon & Roasted Veg	false	1 unresolved: 100g Baby Potatoes, halved	520	467	-10
+DIN-011	Air Fryer Fried Chicken with Slaw	false	2 unresolved: 30g Wholemeal Breadcrumbs	440	162	-63
+DIN-012	Slow Cooker Beef & Vegetable Stew	false	4 unresolved: 600g Lean Diced Beef	420	25	-94
+DIN-013	Korean-Style Chicken Rice Bowl	true	ok	540	585	8
+DIN-014	Buffalo Chicken Loaded Fries	false	2 unresolved: 200g Potato, cut into fries	560	392	-30
+DIN-015	Sweet & Sour Chicken with Rice	false	1 unresolved: 80g Pineapple Chunks	520	517	-1
+DIN-016	Lamb Rogan Josh	false	2 unresolved: 1 Can (400g) Chopped Tomatoes	560	540	-4
+DIN-017	Pan-Fried Cod with Crushed New Potatoes	true	ok	420	391	-7
+DIN-018	Pork Stir Fry with Noodles	false	2 unresolved: 150g Pork Loin, sliced	500	171	-66
+DIN-019	Butter Chicken	false	2 unresolved: 30g Light Single Cream	580	456	-21
+DIN-020	Air Fryer Salmon with Tenderstem Broccoli	true	ok	520	481	-7
+DIN-021	Slow Cooker Pulled Pork	false	2 unresolved: 800g Pork Shoulder, trimmed	460	19	-96
+DIN-022	Prawn & Chorizo Paella	false	2 unresolved: 80g Chorizo, sliced	520	241	-54
+DIN-023	Beef & Broccoli Stir Fry	false	1 unresolved: 150g Beef Strips (lean)	480	307	-36
+DIN-024	BBQ Pulled Jackfruit Tacos	false	3 unresolved: 200g Jackfruit, drained and shredded	380	15	-96
+DIN-025	Family-Style Chicken Traybake	false	2 unresolved: 600g Baby Potatoes, halved	480	78	-84
+DIN-026	Family Spaghetti Bolognese	false	2 unresolved: 1 Can (400g) Chopped Tomatoes	520	342	-34
+DIN-027	Budget Sausage & Mash	false	3 unresolved: 3 Reduced-Fat Pork Sausages	520	102	-80
+DIN-028	Summer Grilled Chicken & Salad	false	1 unresolved: 5g Balsamic Vinegar	340	365	7
+DIN-029	Winter Beef & Ale Stew	false	4 unresolved: 600g Diced Beef	420	23	-95
+DIN-030	Family Chicken Curry	false	2 unresolved: 2 Cans (800g) Chopped Tomatoes	420	390	-7
+DIN-031	Low Carb Cauliflower Rice Chicken Curry	false	1 unresolved: 10g Curry Powder	320	347	8
+DIN-032	Family BBQ Chicken Skewers	false	2 unresolved: 2 Peppers, chunked	380	389	2
+DIN-033	Slow Cooker Chicken Tikka	false	2 unresolved: 30g Tikka Masala Paste	400	402	1
+DIN-034	Summer Grilled Salmon with Corn Salsa	false	1 unresolved: 80g Sweetcorn (griddled)	460	376	-18
+DIN-035	Budget Toad in the Hole	false	3 unresolved: 8 Pork Sausages	520	122	-77
+DIN-036	Air Fryer Pork Chops with Roasted Veg	false	2 unresolved: 1 Pork Chop (180g), trimmed	460	139	-70
+DIN-037	Meal Prep Turkey Chilli	false	1 unresolved: 2 Cans (800g) Chopped Tomatoes	440	495	13
+DIN-038	Whole Roasted Chicken Family Dinner	false	2 unresolved: 1 Whole Chicken (1.5kg)	520	82	-84
+DIN-039	Prawn Linguine	false	1 unresolved: 80g Dried Linguine	460	243	-47
+DIN-040	Vegan Chickpea & Spinach Curry	false	1 unresolved: 10g Curry Powder	460	483	5
+DIN-041	Low Carb Beef Stir Fry with Courgette Noodles	false	1 unresolved: 150g Beef Strips (lean)	320	103	-68
+DIN-042	High Fibre Veggie Chilli	false	1 unresolved: 1 Can (400g) Chopped Tomatoes	420	640	52
+DIN-043	Budget Bangers & Bean Bake	false	1 unresolved: 3 Pork Sausages	460	206	-55
+DIN-044	Summer Halloumi & Veg Skewers	true	ok	420	623	48
+DIN-046	Family Fish Pie	false	5 unresolved: 500g White Fish Fillet, cubed	460	42	-91
+DIN-047	Slow Cooker Lamb Curry	false	3 unresolved: 600g Lamb Shoulder, diced	520	141	-73
+DIN-048	Air Fryer Turkey Meatloaf	false	2 unresolved: 30g Gluten-Free Breadcrumbs	320	342	7
+DIN-049	Family Chicken Pie	false	3 unresolved: 30g Flour	520	320	-38
+DIN-050	Steak Frites	false	1 unresolved: 200g Potato, cut into fries	560	491	-12
+DIN-051	Budget Chicken & Veg Bake	false	1 unresolved: 150g Potato, chunked	480	197	-59
+DIN-052	Meal Prep Beef & Broccoli Boxes	false	1 unresolved: 600g Beef Strips (lean)	480	299	-38
+DIN-053	Winter Chicken & Leek Pie	false	3 unresolved: 30g Flour	520	250	-52
+DIN-054	Vegan Lentil Bolognese	true	ok	480	499	4
+DIN-055	Honey Garlic Salmon Traybake	true	ok	440	402	-9
+DIN-056	Peri-Peri Chicken with Rice	false	2 unresolved: 15g Peri-Peri Seasoning	460	487	6
+DIN-057	Budget Cottage Pie	false	2 unresolved: 800g Potato, chopped	420	341	-19
+DIN-058	Slow Cooker Beef Brisket	false	3 unresolved: 800g Beef Brisket	440	14	-97
+DIN-059	Vegan Buddha Bowl with Tahini Dressing	true	ok	480	435	-9
+DIN-060	Family Turkey Meatballs & Spaghetti	false	2 unresolved: 1 Can (800g) Chopped Tomatoes	480	254	-47
+DIN-061	Winter Root Vegetable Stew	false	2 unresolved: 2 Parsnips, chopped	260	200	-23
+DIN-062	Air Fryer Cod Goujons with Peas	false	2 unresolved: 30g Panko Breadcrumbs	360	276	-23
+DIN-064	Pork Tenderloin with Apple Sauce	false	1 unresolved: 5g Sage	460	511	11
+DIN-065	Meal Prep Chicken Fajita Bowls	false	3 unresolved: 2 Peppers, sliced	400	378	-5
+DIN-066	Chicken Fried Rice (Takeaway Style)	true	ok	500	599	20
+DIN-067	Budget Vegetable Curry	false	2 unresolved: 1 Can (400g) Chopped Tomatoes	420	570	36
+DIN-068	Family Beef Tacos	false	implausible portion: 150g Reduced-Fat Cheddar, grated (150g)	460	561	22
+DIN-069	Air Fryer Chicken Kiev with Broccoli	false	1 unresolved: 30g Panko Breadcrumbs	460	392	-15
+DIN-070	Lamb Kofta Curry	false	2 unresolved: 150g Lamb Mince (10% fat)	560	286	-49
+DIN-071	Turkey & Vegetable Noodle Stir Fry	false	1 unresolved: 100g Mixed Stir Fry Vegetables	460	338	-27
+DIN-072	BBQ Beef Brisket Burger	false	3 unresolved: 150g Lean Beef Patty (5% fat)	520	14	-97
+DIN-073	Summer Prawn Skewers with Cous Cous	false	1 unresolved: 100g Cooked Cous Cous	400	237	-41
+DIN-074	Family Roast Beef Dinner	false	2 unresolved: 1kg Beef Joint	480	56	-88
+DIN-075	Vegan Mushroom Stroganoff	true	ok	480	707	47
+DIN-076	Meal Prep Chicken Tikka Boxes	false	2 unresolved: 30g Tikka Masala Paste	420	402	-4
+DIN-077	Winter Sausage & Bean Casserole	false	2 unresolved: 6 Pork Sausages	520	187	-64
+DIN-078	Duck Breast with Roasted Vegetables	false	1 unresolved: 1 Duck Breast (180g)	560	184	-67
+DIN-079	Summer Turkey Burgers with Salad	false	1 unresolved: 5g Cajun Seasoning	320	314	-2
+DIN-080	Tempeh Stir Fry with Noodles	false	1 unresolved: 100g Mixed Stir Fry Vegetables	480	455	-5
+DIN-081	Budget Pork & Rice One-Pot	false	2 unresolved: 150g Pork Loin, diced	480	154	-68
+DIN-082	Venison Steak with Root Vegetable Mash	true	ok	420	583	39
+DIN-083	Prawn & Vegetable Curry	false	1 unresolved: 10g Curry Powder	400	353	-12
+DIN-084	Air Fryer Halloumi Fajitas	false	2 unresolved: 10g Fajita Seasoning	520	524	1
+DIN-085	Slow Cooker Chicken Casserole	true	ok	340	47	-86
+DIN-086	Pork Belly Bites with Cabbage	true	ok	560	1043	86
+DIN-087	Meal Prep Vegetable Fried Rice with Tofu	false	1 unresolved: 300g Mixed Frozen Vegetables	400	449	12
+DIN-088	Chicken & Chorizo Jambalaya	false	1 unresolved: 80g Chorizo, sliced	560	403	-28
+DIN-089	Vegan Sweet Potato & Black Bean Chilli	false	1 unresolved: 1 Can (400g) Chopped Tomatoes	320	345	8
+DIN-090	Turkey Escalope with Lemon Butter Sauce	false	2 unresolved: 150g Turkey Escalope	420	141	-66
+DIN-091	Winter Chicken & Barley Stew	true	ok	420	438	4
+DIN-092	Air Fryer Turkey Burgers	false	1 unresolved: 5g Cajun Seasoning	380	426	12
+DIN-093	Family Sausage & Bean Casserole	false	2 unresolved: 12 Pork Sausages	480	97	-80
+DIN-094	Rabbit Stew (Traditional)	false	1 unresolved: 500g Rabbit Pieces	380	63	-83
+DIN-095	Meal Prep Turkey & Sweet Potato Boxes	true	ok	380	377	-1
+DIN-096	Vegan Jackfruit Curry	false	2 unresolved: 200g Jackfruit, drained and shredded	400	214	-46
+DIN-097	Summer BBQ Steak Salad	false	1 unresolved: 5g Balsamic Vinegar	400	423	6
+DIN-098	Pheasant Breast with Braised Cabbage	false	1 unresolved: 1 Pheasant Breast (150g)	380	229	-40
+DIN-099	Vegan Thai Green Curry	false	2 unresolved: 20g Thai Green Curry Paste	480	435	-9
+DIN-100	Family Chicken Fajita Bake	false	3 unresolved: 2 Peppers, sliced	380	348	-8
+DIN-101	Meal Prep Beef Stir Fry Boxes	false	2 unresolved: 600g Beef Strips (lean)	480	248	-48
+DIN-102	Guinea Fowl Roast with Vegetables	false	2 unresolved: 1 Guinea Fowl (1.2kg)	460	82	-82
+DIN-103	Vegan Cauliflower Wings with Rice	false	2 unresolved: 40g Plain Flour	380	206	-46
+DIN-104	Partridge with Braised Lentils	false	1 unresolved: 1 Partridge Breast (120g)	380	226	-41
+DIN-105	Vegan Butternut Squash Risotto	false	3 unresolved: 150g Butternut Squash, diced	420	174	-59
+DIN-106	Ostrich Steak with Sweet Potato Mash	true	ok	420	619	47
+DIN-107	Meal Prep Vegan Chilli Boxes	false	1 unresolved: 2 Cans (800g) Chopped Tomatoes	380	397	4
+DIN-108	Wild Boar Sausage Casserole	false	2 unresolved: 4 Wild Boar Sausages	480	401	-16
+DIN-109	Crab Linguine	false	2 unresolved: 80g Dried Linguine	460	105	-77
+DIN-110	Scallops with Chorizo and Cauliflower Puree	false	2 unresolved: 150g Scallops	380	138	-64
+DIN-112	Family Fish Finger Sandwich Night	false	2 unresolved: 16 Fish Fingers	460	52	-89
+DIN-113	Slow Cooker Venison Casserole	false	3 unresolved: 600g Diced Venison	340	23	-93
+DIN-114	Roast Quail with Root Vegetables	false	2 unresolved: 2 Whole Quail	480	150	-69
+DIN-115	Family Fish Pie with Cheesy Mash	false	3 unresolved: 500g Mixed Fish (Salmon, Cod, Prawns)	460	122	-73
+DIN-116	Baked Cod with Herb Crust	false	1 unresolved: 20g Breadcrumbs	400	285	-29
+DIN-117	Budget Sausage Pasta Bake	false	2 unresolved: 8 Pork Sausages, sliced	520	377	-28
+DIN-118	Meal Prep Pork & Rice Boxes	false	2 unresolved: 600g Pork Loin, diced	440	246	-44
+DIN-119	Winter Chicken & Chorizo Stew	false	2 unresolved: 80g Chorizo, sliced	480	472	-2
+DIN-120	Air Fryer Pork Belly Bites	false	1 unresolved: 5g Chinese Five Spice	560	1087	94
+DIN-121	Vegan Stuffed Peppers	false	1 unresolved: 40g Sweetcorn	360	263	-27
+DIN-122	Family Turkey Curry	false	2 unresolved: 2 Cans (800g) Chopped Tomatoes	400	312	-22
+DIN-123	Slow Cooker Pork & Apple	false	3 unresolved: 800g Pork Shoulder, trimmed	420	14	-97
+DIN-124	Summer Chicken Skewers with Cous Cous	false	1 unresolved: 100g Cooked Cous Cous	460	357	-22
+DIN-125	Meal Prep Chicken Curry Boxes	false	2 unresolved: 2 Cans (800g) Chopped Tomatoes	420	389	-7
+DIN-126	BBQ Turkey Skewers with Corn	false	1 unresolved: 20g BBQ Marinade	360	223	-38
+DIN-127	Winter Lamb Hotpot	false	3 unresolved: 600g Lamb Neck, diced	480	23	-95
+DIN-128	Air Fryer Lamb Chops with Veg	false	2 unresolved: 2 Lamb Chops (approx. 200g)	440	51	-88
+DIN-129	Vegan Sweet Potato Shepherd's Pie	false	2 unresolved: 600g Plant-Based Mince	360	195	-46
+DIN-130	Meal Prep Lamb & Veg Boxes	false	1 unresolved: 300g Mixed Roasted Vegetables	480	526	10
+DIN-131	Summer Chicken Caesar Wraps	false	1 unresolved: 15g Light Caesar Dressing	420	340	-19
+DIN-132	Family Beef Stroganoff	false	2 unresolved: 600g Beef Strips (lean)	540	324	-40
+DIN-133	Air Fryer Chicken Thighs with Rice	true	ok	440	272	-38
+DIN-134	Baked Chicken Thighs with Ratatouille	false	1 unresolved: 100g Aubergine, diced	460	202	-56
+DIN-135	Vegan Pad Thai	false	2 unresolved: 80g Beansprouts	480	329	-31
+DIN-136	Meal Prep Fajita Chicken Fajita Bowls Spicy	false	3 unresolved: 2 Peppers, sliced	420	443	5
+DIN-137	Slow Cooker BBQ Beef Brisket	false	3 unresolved: 800g Beef Brisket	460	11	-98
+DIN-138	Family Chicken Fried Rice	true	ok	440	542	23
+DIN-139	Vegan Aubergine Curry	false	2 unresolved: 200g Aubergine, diced	380	214	-44
+DIN-140	Air Fryer Beef Meatballs with Spaghetti	false	1 unresolved: 80g Dried Spaghetti	560	498	-11
+DIN-141	Winter Chicken & Root Veg Bake	false	1 unresolved: 600g Parsnips, chunked	480	97	-80
+DIN-142	Meal Prep Halloumi Fajita Bowls	false	3 unresolved: 2 Peppers, sliced	460	516	12
+DIN-143	Summer BBQ Halloumi Burger	false	2 unresolved: 1 Burger Bun	460	324	-30
+DIN-144	Family Pork Casserole	false	2 unresolved: 600g Pork Loin, diced	360	27	-92
+DIN-145	Vegan Cauliflower Tikka Masala	false	1 unresolved: 15g Tikka Masala Paste	420	389	-7
+DIN-146	Air Fryer Prawn Skewers with Rice	true	ok	400	337	-16
+DIN-147	Slow Cooker Chicken Tikka Masala	false	3 unresolved: 30g Tikka Masala Paste	440	378	-14
+DIN-148	Family Turkey Meatball Pasta Bake	false	2 unresolved: 1 Can (800g) Chopped Tomatoes	520	540	4
+DIN-149	Meal Prep Cod & Sweet Potato Boxes	false	1 unresolved: 4 Cod Fillets (600g)	360	196	-46
+DIN-150	Meal Prep Steak Fajita Bowls	false	3 unresolved: 2 Peppers, sliced	480	510	6
+DIN-151	Winter Steak & Ale Pie	false	4 unresolved: 600g Diced Beef	540	11	-98
+DIN-152	Family Turkey Fajita Bake	false	3 unresolved: 2 Peppers, sliced	360	272	-24
+DIN-153	Vegan Butternut Squash Curry	false	2 unresolved: 200g Butternut Squash, cubed	400	214	-46
+DIN-154	Air Fryer Butternut Squash & Chicken	false	1 unresolved: 150g Butternut Squash, cubed	380	350	-8
+DIN-155	Slow Cooker Butternut Squash & Lentil Dahl	false	3 unresolved: 400g Butternut Squash, cubed	280	98	-65
+DIN-157	Summer BBQ Chicken Sausages with Corn	false	1 unresolved: 3 Chicken Sausages	420	140	-67
+DIN-158	Family Chorizo & Bean Stew	false	2 unresolved: 150g Chorizo, sliced	380	169	-56
+DIN-159	Meal Prep Halloumi & Quinoa Boxes	false	1 unresolved: 300g Mixed Roasted Vegetables	460	485	5
+DIN-160	Air Fryer Turkey Meatballs with Sweet Potato Mash	true	ok	400	482	21
+DIN-161	Winter Rye Bread Soup Bowl	true	ok	320	406	27
+DIN-162	Family Prawn & Chorizo Paella	false	2 unresolved: 150g Chorizo, sliced	520	225	-57
+DIN-163	Meal Prep Egg Fried Rice Boxes	false	1 unresolved: 300g Mixed Frozen Vegetables	380	376	-1
+DIN-164	Family Beef Enchiladas	false	2 unresolved: 8 Small Tortillas	480	526	10
+DIN-165	Vegan Black Bean Enchiladas	false	2 unresolved: 2 Small Tortillas	420	232	-45
+DIN-166	Meal Prep Chicken Halloumi Skewer Boxes	true	ok	480	615	28
+DIN-167	Vegan Chocolate Oat Porridge Dinner Bowl	false	1 unresolved: 15g Cocoa Powder	360	174	-52
+DIN-168	Bangers & Mash with Onion Gravy	false	3 unresolved: 4 Pork Sausages	580	61	-89
+DIN-169	Vegan Cocoa Black Bean Chilli	false	2 unresolved: 1 Can (400g) Chopped Tomatoes	260	288	11
+DIN-170	Family Bacon & Leek Pasta Bake	false	implausible portion: 100g Reduced-Fat Cheddar, grated (100g)	480	460	-4
+DIN-171	Meal Prep Cinnamon Spiced Chicken & Rice	true	ok	420	458	9
+DIN-172	Family Prawn & Chorizo Pasta	false	2 unresolved: 150g Chorizo, sliced	520	382	-27
+DIN-173	Summer Fruit Smoothie Bowl Dinner	true	ok	320	358	12
+DIN-174	Roast Duck with Orange Sauce	false	2 unresolved: 2 Duck Breasts (300g)	460	92	-80
+DIN-175	Vegan Egg-Free Scramble Dinner Bowl	false	1 unresolved: 2g Turmeric	380	501	32
+DIN-176	Meal Prep Turkey Frittata Boxes	true	ok	260	314	21
+DIN-177	Berry & Balsamic Chicken Salad	false	1 unresolved: 5g Balsamic Vinegar	360	374	4
+DIN-178	Meal Prep Salmon & Egg Boxes	false	1 unresolved: 4 Salmon Fillets (600g)	380	160	-58
+DIN-179	Family Fish Finger Wrap Night	false	3 unresolved: 16 Fish Fingers	460	6	-99
+DIN-180	Roast Pork with Apple Sauce	false	3 unresolved: 800g Pork Loin Joint	460	31	-93
+DIN-181	Vegan Apple & Squash Curry	false	2 unresolved: 150g Butternut Squash, cubed	400	301	-25
+DIN-183	Peanut Chicken Satay Skewers with Rice	true	ok	540	565	5
+DIN-184	Family Steak Fajita Night	false	3 unresolved: 2 Peppers, sliced	360	315	-12
+DIN-185	Peanut Satay Tofu Stir Fry	false	1 unresolved: 100g Mixed Stir Fry Vegetables	540	534	-1
+DIN-186	Slow Cooker Lamb Shanks	false	4 unresolved: 4 Lamb Shanks	420	11	-97
+DIN-187	Honey Garlic Chicken Traybake	false	1 unresolved: 600g Baby Potatoes, halved	460	55	-88
+DIN-188	Meal Prep Honey Garlic Chicken Boxes	true	ok	460	482	5
+DIN-189	Winter Turkey & Cranberry Casserole	false	1 unresolved: 40g Dried Cranberries	320	199	-38
+DIN-190	Crab & Sweetcorn Chowder	false	3 unresolved: 100g White Crab Meat	340	85	-75
+DIN-191	Family Turkey Cranberry Traybake	false	3 unresolved: 1 Turkey Crown (1.2kg)	420	31	-93
+DIN-192	Scallops with Pea Puree	false	1 unresolved: 150g Scallops	340	212	-38
+DIN-193	Budget Rice Cake Crusted Chicken	true	ok	380	443	17
+DIN-194	Chicken & Pea Risotto	true	ok	480	475	-1
+DIN-195	Budget Rice Cake Crumbed Fish with Peas	false	1 unresolved: 150g White Fish Fillet	360	270	-25
+DIN-196	Family Turkey Rasher Carbonara	false	1 unresolved: 12 Turkey Rashers, chopped	520	455	-12
+DIN-197	Meal Prep Peanut Chicken Noodle Boxes	false	implausible portion: 80g Peanut Butter (80g)	540	529	-2
+DIN-198	Roasted Beetroot & Goats Cheese Salmon	false	2 unresolved: 150g Beetroot, cubed	480	400	-17
+DIN-199	Family Marmite Spaghetti (Savoury Umami Pasta)	false	3 unresolved: 320g Dried Spaghetti	480	86	-82
+DIN-200	Meal Prep Goats Cheese Chicken Boxes	false	2 unresolved: 120g Goats Cheese, crumbled	480	443	-8
+DIN-201	Summer Banana & Chicken Curry	false	1 unresolved: 10g Mild Curry Powder	520	507	-2
+DIN-202	Family Chicken & Chorizo Traybake	false	3 unresolved: 150g Chorizo, sliced	540	16	-97
+DIN-203	Vegan Beetroot Risotto	false	3 unresolved: 100g Beetroot, grated	380	130	-66
+DIN-204	Meal Prep Ham & Sweetcorn Rice Boxes	false	2 unresolved: 320g Lean Ham, diced	400	195	-51
+DIN-205	Family Ham & Cheese Pasta Bake	false	1 unresolved: 320g Lean Ham, diced	460	429	-7
+DIN-206	Almond Crusted Chicken with Green Beans	true	ok	420	539	28
+DIN-207	Meal Prep Chorizo Chicken Rice Boxes	false	2 unresolved: 150g Chorizo, sliced	500	360	-28
+DIN-208	Family Turkey Waffle Dinner Bake	false	1 unresolved: 8 Frozen Waffles	480	312	-35
+DIN-209	Almond Crusted Salmon with Green Beans	true	ok	460	576	25
+DIN-210	Pesto Salmon with New Potatoes	true	ok	480	456	-5
+DIN-211	Meal Prep Pesto Chicken Pasta Boxes	true	ok	520	557	7
+DIN-212	Family Spinach & Ricotta Cannelloni	false	4 unresolved: 16 Cannelloni Tubes	420	17	-96
+DIN-213	Meal Prep Chicken Quinoa Spinach Boxes	true	ok	420	429	2
+DIN-214	Meal Prep Salmon Ricotta Boxes	false	2 unresolved: 4 Salmon Fillets (600g)	380	17	-96
+DIN-215	Winter Spinach & Ricotta Soup	false	2 unresolved: 100g Ricotta	220	57	-74
+DIN-216	Meal Prep Chicken Sausage Rice Boxes	false	2 unresolved: 8 Chicken Sausages, sliced	400	130	-67
+DIN-217	Honey Glazed Salmon with Green Beans	true	ok	420	404	-4
+DIN-218	Family Honey Glazed Salmon Traybake	false	2 unresolved: 4 Salmon Fillets (600g)	440	54	-88
+DIN-219	Vegan Sweet Potato & Chickpea Bowl	true	ok	420	478	14
+DIN-220	Meal Prep Turkey Sweet Potato Boxes Deluxe	true	ok	380	367	-3
+DIN-221	Family Sweet Potato Shepherd's Pie	false	1 unresolved: 1 Can (400g) Chopped Tomatoes	420	570	36
+DIN-222	Family Roast Chicken Dinner	false	2 unresolved: 1 Whole Chicken (1.5kg)	480	75	-84
+DIN-223	Celebration Beef Wellington-Style Bake	false	2 unresolved: 600g Beef Fillet	520	29	-94
+DIN-224	Vegan Feast Buddha Bowl	true	ok	480	516	8
+LUN-001	Chicken Caesar Wrap	false	1 unresolved: 15g Light Caesar Dressing	420	334	-20
+LUN-002	Tuna Sweetcorn Sandwich	false	2 unresolved: 30g Sweetcorn	350	308	-12
+LUN-003	Ham & Cheese Toastie	false	2 unresolved: 60g Lean Ham	430	309	-28
+LUN-004	Chicken Burrito Rice Bowl	false	2 unresolved: 50g Sweetcorn	560	567	1
+LUN-005	Beef Burrito Bowl	false	2 unresolved: 50g Sweetcorn	640	704	10
+LUN-006	Creamy Tomato Chicken Pasta	false	1 unresolved: 30g Light Cream Cheese	590	575	-3
+LUN-007	Greek Salad with Grilled Chicken	true	ok	420	453	8
+LUN-008	Salmon & Quinoa Buddha Bowl	true	ok	560	582	4
+LUN-009	Steak & Herb Grain Bowl	false	2 unresolved: 50g Roasted Peppers	580	511	-12
+LUN-010	Loaded Jacket Potato with Tuna Sweetcorn	false	3 unresolved: 1 Medium Baking Potato (250g)	480	237	-51
+LUN-011	Loaded Jacket Potato with Chilli Beef	false	1 unresolved: 1 Medium Baking Potato (250g)	560	504	-10
+LUN-012	Falafel & Hummus Grain Bowl	false	2 unresolved: 6 Falafel (approx. 120g)	480	67	-86
+LUN-013	Prawn & Avocado Rice Bowl	true	ok	480	540	13
+LUN-014	Turkey Club Sandwich	false	2 unresolved: 2 Turkey Rashers, cooked	440	337	-23
+LUN-015	Halloumi & Roasted Veg Grain Bowl	false	1 unresolved: 5g Balsamic Vinegar	500	524	5
+LUN-016	Pork Souvlaki Pitta	false	2 unresolved: 150g Pork Loin, diced	440	48	-89
+LUN-017	Lamb Kofta Cous Cous Salad	false	2 unresolved: 150g Lamb Mince (10% fat)	560	36	-94
+LUN-018	Cod & Sweetcorn Chowder	false	3 unresolved: 100g Potato, diced	380	230	-39
+LUN-019	Egg Fried Rice with Prawns	true	ok	460	476	3
+LUN-020	Tempeh & Veg Stir Fry Bowl	false	1 unresolved: 100g Mixed Stir Fry Vegetables	480	539	12
+LUN-021	Chicken Caesar Salad Bowl	false	2 unresolved: 15g Light Caesar Dressing	400	298	-25
+LUN-022	Turkey Meatball Sub	false	2 unresolved: 1 Sub Roll	520	265	-49
+LUN-023	Steak Fajita Bowl	false	1 unresolved: 10g Fajita Seasoning	540	597	11
+LUN-024	White Fish Tacos	false	1 unresolved: 150g White Fish Fillet, cubed	380	131	-66
+LUN-025	Egg & Avocado Salad Bowl	true	ok	380	370	-3
+LUN-026	Budget Egg Fried Rice	true	ok	420	420	0
+LUN-027	Meal Prep Chicken & Rice Boxes	true	ok	440	454	3
+LUN-028	Summer Prawn & Mango Salad	true	ok	320	282	-12
+LUN-029	Budget Beans on Toast with Egg	true	ok	380	408	7
+LUN-030	High-Fibre Lentil & Veg Soup	false	1 unresolved: 800ml Vegetable Stock	260	134	-48
+LUN-031	Low Carb Chicken Caesar Lettuce Wraps	false	1 unresolved: 15g Light Caesar Dressing	320	297	-7
+LUN-032	Family Chicken Fajita Wraps	false	4 unresolved: 8 Wholemeal Wraps	380	248	-35
+LUN-033	Budget Cheese & Onion Toastie	false	1 unresolved: 5g Butter	420	361	-14
+LUN-034	High-Fibre Chickpea Salad	true	ok	320	364	14
+LUN-035	Tuna Pasta Salad	false	2 unresolved: 50g Sweetcorn	420	461	10
+LUN-036	Budget Vegetable Fried Rice	false	1 unresolved: 80g Mixed Frozen Vegetables	340	252	-26
+LUN-037	High-Protein Cottage Cheese Jacket Potato	false	1 unresolved: 1 Medium Baking Potato (250g)	380	138	-64
+LUN-038	Lamb & Feta Salad Bowl	true	ok	460	471	2
+LUN-039	Grain Bowl with Roasted Butternut Squash	false	1 unresolved: 150g Butternut Squash, cubed	420	334	-20
+LUN-040	Chicken & Quinoa Power Bowl	true	ok	540	591	9
+LUN-041	Budget Cheese & Beans Jacket Potato	false	1 unresolved: 1 Medium Baking Potato (250g)	460	309	-33
+LUN-042	Family Chicken Noodle Soup	true	ok	280	286	2
+LUN-043	Meal Prep Turkey & Veg Rice Boxes	false	1 unresolved: 300g Mixed Stir Fry Vegetables	400	325	-19
+LUN-044	Pesto Chicken Pasta Salad	true	ok	560	636	14
+LUN-045	Budget Beans & Rice Bowl	true	ok	340	426	25
+LUN-046	Smoked Mackerel Salad	false	1 unresolved: 40g Beetroot, sliced	420	352	-16
+LUN-047	Chicken & Sweetcorn Wrap	false	2 unresolved: 30g Sweetcorn	400	289	-28
+LUN-048	BBQ Pulled Chicken Sandwich	false	2 unresolved: 30g BBQ Sauce	400	254	-36
+LUN-049	Falafel Salad Bowl	false	1 unresolved: 6 Falafel (approx. 120g)	400	68	-83
+LUN-050	Cajun Chicken Rice Bowl	false	2 unresolved: 50g Sweetcorn	480	455	-5
+LUN-051	Halloumi Wrap with Sweet Chilli	true	ok	460	428	-7
+LUN-052	Prawn Cocktail Salad	false	2 unresolved: 15g Light Mayo	220	136	-38
+LUN-053	Turkey & Avocado Sandwich	false	1 unresolved: 5g Mustard	360	302	-16
+LUN-054	Cod & Chips (Healthier Version)	false	2 unresolved: 30g Panko Breadcrumbs	480	283	-41
+LUN-056	BBQ Halloumi Salad	false	1 unresolved: 10g Balsamic Glaze	380	345	-9
+LUN-057	Chicken Tikka Wrap	false	1 unresolved: 10g Tikka Masala Paste	420	359	-15
+LUN-058	Steak Cous Cous Bowl	false	1 unresolved: 100g Cooked Cous Cous	540	419	-22
+LUN-059	Budget Tuna Jacket Potato	false	2 unresolved: 1 Medium Baking Potato (250g)	340	157	-54
+LUN-060	Chicken Noodle Salad	true	ok	440	408	-7
+LUN-061	Meal Prep Salmon & Quinoa Boxes	false	1 unresolved: 4 Salmon Fillets (600g)	460	190	-59
+LUN-062	Chicken Tortilla Soup	false	3 unresolved: 1 Can (400g) Chopped Tomatoes	300	293	-2
+LUN-063	High Fibre Bean & Veg Salad	true	ok	340	397	17
+LUN-064	Roast Chicken & Stuffing Sandwich	false	2 unresolved: 30g Stuffing	380	313	-18
+LUN-065	Spicy Chickpea Wrap	true	ok	380	348	-8
+LUN-066	Turkey Meatball Sub Bowl	true	ok	440	491	12
+LUN-067	Egg & Spinach Wrap	false	1 unresolved: 10g Hot Sauce	340	238	-30
+LUN-068	Chicken Shawarma Rice Bowl	false	1 unresolved: 5g Shawarma Seasoning	460	466	1
+LUN-069	Budget Egg Salad Sandwich	false	1 unresolved: 10g Light Mayo	340	293	-14
+LUN-070	Cottage Cheese & Pineapple Salad	false	1 unresolved: 80g Pineapple, diced	300	265	-12
+LUN-071	Meal Prep Lentil & Veg Curry Boxes	false	2 unresolved: 2 Cans (800g) Chopped Tomatoes	420	229	-45
+LUN-072	Turkey & Sweetcorn Rice Bowl	false	1 unresolved: 50g Sweetcorn	440	424	-4
+LUN-073	Budget Lentil Soup	false	1 unresolved: 800ml Vegetable Stock	260	131	-50
+LUN-074	Chorizo & Chickpea Salad	false	1 unresolved: 50g Chorizo, diced	460	263	-43
+LUN-075	Prawn & Mango Rice Bowl	true	ok	420	368	-12
+LUN-076	Chicken Pesto Wrap	true	ok	440	395	-10
+LUN-077	Family Chicken & Sweetcorn Soup	false	2 unresolved: 200g Sweetcorn	260	254	-2
+LUN-078	Duck & Hoisin Wrap	false	1 unresolved: 1 Duck Breast (150g), sliced	480	133	-72
+LUN-079	Meal Prep Beef Chilli Boxes	false	1 unresolved: 2 Cans (800g) Chopped Tomatoes	480	645	34
+LUN-080	White Fish & New Potato Salad	false	1 unresolved: 150g White Fish Fillet	400	221	-45
+LUN-081	Budget Chickpea Curry Wrap	false	1 unresolved: 10g Curry Powder	380	357	-6
+LUN-082	Venison & Cranberry Salad	false	2 unresolved: 20g Dried Cranberries	380	412	8
+LUN-083	Family Sausage Pasta Bake	false	3 unresolved: 8 Pork Sausages, sliced	520	297	-43
+LUN-084	Air Fryer Salmon Salad	true	ok	420	417	-1
+LUN-085	Budget Pasta with Tomato & Herbs	true	ok	400	442	11
+LUN-086	Pork Souvlaki Salad Bowl	false	1 unresolved: 150g Pork Loin, cubed	420	189	-55
+LUN-087	Budget Chicken & Sweetcorn Sandwich	false	2 unresolved: 30g Sweetcorn	380	313	-18
+LUN-088	Halloumi & Chickpea Salad	true	ok	460	665	45
+LUN-089	Meal Prep Turkey Meatball Boxes	false	1 unresolved: 1 Can (800g) Chopped Tomatoes	420	373	-11
+LUN-090	Duck Salad with Orange Dressing	false	3 unresolved: 150g Duck Breast, sliced	420	97	-77
+LUN-091	Budget Pasta Salad	false	2 unresolved: 50g Sweetcorn	400	341	-15
+LUN-092	Chicken & Halloumi Skewer Salad	true	ok	480	526	10
+LUN-093	Meal Prep Chickpea & Veg Curry Boxes	false	2 unresolved: 2 Cans (800g) Chopped Tomatoes	400	469	17
+LUN-094	Rabbit & Vegetable Broth	false	1 unresolved: 300g Rabbit Pieces	260	69	-73
+LUN-095	Turkey Caesar Salad	false	1 unresolved: 15g Light Caesar Dressing	340	222	-35
+LUN-096	Vegan Falafel Grain Bowl	false	1 unresolved: 6 Falafel (approx. 120g)	460	166	-64
+LUN-097	Turkey Ham Salad Box	false	1 unresolved: 80g Turkey Ham, sliced	220	107	-51
+LUN-098	Pheasant & Cranberry Salad	false	3 unresolved: 1 Pheasant Breast (150g), sliced	380	97	-74
+LUN-099	Meal Prep Egg & Bacon Muffin Tin Batch	false	1 unresolved: Salt and Pepper, to taste	150	111	-26
+LUN-100	Venison Burger with Salad	false	1 unresolved: 150g Venison Mince	380	176	-54
+LUN-101	Budget Cheese & Tomato Toastie	false	2 unresolved: 1 Tomato, sliced	400	309	-23
+LUN-102	Smoked Mackerel Jacket Potato	false	1 unresolved: 1 Medium Baking Potato (250g)	460	215	-53
+LUN-103	Meal Prep Salmon Teriyaki Boxes	false	1 unresolved: 4 Salmon Fillets (600g)	460	241	-48
+LUN-104	Crayfish & Avocado Salad	false	1 unresolved: 150g Cooked Crayfish Tails	340	218	-36
+LUN-105	Budget Cheese & Onion Pasty Alternative Bowl	false	1 unresolved: 150g Potato, diced	380	227	-40
+LUN-106	Ostrich Steak Salad	false	1 unresolved: 5g Balsamic Vinegar	340	419	23
+LUN-108	Scallop & Pea Risotto	false	2 unresolved: 150g Scallops	460	180	-61
+LUN-109	Budget Beans & Cheese Baked Potato	false	1 unresolved: 1 Medium Baking Potato (250g)	480	309	-36
+LUN-110	Wild Boar Ragu Pasta	false	1 unresolved: 150g Wild Boar Mince	560	407	-27
+LUN-111	Crab Salad Roll	false	3 unresolved: 100g White Crab Meat	340	3	-99
+LUN-112	Quail & Fig Salad	false	2 unresolved: 1 Whole Quail (approx. 150g)	420	97	-77
+LUN-113	Meal Prep Cottage Cheese & Fruit Pots	false	1 unresolved: 320g Pineapple, diced	220	183	-17
+LUN-114	Turkey & Cranberry Sandwich	false	1 unresolved: 10g Cranberry Sauce	340	265	-22
+LUN-115	Meal Prep Turkey & Quinoa Boxes	true	ok	400	361	-10
+LUN-116	Cod & Sweet Potato Bowl	true	ok	400	368	-8
+LUN-117	Ham & Egg Salad Box	false	1 unresolved: 80g Sliced Ham	320	240	-25
+LUN-118	Chicken & Sweetcorn Chowder	false	2 unresolved: 100g Potato, diced	380	333	-12
+LUN-119	Meal Prep Steak & Veg Boxes	false	1 unresolved: 300g Mixed Vegetables	500	554	11
+LUN-120	Beef & Blue Cheese Salad	false	1 unresolved: 20g Blue Cheese, crumbled	420	412	-2
+LUN-121	Budget Rice & Bean Bowl	true	ok	360	426	18
+LUN-122	Chicken & Bacon Salad	true	ok	380	419	10
+LUN-123	Budget Cheese & Pickle Sandwich	false	1 unresolved: 15g Pickle	360	309	-14
+LUN-125	Meal Prep Egg & Chickpea Salad Boxes	true	ok	380	568	49
+LUN-126	Lamb & Mint Salad	true	ok	400	388	-3
+LUN-127	Meal Prep Fajita Rice Boxes	false	3 unresolved: 2 Peppers, sliced	420	443	5
+LUN-128	Chicken Caprese Salad	false	1 unresolved: 60g Mini Mozzarella Balls	460	346	-25
+LUN-129	Budget Beans & Rice with Cheese	true	ok	420	506	20
+LUN-130	Sweet Potato & Black Bean Wrap	true	ok	420	333	-21
+LUN-131	Meal Prep Beef & Sweetcorn Rice Boxes	false	1 unresolved: 300g Sweetcorn	480	577	20
+LUN-132	Tuna & Bean Salad	false	1 unresolved: 150g Cannellini Beans, drained	360	262	-27
+LUN-133	Meal Prep Prawn & Rice Boxes	false	1 unresolved: 300g Mixed Stir Fry Vegetables	420	361	-14
+LUN-134	Chicken & Roasted Veg Cous Cous	false	1 unresolved: 100g Cooked Cous Cous	460	374	-19
+LUN-135	Budget Cheese Omelette Sandwich	true	ok	420	412	-2
+LUN-136	Salmon & Cucumber Salad	true	ok	420	416	-1
+LUN-137	Meal Prep Chicken Caesar Boxes	false	1 unresolved: 60g Light Caesar Dressing	360	298	-17
+LUN-138	Prawn & Avocado Wrap	false	1 unresolved: 1 Gluten-Free Wrap	420	254	-40
+LUN-139	Budget Rice & Egg Bowl	true	ok	420	388	-8
+LUN-140	Turkey & Halloumi Skewer Bowl	true	ok	480	586	22
+LUN-141	Budget Apple & Cheese Sandwich	true	ok	360	403	12
+LUN-142	Turkey Meatball Salad	true	ok	380	401	6
+LUN-143	Meal Prep Bean & Rice Boxes	true	ok	360	473	31
+LUN-144	Chicken & Chorizo Rice Bowl	false	1 unresolved: 40g Chorizo, sliced	540	372	-31
+LUN-145	Meal Prep Egg & Avocado Boxes	false	1 unresolved: 2 Avocados, sliced	320	152	-52
+LUN-146	Cod & Chorizo Traybake Salad	false	1 unresolved: 30g Chorizo, diced	380	139	-63
+LUN-147	Meal Prep Cod & Rice Boxes	false	1 unresolved: 4 Cod Fillets (600g)	380	265	-30
+LUN-148	Steak Cobb Salad	false	1 unresolved: 20g Blue Cheese, crumbled	460	420	-9
+LUN-149	Budget Pasta with Peas & Cheese	true	ok	460	519	13
+LUN-150	Turkey Meatball Sub Salad	true	ok	360	356	-1
+LUN-151	Meal Prep Steak Cobb Boxes	false	1 unresolved: 80g Blue Cheese, crumbled	420	395	-6
+LUN-152	Roasted Squash & Feta Salad	false	1 unresolved: 150g Butternut Squash, cubed	380	232	-39
+LUN-154	Chicken Sausage Grain Bowl	false	1 unresolved: 2 Chicken Sausages, sliced	420	216	-49
+LUN-155	Budget Jacket Potato with Butter	false	2 unresolved: 1 Medium Baking Potato (250g)	420	121	-71
+LUN-156	Chorizo & Chickpea Stew Bowl	false	1 unresolved: 50g Chorizo, diced	420	311	-26
+LUN-157	Meal Prep Halloumi Salad Boxes	true	ok	380	427	12
+LUN-158	Turkey Patty Salad Bowl	true	ok	340	393	16
+LUN-159	Meal Prep Rye Bread & Egg Boxes	false	1 unresolved: 2 Avocados, sliced	360	195	-46
+LUN-160	Prawn Cocktail Wrap	false	2 unresolved: 15g Light Mayo	400	218	-45
+LUN-161	Meal Prep Sweetcorn Fritter Boxes	false	2 unresolved: 200g Sweetcorn	260	80	-69
+LUN-162	Beef Taco Salad	false	1 unresolved: 5g Taco Seasoning	420	515	23
+LUN-163	Meal Prep Beef Taco Rice Boxes	false	1 unresolved: 20g Taco Seasoning	520	721	39
+LUN-164	Chicken & Halloumi Grain Bowl	true	ok	460	485	5
+LUN-165	Budget Cocoa Overnight Oats to Go	false	1 unresolved: 40g Cocoa Powder	380	157	-59
+LUN-166	Sausage & Mustard Mash Bowl	false	4 unresolved: 3 Pork Sausages	540	0	-100
+LUN-167	Meal Prep Cocoa Overnight Oats to Go	false	1 unresolved: 40g Cocoa Powder	320	153	-52
+LUN-168	Turkey Bacon Club Salad	false	1 unresolved: 2 Turkey Rashers	360	282	-22
+LUN-169	Meal Prep Cinnamon Porridge Cups	true	ok	300	183	-39
+LUN-170	Prawn & Chorizo Rice Bowl	false	2 unresolved: 100g Cooked Prawns	460	207	-55
+LUN-171	Meal Prep Fruit Smoothie Packs	false	1 unresolved: 4 Bananas, sliced and frozen	140	50	-64
+LUN-172	Duck & Orange Salad	false	2 unresolved: 1 Duck Breast (150g), sliced	440	97	-78
+LUN-173	Meal Prep Scrambled Egg Toast Boxes	true	ok	380	199	-48
+LUN-174	Turkey Frittata Salad Box	true	ok	320	357	12
+LUN-175	Meal Prep Yoghurt & Berry Pots	true	ok	160	216	35
+LUN-176	Salmon & Egg Salad	false	1 unresolved: 100g Smoked Salmon	340	168	-51
+LUN-177	Meal Prep Cereal Bar Snack Boxes	false	2 unresolved: 4 Cereal Bars	220	0	-100
+LUN-178	Pork & Apple Salad	false	1 unresolved: 150g Pork Loin, sliced	360	191	-47
+LUN-179	Meal Prep Pork Mince & Rice Boxes	false	2 unresolved: 600g Pork Mince	480	202	-58
+LUN-181	Meal Prep Peanut Butter Banana Overnight Oats	false	1 unresolved: 2 Bananas, sliced	460	244	-47
+LUN-182	Steak Taco Bowl	true	ok	580	644	11
+LUN-183	Budget Peanut Butter Banana Wrap	true	ok	420	311	-26
+LUN-184	Lamb & Mint Yoghurt Salad	true	ok	400	317	-21
+LUN-185	Meal Prep Honey Glazed Chicken Boxes	true	ok	460	478	4
+LUN-187	Budget Honey Mustard Chicken Sandwich	true	ok	360	347	-4
+LUN-188	Crab Linguine Light	false	2 unresolved: 80g Dried Linguine	440	105	-76
+LUN-189	Meal Prep Chicken Sandwiches Batch	true	ok	360	248	-31
+LUN-190	Scallop & Chorizo Salad	false	2 unresolved: 100g Scallops	340	97	-71
+LUN-191	Meal Prep Rice Cake Snack Boxes	false	1 unresolved: 4 Apples	260	87	-67
+LUN-192	Pea & Ham Soup	false	1 unresolved: 150g Lean Ham, diced	260	160	-38
+LUN-193	Meal Prep Chicken Pea Rice Boxes	true	ok	440	504	15
+LUN-194	Turkey Club Wrap	false	2 unresolved: 2 Turkey Rashers	440	251	-43
+LUN-195	Meal Prep Peanut Butter Oats Batch	false	implausible portion: 80g Peanut Butter (80g)	440	244	-45
+LUN-196	Beetroot & Feta Salad with Chicken	false	1 unresolved: 60g Cooked Beetroot, diced	440	424	-4
+LUN-197	Meal Prep Marmite Cheese Toastie Packs	false	1 unresolved: 40g Marmite	380	170	-55
+LUN-198	Goats Cheese & Beetroot Salad	false	2 unresolved: 50g Goats Cheese, crumbled	340	97	-71
+LUN-199	Meal Prep Banana Porridge Cups	false	1 unresolved: 4 Bananas, sliced	320	141	-56
+LUN-200	Chicken Chorizo Rice Bowl Deluxe	false	1 unresolved: 40g Chorizo, sliced	560	372	-34
+LUN-201	Meal Prep Goats Cheese Muffin Boxes	false	1 unresolved: 80g Goats Cheese, crumbled	220	152	-31
+LUN-202	Ham & Sweetcorn Jacket Potato	false	3 unresolved: 1 Medium Baking Potato (250g)	460	80	-83
+LUN-203	Meal Prep Cereal & Banana Snack Boxes	false	2 unresolved: 4 Cereal Bars	240	0	-100
+LUN-204	Almond Butter Chicken Satay Bowl	false	1 unresolved: 20g Almond Butter	540	448	-17
+LUN-205	Meal Prep Chicken Chorizo Egg Boxes	false	1 unresolved: 80g Chorizo, diced	260	205	-21
+LUN-206	Turkey Waffle Club Sandwich	false	3 unresolved: 2 Frozen Waffles	460	114	-75
+LUN-207	Meal Prep Almond Butter Rice Cake Snacks	false	1 unresolved: 80g Almond Butter	220	19	-91
+LUN-208	Pesto Chicken Salad	true	ok	400	267	-33
+LUN-209	Meal Prep Egg Pesto Boxes	true	ok	260	154	-41
+LUN-210	Ricotta & Spinach Stuffed Chicken	false	1 unresolved: 40g Ricotta	440	374	-15
+LUN-211	Meal Prep Vanilla Protein Oats Batch	true	ok	420	239	-43
+LUN-212	Smoked Salmon & Ricotta Salad	false	2 unresolved: 80g Smoked Salmon	320	97	-70
+LUN-213	Budget Spinach & Egg Rice Bowl	true	ok	380	359	-6
+LUN-215	Meal Prep Honey Yoghurt Pots	true	ok	120	176	47
+LUN-216	Chicken Sweet Potato Grain Bowl	true	ok	420	474	13
+LUN-217	Meal Prep Chicken Sweet Potato Boxes	true	ok	380	446	17
+LUN-218	Turkey & Sweet Potato Bowl	true	ok	420	402	-4
+LUN-219	Meal Prep Sweet Potato Wedge Boxes	false	1 unresolved: 4 Sweet Potatoes, cut into wedges	180	50	-72
+LUN-220	Chicken & Quinoa Power Salad	true	ok	460	465	1
+LUN-221	Salmon Grain Bowl	true	ok	480	534	11
+SNK-001	Vanilla Greek Yoghurt & Honey	true	ok	140	173	24
+SNK-002	Pineapple Cottage Cheese Bowl	false	1 unresolved: 80g Pineapple Chunks	170	126	-26
+SNK-003	Chocolate Protein Pudding	false	1 unresolved: 1 scoop (30g) Chocolate Protein Powder	210	146	-30
+SNK-004	Double Chocolate Protein Cookies	false	2 unresolved: 2 scoops (60g) Chocolate Protein Powder	180	75	-58
+SNK-005	No-Bake Peanut Butter Energy Balls	false	1 unresolved: 20g Dark Chocolate Chips	130	68	-48
+SNK-006	Apple & Peanut Butter	true	ok	180	182	1
+SNK-007	Vanilla Protein Shake	true	ok	240	218	-9
+SNK-008	Salt & Vinegar Rice Cakes with Cottage Cheese	true	ok	140	145	4
+SNK-009	Homemade High-Protein Snack Box	true	ok	260	280	8
+SNK-010	Chocolate Peanut Butter Protein Shake	false	1 unresolved: 1 scoop (30g) Chocolate Protein Powder	400	214	-46
+SNK-011	Turkey & Cheese Roll-Ups	false	2 unresolved: 40g Reduced-Fat Cheese Slices	190	91	-52
+SNK-012	Hummus & Veggie Sticks	false	1 unresolved: 80g Pepper Strips	180	128	-29
+SNK-013	Protein Flapjack	false	1 unresolved: 60g Butter	190	55	-71
+SNK-014	Boiled Eggs & Cherry Tomatoes	true	ok	170	157	-8
+SNK-015	Dark Chocolate & Almond Rice Cakes	false	1 unresolved: 15g Dark Chocolate Almond Butter	170	77	-55
+SNK-016	Edamame with Sea Salt	true	ok	150	182	21
+SNK-017	Protein Overnight Chia Pot	true	ok	280	309	10
+SNK-018	Budget Peanut Butter Banana Toast	true	ok	260	215	-17
+SNK-019	Protein Cookie Dough Balls	false	1 unresolved: 20g Dark Chocolate Chips	150	85	-43
+SNK-020	Cheese & Crackers	true	ok	260	269	3
+SNK-021	Beef Jerky & Almonds	false	1 unresolved: 30g Beef Jerky	220	116	-47
+SNK-022	Frozen Yoghurt Berry Bites	true	ok	60	69	15
+SNK-023	Protein Yoghurt with Granola & Seeds	true	ok	260	369	42
+SNK-024	Spiced Roasted Chickpeas	true	ok	140	194	39
+SNK-025	Protein Popcorn	true	ok	110	26	-76
+SNK-026	Turkey Jerky & Fruit Mix	false	1 unresolved: 30g Turkey Jerky	180	94	-48
+SNK-027	Mixed Nuts & Dried Fruit	true	ok	220	200	-9
+SNK-028	Protein Hot Chocolate	false	2 unresolved: 1 scoop (30g) Chocolate Protein Powder	250	105	-58
+SNK-029	Smoked Salmon & Cucumber Bites	false	1 unresolved: 60g Smoked Salmon	110	13	-88
+SNK-030	Cucumber & Tuna Bites	false	1 unresolved: 10g Light Mayo	150	169	13
+SNK-031	Protein Rice Pudding Pot	true	ok	340	319	-6
+SNK-032	Chocolate Rice Cakes	true	ok	150	84	-44
+SNK-033	Cheese String & Grapes	false	2 unresolved: 2 Cheese Strings	200	0	-100
+SNK-034	Chicken Skewer Bites	true	ok	220	306	39
+SNK-035	Overnight Chia & Mango Pot	true	ok	190	224	18
+SNK-036	Oatcakes with Cottage Cheese & Chives	false	1 unresolved: 3 Oatcakes	220	86	-61
+SNK-037	Peanut Butter Protein Shake	true	ok	380	327	-14
+SNK-038	Babybel & Ham Snack Box	false	2 unresolved: 2 Babybel Light	180	0	-100
+SNK-039	Baked Sweet Potato Crisps	true	ok	110	78	-29
+SNK-040	Protein Banana Bread Slice	false	2 unresolved: 3 Ripe Bananas, mashed	160	43	-73
+SNK-041	Prawn Rice Cakes	false	2 unresolved: 60g Cooked Prawns	160	77	-52
+SNK-042	Salted Popcorn & Dark Chocolate Mix	false	1 unresolved: 10g Dark Chocolate Chips	160	22	-86
+SNK-043	Turkey & Cucumber Roll-Ups	false	1 unresolved: 5g Mustard	100	97	-3
+SNK-044	Baked Parmesan Kale Crisps	true	ok	80	61	-24
+SNK-045	Chocolate Protein Milkshake	false	1 unresolved: 1 scoop (30g) Chocolate Protein Powder	340	231	-32
+SNK-046	Roasted Edamame Beans	true	ok	160	148	-7
+SNK-047	Ham & Pickle Rice Cakes	false	2 unresolved: 40g Sliced Ham	130	77	-41
+SNK-048	Deviled Eggs	false	2 unresolved: 15g Light Mayo	160	146	-9
+SNK-049	Cottage Cheese & Chive Dip with Veg Sticks	true	ok	180	172	-4
+SNK-050	Salami & Melon Bites	false	2 unresolved: 30g Salami, sliced	160	0	-100
+SNK-051	Peanut Butter Stuffed Dates	false	1 unresolved: 4 Medjool Dates, pitted	230	118	-49
+SNK-052	Cherry Tomato & Mozzarella Skewers	false	1 unresolved: 60g Mini Mozzarella Balls	200	60	-70
+SNK-053	Air-Popped Popcorn with Nutritional Yeast	false	1 unresolved: 5g Nutritional Yeast	120	22	-82
+SNK-054	Pickled Onion Cheese Bites	false	1 unresolved: 20g Pickled Onions	150	161	7
+SNK-055	Chicken Liver Pate on Oatcakes	false	2 unresolved: 30g Chicken Liver Pate	220	0	-100
+SNK-056	Smoked Mackerel Pate on Oatcakes	false	2 unresolved: 20g Light Cream Cheese	280	123	-56
+SNK-057	Cracker & Ham Stacks	false	1 unresolved: 60g Sliced Ham	220	108	-51
+SNK-059	Scallop Ceviche Bites	false	1 unresolved: 100g Scallops, thinly sliced	110	6	-95
+SNK-060	Mini Fish Cakes	false	3 unresolved: 150g White Fish, cooked and flaked	220	36	-84
+SNK-061	Pickled Egg Snack	true	ok	140	143	2
+SNK-062	Marmite Rice Cakes	false	1 unresolved: 10g Marmite	90	77	-14
+SNK-063	Cheese & Grape Skewers	false	1 unresolved: 80g Grapes	180	161	-11
+SNK-064	Pepperoni & Cheese Bites	false	1 unresolved: 30g Turkey Pepperoni	220	161	-27
+SNK-065	Apple & Cheese Snack Box	true	ok	180	214	19
+SNK-066	Bacon Wrapped Dates	false	1 unresolved: 4 Medjool Dates, pitted	240	75	-69
+SNK-068	Lamb Kofta Bites	false	1 unresolved: 100g Lamb Mince (10% fat)	240	90	-62
+SNK-069	Chicken Sausage Bites	false	1 unresolved: 2 Chicken Sausages, sliced into rounds	180	0	-100
+SNK-070	Beef Jerky & Apple	false	1 unresolved: 30g Beef Jerky	190	94	-51
+SNK-071	Roasted Chickpea & Pumpkin Seed Mix	true	ok	190	242	27
+SNK-072	Smoked Haddock Pate Bites	false	2 unresolved: 20g Light Cream Cheese	260	54	-79
+SNK-073	Salmon & Cream Cheese Rice Cakes	false	2 unresolved: 40g Smoked Salmon	170	77	-55
+SNK-074	Mini Meatballs Snack Box	true	ok	220	335	52
+SNK-075	Grilled Halloumi Sticks	true	ok	260	257	-1
+SNK-076	Pork Scratching Alternative - Baked Pork Crisps	false	1 unresolved: 50g Pork Rind	260	0	-100
+SNK-077	Chorizo Bites	false	1 unresolved: 50g Chorizo, sliced	220	0	-100
+SNK-078	Cod Goujon Bites	false	1 unresolved: 20g Panko Breadcrumbs	220	170	-23
+SNK-079	Blue Cheese & Grape Bites	false	2 unresolved: 30g Blue Cheese, crumbled	180	0	-100
+SNK-080	Butternut Squash Soup Shots	false	2 unresolved: 200g Butternut Squash, cubed	70	2	-97
+SNK-081	Lentil Dahl Soup Shot	false	1 unresolved: 150g Leftover Lentil Dahl	140	0	-100
+SNK-082	Grilled Corn Bites	true	ok	150	97	-35
+SNK-083	Chorizo Crisps	false	1 unresolved: 50g Chorizo, thinly sliced	220	0	-100
+SNK-084	Turkey Patty Bites	true	ok	220	236	7
+SNK-085	Prawn Cocktail Bites	false	2 unresolved: 10g Light Mayo	140	85	-39
+SNK-086	Beef Taco Bites	false	1 unresolved: 5g Taco Seasoning	220	280	27
+SNK-087	Chicken Skewer Halloumi Bites	true	ok	220	260	18
+SNK-088	Mini Sausage Rolls (Lean)	false	2 unresolved: 150g Turkey Sausage Meat	200	7	-96
+SNK-089	Bacon Wrapped Asparagus	true	ok	160	91	-43
+SNK-090	Frozen Berry Bites	true	ok	50	50	0
+SNK-091	Orange & Almond Bites	false	1 unresolved: 1 Orange, segmented	150	87	-42
+SNK-092	Greek Yoghurt & Honeycomb Pot	false	1 unresolved: 10g Honeycomb Pieces	150	146	-3
+SNK-093	Smoked Salmon Blinis	false	3 unresolved: 4 Mini Blinis	180	0	-100
+SNK-094	Apple & Cinnamon Bites	true	ok	90	101	12
+SNK-095	Peanut Butter Banana Rice Cakes	true	ok	220	218	-1
+SNK-096	Steak Bites with Salsa	true	ok	220	217	-1
+SNK-097	Honey Roasted Chickpeas	true	ok	170	347	104
+SNK-098	Turkey & Cranberry Bites	false	1 unresolved: 10g Cranberry Sauce	110	91	-17
+SNK-099	Crab Cucumber Cups	false	1 unresolved: 60g White Crab Meat	90	13	-86
+SNK-100	Scallop Bites with Lemon	false	1 unresolved: 100g Scallops	170	45	-74
+SNK-101	Minted Pea & Ham Cups	false	1 unresolved: 40g Lean Ham, diced	110	67	-39
+SNK-102	Turkey Rasher Crisps	false	1 unresolved: 3 Turkey Rashers	140	0	-100
+SNK-103	Beetroot Hummus with Veg Sticks	false	1 unresolved: 100g Cooked Beetroot	150	116	-23
+SNK-104	Goats Cheese & Cracker Bites	false	1 unresolved: 40g Goats Cheese, sliced	260	108	-58
+SNK-105	Chorizo & Cheese Bites	false	1 unresolved: 30g Chorizo, sliced	220	121	-45
+SNK-106	Ham & Sweetcorn Rice Cakes	false	2 unresolved: 40g Lean Ham, chopped	140	77	-45
+SNK-107	Almond Butter Apple Slices	false	1 unresolved: 15g Almond Butter	180	94	-48
+SNK-108	Turkey Waffle Bites	false	1 unresolved: 1 Frozen Waffle, cut into strips	180	34	-81
+SNK-109	Pesto Cherry Tomato Bites	true	ok	100	17	-83
+SNK-110	Ricotta & Honey Toast Bites	false	1 unresolved: 30g Ricotta	180	89	-51
+SNK-111	Smoked Salmon Ricotta Rice Cakes	false	2 unresolved: 30g Smoked Salmon	160	77	-52
+SNK-112	Honey Yoghurt Dip with Fruit	false	1 unresolved: 80g Strawberries	110	112	2
+SNK-113	Sweet Potato Wedges	true	ok	130	81	-38
+SNK-114	Turkey & Sweet Potato Bites	true	ok	190	186	-2
+SNK-115	Almond & Date Energy Bites	false	2 unresolved: 150g Medjool Dates, pitted	110	58	-47
+SNK-116	Cottage Cheese & Pineapple Cup	false	1 unresolved: 80g Pineapple, diced	170	126	-26
