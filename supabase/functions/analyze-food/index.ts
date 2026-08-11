@@ -8,7 +8,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const FOOD_ANALYSIS_PROMPT = `You are a nutrition analysis AI. Analyze ALL food items visible in this image and provide nutritional estimates for EACH item separately.
+const FOOD_ANALYSIS_PROMPT = `You are a nutrition analysis AI for a UK fitness app. Identify every food item visible in this image and estimate its nutrition.
+
+HOW TO IDENTIFY
+- Use familiar UK names for what you see: "beans on toast", "jacket potato", "bacon sandwich",
+  "Greek yoghurt", "porridge". Not American equivalents.
+- DEFAULT TO SPLITTING. Anything served on a base splits into the base and each topping:
+  "egg on toast" is "toast" + "fried egg"; "avocado toast with poached egg and seeds" is
+  "toast" + "avocado" + "poached egg" + "seeds". A fry-up is one item per component. The user
+  adjusts portions per row, so a combined row they can't edit is close to useless to them.
+- Only keep something as ONE item when its components are physically blended and could not be
+  served apart: soup, smoothie, curry, stew, scrambled egg, porridge.
+- A composed dish having a well-known name does NOT make it one item. "Avocado toast" is still
+  bread plus avocado. Judge by whether the parts are separable on the plate, not by the name.
+- Do NOT list garnishes and seasonings as their own items — herbs, chilli flakes, a squeeze of
+  lemon, salt and pepper. Anything under about 5 kcal belongs folded into the dish it sits on,
+  not as a row the user has to scroll past.
+- Include cooking fat and spreads you can reasonably infer: butter on toast, oil in the pan for
+  a fried egg, dressing on a salad. These are a common and material source of underestimation.
+  Fold them into the item they belong to rather than listing them separately.
+
+ESTIMATING PORTIONS
+Anchor to what's in shot — plate diameter (typically 26-28cm), a slice of bread (~40g), a
+standard mug (~250ml), a fork. Keep serving_size SHORT and scannable — "2 slices", "180g",
+"1 bowl", "2 eggs". It is displayed in a narrow row in the app. Put any reasoning or detail
+in description instead.
+
+CONFIDENCE
+Report per item, and be honest: "high" when the food and portion are both clear, "medium" when
+the food is clear but the portion is a guess, "low" when the food itself is uncertain.
+
+ALWAYS RETURN YOUR BEST ATTEMPT
+If a food is partly obscured, blurry, unfamiliar or ambiguous, still return it with your best
+estimate and a "low" confidence — a low-confidence answer the user can correct is far more
+useful than a failure. Only use the error form below when the image contains no food at all.
 
 Return your response in this exact JSON format:
 {
@@ -35,13 +68,13 @@ Return your response in this exact JSON format:
   "suggestions": "Any suggestions for making this meal healthier"
 }
 
-If you cannot identify any food or the image doesn't contain food, return:
+Only if the image contains no food whatsoever, return:
 {
   "success": false,
   "error": "Description of the issue"
 }
 
-Detect ALL separate food items. Be accurate but realistic with nutritional estimates. Round numbers appropriately.`;
+Be realistic with nutritional estimates and round numbers sensibly. Return only the JSON object.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -99,7 +132,7 @@ serve(async (req) => {
       processedImageData = `data:image/jpeg;base64,${processedImageData}`;
     }
 
-    const response = await aiChatCompletion({
+    const callModel = (attempt = 1) => aiChatCompletion({
       model: "gemini-2.5-flash",
       messages: [
         {
@@ -116,8 +149,23 @@ serve(async (req) => {
           ],
         },
       ],
-      max_tokens: 3000,
+      // The owner reported the same plate scanning differently on repeat attempts. The call
+      // was running at the gateway's default sampling temperature, so identical input could
+      // produce a different itemisation — or a bail-out — each time. Vision extraction wants
+      // the most likely reading, not a varied one.
+      // Attempt 1 is greedy for consistency. A retry at the same temperature would be a
+      // bit-for-bit repeat of the failure, so attempt 2 deliberately samples differently.
+      temperature: attempt === 1 ? 0 : 0.3,
+      response_format: { type: "json_object" },
+      // gemini-2.5-flash is a thinking model and this ceiling covers reasoning AND output, so
+      // too low a value truncates the JSON mid-object and the parse below fails. At 3000 it
+      // failed roughly half of test scans; at 8000 a six-item plate still truncated. Itemising
+      // properly means long replies, so budget like parse-workout-plan does rather than like
+      // the smaller single-answer calls.
+      max_tokens: 16000,
     });
+
+    const response = await callModel();
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -140,31 +188,54 @@ serve(async (req) => {
       );
     }
 
+    // A scan is a one-shot user action behind a camera capture — there's no cheap way for
+    // them to "try again with different wording", and MealScanner turns any failure straight
+    // into a dead-end error screen. One retry is worth the latency.
+    const readAnalysis = (raw: unknown): Record<string, unknown> | null => {
+      if (typeof raw !== "string" || !raw) return null;
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return null;
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch {
+        return null;
+      }
+    };
+
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    
-    if (!content) {
+    let analysis = readAnalysis(data.choices?.[0]?.message?.content);
+
+    if (!analysis) {
+      console.warn(
+        "analyze-food: unusable first response",
+        "finish_reason=", data.choices?.[0]?.finish_reason,
+        "length=", String(data.choices?.[0]?.message?.content ?? "").length,
+      );
+      const retry = await callModel(2);
+      if (retry.ok) {
+        const retryData = await retry.json();
+        analysis = readAnalysis(retryData.choices?.[0]?.message?.content);
+        if (!analysis) {
+          console.error(
+            "analyze-food: unusable retry response",
+            "finish_reason=", retryData.choices?.[0]?.finish_reason,
+            retryData.choices?.[0]?.message?.content,
+          );
+        }
+      }
+    }
+
+    if (!analysis) {
       return new Response(
-        JSON.stringify({ success: false, error: "No response from AI" }), 
+        JSON.stringify({ success: false, error: "Failed to parse analysis" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found");
-      const analysis = JSON.parse(jsonMatch[0]);
-      return new Response(
-        JSON.stringify(analysis), 
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } catch {
-      console.error("Failed to parse AI response:", content);
-      return new Response(
-        JSON.stringify({ success: false, error: "Failed to parse analysis" }), 
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    return new Response(
+      JSON.stringify(analysis),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error("Food analysis error:", error);
     return new Response(
