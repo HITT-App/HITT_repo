@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Flame, Users } from "lucide-react";
 
 import mealImage from "@/assets/meal-steak-salsa.jpg";
+import { storageImage, IMG } from "@/lib/storage-image";
 
 interface MealQuickCardProps {
   meal: {
@@ -31,7 +32,7 @@ export function MealQuickCard({ meal }: MealQuickCardProps) {
       {/* Image */}
       <div className="relative h-40">
         <img 
-          src={meal.image_url || mealImage} 
+          src={storageImage(meal.image_url || mealImage, IMG.card)} 
           alt={meal.name}
           className="w-full h-full object-cover"
         />

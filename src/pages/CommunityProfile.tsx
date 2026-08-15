@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { ReportSheet } from "@/components/community/ReportSheet";
+import { storageImage, IMG } from "@/lib/storage-image";
 
 const presetAvatar = (seed: string | null | undefined) => {
   const s = seed || '';
@@ -340,7 +341,7 @@ const CommunityProfile = () => {
                 <p className="text-sm line-clamp-3 text-foreground/90">{post.content}</p>
                 {post.image_url && (
                   <img
-                    src={post.image_url}
+                    src={storageImage(post.image_url, IMG.card)}
                     alt=""
                     className="mt-3 rounded-xl w-full aspect-video object-cover"
                     loading="lazy"

@@ -15,6 +15,32 @@ interface FeatureFlag {
   description: string | null;
 }
 
+// The admin upload accepted `video/*` with no ceiling at all, which is how single files
+// large enough to exhaust the storage quota got in.
+const MAX_ASSET_MB = 25;
+const MAX_ASSET_BYTES = MAX_ASSET_MB * 1024 * 1024;
+
+/**
+ * Delete older `app-assets` objects sharing a prefix, keeping the one just uploaded.
+ *
+ * Uploading a .webm over an existing .mp4 writes a new object rather than replacing it, so
+ * `upsert` alone doesn't stop the bucket growing. Best-effort: a failure here must never
+ * fail the upload the admin just did.
+ */
+async function removeSupersededAssets(prefix: string, keepFileName: string) {
+  try {
+    const { data: existing } = await supabase.storage.from("app-assets").list("", { limit: 100 });
+    const stale = (existing ?? [])
+      .map((o) => o.name)
+      .filter((name) => name.startsWith(prefix) && name !== keepFileName);
+    if (stale.length) {
+      await supabase.storage.from("app-assets").remove(stale);
+    }
+  } catch (err) {
+    console.warn("Could not clean up superseded assets", err);
+  }
+}
+
 export default function AdminSettings() {
   const { toast } = useToast();
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
@@ -87,15 +113,29 @@ export default function AdminSettings() {
       toast({ variant: "destructive", title: "Please select a video file" });
       return;
     }
+    if (file.size > MAX_ASSET_BYTES) {
+      toast({
+        variant: "destructive",
+        title: "Video too large",
+        description: `Please upload a video under ${MAX_ASSET_MB}MB. This one is ${(file.size / 1024 / 1024).toFixed(0)}MB.`,
+      });
+      return;
+    }
 
     setUploadingVideo(true);
     try {
-      const fileName = `hero-video-${Date.now()}.${file.name.split(".").pop()}`;
+      // Fixed name, not `hero-video-${Date.now()}`. With a unique name per upload the
+      // upsert below never actually replaced anything, so every hero video ever uploaded
+      // stayed in the bucket forever. See docs — that accumulation is what filled storage.
+      const fileName = `hero-video.${file.name.split(".").pop()}`;
       const { error: uploadError } = await supabase.storage
         .from("app-assets")
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
+
+      // A different extension means a different object, so the previous one would linger.
+      await removeSupersededAssets("hero-video", fileName);
 
       const { data: urlData } = supabase.storage
         .from("app-assets")
@@ -143,13 +183,24 @@ export default function AdminSettings() {
       toast({ variant: "destructive", title: "Please select an image or video file" });
       return;
     }
+    if (file.size > MAX_ASSET_BYTES) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: `Please upload a file under ${MAX_ASSET_MB}MB. This one is ${(file.size / 1024 / 1024).toFixed(0)}MB.`,
+      });
+      return;
+    }
     setUploadingSplash(true);
     try {
-      const fileName = `splash-bg-${Date.now()}.${file.name.split(".").pop()}`;
+      // Fixed name for the same reason as the hero video above.
+      const fileName = `splash-bg.${file.name.split(".").pop()}`;
       const { error: uploadError } = await supabase.storage
         .from("app-assets")
         .upload(fileName, file, { upsert: true });
       if (uploadError) throw uploadError;
+
+      await removeSupersededAssets("splash-bg", fileName);
 
       const { data: urlData } = supabase.storage.from("app-assets").getPublicUrl(fileName);
       const publicUrl = urlData.publicUrl;

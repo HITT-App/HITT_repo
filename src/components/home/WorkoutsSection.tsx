@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { storageImage, IMG } from "@/lib/storage-image";
 
 const CATEGORIES = [
   { id: "all", label: "All" },
@@ -89,7 +90,7 @@ export function WorkoutsSection() {
             >
               <div className="relative h-32">
                 {workout.thumbnail_url ? (
-                  <img src={workout.thumbnail_url} alt={workout.title} className="w-full h-full object-cover" />
+                  <img src={storageImage(workout.thumbnail_url, IMG.card)} alt={workout.title} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-primary/30 to-secondary" />
                 )}

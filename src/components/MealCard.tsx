@@ -25,7 +25,7 @@ export function MealCard({ meal, onClick }: MealCardProps) {
       <div className="relative h-28 w-full">
         {meal.image_url ? (
           <img
-            src={meal.image_url}
+            src={storageImage(meal.image_url, IMG.card)}
             alt={meal.name}
             className="w-full h-full object-cover"
           />

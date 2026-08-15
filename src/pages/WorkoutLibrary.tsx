@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { SportsTab } from '@/components/SportsTab';
 import { normaliseSlug } from '@/lib/workout-filters';
+import { storageImage, IMG } from '@/lib/storage-image';
 
 type Workout = {
   id: string;
@@ -202,7 +203,7 @@ export default function WorkoutLibrary() {
               <div className="relative h-40 bg-gradient-to-br from-primary/20 to-primary/5">
                 {featuredWorkouts[0].thumbnail_url ? (
                   <img 
-                    src={featuredWorkouts[0].thumbnail_url} 
+                    src={storageImage(featuredWorkouts[0].thumbnail_url, IMG.hero)} 
                     alt={featuredWorkouts[0].title}
                     className="w-full h-full object-cover"
                   />
@@ -294,7 +295,7 @@ export default function WorkoutLibrary() {
                   <CardContent className="p-2.5 flex items-center gap-2.5">
                     <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {workout.thumbnail_url ? (
-                        <img src={workout.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                        <img src={storageImage(workout.thumbnail_url, IMG.card)} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <Dumbbell className="w-5 h-5 text-muted-foreground" />
                       )}

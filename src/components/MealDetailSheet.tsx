@@ -61,7 +61,7 @@ export function MealDetailSheet({ meal, open, onClose }: MealDetailSheetProps) {
         {/* Hero image */}
         {meal.image_url && (
           <div className="h-48 w-full overflow-hidden">
-            <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
+            <img src={storageImage(meal.image_url, IMG.hero)} alt={meal.name} className="w-full h-full object-cover" />
           </div>
         )}
         {!meal.image_url && (

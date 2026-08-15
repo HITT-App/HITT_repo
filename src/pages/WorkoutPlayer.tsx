@@ -119,7 +119,7 @@ function ExerciseMedia({ exercise, isPaused }: { exercise: Exercise | undefined;
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#101010' }}>
       {exercise?.thumbnail_url
-        ? <img src={exercise.thumbnail_url} alt=""
+        ? <img src={storageImage(exercise.thumbnail_url, IMG.tiny)} alt=""
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.55 }} />
         : <div style={{ position: 'absolute', inset: 0, opacity: 0.45,
             background: 'repeating-linear-gradient(135deg, #181818 0 13px, #121212 13px 26px)' }} />
@@ -134,7 +134,7 @@ function ExerciseThumb({ exercise, style }: { exercise: Exercise; style?: React.
   return (
     <div style={{ position: 'relative', overflow: 'hidden', background: '#101010', flexShrink: 0, ...style }}>
       {exercise.thumbnail_url
-        ? <img src={exercise.thumbnail_url} alt=""
+        ? <img src={storageImage(exercise.thumbnail_url, IMG.tiny)} alt=""
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.55 }} />
         : <div style={{ position: 'absolute', inset: 0, opacity: 0.45,
             background: 'repeating-linear-gradient(135deg, #181818 0 8px, #0e0e0e 8px 16px)' }} />

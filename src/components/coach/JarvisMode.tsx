@@ -22,6 +22,7 @@ import { JarvisDietaryPrefsCard } from './JarvisDietaryPrefsCard';
 import { saveMealPlan, getMealPlan, clearMealPlan } from '@/lib/mealPlanStorage';
 import { format } from 'date-fns';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload, RecommendMealPlanPayload } from '@/hooks/useAI.types';
+import { storageImage, IMG } from '@/lib/storage-image';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
 // Strips excessive emoji usage (keeps max 1 per paragraph).
@@ -1306,7 +1307,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
             <div className="flex items-start gap-3">
               {recommendedWorkout.thumbnail_url ? (
                 <img
-                  src={recommendedWorkout.thumbnail_url}
+                  src={storageImage(recommendedWorkout.thumbnail_url, IMG.card)}
                   alt={recommendedWorkout.title}
                   className="w-12 h-12 rounded-xl object-cover shrink-0"
                 />

@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { ArrowLeft, Search, Filter, Grid, List, Flame, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { storageImage, IMG } from '@/lib/storage-image';
 
 // Ingredients + steps come from the linked `ingredients` and `steps` tables,
 // joined client-side. Both are stored as free-text strings (e.g. "150g firm
@@ -418,7 +419,7 @@ export default function BrowseMeals() {
                 {/* Image */}
                 <div className="h-48 bg-secondary w-full overflow-hidden">
                   {selectedRecipe.image_url ? (
-                    <img src={selectedRecipe.image_url} alt={selectedRecipe.name} className="w-full h-full object-cover" />
+                    <img src={storageImage(selectedRecipe.image_url, IMG.hero)} alt={selectedRecipe.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-6xl">
                       {selectedRecipe.emoji || <Flame className="w-16 h-16 text-primary/30" />}
@@ -556,7 +557,7 @@ function Shelf({ title, items, onSelect }: { title: string; items: Meal[]; onSel
           >
             <div className="aspect-square bg-secondary relative">
               {meal.image_url ? (
-                <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
+                <img src={storageImage(meal.image_url, IMG.card)} alt={meal.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-4xl">{meal.emoji || '🍽️'}</div>
               )}
@@ -600,7 +601,7 @@ function FilteredResults({
               <CardContent className="p-3 flex gap-3">
                 <div className="w-16 h-16 rounded-xl bg-secondary flex-shrink-0 overflow-hidden">
                   {meal.image_url
-                    ? <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
+                    ? <img src={storageImage(meal.image_url, IMG.card)} alt={meal.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-2xl">{meal.emoji || <Flame className="w-6 h-6 text-primary/30" />}</div>}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -626,7 +627,7 @@ function FilteredResults({
             <Card key={meal.id} className="border-border/50 overflow-hidden cursor-pointer" onClick={() => onSelect(meal)}>
               <div className="aspect-square bg-secondary relative">
                 {meal.image_url
-                  ? <img src={meal.image_url} alt={meal.name} className="w-full h-full object-cover" />
+                  ? <img src={storageImage(meal.image_url, IMG.card)} alt={meal.name} className="w-full h-full object-cover" />
                   : <div className="w-full h-full flex items-center justify-center text-4xl">{meal.emoji || <Flame className="w-8 h-8 text-primary/30" />}</div>}
               </div>
               <CardContent className="p-2">

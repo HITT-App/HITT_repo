@@ -158,7 +158,11 @@ serve(async (req) => {
     //
     // Buckets are pathed {user_id}/... so a user's objects are listable by prefix.
     // Add any future user-scoped bucket here — nothing else cleans them up.
-    const USER_STORAGE_BUCKETS = ["body-scan-photos"];
+    // Every bucket where objects are keyed under `{user_id}/...`. Missing one means that
+    // user's files survive account deletion forever with nothing left to attribute them to —
+    // both a storage leak and a data-retention problem. community-images and avatars were
+    // absent here until 2026-08-15.
+    const USER_STORAGE_BUCKETS = ["body-scan-photos", "community-images", "avatars"];
     for (const bucket of USER_STORAGE_BUCKETS) {
       try {
         // list() is not recursive, so walk the per-scan folders under {uid}/.

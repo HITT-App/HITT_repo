@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HIITLogo } from '@/components/HIITLogo';
 import { Clock, Flame, Star, ChevronRight, Sparkles, Dumbbell } from 'lucide-react';
+import { storageImage, IMG } from '@/lib/storage-image';
 
 interface Workout {
   id: string;
@@ -104,7 +105,7 @@ export function WorkoutRecommendations({ limit = 3, showMessage = true }: Workou
             <CardContent className="p-3 flex items-center gap-3">
               <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {workout.thumbnail_url ? (
-                  <img src={workout.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                  <img src={storageImage(workout.thumbnail_url, IMG.card)} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <Dumbbell className="w-6 h-6 text-primary" />
                 )}

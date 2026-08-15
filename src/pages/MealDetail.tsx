@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import hiitLogo from "@/assets/hiit-logo.jpg";
+import { storageImage, IMG } from "@/lib/storage-image";
 
 type Ingredient = { name: string; amount?: string | number | null; unit?: string | null };
 
@@ -133,7 +134,7 @@ const MealDetail = () => {
         <div className="relative h-64">
           {meal.image_url ? (
             <img
-              src={meal.image_url}
+              src={storageImage(meal.image_url, IMG.hero)}
               alt={meal.name}
               className="w-full h-full object-cover"
             />

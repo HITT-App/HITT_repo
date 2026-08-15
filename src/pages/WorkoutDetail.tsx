@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { getYouTubeEmbedUrl } from '@/lib/video';
 import { Capacitor } from '@capacitor/core';
 import { sendStructuredWorkoutToWatch } from '@/plugins/WatchPlugin';
+import { storageImage, IMG } from '@/lib/storage-image';
 
 type Workout = {
   id: string;
@@ -220,7 +221,7 @@ export default function WorkoutDetail() {
         ) : (
           <div className="h-52 relative">
             {workout.thumbnail_url && (
-              <img src={workout.thumbnail_url} alt={workout.title} className="w-full h-full object-cover" />
+              <img src={storageImage(workout.thumbnail_url, IMG.hero)} alt={workout.title} className="w-full h-full object-cover" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
           </div>
@@ -369,7 +370,7 @@ export default function WorkoutDetail() {
                     <CardContent className="p-3 flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
                         {exercise.thumbnail_url ? (
-                          <img src={exercise.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                          <img src={storageImage(exercise.thumbnail_url, IMG.tiny)} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-lg font-bold text-primary">{index + 1}</span>
                         )}
