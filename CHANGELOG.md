@@ -1,6 +1,6 @@
 # HITT App Changelog
 
-## [2026-08-15] — v1.0.7 / Build 334: 973 new recipes, dessert & cheat-meal browsing, much faster images, food scan fixed
+## [2026-08-15] — v1.0.8 / Build 334: 973 new recipes, dessert & cheat-meal browsing, much faster images, food scan fixed
 
 - **973 new recipes from the owner**, nearly doubling the library to 1,930. Delivered as a pack of 1,000 and cleaned up before import: 22 were exact duplicates under different names, 5 had nutrition that contradicted their own ingredient lists, and 32 carried artefacts from however they were generated (one dessert was named "Protein Crab-Free Vanilla Panna Cotta"). **Already live on every version** — recipes come from the server
   - **Allergen data was materially incomplete and has been corrected.** The pack only ever used nine allergen labels — celery, mustard, sulphites, lupin and molluscs never appeared once, five of the UK's fourteen. 118 missing allergens were added from the ingredient lists, including all eight scallop dishes that declared no molluscs, a breakfast listing a fried egg with no allergens at all, and a fish pie containing prawns that declared only fish and milk. 19 incorrect "free-from" claims were removed, such as gelatine tagged vegetarian and honey tagged vegan
@@ -11,8 +11,8 @@
 - **A hole that exposed the recipe library has been closed.** One database view ignored the sign-in requirement, so the entire recipe library could be read without an account. Fixed and verified. **Already live on every version**
 - **Storage fixes after an outage.** On 14 August the app went completely down — nobody could sign in — because Supabase storage passed its limit and the whole project was suspended. Restored by upgrading the plan. The causes are fixed too: hero and splash uploads were keeping every file ever uploaded instead of replacing them, admin video uploads had no size limit at all, and deleting your account left your community images and avatar behind. **Account deletion cleanup is live on every version**; the upload fixes need this build
 
-> **Not submitted to the App Store** — this is a TestFlight build only, and the marketing version stays at 1.0.7. Bump it if this goes for review.
->
+- **Marketing version bumped to 1.0.8** across all targets (App, Watch, Live Activity). This was forced rather than chosen: the first upload attempt was rejected because **1.0.7 has already been approved and released**, which closes that version to new builds (`Invalid Pre-Release Train`, error 90186). Any build after an approved release needs a higher version number
+
 > **Google Play is unaffected by this build** — the Android app is currently suspended and no Android release was attempted.
 
 ## [2026-08-01] — v1.0.7 / Build 333: comment reactions fixed, error monitoring moved to the owner's account
