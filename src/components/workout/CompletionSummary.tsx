@@ -6,6 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
+import hiitLogo from '@/assets/hiit-logo.webp';
 import type { Json } from '@/integrations/supabase/types';
 import type { RoutePoint } from './ShareCardCanvas';
 import { ActivityShareCard } from './ActivityShareCard';

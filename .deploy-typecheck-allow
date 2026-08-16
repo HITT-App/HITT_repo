@@ -1,0 +1,12 @@
+# Symbols that raise TS2304 ("Cannot find name") but are safe to ship.
+#
+# Only names used purely in TYPE positions belong here — those erase at compile
+# time and never reach the bundle. A name used as a VALUE must never be listed:
+# that is the missing-import class that shipped broken in v1.0.8 / build 334.
+#
+# One name per line. Matched against: Cannot find name '<name>'
+
+# Web Speech API. No lib.dom typings in this TS version; used only as a type
+# annotation in WakeWordListener.tsx and lib/mic-debug.ts, never constructed
+# directly by that identifier (runtime goes via window.webkitSpeechRecognition).
+SpeechRecognition
