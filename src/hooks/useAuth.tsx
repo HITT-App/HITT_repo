@@ -167,7 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, displayName?: string) => {
     const { error } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
       options: {
         emailRedirectTo: Capacitor.isNativePlatform()
@@ -181,7 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     const correlationId = generateCorrelationId();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) {
       logSecurityEvent(SecurityEventTypes.AUTH_FAILURE, {
         correlationId,
@@ -377,7 +377,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const redirectTo = Capacitor.isNativePlatform()
       ? 'hiitfitness://auth-callback?view=update-password'
       : `${window.location.origin}/auth?view=update-password`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     return { error: error as Error | null };
   };
 

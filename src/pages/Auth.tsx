@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { HIITLogo } from "@/components/HIITLogo";
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft, AlertCircle } from "lucide-react";
 import { z } from "zod";
+import { describeSignInError, type AuthFailure } from "@/lib/auth-errors";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -102,9 +103,9 @@ const Auth = () => {
     try {
       setApiError(null);
       if (view === "signin") {
-        loginSchema.parse({ email, password });
+        loginSchema.parse({ email: email.trim(), password });
       } else if (view === "signup") {
-        signupSchema.parse({ email, password, displayName, confirmPassword, acceptedTerms });
+        signupSchema.parse({ email: email.trim(), password, displayName, confirmPassword, acceptedTerms });
       } else if (view === "update-password") {
         updatePasswordSchema.parse({ password, confirmPassword });
       }
@@ -136,11 +137,7 @@ const Auth = () => {
       if (view === "signin") {
         const { error } = await signIn(email, password);
         if (error) {
-          if (error.message.toLowerCase().includes("email not confirmed")) {
-            setApiError("Please confirm your email address before signing in. Check your inbox.");
-          } else {
-            setApiError("Incorrect email or password.");
-          }
+          setApiError(describeSignInError(error as AuthFailure));
         }
       } else if (view === "signup") {
         const { error } = await signUp(email, password, displayName);
@@ -262,6 +259,11 @@ const Auth = () => {
           <Input
             id="email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="Enter your email address..."
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -435,6 +437,11 @@ const Auth = () => {
             ref={emailRef}
             id="email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="Enter your email address..."
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -649,6 +656,11 @@ const Auth = () => {
           <Input
             id="email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="Enter your email address..."
             value={email}
             onChange={(e) => setEmail(e.target.value)}
