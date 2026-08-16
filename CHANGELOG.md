@@ -1,5 +1,14 @@
 # HITT App Changelog
 
+## [2026-08-16] — v1.0.9 / Build 335: hotfix — home screen and workout players crashed on 1.0.8
+
+- **Fixes a crash that made 1.0.8 unusable.** Opening the app, starting a structured workout, or starting a gym session showed "Something went wrong" instead of the screen. Four screens were affected: the **home screen** (via the recommended-meals carousel), the **meal detail sheet**, the **workout player** and the **gym timer**
+  - Cause: the image-speedup work in 1.0.8 added calls to a new image helper in thirteen files but the import statement in four of them, so at runtime the app looked for something that wasn't there (`Can't find variable: storageImage`). Every affected screen threw as soon as it tried to render an image
+  - The build tool doesn't treat a missing import as an error — it compiles the reference and lets it fail in the browser — which is why 1.0.8 built, archived and passed review with the fault in it. A TypeScript check catches it before the build starts, and was run against the whole codebase before this build to confirm these four were the only occurrences
+- **Marketing version bumped to 1.0.9.** 1.0.8 is approved and released, which closes that version to new builds (`Invalid Pre-Release Train`, error 90186), so a hotfix on top of it needs a higher version number
+
+> **Google Play is unaffected by this build** — the Android app is currently suspended and no Android release was attempted.
+
 ## [2026-08-15] — v1.0.8 / Build 334: 973 new recipes, dessert & cheat-meal browsing, much faster images, food scan fixed
 
 - **973 new recipes from the owner**, nearly doubling the library to 1,930. Delivered as a pack of 1,000 and cleaned up before import: 22 were exact duplicates under different names, 5 had nutrition that contradicted their own ingredient lists, and 32 carried artefacts from however they were generated (one dessert was named "Protein Crab-Free Vanilla Panna Cotta"). **Already live on every version** — recipes come from the server
