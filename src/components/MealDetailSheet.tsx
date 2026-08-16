@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import hiitLogo from '@/assets/hiit-logo.jpg'
+import { storageImage, IMG } from '@/lib/storage-image'
 import {
   Drawer,
   DrawerContent,

@@ -21,6 +21,7 @@ import { CompletionSummary } from "@/components/workout/CompletionSummary"
 import { getSportConfig } from "@/lib/sports"
 import type { ExerciseSnapshot } from "@/integrations/supabase/types"
 import { Capacitor } from "@capacitor/core"
+import { storageImage, IMG } from "@/lib/storage-image"
 
 // ── palette ────────────────────────────────────────────────────────────────────
 const WP = {

@@ -1,4 +1,5 @@
 import hiitLogo from '@/assets/hiit-logo.jpg'
+import { storageImage, IMG } from '@/lib/storage-image'
 
 type MealCardMeal = {
   id: string

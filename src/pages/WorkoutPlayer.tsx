@@ -15,6 +15,7 @@ import { WearableLaunchCard } from '@/components/wearable/WearableLaunchCard'
 import type { PrimaryWearable } from '@/lib/wearable-detection'
 import { Capacitor } from '@capacitor/core'
 import { getYouTubeEmbedUrl } from '@/lib/video'
+import { storageImage, IMG } from '@/lib/storage-image'
 import {
   ArrowLeft, Play, Pause, SkipBack, SkipForward,
   Clock, Repeat2, Info, ChevronRight, Check,
