@@ -357,7 +357,7 @@ export const useBrowseUsers = () => {
 };
 
 // =============== CONTENT REPORTS (App Store Guideline 1.2) ===============
-export type ReportContentType = 'post' | 'comment' | 'story' | 'dm' | 'chatroom' | 'profile';
+export type ReportContentType = 'post' | 'comment' | 'story' | 'dm' | 'chatroom' | 'profile' | 'ai_message';
 export type ReportReason =
   | 'spam' | 'harassment' | 'hate' | 'nudity' | 'violence' | 'self_harm' | 'scam' | 'other';
 
@@ -382,6 +382,8 @@ export const useReports = () => {
     reportedUserId?: string | null;
     reason: ReportReason;
     details?: string;
+    /** Verbatim content, for surfaces a moderator can't open later (AI replies). */
+    contentSnapshot?: string;
   }): Promise<boolean> => {
     if (!user) {
       toast({ title: 'Sign in required', description: 'Please sign in to report content.', variant: 'destructive' });
@@ -395,6 +397,7 @@ export const useReports = () => {
         content_id: args.contentId,
         reason: args.reason,
         details: args.details?.trim() || null,
+        content_snapshot: args.contentSnapshot?.trim() || null,
       });
       // A duplicate (same user, same item) is fine — they've already reported it.
       if (error && !String(error.message).toLowerCase().includes('duplicate')) throw error;

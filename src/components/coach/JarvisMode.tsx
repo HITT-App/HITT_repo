@@ -23,9 +23,18 @@ import { saveMealPlan, getMealPlan, clearMealPlan } from '@/lib/mealPlanStorage'
 import { format } from 'date-fns';
 import type { RecommendWorkoutPayload, RecommendWorkoutPlanPayload, LogFoodPayload, SetGoalsPayload, RecommendMealPlanPayload } from '@/hooks/useAI.types';
 import { storageImage, IMG } from '@/lib/storage-image';
+import { ReportSheet } from '@/components/community/ReportSheet';
 
 // Renders AI response text with paragraph spacing, bullet lists, and bold.
 // Strips excessive emoji usage (keeps max 1 per paragraph).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Only persisted replies can be reported: content_reports.content_id is a uuid, and
+// synthetic messages are consumer-injected UI text that never reaches the database.
+function isReportable(msg: { id?: string; synthetic?: boolean }): msg is { id: string } {
+  return !msg.synthetic && !!msg.id && UUID_RE.test(msg.id);
+}
+
 function formatResponse(text: string): React.ReactNode[] {
   const emojiRe = /[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu;
 
@@ -217,6 +226,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
     | null
   >(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [reportingMessage, setReportingMessage] = useState<{ id: string; content: string } | null>(null);
   const [pendingGoalPrompt, setPendingGoalPrompt] = useState(false);
   const [todayKcalTotal, setTodayKcalTotal] = useState<number | undefined>(undefined);
   const [recommendedWorkout, setRecommendedWorkout] = useState<RecommendedWorkout | null>(null);
@@ -927,7 +937,19 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
         {ai.messages.filter(msg => msg.content.trim() !== '').map((msg, i) => (
           msg.role === 'assistant' ? (
             <div key={msg.id ?? i} className="bg-secondary/40 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-2 uppercase">Coach HIIT</p>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Coach HIIT</p>
+                {isReportable(msg) && (
+                  <button
+                    type="button"
+                    onClick={() => setReportingMessage({ id: msg.id, content: msg.content })}
+                    aria-label="Report this response"
+                    className="text-muted-foreground/60 hover:text-foreground transition-colors -mt-0.5 -mr-1 p-1"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
               <div className="text-sm text-foreground leading-relaxed space-y-2">
                 {formatResponse(msg.content)}
               </div>
@@ -1560,6 +1582,14 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           </Button>
         </div>
       </div>
+
+      <ReportSheet
+        open={reportingMessage !== null}
+        onOpenChange={(o) => { if (!o) setReportingMessage(null); }}
+        contentType="ai_message"
+        contentId={reportingMessage?.id ?? ''}
+        contentSnapshot={reportingMessage?.content}
+      />
 
     </div>
   );

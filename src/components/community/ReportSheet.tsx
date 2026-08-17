@@ -15,6 +15,8 @@ interface ReportSheetProps {
   contentType: ReportContentType
   contentId: string
   reportedUserId?: string | null
+  /** Verbatim content, for surfaces a moderator can't open later (AI replies). */
+  contentSnapshot?: string
   /** Fired after a successful report — e.g. to hide the item locally. */
   onReported?: () => void
 }
@@ -22,7 +24,7 @@ interface ReportSheetProps {
 // Shared report dialog for every user-generated-content surface (posts, comments,
 // stories, messages, profiles). App Store Guideline 1.2.
 export function ReportSheet({
-  open, onOpenChange, contentType, contentId, reportedUserId, onReported,
+  open, onOpenChange, contentType, contentId, reportedUserId, contentSnapshot, onReported,
 }: ReportSheetProps) {
   const { reportContent } = useReports()
   const [reason, setReason] = useState<ReportReason | null>(null)
@@ -34,7 +36,7 @@ export function ReportSheet({
   const handleSubmit = async () => {
     if (!reason || submitting) return
     setSubmitting(true)
-    const ok = await reportContent({ contentType, contentId, reportedUserId, reason, details })
+    const ok = await reportContent({ contentType, contentId, reportedUserId, reason, details, contentSnapshot })
     setSubmitting(false)
     if (ok) {
       reset()

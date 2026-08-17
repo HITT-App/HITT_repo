@@ -119,7 +119,7 @@ export default function AdminCommunity() {
                 : reports.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell><Badge variant="outline">{r.content_type}</Badge></TableCell>
-                    <TableCell className="text-sm">{r.reason}{r.details ? <p className="text-xs text-muted-foreground truncate max-w-[220px]">{r.details}</p> : null}</TableCell>
+                    <TableCell className="text-sm">{r.reason}{r.details ? <p className="text-xs text-muted-foreground truncate max-w-[220px]">{r.details}</p> : null}{r.content_snapshot ? <p className="text-xs text-muted-foreground/80 mt-1 max-w-[320px] whitespace-pre-wrap line-clamp-4 border-l-2 border-border pl-2">{r.content_snapshot}</p> : null}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</TableCell>
                     <TableCell><div className="flex gap-2"><Button size="sm" variant="destructive" disabled={actioningId === r.id} onClick={() => actionReport(r)}>Remove</Button><Button size="sm" variant="outline" disabled={actioningId === r.id} onClick={() => dismissReport(r)}>Dismiss</Button></div></TableCell>
                   </TableRow>
