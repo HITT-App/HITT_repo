@@ -62,7 +62,9 @@ For each category Google asks you to walk through:
 ## Health and fitness
 
 ### Health info — **Collected**
-Includes: heart rate, resting heart rate, HRV, sleep data, weight, body fat, blood pressure (only if user manually enters), body composition from AI body scan
+Includes: heart rate, resting heart rate, sleep data, weight, body fat, blood pressure (only if user manually enters), body composition from AI body scan
+
+> **Do not re-add HRV.** It was removed from the manifest, the permission request and this form on 2026-08-01 after a Health Connect *Minimum Scope* rejection. Verified 2026-08-18: no code reads or writes it and `health_metrics` holds zero HRV rows. Re-declaring it would contradict the Health Connect declaration.
 - **Purposes:** App functionality, Personalisation
 - **Optional/Required:** Optional (each integration is opt-in — HealthKit / Health Connect / manual entry)
 - **Shared:** No (with the narrow user-opt-in exception: when the "Use my health data for AI coaching" toggle is ON in Settings, a subset is sent to Google Gemini for personalised coaching responses — default OFF; disclosed in privacy policy §3.7)
@@ -140,11 +142,14 @@ Includes: workouts, exercise sessions, steps, distance, calories burned, GPS rou
 
 ### In-app search history — **Not collected**
 
-### Installed apps — **Collected** (limited — vendor-wearable detection only)
-- We probe for installed vendor wearable apps via PackageManager (Garmin Connect, Fitbit, Whoop, Oura, Polar, Suunto, Strava) so the app can offer the correct integration — no listing of unrelated apps
-- **Purposes:** App functionality
-- **Optional/Required:** Required
-- **Shared:** No
+### Installed apps — **Not collected**
+
+> Was previously declared as collected. **Wearable detection is iOS-only** —
+> `WearableDetectPlugin` gates on `getPlatform() === "ios"` and returns an empty result on
+> Android, and the merged Android manifest requests no `QUERY_ALL_PACKAGES`. On Android the
+> app infers the wearable from `activity_logs` history instead. This form covers the Android
+> app, so the honest answer is Not collected. **If an Android package probe is ever added,
+> this flips back to Collected.**
 
 ### Other user-generated content — **Collected**
 - Community posts, comments, reactions, direct messages
