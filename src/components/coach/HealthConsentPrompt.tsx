@@ -12,12 +12,20 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Capacitor } from '@capacitor/core';
 
-// First-use consent for sending Apple Health / HealthKit-derived data to the
+// Naming the wrong platform's health store is the kind of visible error a store
+// reviewer reads as carelessness — this screen is the first thing they open.
+const HEALTH_SOURCE =
+  Capacitor.getPlatform() === 'ios' ? 'Apple Health'
+  : Capacitor.getPlatform() === 'android' ? 'Health Connect'
+  : 'your connected health apps';
+
+// First-use consent for sending health-platform data to the
 // third-party AI provider (App Store Guideline 5.1.3). Shown once — the first
 // time the user opens the AI coach — as an explicit opt-in. The server-side gate
 // stays default-OFF until the user opts in here (or later in Settings), so no
-// Apple Health data reaches the AI before they answer.
+// health-platform data reaches the AI before they answer.
 const askedKey = (uid: string) => `hiit-health-ai-consent-asked-${uid}`;
 
 export function HealthConsentPrompt() {
@@ -70,10 +78,10 @@ export function HealthConsentPrompt() {
         <AlertDialogHeader>
           <AlertDialogTitle>Personalise coaching with your health data?</AlertDialogTitle>
           <AlertDialogDescription>
-            HIIT can use your activity, heart rate, and sleep — including data from Apple
-            Health — to tailor your AI coaching. This is sent to our AI provider (Google) to
-            generate your coaching and is never used to train their models or for advertising.
-            You can turn it off anytime in Settings.
+            HIIT can use your activity, heart rate, and sleep — including data from
+            {' '}{HEALTH_SOURCE} — to tailor your AI coaching. This is sent to our AI provider
+            (Google) to generate your coaching and is never used to train their models or for
+            advertising. You can turn it off anytime in Settings.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
