@@ -44,6 +44,29 @@
          returns "denied" without ever prompting the user. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Camera + microphone for the in-WebView getUserMedia surfaces: the body
+         scan and barcode scanner (video), and the voice coach (audio). We use
+         getUserMedia directly rather than @capacitor/camera, so no plugin
+         injects these for us and they have to be declared here.
+
+         Capacitor's BridgeWebChromeClient.onPermissionRequest DOES ask for
+         CAMERA / RECORD_AUDIO at runtime when the WebView requests capture —
+         but Android auto-denies a runtime request for an undeclared
+         permission, silently. The user then sees "Could not access camera.
+         Please check permissions." with no permission to grant in Settings,
+         because an undeclared permission never appears there.
+         Shipped without these in versionCode 12; reported by a user. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Declaring CAMERA implies android.hardware.camera is REQUIRED, which
+         would hide the app on Play from any device without one. Both features
+         are optional to the app, so opt out of that filtering explicitly. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <!-- Health Connect (read) — the surface we already query on iOS's
          HealthKit via @capgo/capacitor-health. Mirror the read list in
          useHealthProfile.ts and useWatchSync.ts. Each of these needs a
