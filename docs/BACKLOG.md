@@ -15,7 +15,7 @@ Every claim below was re-checked against the codebase and the production databas
 |---|---|---|
 | **#109** | Dead button, no `onClick` at all | **Done.** Handler exists at `src/pages/BodyScan.tsx:1007`. The scope doc was stale. |
 | **#112** | Test account had `push_enabled = false`; 2 of 61 users had a preferences row | **Not a bug, now evidenced.** See the push audit below. Nobody is blocked. |
-| **#108** | Quick copy sweep, Jarvis → "AI coach" | **Not done** — 62 `Jarvis` occurrences remain in `src/**/*.tsx`. ⚠️ This now contradicts the Jarvis-first product direction. Decide which is right before touching it. |
+| **#108** | Quick copy sweep, Jarvis → "AI coach" | **Done, and no action needed.** The UI says "AI Coach" / "HIIT AI Coach" throughout (`AISurface.tsx:33`, `HIITMenu.tsx:60`, `AICoachSection.tsx:18`). The 62 remaining `Jarvis` hits are **all internal**: 38 code identifiers (`JarvisMode`, imports, filenames), ~12 `console.error('[Jarvis] …')` prefixes, one event name `hitt:open-jarvis`, and one legacy-title DB filter at `ChatSettings.tsx:70`. **Zero** appear in JSX text or a user-facing prop. Renaming the internals would be churn with no user-visible effect. |
 | **#111** | Shipped; only the `CompletionSummary` path wired | **Accurate.** Files present, mounted in `App.tsx`. `SocialShareButtons.tsx` still has **0 callers** — still dead code. |
 | **#113** | Shipped | **Present** — `src/hooks/useKeyboardHeight.ts`. |
 | **#116** | Shipped | **Present** — `src/components/SplashScreen.tsx`, hidden via `src/lib/native.ts:28`. |
@@ -51,6 +51,17 @@ there is no signup trigger, which is why 96 of 98 users have no row.
 **Why #112 could never have been reproduced.** The feature still has almost nothing to fire
 on: **3 likes in the app's entire history** (last one 30 July), 4 comments, 22 reactions
 (last 12 August), 15 posts (last 13 August). Nothing at all in the last 30 days.
+
+**⚠️ A failed send permanently deletes the token — including on transient errors.**
+`notify-user:319` and `:331` do `if (ok) sent++; else delete the token`. But `sendApns`
+returns `res.ok` (`:89`), which is false for **any** non-2xx and for any thrown fetch error.
+So an APNs 500, a 429 rate-limit, a network blip — or a **403 InvalidProviderToken from a
+wrong APNs key** — all silently unsubscribe the device forever. Only `410 Unregistered` and
+`400 BadDeviceToken` actually mean the token is dead. This matters given the history: the
+APNs key was team-mismatched between the July transfer and 13 July, and any `notify-user`
+call in that window would have deleted tokens wholesale rather than failing safe.
+**Fix before running any token-bearing test:** classify the APNs `reason` and the FCM error
+code, delete only on the two genuine "gone" responses, and leave everything else alone.
 
 **The real gap is observability, not delivery.** `notify-user` logs nothing and returns 200
 whether it sends or skips. The `push_notifications` table has **never had a row** — and it
