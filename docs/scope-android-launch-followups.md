@@ -1,6 +1,8 @@
 # Scope — post-Play-launch follow-ups (#107–#110)
 
-**Status:** Scoping (2026-07-10)
+**Status:** Scoping (2026-07-10) · **Reconciled 2026-09-04** — #109 is done; #108
+conflicts with the Jarvis-first direction and needs a decision before anyone acts on it;
+#107 and #110 were not re-verified. See `docs/BACKLOG.md`.
 **Total estimate:** ~1 sprint if we take all four back-to-back.
 
 These four surfaced during Play Store screenshot prep. Two are cross-platform bugs (#107, #109), one is a naming/branding sweep (#108), one is a genuinely-missing feature path (#110).
@@ -10,6 +12,10 @@ Recommended order: **#109 → #107 → #108 → #110** — 109 and 107 are user-
 ---
 
 ## #109 — Body Scan "Add these to my plan" (dead button)
+
+> ✅ **DONE — verified 2026-09-04.** The button has an `onClick` handler at
+> `src/pages/BodyScan.tsx:1007`. Everything below described the state in July and is
+> kept only as the original analysis. Not device-verified.
 
 **Estimated:** Small — 30 min.
 

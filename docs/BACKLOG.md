@@ -6,6 +6,64 @@ scope doc once it's big enough to need one; strike it here and link the doc.
 
 **Added 2026-07-29** (owner request): #111–#115. #116–#118 added the same day.
 
+## Reconciled against the code, 2026-09-04
+
+Every claim below was re-checked against the codebase and the production database on
+4 September 2026, because the July status had drifted. What changed:
+
+| Task | July said | Verified 2026-09-04 |
+|---|---|---|
+| **#109** | Dead button, no `onClick` at all | **Done.** Handler exists at `src/pages/BodyScan.tsx:1007`. The scope doc was stale. |
+| **#112** | Test account had `push_enabled = false`; 2 of 61 users had a preferences row | **Not a bug, now evidenced.** See the push audit below. Nobody is blocked. |
+| **#108** | Quick copy sweep, Jarvis → "AI coach" | **Not done** — 62 `Jarvis` occurrences remain in `src/**/*.tsx`. ⚠️ This now contradicts the Jarvis-first product direction. Decide which is right before touching it. |
+| **#111** | Shipped; only the `CompletionSummary` path wired | **Accurate.** Files present, mounted in `App.tsx`. `SocialShareButtons.tsx` still has **0 callers** — still dead code. |
+| **#113** | Shipped | **Present** — `src/hooks/useKeyboardHeight.ts`. |
+| **#116** | Shipped | **Present** — `src/components/SplashScreen.tsx`, hidden via `src/lib/native.ts:28`. |
+| **#118** | Shipped, "progress photos" | **Present**, but it is the **Body Scan** feature backed by the `body_scans` table. There is no `progress_photo` anything — the doc's name never matched the code. |
+| **#107** | Copy + wrong "nothing scheduled" flag | Copy string present at `WorkoutSchedule.tsx:484,598`. The flag half was **not** re-verified. |
+| **#110** | Server-side feature work | **Not re-checked.** |
+
+Presence in the code was verified; **device behaviour was not**. The "needs a device check"
+caveats from July still stand on #111, #113, #116, #117 and #118.
+
+---
+
+## Push notification audit, 2026-09-04
+
+Run against production because the user base grew. **The preference gate is blocking nobody,
+and #112 stays closed.**
+
+| Measure | Value |
+|---|---|
+| Profiles | **98** (was 61 in July) |
+| Users with a device token | **67** — 61 iOS, 7 Android, 1 on both |
+| `notification_preferences` rows | **2**, both `push_enabled = true` |
+| Token-holders hard-skipped by preference | **0** |
+| Token-holders with no preferences row | **66** |
+| Token freshness | None older than 90 days; newest today |
+
+**Why the missing rows are harmless.** `notify-user` reads
+`if (prefs && (!prefs.push_enabled || prefs[prefCol] === false))` — a *missing* row is falsy,
+so it falls through to allowed. The gate fails open. Rows are only ever written when someone
+saves the Notification Preferences screen (`NotificationPreferences.tsx:136`, an upsert);
+there is no signup trigger, which is why 96 of 98 users have no row.
+
+**Why #112 could never have been reproduced.** The feature still has almost nothing to fire
+on: **3 likes in the app's entire history** (last one 30 July), 4 comments, 22 reactions
+(last 12 August), 15 posts (last 13 August). Nothing at all in the last 30 days.
+
+**The real gap is observability, not delivery.** `notify-user` logs nothing and returns 200
+whether it sends or skips. The `push_notifications` table has **never had a row** — and it
+only covers admin broadcasts anyway, not the per-user path. So there is no way to answer
+"did that push arrive?" from data. Two things would fix it:
+
+1. Log every `notify-user` outcome (sent / skipped-preference / skipped-no-token / gateway
+   error) with the user and category. Without this, any future push report is unfalsifiable.
+2. One live end-to-end send to a real device, to prove the APNs and FCM paths work at all
+   since the team change. Nothing on record has ever demonstrated it.
+
+---
+
 ## Status at 2026-07-30 — v1.0.6 / Build 332 submitted for App Store review
 
 Everything below is committed, pushed, and shipped in **Build 332** unless stated otherwise.
