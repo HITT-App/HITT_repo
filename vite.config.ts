@@ -101,7 +101,6 @@ export default defineConfig(() => ({
           "date": ["date-fns"],
           "capacitor": [
             "@capacitor/core",
-            "@capacitor/geolocation",
             "@capacitor/keyboard",
             "@capacitor/splash-screen",
             "@capacitor/status-bar",
