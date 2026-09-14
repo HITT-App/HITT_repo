@@ -163,6 +163,12 @@ serve(async (req) => {
       // properly means long replies, so budget like parse-workout-plan does rather than like
       // the smaller single-answer calls.
       max_tokens: 16000,
+      // ai-client aborts at 55s by default, which is too tight for a 16000-token
+      // ceiling on a thinking model with response_format re-sampling — the same
+      // combination that made parse-workout-plan surface a raw AbortError after a
+      // long hang. Kept to 100s rather than the 150s used there because this call
+      // retries once (callModel(2) below), so the worst case is twice this number.
+      timeout_ms: 100_000,
     });
 
     const response = await callModel();
