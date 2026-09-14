@@ -1358,3 +1358,24 @@ emits that warning generically.
 believes unreachable, which produces a bundle that builds cleanly and crashes on a plugin call.
 If app size ever justifies it, that is a deliberate piece of work with keep rules and device
 testing, not a config flip.
+
+
+---
+
+## #122 — Ship the pending client-side changes in the next build
+
+**Added 2026-09-14.** Two changes are committed and pushed but only reach users on the next
+Android/iOS build. Neither justifies a build of its own; fold them into whatever ships next.
+
+1. **`describeAIError()` (`src/lib/ai-errors.ts`)** — commit `775e594`. Abort-shaped errors from any
+   AI edge function currently render raw on the upload screen as
+   `AbortError: The signal has been aborted`. The helper maps them to "This is taking longer than
+   expected — please try again." Already wired into `UploadWorkoutPlan` and `useOnboardingPlan`;
+   it just needs building. Lower urgency now that the server-side timeouts were raised, since the
+   abort should be rare — but it is the difference between a crash-looking error and a clear one
+2. **#121 native debug symbols** — the one-line `ndk { debugSymbolLevel 'FULL' }` in
+   `android/app/build.gradle`
+
+**Before that build ships,** diff the merged manifest against versionCode 16 if any Capacitor
+plugin has moved. versionCode 15 was scrapped because a plugin bump silently added four Health
+Connect permissions — see the CHANGELOG entry for 14 September.

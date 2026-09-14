@@ -1,10 +1,48 @@
 # HITT App Changelog
 
-## [2026-09-14] — Android v1.0 / versionCode 15: xlsx security patch, Capacitor plugin updates
+## [2026-09-14] — Server-side: workout plan upload and food scan no longer time out
 
-Submitted to **internal testing** on 14 September. Security and maintenance only — there are
-**no `src/` changes at all** between versionCode 14 and 15, so nothing in the app looks or
-behaves differently. Testers should not go looking for new features.
+No app build needed — both are edge function deploys and are **already live on every version**.
+
+- **Uploading a workout plan as a spreadsheet now completes.** It hung for about a minute and then
+  failed with `AbortError: The signal has been aborted`. `aiChatCompletion()` aborts at 55 seconds
+  unless told otherwise, and `parse-workout-plan` never told it otherwise — while asking for up to
+  16,000 output tokens with `response_format: json_object`, which makes the runtime re-sample until
+  the output parses. A plan of any length simply could not finish inside the budget. Raised to 150s
+  (`parse-workout-plan` v27). Confirmed against a real invocation: the abort fired at
+  `ai-client.ts` and the same document parsed afterwards
+  - **The spreadsheet library was not the cause.** The `xlsx` 0.18.5 → 0.20.3 upgrade in versionCode
+    16 was the obvious suspect, being the same code path. It produces byte-identical CSV to 0.18.5
+    on the same workbook — verified by running both versions side by side
+- **The AI food scan had the same fault waiting.** `analyze-food` shares the profile exactly: 16,000
+  max tokens, `response_format` re-sampling, and the 55s default. Raised to 100s rather than 150s
+  because it retries once, so the worst case is two attempts (`analyze-food` v42). Not yet seen
+  failing in the wild — fixed pre-emptively
+- **Abort errors are no longer shown raw.** `useOnboardingPlan` already mapped them to
+  "This is taking longer than expected — please try again", but kept that private, so the same
+  failure read as a stack trace on the upload screen and as a sensible message on the wizard.
+  Extracted to `src/lib/ai-errors.ts` and used in both. **This part needs an app build** — see
+  backlog #122
+
+## [2026-09-14] — Android v1.0 / versionCode 16: xlsx security patch, Capacitor plugin updates
+
+**Shipped to production** on 14 September, replacing versionCode 14. Security and maintenance
+only — there are **no `src/` changes at all**, so nothing in the app looks or behaves differently.
+
+**versionCode 15 was built but never released.** The `@capgo/capacitor-health` 8.4.0 → 8.10.5 bump
+added six Health Connect permissions, and the manifest's 35 `tools:node="remove"` entries predate
+them, so four reached the bundle: `READ`/`WRITE_HYDRATION` and `READ`/`WRITE_NUTRITION`. HIIT uses
+none of them — `useHealthSync` reads steps, sleep, weight, workouts, heart rate, resting heart rate
+and calories, and writes only workouts. Shipping it would have widened the Play declaration and
+forced a re-review, and per the union rule those permissions could not have been withdrawn until 15
+was retired from every track. versionCode 16 removes them and declares the same 13 health
+permissions as versionCode 14.
+
+**Lesson for future plugin bumps:** "no `src/` changes" is not sufficient assurance. Capacitor
+plugins contribute permissions through manifest merging, which is exactly what the remove list
+exists to control. Diff the merged manifest at
+`android/app/build/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml`
+after any plugin update.
 
 - **The spreadsheet library behind Excel workout-plan upload has been patched.** `xlsx` was
   pinned at 0.18.5, which carries two high-severity advisories — prototype pollution and a

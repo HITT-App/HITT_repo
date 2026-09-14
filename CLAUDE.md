@@ -280,6 +280,19 @@ this same coordinator-proxy shape and skip the direct onReceive on the destinati
 All LLM calls go through `aiChatCompletion()` from `_shared/ai-client.ts` — never fetch the AI
 gateway directly. This allows provider switching (Gemini / OpenAI / Anthropic) via Supabase secrets.
 
+**`aiChatCompletion()` aborts at 55 seconds unless you pass `timeout_ms`.** That default suits a
+short chat reply. It does not suit a call with a large `max_tokens` ceiling, and it especially does
+not suit one using `response_format: { type: "json_object" }`, which makes the runtime re-sample
+until the output parses. When the abort fires, the client sees a raw
+`AbortError: The signal has been aborted` after a long hang — it looks like a crash, not a timeout.
+Set `timeout_ms` explicitly on any call that can generate a long response, and halve your budget if
+the call retries. Current overrides: `parse-workout-plan` 150s, `generate-workout-plan` and
+`generate-ai-workout-plan` 110s, `analyze-food` 100s (retries once, so 200s worst case),
+`generate-daily-insight` 15s. Everything else still runs on the 55s default.
+
+**Render AI errors through `describeAIError()` (`src/lib/ai-errors.ts`), never `err.message`.**
+Abort-shaped errors are not readable by users.
+
 **Postgres reads with more than 1,000 rows — you MUST paginate.** PostgREST enforces a server-side
 `max-rows: 1000` cap on any single response, and it silently truncates. Passing `.range(0, 19999)`
 to bypass it doesn't work — the server still returns only the first 1,000 rows and the rest are
