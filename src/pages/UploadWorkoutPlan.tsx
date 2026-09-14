@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 import { format, addDays, addWeeks, startOfWeek, getDay } from "date-fns"
 import type { ExerciseSnapshot } from "@/integrations/supabase/types"
+import { describeAIError } from "@/lib/ai-errors"
 
 interface ParsedExercise extends ExerciseSnapshot {}
 
@@ -186,7 +187,7 @@ export default function UploadWorkoutPlan() {
       setUseAdjusted(false)
       setStep("review")
     } catch (err: any) {
-      toast.error(err.message || "Could not read your plan. Try a clearer image or paste the text.")
+      toast.error(describeAIError(err))
       setStep("upload")
     }
   }, [user])

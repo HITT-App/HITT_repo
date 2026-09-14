@@ -3,24 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { ExerciseSnapshot } from '@/integrations/supabase/types';
 import { format } from 'date-fns';
-
-// Maps any abort-shaped error (client cancel, upstream gateway timeout) to a
-// human-readable string. Without this, users see literal "AbortError: The
-// signal has been aborted" when the LLM gateway hits its 55s timeout.
-function friendlyError(err: unknown): string {
-  if (err instanceof Error) {
-    const name = err.name;
-    const msg = err.message ?? '';
-    const looksAborted =
-      name === 'AbortError' ||
-      /aborted|abort|signal|timeout/i.test(msg);
-    if (looksAborted) {
-      return 'This is taking longer than expected — please try again.';
-    }
-    return msg || 'Something went wrong';
-  }
-  return 'Something went wrong';
-}
+import { describeAIError } from '@/lib/ai-errors';
 
 export interface OnboardingAnswers {
   goal: string;
@@ -154,7 +137,7 @@ export function useOnboardingPlan() {
     } catch (err: unknown) {
       // Silent cancel — caller deliberately aborted (e.g. unmount).
       if (controller.signal.aborted) return;
-      setError(friendlyError(err));
+      setError(describeAIError(err));
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
       setIsGenerating(false);

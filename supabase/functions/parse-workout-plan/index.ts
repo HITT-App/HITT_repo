@@ -187,6 +187,12 @@ Return ONLY valid JSON in this exact shape:
       // quotes" / "unescaped newlines in string values" class of failure
       // that the local repair logic below only partially handled.
       response_format: { type: "json_object" },
+      // ai-client defaults to a 55s abort, which suits short chat replies but not
+      // this call: max_tokens is 16000 and response_format forces the runtime to
+      // re-sample until the output parses as JSON, so a long plan can spend well
+      // over a minute generating. Hitting the default surfaced to users as a raw
+      // "The signal has been aborted" after a long hang.
+      timeout_ms: 150000,
     });
 
     if (!response.ok) {
