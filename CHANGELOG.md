@@ -1,5 +1,45 @@
 # HITT App Changelog
 
+## [2026-09-14] — Android v1.0 / versionCode 15: xlsx security patch, Capacitor plugin updates
+
+Submitted to **internal testing** on 14 September. Security and maintenance only — there are
+**no `src/` changes at all** between versionCode 14 and 15, so nothing in the app looks or
+behaves differently. Testers should not go looking for new features.
+
+- **The spreadsheet library behind Excel workout-plan upload has been patched.** `xlsx` was
+  pinned at 0.18.5, which carries two high-severity advisories — prototype pollution and a
+  regular-expression denial of service. It matters here rather than in the abstract because
+  that library parses **files the user supplies**: `UploadWorkoutPlan.tsx` dynamically imports
+  it to read uploaded `.xlsx`/`.xls` plans. Untrusted input into a vulnerable parser is exactly
+  the shape both advisories describe
+  - `npm audit` reports **no fix available**, because SheetJS stopped publishing to npm at
+    0.18.5. The patched build comes from the vendor's own distribution instead, pinned at
+    `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. **Note this is a tarball URL rather
+    than the npm registry** — deliberate, and the maintainer's documented channel, but worth
+    knowing when reading `package.json`
+  - **Needs this build.** It is bundled into the app, so no server change can deliver it
+- **Capacitor plugins updated 8.2.0 → 8.5.1** (android, ios, core, app, browser, filesystem,
+  keyboard, local-notifications, push-notifications, splash-screen, status-bar). These are
+  native, so this is a real rebuild rather than a web-asset swap. **Needs this build**
+- **A stale build-config entry that broke the build has been removed.** `vite.config.ts` listed
+  `@capacitor/geolocation` in `manualChunks`, but it is not a dependency and nothing imports
+  it. It had only ever resolved because a leftover copy sat in `node_modules`; the dependency
+  update pruned that copy and the build then failed on an unresolvable chunk entry. The app
+  uses `@capacitor-community/background-geolocation`, which is unaffected
+- **Backlog reconciled against the code** (#108 finding corrected, a token-deletion bug
+  recorded). Documentation only — no app impact
+
+**Watch on first install:** gradle emitted Kotlin metadata mismatches for
+`capgo-capacitor-health` — compiled against Kotlin 2.4.0 where 2.2.0 was expected. The build
+and lint both passed, but that class of mismatch tends to surface at runtime rather than build
+time, so **health tracking needs testing on a real device** before rolling beyond internal.
+GPS and notifications are worth a regression pass too, being the other native plugins that moved.
+
+> **iOS is unaffected by this build** — no iOS release was attempted. The iOS side now lives on
+> Casey's Apple account (team 5933246NY5) and is at v1.0.9 / Build 335. Note the two platforms
+> have drifted apart on marketing version: Android is still `versionName "1.0"` while iOS is
+> 1.0.9.
+
 ## [2026-08-16] — v1.0.9 / Build 335: hotfix — home screen and workout players crashed on 1.0.8
 
 - **Fixes a crash that made 1.0.8 unusable.** Opening the app, starting a structured workout, or starting a gym session showed "Something went wrong" instead of the screen. Four screens were affected: the **home screen** (via the recommended-meals carousel), the **meal detail sheet**, the **workout player** and the **gym timer**
