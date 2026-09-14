@@ -1328,3 +1328,33 @@ truncates at 1,000.
 
 **Action needed:** owner sign-off on step 4 (showing "unavailable" instead of a number) and
 on whether an admin review queue is worth building vs just fixing the data once.
+
+---
+
+## #121 — Upload native debug symbols with the Android bundle
+
+**Added 2026-09-14.** Play Console warns on every upload that the bundle contains native code
+with no debug symbols. Fold this into whatever build comes next rather than triggering one for it.
+
+```gradle
+// android/app/build.gradle
+release {
+    minifyEnabled false
+    ndk { debugSymbolLevel 'FULL' }
+    ...
+}
+```
+
+**Low value, hence the low priority.** The only native code in the bundle is
+`libdatastore_shared_counter.so` (AndroidX DataStore) across four ABIs. None of HIIT's code is
+native and no Capacitor plugin ships a `.so` here, so a native crash would be a Google bug that
+symbols would not help you fix.
+
+**The companion warning about a missing deobfuscation file can be ignored outright** —
+`minifyEnabled false`, so nothing is obfuscated and there is no mapping file to upload. Play
+emits that warning generically.
+
+**Do not enable R8 to silence it.** Capacitor plugins are reached reflectively; R8 strips code it
+believes unreachable, which produces a bundle that builds cleanly and crashes on a plugin call.
+If app size ever justifies it, that is a deliberate piece of work with keep rules and device
+testing, not a config flip.
