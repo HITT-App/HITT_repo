@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { cleanImageData, cleanText, limitChatMessages } from "../_shared/request-limits.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 import {
   searchRecipes,
@@ -1723,13 +1724,21 @@ function buildMacroNote(t: ExplicitMealTargets, meals: any[]): string {
   return `Honest note: I matched most of your targets, but ${misses.join(', and ')}. Our recipe library is a little thin on meals that fit that exactly, so this is the closest I could get — tweak the number (or your calorie target) and I'll rebuild, or run with this as a solid plan.\n\n`;
 }
 
+type ClientContext = {
+  customMemory?: string;
+  customResponseStyle?: string;
+  // update_memory writes with these; they only exist inside the request handler
+  userId?: string;
+  supabaseAdmin?: ReturnType<typeof createClient>;
+};
+
 async function mapToolCallToAction(
   tc: { name: string; arguments: string },
   validWorkoutIds: Set<string>,
   validRecipeIds: Set<string>,
   authHeader: string,
   supabaseUrl: string,
-  clientContext: { customMemory?: string; customResponseStyle?: string },
+  clientContext: ClientContext,
 ): Promise<object | null> {
   try {
     const args = tc.arguments ? JSON.parse(tc.arguments) : {};
@@ -1908,14 +1917,17 @@ async function mapToolCallToAction(
           console.warn("[ai-coach] update_memory missing updates");
           return null;
         }
+        const { userId, supabaseAdmin } = clientContext;
+        if (!userId || !supabaseAdmin) return null;
         const allowedKeys = new Set(["injuries", "preferences", "lifestyle", "notes"]);
         for (const [key, value] of Object.entries(args.updates)) {
           if (!allowedKeys.has(key) || typeof value !== "string") continue;
-          await supabaseAdmin.rpc("upsert_user_memory_key", {
+          const { error } = await supabaseAdmin.rpc("upsert_user_memory_key", {
             p_user_id: userId,
             p_key: key,
             p_value: value,
           });
+          if (error) console.error("[ai-coach] update_memory failed:", error.message);
         }
         return null; // silent — no card shown to user
       }
@@ -1935,7 +1947,7 @@ function buildStructuredStream(
   validRecipeIds: Set<string>,
   authHeader: string,
   supabaseUrl: string,
-  clientContext: { customMemory?: string; customResponseStyle?: string },
+  clientContext: ClientContext,
   retryStructured?: () => Promise<Response>,
   mealPlanExpected?: boolean,
   suppressMealWizard?: boolean,
@@ -2571,11 +2583,13 @@ serve(async (req) => {
 
     // ─── Process request ───
     const reqBody = await req.json();
-    const { messages, imageData, hasImage } = reqBody;
+    const messages = limitChatMessages(reqBody.messages);
+    const imageData = cleanImageData(reqBody.imageData);
+    const hasImage = reqBody.hasImage;
     // Accept both field names: customResponse (JarvisMode/useAIChat) and customResponseStyle (useAI hook)
-    const customResponse: string = reqBody.customResponse || reqBody.customResponseStyle || '';
-    const customMemory: string = reqBody.customMemory || '';
-    const healthProfile: string = reqBody.healthProfile || '';
+    const customResponse: string = cleanText(reqBody.customResponse || reqBody.customResponseStyle);
+    const customMemory: string = cleanText(reqBody.customMemory);
+    const healthProfile: string = cleanText(reqBody.healthProfile);
 
     let extraContext = '';
     if (healthProfile && healthProfile.trim()) {
@@ -3019,7 +3033,7 @@ serve(async (req) => {
         validRecipeIds,
         authHeader,
         supabaseUrl,
-        { customMemory, customResponseStyle: customResponse },
+        { customMemory, customResponseStyle: customResponse, userId, supabaseAdmin },
         retryStructured,
         mealPlanExpected,
         suppressMealWizard,
