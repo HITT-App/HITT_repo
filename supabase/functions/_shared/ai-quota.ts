@@ -9,7 +9,7 @@
 // Defaults can be overridden per endpoint; pass a higher cap for ai-coach
 // (long conversations) than for plan generation.
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export interface QuotaOptions {
   /** Max generations of this type per 24h per user. */
@@ -34,6 +34,9 @@ export const DEFAULT_QUOTAS: Record<string, number> = {
   generate_ai_workout: 20,
   generate_ai_workout_plan: 50,
   parse_workout_plan: 10,
+  // Voice: TTS speaks every legacy-chat reply; scribe is one token per mic tap
+  tts: 500,
+  scribe_token: 300,
 };
 
 export interface QuotaResult {
@@ -80,4 +83,27 @@ export function quotaExceededResponse(result: QuotaResult, corsHeaders: Record<s
       },
     }
   );
+}
+
+// Checks the quota, then logs this call so it counts towards the next check.
+// Returns a 429 Response when over the cap, otherwise null.
+export async function enforceAIQuota(
+  userId: string,
+  generationType: string,
+  corsHeaders: Record<string, string>,
+  model = "n/a",
+): Promise<Response | null> {
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const quota = await checkAIQuota(admin, userId, {
+    dailyCap: DEFAULT_QUOTAS[generationType],
+    generationType,
+  });
+  if (!quota.ok) return quotaExceededResponse(quota, corsHeaders);
+  await admin.from("ai_generation_log").insert({
+    user_id: userId,
+    generation_type: generationType,
+    model,
+    prompt: { redacted: true },
+  });
+  return null;
 }

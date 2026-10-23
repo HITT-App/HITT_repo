@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { enforceAIQuota } from "../_shared/ai-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -65,6 +66,8 @@ serve(async (req) => {
     }
 
     const userId = userData.user.id;
+    const overQuota = await enforceAIQuota(userId, "scribe_token", corsHeaders, "elevenlabs");
+    if (overQuota) return overQuota;
     logEvent("info", "Scribe token request authenticated", {
       correlationId,
       userId,
@@ -97,6 +100,8 @@ serve(async (req) => {
         correlationId,
         userId,
         statusCode: response.status,
+        // ElevenLabs' own reason (quota, key, plan); no user content in it
+        reason: errorText.slice(0, 300),
         eventType: "external_api_error",
       });
       

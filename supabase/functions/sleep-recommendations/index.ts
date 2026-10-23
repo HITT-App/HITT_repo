@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { enforceAIQuota } from "../_shared/ai-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +35,9 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const overQuota = await enforceAIQuota(user.id, "sleep_recommendations", corsHeaders);
+    if (overQuota) return overQuota;
 
     // Fetch user data in parallel
     const [preferencesResult, logsResult, schedulesResult, consentResult] = await Promise.all([
