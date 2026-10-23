@@ -25,6 +25,17 @@ const corsHeaders = {
 
 const MAX_ATTEMPTS = 5;
 
+// Wrong codes are counted per IP and in total; the total stops a spread-out guessing run
+const FAIL_ENDPOINT = "redeem-garmin-pairing:fail";
+const FAIL_WINDOW_MS = 15 * 60 * 1000;
+const MAX_FAILS_PER_IP = 10;
+const MAX_FAILS_GLOBAL = 300;
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") {
@@ -55,6 +66,22 @@ serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+    const ipHash = await sha256Hex(`garmin-pairing:${ip}`);
+    const since = new Date(Date.now() - FAIL_WINDOW_MS).toISOString();
+    const [ipFails, allFails] = await Promise.all([
+      admin.from("rate_limit_events").select("id", { count: "exact", head: true })
+        .eq("endpoint", FAIL_ENDPOINT).eq("identifier_hash", ipHash).gte("created_at", since),
+      admin.from("rate_limit_events").select("id", { count: "exact", head: true })
+        .eq("endpoint", FAIL_ENDPOINT).gte("created_at", since),
+    ]);
+    if ((ipFails.count ?? 0) >= MAX_FAILS_PER_IP || (allFails.count ?? 0) >= MAX_FAILS_GLOBAL) {
+      return new Response(JSON.stringify({ error: "Too many attempts — try again in a few minutes" }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const codeHash = await hashPairingCode(code);
 
     const nowISO = new Date().toISOString();
@@ -70,6 +97,7 @@ serve(async (req) => {
     const match = matches?.[0];
 
     if (!match) {
+      await admin.from("rate_limit_events").insert({ identifier_hash: ipHash, endpoint: FAIL_ENDPOINT });
       return new Response(JSON.stringify({ error: "Invalid or expired code" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
