@@ -90,6 +90,7 @@ serve(async (req) => {
       { data: recentWorkouts },
       { data: scoreHistory },
       { data: profile },
+      { data: prefs },
     ] = await Promise.all([
       admin
         .from("activity_logs")
@@ -114,8 +115,13 @@ serve(async (req) => {
         .limit(30),
       admin
         .from("profiles")
-        .select("display_name, fitness_goal, fitness_level, ai_health_consent")
-        .eq("id", user.id)
+        .select("display_name, fitness_goal, ai_health_consent")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      admin
+        .from("workout_preferences")
+        .select("workout_goal, fitness_level")
+        .eq("user_id", user.id)
         .maybeSingle(),
     ]);
 
@@ -149,7 +155,7 @@ serve(async (req) => {
       : null;
 
     const summary = [
-      `User: ${profile?.data?.display_name ?? "athlete"}, goal: ${profile?.data?.fitness_goal ?? "general fitness"}, level: ${profile?.data?.fitness_level ?? "intermediate"}`,
+      `User: ${profile?.display_name ?? "athlete"}, goal: ${prefs?.workout_goal ?? profile?.fitness_goal ?? "general fitness"}, level: ${prefs?.fitness_level ?? "intermediate"}`,
       `Last 30 days: ${totalSessions} sessions, ${Math.round(totalCalories)} kcal burned, ${totalMinutes} minutes active`,
       activityTypes.length > 0 ? `Activity types: ${activityTypes.join(", ")}` : null,
       scoreDelta !== null ? `HIIT score change: ${scoreDelta > 0 ? "+" : ""}${scoreDelta}% over 30 days` : null,

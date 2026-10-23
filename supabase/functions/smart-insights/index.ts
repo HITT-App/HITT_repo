@@ -52,9 +52,10 @@ serve(async (req) => {
     const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
     const today = now.toISOString().split("T")[0];
 
-    const [profileRes, streakRes, workoutsRes, sleepRes, moodRes, activityRes, mealsRes] = await Promise.all([
-      supabase.from("profiles").select("display_name, fitness_level, goals, ai_health_consent").eq("user_id", userId).maybeSingle(),
-      supabase.from("streaks").select("current_streak, longest_streak").eq("user_id", userId).maybeSingle(),
+    const [profileRes, prefsRes, streakRes, workoutsRes, sleepRes, moodRes, activityRes, mealsRes] = await Promise.all([
+      supabase.from("profiles").select("display_name, fitness_goal, ai_health_consent").eq("user_id", userId).maybeSingle(),
+      supabase.from("workout_preferences").select("workout_goal, fitness_level").eq("user_id", userId).maybeSingle(),
+      supabase.from("user_streaks").select("current_streak, longest_streak").eq("user_id", userId).maybeSingle(),
       supabase.from("workout_progress").select("workout_id, duration_seconds, completed_at, created_at").eq("user_id", userId).gte("created_at", weekAgo),
       supabase.from("health_metrics").select("value, recorded_at").eq("user_id", userId).eq("metric_type", "sleep").gte("recorded_at", weekAgo).order("recorded_at", { ascending: false }).limit(7),
       supabase.from("daily_checkins").select("mood, energy, date").eq("user_id", userId).order("date", { ascending: false }).limit(3),
@@ -63,6 +64,7 @@ serve(async (req) => {
     ]);
 
     const profile = profileRes.data;
+    const prefs = prefsRes.data;
     const streak = streakRes.data;
     const workouts = workoutsRes.data || [];
     const moods = moodRes.data || [];
@@ -91,7 +93,7 @@ serve(async (req) => {
 
     const contextBlock = `
 USER: ${profile?.display_name || "Athlete"}
-Fitness level: ${profile?.fitness_level || "unknown"} | Goals: ${profile?.goals || "general fitness"}
+Fitness level: ${prefs?.fitness_level || "unknown"} | Goals: ${prefs?.workout_goal || profile?.fitness_goal || "general fitness"}
 Current streak: ${streak?.current_streak || 0} days | Longest: ${streak?.longest_streak || 0} days
 This week: ${totalWorkouts} workouts (${totalWorkoutMin} min), ${totalActivities} activities, ${totalCalories} cal burned, ${totalDistance} km
 Sleep avg: ${avgSleep ? avgSleep + "h" : "no data"}
