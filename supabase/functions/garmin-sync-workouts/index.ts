@@ -7,6 +7,7 @@ import {
   GarminRetryLater,
   GarminTokenDead,
   getValidAccessToken,
+  markNeedsReconnect,
 } from "../_shared/garmin-connection.ts";
 import { sha256Hex } from "../_shared/garmin-crypto.ts";
 import { adminClient } from "../_shared/garmin-http.ts";
@@ -261,7 +262,7 @@ serve(async (req) => {
       if (e instanceof PermissionOff) {
         await admin.from("garmin_connections").update({ status: "permission_off" }).eq("user_id", userId);
       } else if (e instanceof TokenRejected || e instanceof GarminTokenDead) {
-        await admin.from("garmin_connections").update({ status: "needs_reconnect" }).eq("user_id", userId);
+        await markNeedsReconnect(admin, userId);
       } else {
         console.error("[garmin-sync-workouts] user failed:", (e as Error).name);
       }

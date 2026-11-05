@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { GarminSetupSheet } from "@/components/wearable/GarminSetupSheet";
 import { PairGarminWatchDialog } from "@/components/wearable/PairGarminWatchDialog";
 import { PairedWatchesList } from "@/components/wearable/PairedWatchesList";
+import { GarminConnectCard } from "@/components/wearable/GarminConnectCard";
+import { useGarminConnection } from "@/hooks/useGarminConnection";
 
 // Multi-source view of every wearable that's putting data into the user's
 // activity_logs / health_metrics in the last 14 days. The HealthKit aggregator
@@ -46,6 +48,7 @@ function canonicalPlatform(raw: string): string {
 const FRIENDLY: Record<string, { label: string; caveat?: string }> = {
   apple_watch:  { label: "Apple Watch" },
   garmin:       { label: "Garmin" },
+  garmin_api:   { label: "Garmin" },
   fitbit:       { label: "Fitbit" },
   whoop:        { label: "Whoop", caveat: "HR + workouts only — strain & recovery stay in the Whoop app" },
   oura:         { label: "Oura" },
@@ -59,7 +62,7 @@ function friendlyFor(platform: string) {
 
 function iconFor(platform: string) {
   if (platform === "apple_watch") return Watch;
-  if (platform === "garmin" || platform === "fitbit" || platform === "whoop" || platform === "oura") return Activity;
+  if (platform === "garmin" || platform === "garmin_api" || platform === "fitbit" || platform === "whoop" || platform === "oura") return Activity;
   if (platform === "apple_health") return Heart;
   return Activity;
 }
@@ -119,6 +122,7 @@ export default function ConnectedDevices() {
   const [syncing, setSyncing] = useState(false);
   const [garminSheetOpen, setGarminSheetOpen] = useState(false);
   const [pairWatchOpen, setPairWatchOpen] = useState(false);
+  const { connected: garminConnected } = useGarminConnection();
 
   const refresh = async () => {
     if (!user) return;
@@ -176,6 +180,8 @@ export default function ConnectedDevices() {
       </header>
 
       <main className="max-w-screen-sm mx-auto p-4 space-y-4">
+        <GarminConnectCard />
+
         {devices === null ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -201,13 +207,15 @@ export default function ConnectedDevices() {
             for the multi-wearable user (Apple Watch primary + Garmin
             secondary) whose primary signal outranks the Garmin detection. */}
         <div className="pt-4 border-t border-border/60 space-y-2">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setGarminSheetOpen(true)}
-          >
-            Set up Garmin sync (via Apple Health)
-          </Button>
+          {!garminConnected && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setGarminSheetOpen(true)}
+            >
+              Set up Garmin sync (via Apple Health)
+            </Button>
+          )}
           <Button
             variant="outline"
             className="w-full"
@@ -216,8 +224,8 @@ export default function ConnectedDevices() {
             Pair Garmin watch (HITT Connect IQ app)
           </Button>
           <p className="text-[11px] text-muted-foreground text-center leading-relaxed pt-1">
-            "Set up Garmin sync" enables sharing through Apple Health. "Pair Garmin watch"
-            is for users who've installed the HITT app on their Garmin — workouts come
+            {!garminConnected && `"Set up Garmin sync" enables sharing through Apple Health. `}
+            "Pair Garmin watch" is for users who've installed the HITT app on their Garmin — workouts come
             straight to HITT with no Apple Health middleman.
           </p>
         </div>

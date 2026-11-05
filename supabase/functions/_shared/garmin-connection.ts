@@ -30,6 +30,36 @@ export async function garminEnabledFor(admin: SupabaseClient, userId: string): P
   return !!tester;
 }
 
+// The status filter makes this fire once, however many functions notice the same dead token.
+export async function markNeedsReconnect(admin: SupabaseClient, userId: string): Promise<void> {
+  const { data: changed, error } = await admin
+    .from("garmin_connections")
+    .update({ status: "needs_reconnect" })
+    .eq("user_id", userId)
+    .in("status", ["active", "permission_off"])
+    .select("user_id");
+  if (error) throw new Error(error.message);
+  if (!changed?.length) return;
+  try {
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-user`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        category: "workout",
+        title: "Reconnect Garmin",
+        body: "Your Garmin connection has stopped. Tap to reconnect it.",
+        url: "/connected-devices",
+      }),
+    });
+  } catch (e) {
+    console.error("[garmin] reconnect notification failed:", (e as Error).message);
+  }
+}
+
 export async function getValidAccessToken(admin: SupabaseClient, userId: string): Promise<string> {
   const { clientId, clientSecret, tokenKey } = garminEnv();
   const { data: row } = await admin.from("garmin_tokens").select("*").eq("user_id", userId).maybeSingle();
@@ -54,7 +84,7 @@ export async function getValidAccessToken(admin: SupabaseClient, userId: string)
 
   if (res.status === 400 || res.status === 401) {
     await admin.from("garmin_tokens").update({ refresh_lock_until: null }).eq("user_id", userId);
-    await admin.from("garmin_connections").update({ status: "needs_reconnect" }).eq("user_id", userId);
+    await markNeedsReconnect(admin, userId);
     throw new GarminTokenDead(`Refresh rejected: ${res.status}`);
   }
   if (!res.ok) {

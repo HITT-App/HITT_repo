@@ -167,6 +167,9 @@ export type Database = {
           distance_km: number | null
           duration_seconds: number | null
           ended_at: string | null
+          garmin_activity_id: string | null
+          garmin_device_name: string | null
+          garmin_summary_id: string | null
           id: string
           intensity_level: number | null
           notes: string | null
@@ -186,6 +189,9 @@ export type Database = {
           distance_km?: number | null
           duration_seconds?: number | null
           ended_at?: string | null
+          garmin_activity_id?: string | null
+          garmin_device_name?: string | null
+          garmin_summary_id?: string | null
           id?: string
           intensity_level?: number | null
           notes?: string | null
@@ -205,6 +211,9 @@ export type Database = {
           distance_km?: number | null
           duration_seconds?: number | null
           ended_at?: string | null
+          garmin_activity_id?: string | null
+          garmin_device_name?: string | null
+          garmin_summary_id?: string | null
           id?: string
           intensity_level?: number | null
           notes?: string | null
@@ -340,6 +349,177 @@ export type Database = {
           output_tokens?: number | null
           prompt?: Json
           response?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      garmin_connections: {
+        Row: {
+          ai_consent_at: string | null
+          ai_consent_withdrawn_at: string | null
+          ai_memory_snapshot: Json | null
+          ai_purge_from: string | null
+          connected_at: string
+          course_import_consented_at: string | null
+          disconnect_reason: string | null
+          disconnected_at: string | null
+          garmin_user_id: string
+          last_activity_at: string | null
+          last_workout_pushed_at: string | null
+          last_workout_sync_at: string | null
+          permissions: string[]
+          permissions_changed_at: number | null
+          status: string
+          user_id: string
+          workout_import_consented_at: string | null
+        }
+        Insert: {
+          ai_consent_at?: string | null
+          ai_consent_withdrawn_at?: string | null
+          ai_memory_snapshot?: Json | null
+          ai_purge_from?: string | null
+          connected_at?: string
+          course_import_consented_at?: string | null
+          disconnect_reason?: string | null
+          disconnected_at?: string | null
+          garmin_user_id?: string
+          last_activity_at?: string | null
+          last_workout_pushed_at?: string | null
+          last_workout_sync_at?: string | null
+          permissions?: string[]
+          permissions_changed_at?: number | null
+          status?: string
+          user_id?: string
+          workout_import_consented_at?: string | null
+        }
+        Update: {
+          ai_consent_at?: string | null
+          ai_consent_withdrawn_at?: string | null
+          ai_memory_snapshot?: Json | null
+          ai_purge_from?: string | null
+          connected_at?: string
+          course_import_consented_at?: string | null
+          disconnect_reason?: string | null
+          disconnected_at?: string | null
+          garmin_user_id?: string
+          last_activity_at?: string | null
+          last_workout_pushed_at?: string | null
+          last_workout_sync_at?: string | null
+          permissions?: string[]
+          permissions_changed_at?: number | null
+          status?: string
+          user_id?: string
+          workout_import_consented_at?: string | null
+        }
+        Relationships: []
+      }
+      garmin_testers: {
+        Row: {
+          user_id: string
+        }
+        Insert: {
+          user_id?: string
+        }
+        Update: {
+          user_id?: string
+        }
+        Relationships: []
+      }
+      garmin_workout_links: {
+        Row: {
+          completed_activity_id: string | null
+          content_hash: string | null
+          garmin_schedule_id: number | null
+          garmin_sport: string | null
+          garmin_workout_id: number | null
+          last_error: string | null
+          scheduled_workout_id: string
+          swim_distance_m: number | null
+          sync_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_activity_id?: string | null
+          content_hash?: string | null
+          garmin_schedule_id?: number | null
+          garmin_sport?: string | null
+          garmin_workout_id?: number | null
+          last_error?: string | null
+          scheduled_workout_id?: string
+          swim_distance_m?: number | null
+          sync_status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          completed_activity_id?: string | null
+          content_hash?: string | null
+          garmin_schedule_id?: number | null
+          garmin_sport?: string | null
+          garmin_workout_id?: number | null
+          last_error?: string | null
+          scheduled_workout_id?: string
+          swim_distance_m?: number | null
+          sync_status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      garmin_course_links: {
+        Row: {
+          content_hash: string | null
+          garmin_course_id: number | null
+          garmin_user_id: string | null
+          last_error: string | null
+          route_id: string
+          sending_until: string | null
+          sent_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content_hash?: string | null
+          garmin_course_id?: number | null
+          garmin_user_id?: string | null
+          last_error?: string | null
+          route_id?: string
+          sending_until?: string | null
+          sent_at?: string | null
+          user_id?: string
+        }
+        Update: {
+          content_hash?: string | null
+          garmin_course_id?: number | null
+          garmin_user_id?: string | null
+          last_error?: string | null
+          route_id?: string
+          sending_until?: string | null
+          sent_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      garmin_activity_details: {
+        Row: {
+          garmin_activity_id: string
+          heart_rate: Json
+          route: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          garmin_activity_id?: string
+          heart_rate?: Json
+          route?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          garmin_activity_id?: string
+          heart_rate?: Json
+          route?: Json
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

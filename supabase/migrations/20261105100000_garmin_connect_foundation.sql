@@ -70,6 +70,9 @@ CREATE TABLE public.garmin_testers (
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE
 );
 ALTER TABLE public.garmin_testers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users read their own Garmin tester row"
+  ON public.garmin_testers FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
 
 CREATE TABLE public.garmin_webhook_inbox (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

@@ -1,7 +1,7 @@
 // Sends a HIIT route to the user's Garmin as a course. Each send is one tap, so it runs
 // straight away rather than waiting for the sync. Garmin then syncs it to the watch itself.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { GarminRetryLater, GarminTokenDead, getValidAccessToken } from "../_shared/garmin-connection.ts";
+import { GarminRetryLater, GarminTokenDead, getValidAccessToken, markNeedsReconnect } from "../_shared/garmin-connection.ts";
 import { sha256Hex } from "../_shared/garmin-crypto.ts";
 import { adminClient, corsHeaders, json, requireUser } from "../_shared/garmin-http.ts";
 import { canSendRoute, mapCourse, planCourseSend } from "../_shared/garmin-course.ts";
@@ -39,9 +39,6 @@ serve(async (req) => {
     if (error) throw new Error(error.message);
     if (!connection || connection.status === "disconnected") return json({ error: "not_connected" }, 400);
 
-    const setStatus = (status: string) =>
-      admin.from("garmin_connections").update({ status }).eq("user_id", user.id);
-
     // What Garmin already holds stays there when this is turned off. The user removes it per route.
     if (body.action === "consent" || body.action === "stop") {
       const { error: updateError } = await admin
@@ -63,11 +60,11 @@ serve(async (req) => {
     const handleRefusal = async (res: Response): Promise<Response | null> => {
       if (res.status === 429) return json({ error: "try_later" }, 429);
       if (res.status === 412) {
-        await setStatus("permission_off");
+        await admin.from("garmin_connections").update({ status: "permission_off" }).eq("user_id", user.id);
         return json({ error: "permission_off" }, 403);
       }
       if (res.status === 401) {
-        await setStatus("needs_reconnect");
+        await markNeedsReconnect(admin, user.id);
         return json({ error: "needs_reconnect" }, 409);
       }
       if (res.status >= 500) return json({ error: "try_later" }, 503);
