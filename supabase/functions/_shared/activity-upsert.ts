@@ -53,6 +53,8 @@ export interface ActivityRow {
   source_platform: string;
   source_platform_id: string;
   status?: string;
+  garmin_activity_id?: string | null;
+  garmin_device_name?: string | null;
 }
 
 interface StampedRow extends ActivityRow {
@@ -104,6 +106,14 @@ export interface UpsertResult {
   skipped: number;
   upgraded: number;             // rows where a lower-priority existing row was replaced
   insertedRows?: InsertedSummary[];
+}
+
+// A merged row can carry Garmin values while another source owns it, so every
+// path that writes them also sets these columns. They drive attribution,
+// the AI gate and deletion.
+function garminTag(row: ActivityRow): Record<string, unknown> {
+  if (!row.garmin_activity_id) return {};
+  return { garmin_activity_id: row.garmin_activity_id, garmin_device_name: row.garmin_device_name ?? null };
 }
 
 export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise<UpsertResult> {
@@ -210,6 +220,7 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
     if (row.calories_burned != null) patch.calories_burned = row.calories_burned;
     if (row.avg_heart_rate != null) patch.avg_heart_rate = row.avg_heart_rate;
     if (row.distance_km != null) patch.distance_km = row.distance_km;
+    Object.assign(patch, garminTag(row));
 
     const { error } = await admin
       .from("activity_logs")
@@ -244,6 +255,7 @@ export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise
       skipped++;
       continue;
     }
+    Object.assign(patch, garminTag(row));
     const { error } = await admin
       .from("activity_logs")
       .update(patch)
@@ -351,6 +363,10 @@ async function maybeScheduleExternalPBReminder(
   // Guard: our own in-app path handles PBs client-side (WorkoutPlayer.tsx).
   // Duplicating server-side would fire two pushes for the same workout.
   if (row.source_platform === "hitt_phone") return;
+
+  // workout_progress has no source column, so a Garmin-derived row there
+  // couldn't be attributed or removed when a user withdraws consent.
+  if (row.source_platform === "garmin_api") return;
 
   const canonicalType = normaliseActivityType(row.activity_type);
   const newDuration = row.duration_seconds;

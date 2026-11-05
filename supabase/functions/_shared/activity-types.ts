@@ -76,6 +76,17 @@ const ALIASES: Record<string, CanonicalActivityType> = {
   crosstraining: "cross_training", crossfit: "cross_training",
   // triathlon
   triathlon: "triathlon", multisport: "triathlon", swimbikerun: "triathlon",
+  // Garmin Connect values
+  treadmillrunning: "running", indoorrunning: "running", streetrunning: "running",
+  trackrunning: "running", ultrarun: "running", virtualrun: "running", obstaclerun: "running",
+  casualwalking: "walking", speedwalking: "walking", indoorwalking: "walking", rucking: "walking",
+  roadbiking: "cycling", mountainbiking: "cycling", gravelcycling: "cycling", cyclocross: "cycling",
+  downhillbiking: "cycling", recumbentcycling: "cycling", trackcycling: "cycling", virtualride: "cycling",
+  ebiking: "cycling", emountainbiking: "cycling", bmx: "cycling", handcycling: "cycling",
+  indoorhandcycling: "cycling",
+  lapswimming: "swimming", openwaterswimming: "swimming",
+  indoorcardio: "cardio", fitnessequipment: "cardio",
+  floorclimbing: "stairs", mountaineering: "hiking",
 };
 
 // Return the canonical activity_type for whatever raw input we got. Empty /
@@ -111,6 +122,7 @@ export const SOURCE_PRIORITY: Record<string, number> = {
   hitt_watch: 100,
   hitt_garmin_watch: 100,
   apple_watch: 80,
+  garmin_api: 75,
   garmin: 70,
   fitbit: 60,
   whoop: 60,

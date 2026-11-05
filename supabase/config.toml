@@ -28,6 +28,19 @@ verify_jwt = false
 [functions.sync-healthkit-background]
 verify_jwt = false
 
+# Garmin redirects the browser here with no Supabase session. The single-use
+# state ties the request to a user, and nothing links until garmin-oauth-finish.
+[functions.garmin-oauth-callback]
+verify_jwt = false
+
+# Garmin's push has no session or signature: authenticated by a secret in the URL.
+[functions.garmin-webhook]
+verify_jwt = false
+
+# Called by pg_cron with GARMIN_CRON_SECRET.
+[functions.garmin-process-inbox]
+verify_jwt = false
+
 # Owner analytics digest — invoked by pg_cron (Authorization: Bearer <DIGEST_CRON_SECRET>)
 # or manually with x-digest-secret. Auth is a shared secret checked inside the function.
 [functions.analytics-digest]
