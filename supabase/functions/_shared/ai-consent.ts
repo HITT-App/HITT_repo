@@ -4,7 +4,12 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 // someone decides otherwise. Null is a row logged by hand in the app.
 const FIRST_PARTY_ACTIVITY_SOURCES = new Set(["hitt_phone", "hitt_garmin_watch", "manual"]);
 
-export type AiConsent = { health: boolean; garmin: boolean };
+export type AiConsent = {
+  health: boolean;
+  garmin: boolean;
+  // Has ever linked Garmin, so blended figures such as the HIIT Score may hold Garmin data.
+  garminLinked?: boolean;
+};
 
 type ActivityRow = { source_platform?: string | null; garmin_activity_id?: string | null };
 type MetricRow = { source_platform?: string | null; notes?: string | null };
@@ -40,6 +45,18 @@ export function consentedProgress<T extends ProgressRow>(rows: T[], consent: AiC
   return rows.filter(r => !(r.workout_id == null && r.workout_source === "catalogue"));
 }
 
+// For sleep logs and readings that have never reached AI without health consent.
+export function consentedHealthRow<T extends MetricRow>(row: T | null | undefined, consent: AiConsent): T | null {
+  if (!row) return null;
+  if (row.source_platform === "garmin_api") return consent.garmin ? row : null;
+  return consent.health ? row : null;
+}
+
+// The score blends Garmin sleep once linked, so it needs Garmin consent from then on.
+export function blendedFigureAllowed(consent: AiConsent): boolean {
+  return !consent.garminLinked || consent.garmin;
+}
+
 export function garminAiActive(
   connection: { status?: string; ai_consent_at?: string | null; ai_consent_withdrawn_at?: string | null } | null,
   flagValue: unknown,
@@ -59,5 +76,6 @@ export async function readAiConsent(client: SupabaseClient, userId: string): Pro
   return {
     health: profile.data?.ai_health_consent === true,
     garmin: garminAiActive(connection.data, flag.data?.value),
+    garminLinked: !!connection.data,
   };
 }

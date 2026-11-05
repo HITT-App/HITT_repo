@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
-import { consentedActivities, consentedProgress, readAiConsent } from "../_shared/ai-consent.ts";
+import { blendedFigureAllowed, consentedActivities, consentedProgress, readAiConsent } from "../_shared/ai-consent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -144,8 +144,9 @@ serve(async (req) => {
 
     const activityTypes = [...new Set((recentActivities ?? []).map(a => a.activity_type))];
 
-    const latestScore = scoreHistory?.[0]?.score ?? null;
-    const oldestScore = scoreHistory?.[scoreHistory.length - 1]?.score ?? null;
+    const usableScores = blendedFigureAllowed(aiConsent) ? scoreHistory ?? [] : [];
+    const latestScore = usableScores[0]?.score ?? null;
+    const oldestScore = usableScores[usableScores.length - 1]?.score ?? null;
     const scoreDelta = latestScore !== null && oldestScore !== null && oldestScore > 0
       ? Math.round(((latestScore - oldestScore) / oldestScore) * 100)
       : null;

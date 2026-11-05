@@ -4,6 +4,22 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { activityFingerprint, upsertActivities } from "../_shared/activity-upsert.ts";
 import { adminClient } from "../_shared/garmin-http.ts";
 import {
+  type GarminBodyComp,
+  type GarminDaily,
+  type GarminHrv,
+  type GarminSleep,
+  type GarminStressDetail,
+  type GarminUserMetrics,
+  mapBodyComp,
+  mapDaily,
+  mapHrv,
+  mapSleep,
+  mapSleepScore,
+  mapStressDetail,
+  mapUserMetrics,
+  type MetricRow,
+} from "../_shared/garmin-health.ts";
+import {
   type GarminActivityDetail,
   type GarminActivitySummary,
   isStalePermissionChange,
@@ -23,7 +39,11 @@ const BACKLOG_ALERT = 500;
 
 // Unknown users and users with sharing off are dropped without an error, so Garmin
 // doesn't retry for a week.
-async function activityExportUsers(admin: SupabaseClient, items: { userId?: string }[]): Promise<Map<string, string>> {
+async function usersWithPermission(
+  admin: SupabaseClient,
+  items: { userId?: string }[],
+  permission: "ACTIVITY_EXPORT" | "HEALTH_EXPORT",
+): Promise<Map<string, string>> {
   const garminIds = [...new Set(items.map(s => s.userId).filter(Boolean))] as string[];
   if (!garminIds.length) return new Map();
 
@@ -36,13 +56,13 @@ async function activityExportUsers(admin: SupabaseClient, items: { userId?: stri
 
   return new Map(
     (connections ?? [])
-      .filter(c => c.status !== "permission_off" && c.permissions.includes("ACTIVITY_EXPORT"))
+      .filter(c => c.status !== "permission_off" && c.permissions.includes(permission))
       .map(c => [c.garmin_user_id, c.user_id]),
   );
 }
 
 async function handleActivities(admin: SupabaseClient, summaries: GarminActivitySummary[]) {
-  const allowed = await activityExportUsers(admin, summaries);
+  const allowed = await usersWithPermission(admin, summaries, "ACTIVITY_EXPORT");
   const rows = summaries.flatMap(s => {
     const userId = s.userId ? allowed.get(s.userId) : undefined;
     const row = userId ? mapGarminActivity(s, userId) : null;
@@ -58,7 +78,7 @@ async function handleActivities(admin: SupabaseClient, summaries: GarminActivity
 }
 
 async function handleActivityDetails(admin: SupabaseClient, details: GarminActivityDetail[]) {
-  const allowed = await activityExportUsers(admin, details);
+  const allowed = await usersWithPermission(admin, details, "ACTIVITY_EXPORT");
   for (const detail of details) {
     const userId = detail.userId ? allowed.get(detail.userId) : undefined;
     const row = userId ? mapActivityDetail(detail, userId) : null;
@@ -71,7 +91,7 @@ async function handleActivityDetails(admin: SupabaseClient, details: GarminActiv
 // Garmin's edits don't list an activityId, so they match on summaryId. Only rows Garmin
 // owns are changed: a workout from HIIT's own watch app keeps its recorded values.
 async function handleManualUpdates(admin: SupabaseClient, summaries: GarminActivitySummary[]) {
-  const allowed = await activityExportUsers(admin, summaries);
+  const allowed = await usersWithPermission(admin, summaries, "ACTIVITY_EXPORT");
   for (const summary of summaries) {
     const userId = summary.userId ? allowed.get(summary.userId) : undefined;
     const row = userId ? mapGarminActivity(summary, userId) : null;
@@ -95,6 +115,38 @@ async function handleManualUpdates(admin: SupabaseClient, summaries: GarminActiv
       if (updateError) throw new Error(updateError.message);
     }
   }
+}
+
+const SOURCE_KEY = "user_id, source_platform, source_platform_id";
+
+async function saveMetrics<T extends { userId?: string }>(
+  admin: SupabaseClient,
+  items: T[],
+  map: (item: T, userId: string) => MetricRow[],
+) {
+  const allowed = await usersWithPermission(admin, items, "HEALTH_EXPORT");
+  const rows = items.flatMap(item => {
+    const userId = item.userId ? allowed.get(item.userId) : undefined;
+    return userId ? map(item, userId) : [];
+  });
+  if (!rows.length) return;
+  // A later summary for the same period must replace the earlier one.
+  const { error } = await admin.from("health_metrics").upsert(rows, { onConflict: SOURCE_KEY });
+  if (error) throw new Error(error.message);
+}
+
+async function handleSleeps(admin: SupabaseClient, sleeps: GarminSleep[]) {
+  const allowed = await usersWithPermission(admin, sleeps, "HEALTH_EXPORT");
+  const rows = sleeps.flatMap(sleep => {
+    const userId = sleep.userId ? allowed.get(sleep.userId) : undefined;
+    const row = userId ? mapSleep(sleep, userId) : null;
+    return row ? [row] : [];
+  });
+  if (rows.length) {
+    const { error } = await admin.from("sleep_logs").upsert(rows, { onConflict: SOURCE_KEY });
+    if (error) throw new Error(error.message);
+  }
+  await saveMetrics(admin, sleeps, mapSleepScore);
 }
 
 async function handleDeregistrations(admin: SupabaseClient, items: { userId?: string }[]) {
@@ -144,6 +196,12 @@ async function processPush(admin: SupabaseClient, rawBody: string): Promise<stri
   if (Array.isArray(push.activities)) await handleActivities(admin, push.activities as GarminActivitySummary[]);
   if (Array.isArray(push.activityDetails)) await handleActivityDetails(admin, push.activityDetails as GarminActivityDetail[]);
   if (Array.isArray(push.manuallyUpdatedActivities)) await handleManualUpdates(admin, push.manuallyUpdatedActivities as GarminActivitySummary[]);
+  if (Array.isArray(push.dailies)) await saveMetrics(admin, push.dailies as GarminDaily[], mapDaily);
+  if (Array.isArray(push.stressDetails)) await saveMetrics(admin, push.stressDetails as GarminStressDetail[], mapStressDetail);
+  if (Array.isArray(push.bodyComps)) await saveMetrics(admin, push.bodyComps as GarminBodyComp[], mapBodyComp);
+  if (Array.isArray(push.userMetrics)) await saveMetrics(admin, push.userMetrics as GarminUserMetrics[], mapUserMetrics);
+  if (Array.isArray(push.hrv)) await saveMetrics(admin, push.hrv as GarminHrv[], mapHrv);
+  if (Array.isArray(push.sleeps)) await handleSleeps(admin, push.sleeps as GarminSleep[]);
   if (Array.isArray(push.deregistrations)) await handleDeregistrations(admin, push.deregistrations as { userId?: string }[]);
   if (Array.isArray(push.userPermissionsChange)) await handlePermissions(admin, push.userPermissionsChange as PermissionsChange[]);
   return types.join(",");

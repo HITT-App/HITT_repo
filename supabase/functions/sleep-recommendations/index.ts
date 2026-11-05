@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { enforceAIQuota } from "../_shared/ai-quota.ts";
+import { consentedHealthRow, readAiConsent } from "../_shared/ai-consent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,7 +41,7 @@ serve(async (req) => {
     if (overQuota) return overQuota;
 
     // Fetch user data in parallel
-    const [preferencesResult, logsResult, schedulesResult, consentResult] = await Promise.all([
+    const [preferencesResult, logsResult, schedulesResult] = await Promise.all([
       supabase
         .from("sleep_preferences")
         .select("*")
@@ -58,18 +59,13 @@ serve(async (req) => {
         .eq("user_id", user.id)
         .eq("is_active", true)
         .maybeSingle(),
-      supabase
-        .from("profiles")
-        .select("ai_health_consent")
-        .eq("user_id", user.id)
-        .maybeSingle(),
     ]);
 
     const preferences = preferencesResult.data;
     // Sleep logs are Apple Health-derived; only send them to the AI provider
     // with the user's explicit consent (App Store 5.1.3).
-    const aiHealthConsent = (consentResult.data as any)?.ai_health_consent === true;
-    const recentLogs = aiHealthConsent ? (logsResult.data || []) : [];
+    const aiConsent = await readAiConsent(supabase, user.id);
+    const recentLogs = (logsResult.data || []).filter((log: any) => consentedHealthRow(log, aiConsent));
     const activeSchedule = schedulesResult.data;
 
     // Calculate sleep stats

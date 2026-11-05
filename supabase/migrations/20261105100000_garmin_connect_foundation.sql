@@ -174,3 +174,61 @@ SELECT cron.schedule(
   WHERE secret.name = 'garmin_cron_secret';
   $cron$
 );
+
+-- One night or day shows one source, with Garmin preferred over Apple Health (B14).
+-- A trigger, because shipped app versions write these rows directly. Hand-logged rows stay.
+CREATE FUNCTION public.prefer_garmin_sleep()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.source_platform = 'garmin_api' THEN
+    DELETE FROM public.sleep_logs
+    WHERE user_id = NEW.user_id
+      AND sleep_date = NEW.sleep_date
+      AND source_platform IS NOT NULL
+      AND source_platform <> 'garmin_api';
+  ELSIF NEW.source_platform IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.sleep_logs
+    WHERE user_id = NEW.user_id AND sleep_date = NEW.sleep_date AND source_platform = 'garmin_api'
+  ) THEN
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER sleep_logs_prefer_garmin
+  BEFORE INSERT ON public.sleep_logs
+  FOR EACH ROW EXECUTE FUNCTION public.prefer_garmin_sleep();
+
+CREATE FUNCTION public.prefer_garmin_metric()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.metric_type NOT IN ('steps', 'resting_heart_rate') THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.source_platform = 'garmin_api' THEN
+    DELETE FROM public.health_metrics
+    WHERE user_id = NEW.user_id
+      AND metric_type = NEW.metric_type
+      AND recorded_at::date = NEW.recorded_at::date
+      AND (notes = 'watch_sync' OR (source_platform IS NOT NULL AND source_platform <> 'garmin_api'));
+  ELSIF (NEW.source_platform IS NOT NULL OR NEW.notes = 'watch_sync') AND EXISTS (
+    SELECT 1 FROM public.health_metrics
+    WHERE user_id = NEW.user_id
+      AND metric_type = NEW.metric_type
+      AND recorded_at::date = NEW.recorded_at::date
+      AND source_platform = 'garmin_api'
+  ) THEN
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER health_metrics_prefer_garmin
+  BEFORE INSERT ON public.health_metrics
+  FOR EACH ROW EXECUTE FUNCTION public.prefer_garmin_metric();

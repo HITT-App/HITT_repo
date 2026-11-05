@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { cleanImageData, cleanText, limitChatMessages } from "../_shared/request-limits.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
-import { consentedActivities, consentedMetrics, consentedProgress, readAiConsent } from "../_shared/ai-consent.ts";
+import { consentedActivities, consentedMetrics, consentedHealthRow, consentedProgress, readAiConsent } from "../_shared/ai-consent.ts";
 import {
   searchRecipes,
   generateMealPlan,
@@ -2214,7 +2214,7 @@ serve(async (req) => {
       supabaseAdmin.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
-      supabaseAdmin.from('health_metrics').select('value').eq('user_id', userId).eq('metric_type', 'steps').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('health_metrics').select('value, source_platform').eq('user_id', userId).eq('metric_type', 'steps').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('user_workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('workouts').select('id, title, category, difficulty, duration_minutes, body_areas, equipment').limit(50),
       // Prefer owner-curated recipes (source='owner') over legacy seed rows so
@@ -2232,11 +2232,10 @@ serve(async (req) => {
     // in-app consent. Without it, blank them so the coaching prompt carries no
     // Apple Health data. Manual / phone / direct-push activities are not
     // HealthKit-sourced and are kept.
-    const aiHealthConsent = (profile as any)?.ai_health_consent === true;
-    const recentSleep = aiHealthConsent ? rawSleep : null;
-    const latestHeartRate = aiHealthConsent ? rawHeartRate : null;
-    const latestSteps = aiHealthConsent ? rawSteps : null;
     const aiConsent = await readAiConsent(supabaseAdmin, userId);
+    const recentSleep = consentedHealthRow(rawSleep, aiConsent);
+    const latestHeartRate = consentedHealthRow(rawHeartRate, aiConsent);
+    const latestSteps = consentedHealthRow(rawSteps, aiConsent);
     const recentActivities = consentedActivities(rawActivities ?? [], aiConsent);
     const recentWorkouts = consentedProgress(rawRecentWorkouts ?? [], aiConsent);
     const latestWeight = consentedMetrics(rawWeight ? [rawWeight] : [], aiConsent)[0] ?? null;

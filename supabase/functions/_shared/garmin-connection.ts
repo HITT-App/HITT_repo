@@ -111,6 +111,11 @@ export async function deleteImportedGarminData(admin: SupabaseClient, userId: st
   const { error: detailsError } = await admin.from("garmin_activity_details").delete().eq("user_id", userId);
   if (detailsError) throw new Error(detailsError.message);
 
+  for (const table of ["health_metrics", "sleep_logs"]) {
+    const { error } = await admin.from(table).delete().eq("user_id", userId).eq("source_platform", "garmin_api");
+    if (error) throw new Error(error.message);
+  }
+
   const { error: deleteError } = await admin
     .from("activity_logs")
     .delete()

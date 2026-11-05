@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { consentedActivities, consentedMetrics, consentedProgress, garminAiActive } from "./ai-consent";
+import { blendedFigureAllowed, consentedActivities, consentedHealthRow, consentedMetrics, consentedProgress, garminAiActive } from "./ai-consent";
 
 const NONE = { health: false, garmin: false };
 const HEALTH = { health: true, garmin: false };
@@ -101,6 +101,25 @@ describe("Garmin AI gate", () => {
   });
 });
 
+describe("sleep and live readings", () => {
+  const apple = { source_platform: "apple_health" };
+  const garmin = { source_platform: "garmin_api" };
+
+  it("needs the matching consent for each source", () => {
+    expect(consentedHealthRow(apple, NONE)).toBeNull();
+    expect(consentedHealthRow(apple, HEALTH)).toBe(apple);
+    expect(consentedHealthRow(garmin, HEALTH)).toBeNull();
+    expect(consentedHealthRow(garmin, GARMIN)).toBe(garmin);
+    expect(consentedHealthRow(null, BOTH)).toBeNull();
+  });
+
+  it("holds back the HIIT Score from linked users until they consent", () => {
+    expect(blendedFigureAllowed(NONE)).toBe(true);
+    expect(blendedFigureAllowed({ ...HEALTH, garminLinked: true })).toBe(false);
+    expect(blendedFigureAllowed({ ...GARMIN, garminLinked: true })).toBe(true);
+  });
+});
+
 describe("audit of AI functions", () => {
   const functionsDir = join(import.meta.dir, "..");
   const aiFiles = readdirSync(functionsDir)
@@ -116,6 +135,25 @@ describe("audit of AI functions", () => {
     const ungated = aiFiles.filter(file => {
       const source = readFileSync(file, "utf-8");
       return source.includes("activity_logs") && !source.includes("consentedActivities");
+    });
+    expect(ungated).toEqual([]);
+  });
+
+  it("gates every AI function that sends sleep logs", () => {
+    const ungated = aiFiles.filter(file => {
+      const source = readFileSync(file, "utf-8");
+      // A count, not the data.
+      const reads = source.match(/from\(['"]sleep_logs['"]\)\s*\.select\(['"][^'"]*['"][^)]*\)/g) ?? [];
+      const sendsData = reads.some(r => !r.includes("count"));
+      return sendsData && !source.includes("consentedHealthRow");
+    });
+    expect(ungated).toEqual([]);
+  });
+
+  it("holds back the HIIT Score wherever it reaches AI", () => {
+    const ungated = aiFiles.filter(file => {
+      const source = readFileSync(file, "utf-8");
+      return source.includes("hiit_score_history") && !source.includes("blendedFigureAllowed");
     });
     expect(ungated).toEqual([]);
   });
