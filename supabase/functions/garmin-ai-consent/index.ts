@@ -1,8 +1,9 @@
-// Grants or withdraws Jarvis's use of Garmin data. Withdrawing removes what AI produced
-// while consent was on. Chats and memory can't be split into Garmin and non-Garmin parts,
-// so everything since consent goes, and the app warns about that first.
+// Grants or withdraws Jarvis's use of Garmin data. Withdrawing removes what AI produced while
+// consent was on, because chat history and memory are resent to the AI on every turn. Keeping
+// them would keep sending Garmin-derived data after consent ended. Plans are the user's choice.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { purgeGarminAiData } from "../_shared/garmin-ai-purge.ts";
 import { adminClient, corsHeaders, json, requireUser } from "../_shared/garmin-http.ts";
 
 async function grant(admin: SupabaseClient, userId: string, connection: { ai_purge_from: string | null }) {
@@ -18,26 +19,6 @@ async function grant(admin: SupabaseClient, userId: string, connection: { ai_pur
   if (error) throw new Error(error.message);
 }
 
-async function purge(admin: SupabaseClient, userId: string, since: string, snapshot: unknown) {
-  const { data: conversations, error: listError } = await admin.from("conversations").select("id").eq("user_id", userId);
-  if (listError) throw new Error(listError.message);
-  const ids = (conversations ?? []).map(c => c.id);
-
-  const steps = [
-    ...(ids.length ? [admin.from("messages").delete().in("conversation_id", ids).gte("created_at", since)] : []),
-    admin.from("conversations").delete().eq("user_id", userId).gte("created_at", since),
-    // One row per user, overwritten in place, so created_at can't date it. It regenerates daily.
-    admin.from("daily_insights").delete().eq("user_id", userId),
-    admin.from("activity_recommendations").delete().eq("user_id", userId).gte("created_at", since),
-    admin.from("ai_generation_log").delete().eq("user_id", userId).gte("created_at", since),
-    admin.from("user_memories").upsert({ user_id: userId, memory: snapshot ?? {}, updated_at: new Date().toISOString() }),
-  ];
-  for (const step of steps) {
-    const { error } = await step;
-    if (error) throw new Error(error.message);
-  }
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -46,11 +27,11 @@ serve(async (req) => {
     const user = await requireUser(req);
     if (!user) return json({ error: "unauthorized" }, 401);
 
-    const body = await req.json().catch(() => ({})) as { action?: string };
+    const body = await req.json().catch(() => ({})) as { action?: string; delete_plans?: boolean };
     const admin = adminClient();
     const { data: connection, error } = await admin
       .from("garmin_connections")
-      .select("status, ai_purge_from, ai_memory_snapshot")
+      .select("status, ai_consent_at, ai_purge_from")
       .eq("user_id", user.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -70,15 +51,15 @@ serve(async (req) => {
         .eq("user_id", user.id);
       if (stopError) throw new Error(stopError.message);
 
-      if (connection.ai_purge_from) {
-        await purge(admin, user.id, connection.ai_purge_from, connection.ai_memory_snapshot);
-        const { error: clearError } = await admin
-          .from("garmin_connections")
-          .update({ ai_purge_from: null, ai_memory_snapshot: null })
-          .eq("user_id", user.id);
-        if (clearError) throw new Error(clearError.message);
-      }
+      await purgeGarminAiData(admin, user.id, { deletePlans: body.delete_plans === true });
       return json({ status: "withdrawn" });
+    }
+
+    // For someone who disconnected and kept this data, then later changes their mind.
+    if (body.action === "delete_kept_data") {
+      if (connection.status !== "disconnected") return json({ error: "still_connected" }, 400);
+      await purgeGarminAiData(admin, user.id, { deletePlans: body.delete_plans === true });
+      return json({ status: "deleted" });
     }
 
     return json({ error: "unknown_action" }, 400);
