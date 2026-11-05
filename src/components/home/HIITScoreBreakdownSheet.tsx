@@ -1,3 +1,4 @@
+import { GarminDerivedNote } from "@/components/wearable/GarminAttribution";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Dumbbell, Flame, Apple, Moon, Zap, Info } from "lucide-react";
@@ -162,6 +163,7 @@ export function HIITScoreBreakdownSheet({
                   and workout intensity adds up to 10. The maximum score is 100.
                 </p>
               </details>
+              <GarminDerivedNote className="text-[11px] text-muted-foreground mt-3 text-center" />
             </>
           ) : (
             <p className="text-sm text-muted-foreground text-center mb-6">

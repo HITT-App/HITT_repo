@@ -1,3 +1,4 @@
+import { GarminAiNote } from "@/components/wearable/GarminAttribution";
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { HEmoji } from "@/components/HEmoji";
 import { useNavigate } from 'react-router-dom';
@@ -953,6 +954,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
               <div className="text-sm text-foreground leading-relaxed space-y-2">
                 {formatResponse(msg.content)}
               </div>
+              <GarminAiNote className="text-[10.5px] text-muted-foreground mt-2" />
             </div>
           ) : (
             <div key={msg.id ?? i} className="bg-primary/10 rounded-2xl px-4 py-3 ml-8">

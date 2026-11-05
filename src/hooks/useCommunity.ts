@@ -14,7 +14,7 @@ export interface CommunityPost {
   poll_options: { options: string[]; votes: number[] } | null;
   before_image_url: string | null;
   after_image_url: string | null;
-  workout_data: { duration?: number; calories?: number; type?: string } | null;
+  workout_data: { duration?: number; calories?: number; type?: string; device?: string } | null;
   likes_count: number;
   comments_count: number;
   created_at: string;
@@ -423,7 +423,7 @@ export const useCommunityActions = () => {
     poll_options?: { options: string[]; votes: number[] };
     before_image_url?: string;
     after_image_url?: string;
-    workout_data?: { duration?: number; calories?: number; type?: string };
+    workout_data?: { duration?: number; calories?: number; type?: string; device?: string };
   }) => {
     if (!user) {
       toast({

@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivity } from "@/hooks/useActivity";
+import { GarminAttribution } from "@/components/wearable/GarminAttribution";
 import { useProfile } from "@/hooks/useProfile";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -164,6 +165,7 @@ const ActivityDashboard = () => {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-medium capitalize">{log.activity_type.replace("-", " ")}</h3>
+                      <GarminAttribution log={log} className="text-xs text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">
                         {format(parseISO(log.started_at), "MMM d, h:mm a")}
                       </p>

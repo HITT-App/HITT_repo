@@ -85,6 +85,8 @@ export interface ActivityShareData {
   sessionName?: string | null;
   // Triathlon-specific
   triathlonSplits?: { swim?: string; bike?: string; run?: string };
+  // Garmin requires this on every exported image of its data, e.g. "Garmin fenix 8".
+  deviceAttribution?: string | null;
 }
 
 function fmtDurationHMS(seconds: number): string {
@@ -442,6 +444,15 @@ export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white
       width: 1080, height: H, position: 'relative', overflow: 'hidden',
       background: rootBg, boxSizing: 'border-box', fontFamily: T.cond,
     }}>
+      {data.deviceAttribution && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: isSquare ? 18 : 36, zIndex: 5,
+          textAlign: 'center', fontSize: 28, fontWeight: 600,
+          color: useLightInk ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)',
+        }}>
+          {data.deviceAttribution}
+        </div>
+      )}
       {onPhoto && photoDataUrl && (
         <img
           src={photoDataUrl}

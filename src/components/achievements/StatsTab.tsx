@@ -1,3 +1,4 @@
+import { GarminDerivedNote } from "@/components/wearable/GarminAttribution";
 import { Calendar, Smartphone, TrendingUp, Facebook, Instagram, Twitter, Send, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -183,6 +184,7 @@ const StatsTab = () => {
           <StatRow label="Badges Earned" value={displayStats.achievements.toString()} />
         </div>
       </Card>
+      <GarminDerivedNote className="text-[10.5px] text-muted-foreground text-center mt-2" />
 
       {/* Share Stats */}
       <div className="text-center pt-4 pb-8">
