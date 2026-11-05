@@ -65,7 +65,8 @@ export async function getPrimaryWearable(
   // Count vendor sources only — phone_only is always the fallback, never a winner.
   const counts = new Map<string, number>();
   for (const row of data) {
-    const src = row.source_platform as string | null;
+    const raw = row.source_platform as string | null;
+    const src = raw === "garmin_api" ? "garmin" : raw;
     if (src && VENDOR_SOURCES.has(src)) {
       counts.set(src, (counts.get(src) ?? 0) + 1);
     }

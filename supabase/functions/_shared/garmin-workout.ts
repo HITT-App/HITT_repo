@@ -290,17 +290,28 @@ export type OneOffPayload =
 const SPORT_NAMES: Record<string, string> = {
   run: "RUNNING",
   running: "RUNNING",
+  jogging: "RUNNING",
+  "trail run": "RUNNING",
   bike: "CYCLING",
+  "mountain bike": "CYCLING",
   cycle: "CYCLING",
   cycling: "CYCLING",
   swim: "LAP_SWIMMING",
   swimming: "LAP_SWIMMING",
   strength: "STRENGTH_TRAINING",
   gym: "STRENGTH_TRAINING",
+  "weight training": "STRENGTH_TRAINING",
+  bodyweight: "STRENGTH_TRAINING",
   yoga: "YOGA",
   pilates: "PILATES",
   hiit: "CARDIO_TRAINING",
   cardio: "CARDIO_TRAINING",
+  tabata: "CARDIO_TRAINING",
+  circuit: "CARDIO_TRAINING",
+  "circuit training": "CARDIO_TRAINING",
+  crossfit: "CARDIO_TRAINING",
+  functional: "CARDIO_TRAINING",
+  hyrox: "CARDIO_TRAINING",
 };
 
 export function garminSportForName(name: string): string | null {

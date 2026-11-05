@@ -16,6 +16,8 @@ import {
   getAppleWatchLabel,
   type LaunchActivityType,
 } from "@/lib/wearable-launch-copy";
+import { useGarminConnection } from "@/hooks/useGarminConnection";
+import { GarminSendButton, type GarminSendPayload } from "./GarminSendButton";
 
 interface Tokens {
   card: string;
@@ -35,10 +37,15 @@ interface WearableLaunchCardProps {
   onLaunchAppleWatch?: () => void;
   watchLaunching?: boolean;
   watchLaunched?: boolean;
+  // What "Send to Garmin" sends. Left out where the workout already syncs from the schedule.
+  garminSend?: GarminSendPayload;
 }
 
 export function WearableLaunchCard(props: WearableLaunchCardProps) {
-  const { wearable, activityType, tokens: C, tint } = props;
+  const { activityType, tokens: C, tint } = props;
+  const { connected: garminConnected } = useGarminConnection();
+  // Detection is cached for days and looks at history, so a new connection wouldn't show yet.
+  const wearable = garminConnected && props.wearable !== "apple_watch" ? "garmin" : props.wearable;
 
   // phone_only — suppress entirely, as per design decision
   if (wearable === "phone_only") return null;
@@ -70,7 +77,7 @@ export function WearableLaunchCard(props: WearableLaunchCardProps) {
   }
 
   // Garmin / Fitbit / Whoop / Oura — instructional card from the copy matrix
-  const copy = getLaunchCopy(activityType, wearable);
+  const copy = getLaunchCopy(activityType, wearable, garminConnected);
   if (!copy) return null;
 
   const Icon = wearable === "garmin" ? Activity : Heart;
@@ -95,6 +102,9 @@ export function WearableLaunchCard(props: WearableLaunchCardProps) {
       )}
       {copy.footer && (
         <p style={{ margin: 0, fontSize: 11, color: C.dim }}>{copy.footer}</p>
+      )}
+      {wearable === "garmin" && garminConnected && props.garminSend && (
+        <GarminSendButton payload={props.garminSend} tokens={C} tint={tint} />
       )}
     </div>
   );

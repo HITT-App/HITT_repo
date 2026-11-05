@@ -762,6 +762,7 @@ const ActivityLive = () => {
           <WearableLaunchCard
             wearable={primaryWearable}
             activityType="gps"
+            garminSend={{ action: "send_sport", sport: activityType }}
             tokens={RC}
             tint={tint}
             onLaunchAppleWatch={launchOnAppleWatch}

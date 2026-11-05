@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRoutes, Route } from "@/hooks/useRoutes";
 import { ROUTES } from "@/lib/routes";
+import { GarminRouteButton } from "@/components/wearable/GarminRouteButton";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: "#22c55e",
@@ -161,6 +162,9 @@ const RouteDetail = () => {
 
       {/* Start button */}
       <div className="absolute bottom-0 left-0 right-0 z-[500] p-5 bg-gradient-to-t from-background via-background/95 to-transparent" style={{ paddingBottom: "calc(var(--safe-area-inset-bottom, 0px) + 20px)" }}>
+        <div className="mb-2">
+          <GarminRouteButton routeId={route.id} />
+        </div>
         <Button className="w-full h-14 text-base font-bold gap-2 rounded-2xl" onClick={handleStartRoute}>
           <Play size={20} />
           Start This Route

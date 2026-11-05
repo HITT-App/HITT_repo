@@ -1,3 +1,4 @@
+import { GarminWorkoutStatus, useGarminWorkoutLinks } from '@/components/wearable/GarminWorkoutStatus'
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
@@ -26,6 +27,7 @@ type ScheduledWorkout = {
   scheduled_date: string
   scheduled_time: string | null
   status: string
+  completed_via_garmin?: boolean
   workout: {
     id: string
     title: string
@@ -66,6 +68,7 @@ export default function WorkoutSchedule() {
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null)
+  const garminLinks = useGarminWorkoutLinks()
 
   // Edit state
   const [activeWorkout, setActiveWorkout] = useState<ScheduledWorkout | null>(null)
@@ -156,6 +159,7 @@ export default function WorkoutSchedule() {
           scheduled_date,
           scheduled_time,
           status,
+          completed_via_garmin,
           workout:workouts (
             id,
             title,
@@ -575,9 +579,13 @@ export default function WorkoutSchedule() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[15px] font-bold text-foreground truncate">{w.workout_title ?? w.workout?.title}</p>
+                          {w.completed_via_garmin && <p className="text-[11.5px] text-muted-foreground">Garmin</p>}
                           <p className="text-[12.5px] text-muted-foreground">
                             {(w.estimated_duration_minutes ?? w.workout?.duration_minutes) ?? '—'} min
                           </p>
+                          {w.status !== 'completed' && (
+                            <GarminWorkoutStatus workoutId={w.id} status={garminLinks?.get(w.id)} />
+                          )}
                         </div>
                         {w.status === 'completed'
                           ? <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />

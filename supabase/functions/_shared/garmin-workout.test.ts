@@ -222,3 +222,21 @@ describe("matchSentWorkout", () => {
     expect(matchSentWorkout({ ...run, durationSeconds: 30 }, candidates)).toBeNull();
   });
 });
+
+describe("garminSportForName with the app's sport names", () => {
+  it("covers the sports Garmin can take", () => {
+    expect(garminSportForName("Run")).toBe("RUNNING");
+    expect(garminSportForName("jogging")).toBe("RUNNING");
+    expect(garminSportForName("Trail Run")).toBe("RUNNING");
+    expect(garminSportForName("Mountain Bike")).toBe("CYCLING");
+    expect(garminSportForName("Weight Training")).toBe("STRENGTH_TRAINING");
+    expect(garminSportForName("CrossFit")).toBe("CARDIO_TRAINING");
+    expect(garminSportForName("Swim")).toBe("LAP_SWIMMING");
+  });
+
+  it("leaves the rest to the start-on-your-watch card", () => {
+    for (const sport of ["Walk", "Hike", "Tennis", "Kayak", "Skiing"]) {
+      expect(garminSportForName(sport)).toBeNull();
+    }
+  });
+});
