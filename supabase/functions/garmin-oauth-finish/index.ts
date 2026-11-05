@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { sha256Hex } from "../_shared/garmin-crypto.ts";
 import { adminClient, corsHeaders, json, requireUser } from "../_shared/garmin-http.ts";
-import { checkFinish } from "../_shared/garmin-oauth.ts";
+import { checkFinish, reconnectResets } from "../_shared/garmin-oauth.ts";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -36,7 +36,15 @@ serve(async (req) => {
       .select("result_hash");
     if (!claimed?.length) return json({ error: "used" }, 400);
 
+    const { data: previous } = await admin
+      .from("garmin_connections")
+      .select("status, garmin_user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const resets = reconnectResets(previous, row!.garmin_user_id);
+
     const { error: linkError } = await admin.from("garmin_connections").upsert({
+      ...(resets.consents ? { workout_import_consented_at: null, course_import_consented_at: null } : {}),
       user_id: user.id,
       garmin_user_id: row!.garmin_user_id,
       permissions: row!.permissions,
@@ -64,6 +72,11 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     });
     if (tokenError) throw new Error(tokenError.message);
+
+    if (resets.workoutLinks) {
+      const { error: linksError } = await admin.from("garmin_workout_links").delete().eq("user_id", user.id);
+      if (linksError) throw new Error(linksError.message);
+    }
 
     await admin.from("garmin_oauth_results").delete().eq("result_hash", resultHash);
     return json({ status: "active", permissions: row!.permissions });

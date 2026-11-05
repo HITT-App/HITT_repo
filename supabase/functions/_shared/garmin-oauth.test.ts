@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { buildAuthorizeUrl, buildReturnUrl, checkFinish, codeChallenge, randomUrlSafe, tokenExpiries } from "./garmin-oauth";
+import { buildAuthorizeUrl, buildReturnUrl, checkFinish, codeChallenge, randomUrlSafe, reconnectResets, tokenExpiries } from "./garmin-oauth";
 import { decryptToken, encryptToken } from "./garmin-crypto";
 
 const KEY = btoa(String.fromCharCode(...new Uint8Array(32).fill(7)));
@@ -80,5 +80,26 @@ describe("token handling", () => {
 
   it("rejects a key of the wrong size", () => {
     expect(encryptToken("secret", btoa("short"))).rejects.toThrow("32 bytes");
+  });
+});
+
+describe("reconnectResets", () => {
+  it("changes nothing on a first connection", () => {
+    expect(reconnectResets(null, "g1")).toEqual({ consents: false, workoutLinks: false });
+  });
+
+  it("resumes a dropped connection as it was", () => {
+    expect(reconnectResets({ status: "needs_reconnect", garmin_user_id: "g1" }, "g1"))
+      .toEqual({ consents: false, workoutLinks: false });
+  });
+
+  it("asks for consent again after a real disconnect, but keeps valid IDs", () => {
+    expect(reconnectResets({ status: "disconnected", garmin_user_id: "g1" }, "g1"))
+      .toEqual({ consents: true, workoutLinks: false });
+  });
+
+  it("clears everything for a different Garmin account", () => {
+    expect(reconnectResets({ status: "needs_reconnect", garmin_user_id: "g1" }, "g2"))
+      .toEqual({ consents: true, workoutLinks: true });
   });
 });

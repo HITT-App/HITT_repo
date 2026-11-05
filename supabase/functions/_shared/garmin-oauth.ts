@@ -126,3 +126,14 @@ export function checkFinish(
   if (new Date(row.expires_at).getTime() <= now) return { ok: false, reason: "expired" };
   return { ok: true };
 }
+
+// A dropped connection (needs_reconnect) resumes as it was. After a real disconnect the user
+// sees the send-to-Garmin notices again, and IDs from another Garmin account are useless here.
+export function reconnectResets(
+  previous: { status: string; garmin_user_id: string | null } | null,
+  garminUserId: string,
+): { consents: boolean; workoutLinks: boolean } {
+  if (!previous) return { consents: false, workoutLinks: false };
+  const newAccount = previous.garmin_user_id !== garminUserId;
+  return { consents: newAccount || previous.status === "disconnected", workoutLinks: newAccount };
+}

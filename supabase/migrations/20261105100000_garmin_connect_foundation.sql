@@ -15,6 +15,7 @@ CREATE TABLE public.garmin_connections (
   last_workout_pushed_at timestamptz,
   last_workout_sync_at timestamptz,
   workout_import_consented_at timestamptz,
+  course_import_consented_at timestamptz,
   -- Here, not on profiles, because every signed-in user can read profiles.
   ai_consent_at timestamptz,
   ai_consent_withdrawn_at timestamptz,
@@ -103,6 +104,24 @@ CREATE INDEX garmin_workout_links_user ON public.garmin_workout_links (user_id);
 ALTER TABLE public.garmin_workout_links ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users read their own Garmin workout links"
   ON public.garmin_workout_links FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Routes sent to Garmin. Deleting a route here leaves the course on the user's Garmin,
+-- because a public route's owner shouldn't be able to remove it from someone else's account.
+CREATE TABLE public.garmin_course_links (
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  route_id uuid NOT NULL REFERENCES public.routes(id) ON DELETE CASCADE,
+  garmin_course_id bigint,
+  garmin_user_id text,
+  content_hash text,
+  sending_until timestamptz,
+  sent_at timestamptz,
+  last_error text,
+  PRIMARY KEY (user_id, route_id)
+);
+ALTER TABLE public.garmin_course_links ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users read their own Garmin course links"
+  ON public.garmin_course_links FOR SELECT TO authenticated
   USING (auth.uid() = user_id);
 
 -- Merges can leave Garmin values in a row owned by another source, so these
