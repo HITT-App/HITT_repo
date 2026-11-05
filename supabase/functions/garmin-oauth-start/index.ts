@@ -1,6 +1,6 @@
 // Starts Garmin's consent flow for the signed-in user and returns the URL to open.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { garminEnabledFor, garminEnv } from "../_shared/garmin-connection.ts";
+import { alertConnectionCount, garminEnabledFor, garminEnv } from "../_shared/garmin-connection.ts";
 import { adminClient, corsHeaders, json, requireUser } from "../_shared/garmin-http.ts";
 import {
   buildAuthorizeUrl,
@@ -31,6 +31,7 @@ serve(async (req) => {
       .select("user_id", { count: "exact", head: true })
       .neq("status", "disconnected");
     if (countError) throw new Error(countError.message);
+    await alertConnectionCount(count ?? 0);
     if ((count ?? 0) >= STARTER_CONNECTION_CAP) return json({ error: "cap_reached" }, 409);
 
     const nowIso = new Date().toISOString();

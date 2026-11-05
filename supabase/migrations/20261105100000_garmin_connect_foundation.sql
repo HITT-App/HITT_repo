@@ -99,10 +99,30 @@ CREATE POLICY "Users read their own Garmin workout links"
 -- columns, not source_platform, decide what counts as Garmin data.
 ALTER TABLE public.activity_logs
   ADD COLUMN garmin_activity_id text,
-  ADD COLUMN garmin_device_name text;
+  ADD COLUMN garmin_device_name text,
+  ADD COLUMN garmin_summary_id text;
 CREATE UNIQUE INDEX activity_logs_garmin_activity
   ON public.activity_logs (user_id, garmin_activity_id)
   WHERE garmin_activity_id IS NOT NULL;
+
+CREATE INDEX activity_logs_garmin_summary
+  ON public.activity_logs (user_id, garmin_summary_id)
+  WHERE garmin_summary_id IS NOT NULL;
+
+-- Kept apart from activity_logs so no AI path, share card or select("*") can
+-- pick up GPS. Keyed by Garmin's ID because details can arrive before the activity.
+CREATE TABLE public.garmin_activity_details (
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  garmin_activity_id text NOT NULL,
+  route jsonb NOT NULL DEFAULT '[]',
+  heart_rate jsonb NOT NULL DEFAULT '[]',
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, garmin_activity_id)
+);
+ALTER TABLE public.garmin_activity_details ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users read their own Garmin activity details"
+  ON public.garmin_activity_details FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
 
 ALTER TABLE public.profiles
   ADD COLUMN garmin_ai_consent_at timestamptz,

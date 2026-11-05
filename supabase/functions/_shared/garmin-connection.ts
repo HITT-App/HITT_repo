@@ -5,6 +5,7 @@ import {
   fetchGarminUser,
   type GarminTokenResponse,
   refreshGrant,
+  STARTER_CONNECTION_CAP,
   tokenExpiries,
 } from "./garmin-oauth.ts";
 
@@ -107,6 +108,9 @@ export async function revokeGarminRegistration(admin: SupabaseClient, userId: st
 
 // Rows that started on another source keep their history and lose only the Garmin values.
 export async function deleteImportedGarminData(admin: SupabaseClient, userId: string): Promise<void> {
+  const { error: detailsError } = await admin.from("garmin_activity_details").delete().eq("user_id", userId);
+  if (detailsError) throw new Error(detailsError.message);
+
   const { error: deleteError } = await admin
     .from("activity_logs")
     .delete()
@@ -116,8 +120,35 @@ export async function deleteImportedGarminData(admin: SupabaseClient, userId: st
 
   const { error: clearError } = await admin
     .from("activity_logs")
-    .update({ garmin_activity_id: null, garmin_device_name: null })
+    .update({ garmin_activity_id: null, garmin_device_name: null, garmin_summary_id: null })
     .eq("user_id", userId)
     .not("garmin_activity_id", "is", null);
   if (clearError) throw new Error(clearError.message);
+}
+
+const CONNECTION_WARNING = 800;
+
+// A PostHog event for the owner, with no user data. Never blocks a connection.
+export async function alertConnectionCount(count: number): Promise<void> {
+  if (count < CONNECTION_WARNING) return;
+  const apiKey = Deno.env.get("POSTHOG_PROJECT_API_KEY");
+  const host = Deno.env.get("POSTHOG_HOST");
+  if (!apiKey || !host) {
+    console.error("[garmin] connection count", count, "but PostHog isn't configured");
+    return;
+  }
+  try {
+    await fetch(`${host}/capture/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: apiKey,
+        event: count >= STARTER_CONNECTION_CAP ? "garmin_connections_cap_reached" : "garmin_connections_near_cap",
+        distinct_id: "garmin-connection-monitor",
+        properties: { count, cap: STARTER_CONNECTION_CAP },
+      }),
+    });
+  } catch (e) {
+    console.error("[garmin] PostHog alert failed:", (e as Error).message);
+  }
 }

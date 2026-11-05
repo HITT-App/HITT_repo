@@ -121,8 +121,8 @@ export function normaliseActivityType(raw: string | null | undefined): Canonical
 export const SOURCE_PRIORITY: Record<string, number> = {
   hitt_watch: 100,
   hitt_garmin_watch: 100,
+  garmin_api: 85,
   apple_watch: 80,
-  garmin_api: 75,
   garmin: 70,
   fitbit: 60,
   whoop: 60,

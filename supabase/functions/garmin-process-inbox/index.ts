@@ -1,11 +1,14 @@
 // Run each minute by pg_cron. Every handler is safe to run twice for the same push.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { upsertActivities } from "../_shared/activity-upsert.ts";
+import { activityFingerprint, upsertActivities } from "../_shared/activity-upsert.ts";
 import { adminClient } from "../_shared/garmin-http.ts";
 import {
+  type GarminActivityDetail,
   type GarminActivitySummary,
   isStalePermissionChange,
+  manualUpdatePatch,
+  mapActivityDetail,
   mapGarminActivity,
   type PermissionsChange,
   secretMatches,
@@ -18,9 +21,11 @@ const LEASE_SECONDS = 300;
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const BACKLOG_ALERT = 500;
 
-async function handleActivities(admin: SupabaseClient, summaries: GarminActivitySummary[]) {
-  const garminIds = [...new Set(summaries.map(s => s.userId).filter(Boolean))] as string[];
-  if (!garminIds.length) return;
+// Unknown users and users with sharing off are dropped without an error, so Garmin
+// doesn't retry for a week.
+async function activityExportUsers(admin: SupabaseClient, items: { userId?: string }[]): Promise<Map<string, string>> {
+  const garminIds = [...new Set(items.map(s => s.userId).filter(Boolean))] as string[];
+  if (!garminIds.length) return new Map();
 
   const { data: connections, error } = await admin
     .from("garmin_connections")
@@ -29,13 +34,15 @@ async function handleActivities(admin: SupabaseClient, summaries: GarminActivity
     .neq("status", "disconnected");
   if (error) throw new Error(error.message);
 
-  // Unknown users are dropped without an error, so Garmin doesn't retry for a week.
-  const allowed = new Map(
+  return new Map(
     (connections ?? [])
       .filter(c => c.status !== "permission_off" && c.permissions.includes("ACTIVITY_EXPORT"))
       .map(c => [c.garmin_user_id, c.user_id]),
   );
+}
 
+async function handleActivities(admin: SupabaseClient, summaries: GarminActivitySummary[]) {
+  const allowed = await activityExportUsers(admin, summaries);
   const rows = summaries.flatMap(s => {
     const userId = s.userId ? allowed.get(s.userId) : undefined;
     const row = userId ? mapGarminActivity(s, userId) : null;
@@ -48,6 +55,46 @@ async function handleActivities(admin: SupabaseClient, summaries: GarminActivity
     .from("garmin_connections")
     .update({ last_activity_at: new Date().toISOString() })
     .in("user_id", [...new Set(rows.map(r => r.user_id))]);
+}
+
+async function handleActivityDetails(admin: SupabaseClient, details: GarminActivityDetail[]) {
+  const allowed = await activityExportUsers(admin, details);
+  for (const detail of details) {
+    const userId = detail.userId ? allowed.get(detail.userId) : undefined;
+    const row = userId ? mapActivityDetail(detail, userId) : null;
+    if (!row) continue;
+    const { error } = await admin.from("garmin_activity_details").upsert(row);
+    if (error) throw new Error(error.message);
+  }
+}
+
+// Garmin's edits don't list an activityId, so they match on summaryId. Only rows Garmin
+// owns are changed: a workout from HIIT's own watch app keeps its recorded values.
+async function handleManualUpdates(admin: SupabaseClient, summaries: GarminActivitySummary[]) {
+  const allowed = await activityExportUsers(admin, summaries);
+  for (const summary of summaries) {
+    const userId = summary.userId ? allowed.get(summary.userId) : undefined;
+    const row = userId ? mapGarminActivity(summary, userId) : null;
+    if (!row || !userId || !summary.summaryId) continue;
+
+    const { data: existing, error } = await admin
+      .from("activity_logs")
+      .select("id, source_platform")
+      .eq("user_id", userId)
+      .or(`garmin_summary_id.eq.${JSON.stringify(summary.summaryId)},garmin_activity_id.eq.${JSON.stringify(summary.summaryId)}`)
+      .limit(1);
+    if (error) throw new Error(error.message);
+
+    if (!existing?.length) {
+      await upsertActivities(admin, [row]);
+    } else if (existing[0].source_platform === "garmin_api") {
+      const { error: updateError } = await admin.from("activity_logs").update({
+        ...manualUpdatePatch(row),
+        fingerprint_hash: await activityFingerprint(row),
+      }).eq("id", existing[0].id);
+      if (updateError) throw new Error(updateError.message);
+    }
+  }
 }
 
 async function handleDeregistrations(admin: SupabaseClient, items: { userId?: string }[]) {
@@ -95,6 +142,8 @@ async function processPush(admin: SupabaseClient, rawBody: string): Promise<stri
   const push = JSON.parse(rawBody) as Record<string, unknown[]>;
   const types = Object.keys(push);
   if (Array.isArray(push.activities)) await handleActivities(admin, push.activities as GarminActivitySummary[]);
+  if (Array.isArray(push.activityDetails)) await handleActivityDetails(admin, push.activityDetails as GarminActivityDetail[]);
+  if (Array.isArray(push.manuallyUpdatedActivities)) await handleManualUpdates(admin, push.manuallyUpdatedActivities as GarminActivitySummary[]);
   if (Array.isArray(push.deregistrations)) await handleDeregistrations(admin, push.deregistrations as { userId?: string }[]);
   if (Array.isArray(push.userPermissionsChange)) await handlePermissions(admin, push.userPermissionsChange as PermissionsChange[]);
   return types.join(",");

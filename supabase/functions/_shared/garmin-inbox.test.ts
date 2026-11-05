@@ -1,6 +1,9 @@
 import { describe, it, expect } from "bun:test";
 import {
+  downsample,
   isStalePermissionChange,
+  manualUpdatePatch,
+  mapActivityDetail,
   mapGarminActivity,
   normaliseDeviceName,
   secretMatches,
@@ -35,6 +38,7 @@ describe("mapGarminActivity", () => {
       source_platform: "garmin_api",
       source_platform_id: "1001",
       garmin_activity_id: "1001",
+      garmin_summary_id: "s-1",
       garmin_device_name: "fenix 8",
     });
   });
@@ -105,5 +109,52 @@ describe("activity types and priority", () => {
   it("ranks Garmin direct above its Apple Health copy and below HIIT's watch app", () => {
     expect(sourcePriority("garmin_api")).toBeGreaterThan(sourcePriority("garmin"));
     expect(sourcePriority("garmin_api")).toBeLessThan(sourcePriority("hitt_garmin_watch"));
+  });
+
+  it("prefers Garmin over every Apple Health source", () => {
+    for (const source of ["apple_watch", "apple_health_native", "healthkit_other"]) {
+      expect(sourcePriority("garmin_api")).toBeGreaterThan(sourcePriority(source));
+    }
+  });
+});
+
+describe("activity details", () => {
+  it("keeps only route and heart rate, in compact form", () => {
+    const row = mapActivityDetail({
+      activityId: 7,
+      samples: [
+        { startTimeInSeconds: 10, latitudeInDegree: 51.5, longitudeInDegree: -0.1, heartRate: 120 },
+        { startTimeInSeconds: 11, heartRate: 121 },
+        { startTimeInSeconds: 12, latitudeInDegree: 51.6, longitudeInDegree: -0.2 },
+      ],
+    }, "u")!;
+    expect(row.garmin_activity_id).toBe("7");
+    expect(row.route).toEqual([[51.5, -0.1], [51.6, -0.2]]);
+    expect(row.heart_rate).toEqual([[10, 120], [11, 121]]);
+  });
+
+  it("handles manual activities with no samples, and refuses a missing ID", () => {
+    expect(mapActivityDetail({ activityId: 7 }, "u")!.route).toEqual([]);
+    expect(mapActivityDetail({ samples: [] }, "u")).toBeNull();
+  });
+
+  it("downsamples without losing the first and last points", () => {
+    const points = Array.from({ length: 10001 }, (_, i) => i);
+    const out = downsample(points, 500);
+    expect(out.length).toBe(500);
+    expect(out[0]).toBe(0);
+    expect(out[499]).toBe(10000);
+    expect(downsample([1, 2], 500)).toEqual([1, 2]);
+  });
+});
+
+describe("manual edits", () => {
+  it("updates stats and type but leaves the device name alone", () => {
+    const row = mapGarminActivity({ ...SUMMARY, activityType: "ROAD_BIKING", deviceName: "unknown", manual: true }, "u")!;
+    const patch = manualUpdatePatch(row);
+    expect(patch.activity_type).toBe("cycling");
+    expect(patch.duration_seconds).toBe(1800);
+    expect(Object.keys(patch)).not.toContain("garmin_device_name");
+    expect(Object.keys(patch)).not.toContain("source_platform");
   });
 });

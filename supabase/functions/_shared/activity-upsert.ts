@@ -55,6 +55,7 @@ export interface ActivityRow {
   status?: string;
   garmin_activity_id?: string | null;
   garmin_device_name?: string | null;
+  garmin_summary_id?: string | null;
 }
 
 interface StampedRow extends ActivityRow {
@@ -113,7 +114,11 @@ export interface UpsertResult {
 // the AI gate and deletion.
 function garminTag(row: ActivityRow): Record<string, unknown> {
   if (!row.garmin_activity_id) return {};
-  return { garmin_activity_id: row.garmin_activity_id, garmin_device_name: row.garmin_device_name ?? null };
+  return {
+    garmin_activity_id: row.garmin_activity_id,
+    garmin_device_name: row.garmin_device_name ?? null,
+    garmin_summary_id: row.garmin_summary_id ?? null,
+  };
 }
 
 export async function upsertActivities(admin: any, rows: ActivityRow[]): Promise<UpsertResult> {
