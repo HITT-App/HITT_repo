@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
-import { consentedActivities, consentedProgress } from "../_shared/ai-consent.ts";
+import { consentedActivities, consentedProgress, readAiConsent } from "../_shared/ai-consent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,7 +95,7 @@ serve(async (req) => {
     ] = await Promise.all([
       admin
         .from("activity_logs")
-        .select("activity_type, duration_seconds, calories_burned, ended_at, source_platform")
+        .select("activity_type, duration_seconds, calories_burned, ended_at, source_platform, garmin_activity_id")
         .eq("user_id", user.id)
         .gte("ended_at", thirtyDaysAgo)
         .order("ended_at", { ascending: false })
@@ -128,9 +128,9 @@ serve(async (req) => {
 
     // HealthKit / Apple Health consent gate (App Store 5.1.3): only include
     // HealthKit-sourced activities in the AI summary with explicit consent.
-    const aiHealthConsent = (profile as any)?.ai_health_consent === true;
-    const recentActivities = consentedActivities(rawActivities ?? [], aiHealthConsent);
-    const recentWorkouts = consentedProgress(rawRecentWorkouts ?? [], aiHealthConsent);
+    const aiConsent = await readAiConsent(admin, user.id);
+    const recentActivities = consentedActivities(rawActivities ?? [], aiConsent);
+    const recentWorkouts = consentedProgress(rawRecentWorkouts ?? [], aiConsent);
 
     const totalSessions = (recentActivities?.length ?? 0) + (recentWorkouts?.length ?? 0);
     const totalCalories = [

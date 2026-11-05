@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { enforceAIQuota } from "../_shared/ai-quota.ts";
-import { consentedActivities } from "../_shared/ai-consent.ts";
+import { consentedActivities, readAiConsent } from "../_shared/ai-consent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,7 +41,7 @@ serve(async (req) => {
     if (overQuota) return overQuota;
 
     // Fetch user data in parallel
-    const [preferencesResult, goalsResult, logsResult, consentResult] = await Promise.all([
+    const [preferencesResult, goalsResult, logsResult] = await Promise.all([
       supabase
         .from("activity_preferences")
         .select("*")
@@ -58,18 +58,11 @@ serve(async (req) => {
         .eq("user_id", user.id)
         .order("started_at", { ascending: false })
         .limit(20),
-      supabase
-        .from("profiles")
-        .select("ai_health_consent")
-        .eq("user_id", user.id)
-        .maybeSingle(),
     ]);
 
     const preferences = preferencesResult.data;
     const goals = goalsResult.data;
-    // Only send HealthKit-sourced activities to the AI with explicit consent (5.1.3).
-    const aiHealthConsent = (consentResult.data as any)?.ai_health_consent === true;
-    const recentLogs = consentedActivities(logsResult.data || [], aiHealthConsent);
+    const recentLogs = consentedActivities(logsResult.data || [], await readAiConsent(supabase, user.id));
 
     // Calculate weekly stats
     const now = new Date();

@@ -44,6 +44,9 @@ serve(async (req) => {
       connected_at: new Date().toISOString(),
       disconnected_at: null,
       disconnect_reason: null,
+      // Reconnecting never restores AI use: the user has to choose it again.
+      ai_consent_at: null,
+      ai_consent_withdrawn_at: null,
     });
     if (linkError?.code === UNIQUE_VIOLATION) {
       await admin.from("garmin_oauth_results").delete().eq("result_hash", resultHash);

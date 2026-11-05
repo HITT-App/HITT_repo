@@ -13,7 +13,13 @@ CREATE TABLE public.garmin_connections (
   disconnect_reason text,
   last_activity_at timestamptz,
   last_workout_pushed_at timestamptz,
-  workout_import_consented_at timestamptz
+  workout_import_consented_at timestamptz,
+  -- Here, not on profiles, because every signed-in user can read profiles.
+  ai_consent_at timestamptz,
+  ai_consent_withdrawn_at timestamptz,
+  -- Earliest consent whose AI output hasn't been purged, and memory as it stood then.
+  ai_purge_from timestamptz,
+  ai_memory_snapshot jsonb
 );
 CREATE UNIQUE INDEX garmin_connections_one_live_link
   ON public.garmin_connections (garmin_user_id)
@@ -124,12 +130,8 @@ CREATE POLICY "Users read their own Garmin activity details"
   ON public.garmin_activity_details FOR SELECT TO authenticated
   USING (auth.uid() = user_id);
 
-ALTER TABLE public.profiles
-  ADD COLUMN garmin_ai_consent_at timestamptz,
-  ADD COLUMN garmin_ai_consent_withdrawn_at timestamptz;
-
 INSERT INTO public.app_settings (key, value)
-VALUES ('ff_garmin_cloud', 'off')
+VALUES ('ff_garmin_cloud', 'off'), ('ff_garmin_ai', 'off')
 ON CONFLICT (key) DO NOTHING;
 
 -- SKIP LOCKED plus a lease, so overlapping cron runs never take the same batch.

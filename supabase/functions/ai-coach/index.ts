@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { cleanImageData, cleanText, limitChatMessages } from "../_shared/request-limits.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
-import { consentedActivities, consentedMetrics, consentedProgress } from "../_shared/ai-consent.ts";
+import { consentedActivities, consentedMetrics, consentedProgress, readAiConsent } from "../_shared/ai-consent.ts";
 import {
   searchRecipes,
   generateMealPlan,
@@ -2208,7 +2208,7 @@ serve(async (req) => {
       supabaseAdmin.from('daily_checkins').select('mood, energy, date').eq('user_id', userId).order('date', { ascending: false }).limit(7),
       supabaseAdmin.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('workout_progress').select('workout_id, workout_source, completed_at, duration_seconds, workouts(title, category)').eq('user_id', userId).order('completed_at', { ascending: false }).limit(10),
-      supabaseAdmin.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km, source_platform').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
+      supabaseAdmin.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km, source_platform, garmin_activity_id').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
       supabaseAdmin.from('scheduled_workouts').select('scheduled_date, status, completed_at, duration_minutes, calories_burned, workout_source, workout_title, workout_description, exercises_snapshot, workouts(title, category, difficulty, body_areas, equipment)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
       supabaseAdmin.from('user_workout_plan_items').select('scheduled_date, status, completed_at, workouts(title, duration_minutes)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
       supabaseAdmin.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
@@ -2236,9 +2236,10 @@ serve(async (req) => {
     const recentSleep = aiHealthConsent ? rawSleep : null;
     const latestHeartRate = aiHealthConsent ? rawHeartRate : null;
     const latestSteps = aiHealthConsent ? rawSteps : null;
-    const recentActivities = consentedActivities(rawActivities ?? [], aiHealthConsent);
-    const recentWorkouts = consentedProgress(rawRecentWorkouts ?? [], aiHealthConsent);
-    const latestWeight = consentedMetrics(rawWeight ? [rawWeight] : [], aiHealthConsent)[0] ?? null;
+    const aiConsent = await readAiConsent(supabaseAdmin, userId);
+    const recentActivities = consentedActivities(rawActivities ?? [], aiConsent);
+    const recentWorkouts = consentedProgress(rawRecentWorkouts ?? [], aiConsent);
+    const latestWeight = consentedMetrics(rawWeight ? [rawWeight] : [], aiConsent)[0] ?? null;
 
     // Fetch active goal separately so errors are visible and we can fall back gracefully.
     // First try: is_active=true (current goal). Fallback: most recent goal regardless of flag.
