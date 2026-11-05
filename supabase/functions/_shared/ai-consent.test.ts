@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { blendedFigureAllowed, consentedActivities, consentedHealthRow, consentedMetrics, consentedProgress, garminAiActive } from "./ai-consent";
+import { blendedFigureAllowed, consentedActivities, consentedHealthRow, consentedSchedule, consentedMetrics, consentedProgress, garminAiActive } from "./ai-consent";
 
 const NONE = { health: false, garmin: false };
 const HEALTH = { health: true, garmin: false };
@@ -120,6 +120,22 @@ describe("sleep and live readings", () => {
   });
 });
 
+describe("consentedSchedule", () => {
+  const ticked = { id: "a", status: "completed", completed_at: "2026-11-05", duration_minutes: 30, calories_burned: 300, completed_via_garmin: true };
+  const own = { id: "b", status: "completed", completed_at: "2026-11-05", duration_minutes: 20, calories_burned: 100, completed_via_garmin: false };
+
+  it("shows a Garmin tick as still planned without Garmin consent", () => {
+    expect(consentedSchedule([ticked, own], HEALTH)).toEqual([
+      { ...ticked, status: "scheduled", completed_at: null, duration_minutes: null, calories_burned: null },
+      own,
+    ]);
+  });
+
+  it("shows it as done with Garmin consent", () => {
+    expect(consentedSchedule([ticked], GARMIN)).toEqual([ticked]);
+  });
+});
+
 describe("audit of AI functions", () => {
   const functionsDir = join(import.meta.dir, "..");
   const aiFiles = readdirSync(functionsDir)
@@ -154,6 +170,15 @@ describe("audit of AI functions", () => {
     const ungated = aiFiles.filter(file => {
       const source = readFileSync(file, "utf-8");
       return source.includes("hiit_score_history") && !source.includes("blendedFigureAllowed");
+    });
+    expect(ungated).toEqual([]);
+  });
+
+  it("gates plan completion wherever AI reads it", () => {
+    const ungated = aiFiles.filter(file => {
+      const source = readFileSync(file, "utf-8");
+      const reads = source.match(/from\(['"](scheduled_workouts|user_workout_plan_items)['"]\)\s*\.select\(['"][^'"]*status[^'"]*['"]/g) ?? [];
+      return reads.length > 0 && (!source.includes("consentedSchedule") || reads.some(r => !r.includes("completed_via_garmin")));
     });
     expect(ungated).toEqual([]);
   });

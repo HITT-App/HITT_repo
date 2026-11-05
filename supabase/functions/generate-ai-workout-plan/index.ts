@@ -52,6 +52,7 @@ Rules:
 - Respect available equipment — bodyweight only if no equipment listed
 - Use intensity='low' for recovery/mobility, 'moderate' for standard sessions, 'high' for HIIT/heavy lifting
 - Each exercise must have EITHER sets+reps OR duration_seconds — not both, not neither
+- Swimming exercises must also include "distance_m": the distance in metres for one set (for example 100). Leave it out for every other exercise
 - Exactly 4 exercises per workout — no more, no less
 - order_index starts at 1 per workout
 - Always set thumbnail_url and video_url to null

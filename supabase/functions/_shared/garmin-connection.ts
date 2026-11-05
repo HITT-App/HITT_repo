@@ -116,6 +116,13 @@ export async function deleteImportedGarminData(admin: SupabaseClient, userId: st
     if (error) throw new Error(error.message);
   }
 
+  for (const table of ["scheduled_workouts", "user_workout_plan_items"]) {
+    const reset: Record<string, unknown> = { status: "scheduled", completed_at: null, completed_via_garmin: false };
+    if (table === "scheduled_workouts") Object.assign(reset, { duration_minutes: null, calories_burned: null });
+    const { error } = await admin.from(table).update(reset).eq("user_id", userId).eq("completed_via_garmin", true);
+    if (error) throw new Error(error.message);
+  }
+
   const { error: deleteError } = await admin
     .from("activity_logs")
     .delete()

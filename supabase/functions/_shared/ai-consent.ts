@@ -57,6 +57,17 @@ export function blendedFigureAllowed(consent: AiConsent): boolean {
   return !consent.garminLinked || consent.garmin;
 }
 
+// A plan row ticked off by a returning Garmin workout holds Garmin data, so without
+// consent Jarvis sees it as still planned, with no duration or calories.
+export function consentedSchedule<T extends { completed_via_garmin?: boolean | null }>(rows: T[], consent: AiConsent): T[] {
+  if (consent.garmin) return rows;
+  return rows.map(r =>
+    r.completed_via_garmin
+      ? { ...r, status: "scheduled", completed_at: null, duration_minutes: null, calories_burned: null }
+      : r
+  );
+}
+
 export function garminAiActive(
   connection: { status?: string; ai_consent_at?: string | null; ai_consent_withdrawn_at?: string | null } | null,
   flagValue: unknown,

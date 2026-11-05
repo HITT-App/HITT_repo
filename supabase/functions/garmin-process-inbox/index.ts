@@ -3,6 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { activityFingerprint, upsertActivities } from "../_shared/activity-upsert.ts";
 import { adminClient } from "../_shared/garmin-http.ts";
+import { matchSentWorkout, type TickCandidate } from "../_shared/garmin-workout.ts";
+import { normaliseActivityType } from "../_shared/activity-types.ts";
 import {
   type GarminBodyComp,
   type GarminDaily,
@@ -75,6 +77,78 @@ async function handleActivities(admin: SupabaseClient, summaries: GarminActivity
     .from("garmin_connections")
     .update({ last_activity_at: new Date().toISOString() })
     .in("user_id", [...new Set(rows.map(r => r.user_id))]);
+
+  for (const summary of summaries) {
+    const userId = summary.userId ? allowed.get(summary.userId) : undefined;
+    const row = userId ? mapGarminActivity(summary, userId) : null;
+    if (userId && row) await tickOffPlan(admin, userId, row, summary);
+  }
+}
+
+// Marks the plan row done when a workout we sent comes back from the watch.
+async function tickOffPlan(
+  admin: SupabaseClient,
+  userId: string,
+  row: NonNullable<ReturnType<typeof mapGarminActivity>>,
+  summary: GarminActivitySummary,
+) {
+  const activityId = row.garmin_activity_id!;
+  const { data: already } = await admin
+    .from("garmin_workout_links")
+    .select("scheduled_workout_id")
+    .eq("user_id", userId)
+    .eq("completed_activity_id", activityId)
+    .limit(1);
+  // Garmin can resend an activity, and it must not tick a second workout.
+  if (already?.length) return;
+
+  const { data: links, error } = await admin
+    .from("garmin_workout_links")
+    .select("scheduled_workout_id, garmin_sport")
+    .eq("user_id", userId)
+    .eq("sync_status", "sent")
+    .is("completed_activity_id", null);
+  if (error) throw new Error(error.message);
+  const ids = (links ?? []).map(l => l.scheduled_workout_id);
+  if (!ids.length) return;
+
+  const sports = new Map((links ?? []).map(l => [l.scheduled_workout_id, l.garmin_sport as string | null]));
+  const candidates: (TickCandidate & { table: string })[] = [];
+  for (const table of ["scheduled_workouts", "user_workout_plan_items"]) {
+    const { data, error: rowsError } = await admin
+      .from(table)
+      .select("id, scheduled_date, status")
+      .in("id", ids)
+      .order("scheduled_date");
+    if (rowsError) throw new Error(rowsError.message);
+    for (const r of data ?? []) {
+      if (r.status === "completed") continue;
+      candidates.push({ id: r.id, date: r.scheduled_date, sport: sports.get(r.id) ?? null, table });
+    }
+  }
+
+  // Garmin's offset gives the date on the user's watch, which is the day they planned it for.
+  const localMs = ((summary.startTimeInSeconds ?? 0) + (summary.startTimeOffsetInSeconds ?? 0)) * 1000;
+  const matchId = matchSentWorkout({
+    activity_type: normaliseActivityType(row.activity_type),
+    localDate: new Date(localMs).toISOString().slice(0, 10),
+    durationSeconds: row.duration_seconds,
+  }, candidates);
+  if (!matchId) return;
+
+  const table = candidates.find(c => c.id === matchId)!.table;
+  const fields: Record<string, unknown> = { status: "completed", completed_at: row.ended_at, completed_via_garmin: true };
+  if (table === "scheduled_workouts") {
+    fields.duration_minutes = Math.round(row.duration_seconds / 60);
+    fields.calories_burned = row.calories_burned;
+  }
+  const { error: tickError } = await admin.from(table).update(fields).eq("id", matchId);
+  if (tickError) throw new Error(tickError.message);
+  const { error: linkError } = await admin
+    .from("garmin_workout_links")
+    .update({ completed_activity_id: activityId })
+    .eq("scheduled_workout_id", matchId);
+  if (linkError) throw new Error(linkError.message);
 }
 
 async function handleActivityDetails(admin: SupabaseClient, details: GarminActivityDetail[]) {

@@ -7,6 +7,7 @@ export type GarminActivitySummary = {
   activityId?: string | number;
   activityType?: string;
   startTimeInSeconds?: number;
+  startTimeOffsetInSeconds?: number;
   durationInSeconds?: number;
   activeKilocalories?: number;
   averageHeartRateInBeatsPerMinute?: number;

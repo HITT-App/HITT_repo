@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { cleanImageData, cleanText, limitChatMessages } from "../_shared/request-limits.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
-import { consentedActivities, consentedMetrics, consentedHealthRow, consentedProgress, readAiConsent } from "../_shared/ai-consent.ts";
+import { consentedActivities, consentedMetrics, consentedHealthRow, consentedProgress, consentedSchedule, readAiConsent } from "../_shared/ai-consent.ts";
 import {
   searchRecipes,
   generateMealPlan,
@@ -2189,8 +2189,8 @@ serve(async (req) => {
       { data: rawSleep },
       { data: rawRecentWorkouts },
       { data: rawActivities },
-      { data: scheduledWorkouts },
-      { data: planItems },
+      { data: rawScheduledWorkouts },
+      { data: rawPlanItems },
       { data: activityGoals },
       { data: rawWeight },
       { data: rawHeartRate },
@@ -2209,8 +2209,8 @@ serve(async (req) => {
       supabaseAdmin.from('sleep_logs').select('*').eq('user_id', userId).order('sleep_date', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('workout_progress').select('workout_id, workout_source, completed_at, duration_seconds, workouts(title, category)').eq('user_id', userId).order('completed_at', { ascending: false }).limit(10),
       supabaseAdmin.from('activity_logs').select('activity_type, started_at, ended_at, duration_seconds, calories_burned, distance_km, source_platform, garmin_activity_id').eq('user_id', userId).eq('status', 'completed').order('started_at', { ascending: false }).limit(7),
-      supabaseAdmin.from('scheduled_workouts').select('scheduled_date, status, completed_at, duration_minutes, calories_burned, workout_source, workout_title, workout_description, exercises_snapshot, workouts(title, category, difficulty, body_areas, equipment)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
-      supabaseAdmin.from('user_workout_plan_items').select('scheduled_date, status, completed_at, workouts(title, duration_minutes)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
+      supabaseAdmin.from('scheduled_workouts').select('completed_via_garmin, scheduled_date, status, completed_at, duration_minutes, calories_burned, workout_source, workout_title, workout_description, exercises_snapshot, workouts(title, category, difficulty, body_areas, equipment)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
+      supabaseAdmin.from('user_workout_plan_items').select('completed_via_garmin, scheduled_date, status, completed_at, workouts(title, duration_minutes)').eq('user_id', userId).order('scheduled_date', { ascending: false }).limit(20),
       supabaseAdmin.from('activity_goals').select('*').eq('user_id', userId).maybeSingle(),
       supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'weight').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('health_metrics').select('*').eq('user_id', userId).eq('metric_type', 'heart_rate').order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
@@ -2237,6 +2237,8 @@ serve(async (req) => {
     const latestHeartRate = consentedHealthRow(rawHeartRate, aiConsent);
     const latestSteps = consentedHealthRow(rawSteps, aiConsent);
     const recentActivities = consentedActivities(rawActivities ?? [], aiConsent);
+    const scheduledWorkouts = consentedSchedule(rawScheduledWorkouts ?? [], aiConsent);
+    const planItems = consentedSchedule(rawPlanItems ?? [], aiConsent);
     const recentWorkouts = consentedProgress(rawRecentWorkouts ?? [], aiConsent);
     const latestWeight = consentedMetrics(rawWeight ? [rawWeight] : [], aiConsent)[0] ?? null;
 

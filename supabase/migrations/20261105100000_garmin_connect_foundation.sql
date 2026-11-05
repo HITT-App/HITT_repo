@@ -91,8 +91,11 @@ CREATE TABLE public.garmin_workout_links (
   garmin_workout_id bigint,
   garmin_schedule_id bigint,
   content_hash text,
+  garmin_sport text,
+  swim_distance_m integer,
+  completed_activity_id text,
   sync_status text NOT NULL DEFAULT 'pending'
-    CHECK (sync_status IN ('pending', 'sent', 'too_long', 'unsupported', 'failed')),
+    CHECK (sync_status IN ('pending', 'sent', 'too_long', 'unsupported', 'needs_distance', 'failed')),
   last_error text,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -233,6 +236,24 @@ $$;
 CREATE TRIGGER health_metrics_prefer_garmin
   BEFORE INSERT ON public.health_metrics
   FOR EACH ROW EXECUTE FUNCTION public.prefer_garmin_metric();
+
+-- A sport or triathlon the user sent from the app, which isn't a row on their schedule.
+CREATE TABLE public.garmin_one_off_workouts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  workout_date date NOT NULL,
+  payload jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX garmin_one_off_workouts_user ON public.garmin_one_off_workouts (user_id, workout_date);
+ALTER TABLE public.garmin_one_off_workouts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users read their own Garmin one-off workouts"
+  ON public.garmin_one_off_workouts FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Set when a returning Garmin workout ticks off a plan row, so the AI gate can hide it.
+ALTER TABLE public.scheduled_workouts ADD COLUMN completed_via_garmin boolean NOT NULL DEFAULT false;
+ALTER TABLE public.user_workout_plan_items ADD COLUMN completed_via_garmin boolean NOT NULL DEFAULT false;
 
 -- Users whose schedule changed. A trigger, because shipped app versions write schedules directly.
 CREATE TABLE public.garmin_sync_dirty (

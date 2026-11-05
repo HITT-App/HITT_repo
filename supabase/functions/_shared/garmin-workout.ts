@@ -7,6 +7,7 @@ export type HiitExercise = {
   sets?: number | null;
   reps?: number | null;
   order_index?: number | null;
+  distance_m?: number | null;
 };
 
 export type HiitWorkout = {
@@ -22,13 +23,15 @@ export type GarminWorkout = {
   sport: string;
   workoutProvider: string;
   workoutSourceId: string;
-  isSessionTransitionEnabled: false;
-  segments: { segmentOrder: 1; sport: string; steps: Step[] }[];
+  isSessionTransitionEnabled: boolean;
+  poolLength?: null;
+  poolLengthUnit?: null;
+  segments: { segmentOrder: number; sport: string; steps: Step[]; poolLength?: null; poolLengthUnit?: null }[];
 };
 
 export type MapResult =
   | { ok: true; workout: GarminWorkout }
-  | { ok: false; reason: "too_long" | "unsupported" };
+  | { ok: false; reason: "too_long" | "unsupported" | "needs_distance" };
 
 const PROVIDER = "HIIT Fitness";
 const MAX_SINGLE_SPORT_STEPS = 100;
@@ -36,6 +39,9 @@ const MAX_STEP_TEXT = 512;
 // Matches the rest used by HIIT's own workout player.
 const REST_SECONDS = 30;
 const DEFAULT_EXERCISE_SECONDS = 45;
+// Garmin's range for timed swim steps.
+const MIN_SWIM_SECONDS = 60;
+const MAX_SWIM_SECONDS = 59 * 60;
 
 // Only pairs checked against Garmin's Appendix B. Anything else is sent as text.
 const EXERCISES: Record<string, [string, string]> = {
@@ -59,7 +65,7 @@ const EXERCISES: Record<string, [string, string]> = {
 
 export function garminSport(category: string | null | undefined): string | null {
   const c = (category ?? "").toLowerCase();
-  if (c.includes("swim")) return null; // Garmin needs pool lengths and distances HIIT doesn't hold
+  if (c.includes("swim")) return "LAP_SWIMMING";
   if (c.includes("triathlon") || c.includes("multi")) return null;
   if (c.includes("strength")) return "STRENGTH_TRAINING";
   if (c.includes("yoga")) return "YOGA";
@@ -68,6 +74,107 @@ export function garminSport(category: string | null | undefined): string | null 
   if (c.includes("cycl") || c.includes("bik")) return "CYCLING";
   // Garmin's list has no HIIT sport value. Asked in the email to Garmin.
   return "CARDIO_TRAINING";
+}
+
+// Jarvis and uploaded workouts have no catalogue category, so the sport comes from the text.
+export function inferCategory(workout: HiitWorkout): string | null {
+  if (workout.category) return workout.category;
+  const title = (workout.title ?? "").toLowerCase();
+  const exercises = workout.exercises.map(e => e.title.toLowerCase()).join(" ");
+  if (/\b(triathlon|brick)\b/.test(title)) return "triathlon";
+  if (/\b(hiit|tabata|cardio|circuit)\b/.test(title)) return "cardio";
+  if (/\bswim|\b(freestyle|backstroke|breaststroke)\b/.test(`${title} ${exercises}`)) return "swimming";
+  if (/\byoga\b/.test(title)) return "yoga";
+  if (/\bpilates\b/.test(title)) return "pilates";
+  if (/\b(run|running|jog|tempo|5k|10k)\b/.test(title)) return "running";
+  if (/\b(cycle|cycling|bike|ride|spin)\b/.test(title)) return "cycling";
+  if (/\b(strength|weights?|lifting|upper body|lower body|push|pull|legs)\b/.test(title)) return "strength";
+  if (workout.exercises.length && workout.exercises.every(e => e.sets && e.reps)) return "strength";
+  return null;
+}
+
+// Uploaded plans often only have the distance in the wording: "4 x 100m freestyle", "1.5 km swim".
+export function parseDistanceMetres(text: string): number | null {
+  const km = text.match(/(\d+(?:\.\d+)?)\s*(?:km|kilomet)/i);
+  if (km) return Math.round(Number(km[1]) * 1000);
+  const m = text.match(/(\d+)\s*(?:m\b|met(?:er|re)s?\b)/i);
+  return m ? Number(m[1]) : null;
+}
+
+function swimStroke(title: string): string {
+  const t = title.toLowerCase();
+  if (t.includes("back")) return "BACKSTROKE";
+  if (t.includes("breast")) return "BREASTSTROKE";
+  if (t.includes("butterfly") || /\bfly\b/.test(t)) return "BUTTERFLY";
+  if (t.includes("free")) return "FREESTYLE";
+  return "CHOICE";
+}
+
+// Returns null if it has neither a distance nor a duration Garmin accepts.
+function swimStep(ex: HiitExercise): Step | null {
+  const distance = ex.distance_m ?? parseDistanceMetres(ex.title);
+  const seconds = ex.duration_seconds ?? 0;
+  const base = {
+    type: "WorkoutStep",
+    intensity: "MAIN",
+    description: ex.title.slice(0, MAX_STEP_TEXT),
+    targetType: null,
+    strokeType: swimStroke(ex.title),
+  };
+  if (distance && distance > 0) {
+    return { ...base, durationType: "DISTANCE", durationValue: distance, durationValueType: "METER" };
+  }
+  if (seconds >= MIN_SWIM_SECONDS && seconds <= MAX_SWIM_SECONDS) {
+    return { ...base, durationType: "TIME", durationValue: seconds };
+  }
+  return null;
+}
+
+function swimRestStep(): Step {
+  return {
+    type: "WorkoutStep",
+    intensity: "REST",
+    description: "Rest",
+    durationType: "FIXED_REST",
+    durationValue: REST_SECONDS,
+    targetType: null,
+  };
+}
+
+function mapSwim(workout: HiitWorkout, exercises: HiitExercise[]): MapResult {
+  const steps: Step[] = [];
+  for (const [i, ex] of exercises.entries()) {
+    const step = swimStep(ex);
+    if (!step) return { ok: false, reason: "needs_distance" };
+    const sets = ex.sets ?? 1;
+    if (sets > 1) {
+      steps.push({
+        type: "WorkoutRepeatStep",
+        repeatType: "REPEAT_UNTIL_STEPS_CMPLT",
+        repeatValue: sets,
+        skipLastRestStep: true,
+        steps: [step, swimRestStep()],
+      });
+    } else {
+      steps.push(step);
+    }
+    if (i < exercises.length - 1) steps.push(swimRestStep());
+  }
+  if (countSteps(steps) > MAX_SINGLE_SPORT_STEPS) return { ok: false, reason: "too_long" };
+  return {
+    ok: true,
+    workout: {
+      workoutName: workout.title?.trim() || "Swim",
+      sport: "LAP_SWIMMING",
+      workoutProvider: PROVIDER,
+      workoutSourceId: PROVIDER,
+      isSessionTransitionEnabled: false,
+      // Unspecified, so it can be done in any pool.
+      poolLength: null,
+      poolLengthUnit: null,
+      segments: [{ segmentOrder: 1, sport: "LAP_SWIMMING", steps: numberSteps(steps) }],
+    },
+  };
 }
 
 export function exerciseEnum(title: string): [string, string] | null {
@@ -114,10 +221,12 @@ function countSteps(steps: Step[]): number {
 }
 
 export function mapWorkout(workout: HiitWorkout): MapResult {
-  const sport = garminSport(workout.category);
+  const sport = garminSport(inferCategory(workout));
   if (!sport || !workout.exercises.length) return { ok: false, reason: "unsupported" };
 
   const exercises = [...workout.exercises].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  if (sport === "LAP_SWIMMING") return mapSwim(workout, exercises);
+
   const steps: Step[] = [];
   exercises.forEach((ex, i) => {
     const sets = ex.sets ?? 1;
@@ -171,4 +280,124 @@ export function planSync(due: Due[], links: Link[], windowEnd: string) {
     return !!l.date && l.date > windowEnd;
   });
   return { create, replace, remove };
+}
+
+export type OneOffPayload =
+  | { kind: "sport"; sport: string; distance_m?: number | null }
+  | { kind: "triathlon"; name?: string | null; swim_km: number; bike_km: number; run_km: number };
+
+// Only sports Garmin's workout list has. Anything else starts on the watch and comes back on its own.
+const SPORT_NAMES: Record<string, string> = {
+  run: "RUNNING",
+  running: "RUNNING",
+  bike: "CYCLING",
+  cycle: "CYCLING",
+  cycling: "CYCLING",
+  swim: "LAP_SWIMMING",
+  swimming: "LAP_SWIMMING",
+  strength: "STRENGTH_TRAINING",
+  gym: "STRENGTH_TRAINING",
+  yoga: "YOGA",
+  pilates: "PILATES",
+  hiit: "CARDIO_TRAINING",
+  cardio: "CARDIO_TRAINING",
+};
+
+export function garminSportForName(name: string): string | null {
+  return SPORT_NAMES[name.trim().toLowerCase()] ?? null;
+}
+
+function distanceStep(metres: number): Step {
+  return {
+    type: "WorkoutStep",
+    intensity: "ACTIVE",
+    durationType: "DISTANCE",
+    durationValue: metres,
+    durationValueType: "METER",
+    targetType: "OPEN",
+  };
+}
+
+export function mapOneOff(payload: OneOffPayload): MapResult {
+  if (payload.kind === "triathlon") {
+    const legs: [string, number][] = [
+      ["LAP_SWIMMING", payload.swim_km],
+      ["CYCLING", payload.bike_km],
+      ["RUNNING", payload.run_km],
+    ];
+    if (legs.some(([, km]) => !(km > 0))) return { ok: false, reason: "needs_distance" };
+    const next = { order: 1 };
+    return {
+      ok: true,
+      workout: {
+        workoutName: `${payload.name?.trim() || "Custom"} Triathlon`,
+        sport: "MULTI_SPORT",
+        workoutProvider: PROVIDER,
+        workoutSourceId: PROVIDER,
+        isSessionTransitionEnabled: true,
+        poolLength: null,
+        poolLengthUnit: null,
+        segments: legs.map(([sport, km], i) => {
+          const step = distanceStep(Math.round(km * 1000));
+          return {
+            segmentOrder: i + 1,
+            sport,
+            poolLength: null,
+            poolLengthUnit: null,
+            steps: numberSteps(
+              [sport === "LAP_SWIMMING" ? { ...step, intensity: "MAIN", targetType: null, strokeType: "CHOICE" } : step],
+              next,
+            ),
+          };
+        }),
+      },
+    };
+  }
+
+  const sport = garminSportForName(payload.sport);
+  if (!sport) return { ok: false, reason: "unsupported" };
+  if (sport === "LAP_SWIMMING") {
+    if (!payload.distance_m) return { ok: false, reason: "needs_distance" };
+    return mapSwim({ title: "Swim", exercises: [] }, [{ title: "Swim", distance_m: payload.distance_m }]);
+  }
+  return {
+    ok: true,
+    workout: {
+      workoutName: payload.sport.trim(),
+      sport,
+      workoutProvider: PROVIDER,
+      workoutSourceId: PROVIDER,
+      isSessionTransitionEnabled: false,
+      segments: [{
+        segmentOrder: 1,
+        sport,
+        steps: numberSteps([{ type: "WorkoutStep", intensity: "ACTIVE", durationType: "OPEN", targetType: "OPEN" }]),
+      }],
+    },
+  };
+}
+
+const SPORT_ACTIVITY_TYPES: Record<string, string[]> = {
+  RUNNING: ["running"],
+  CYCLING: ["cycling"],
+  LAP_SWIMMING: ["swimming"],
+  STRENGTH_TRAINING: ["strength", "cross_training"],
+  CARDIO_TRAINING: ["hiit", "cardio", "cross_training", "other"],
+  YOGA: ["yoga"],
+  PILATES: ["pilates"],
+};
+
+export type TickCandidate = { id: string; date: string; sport: string | null };
+
+// A short accidental recording doesn't count. Earliest of the day first, so a day with
+// two planned workouts ticks them in order as each comes back.
+export function matchSentWorkout(
+  activity: { activity_type: string; localDate: string; durationSeconds: number },
+  candidates: TickCandidate[],
+): string | null {
+  if (activity.durationSeconds < 60) return null;
+  const match = candidates.find(c =>
+    c.date === activity.localDate && !!c.sport && (SPORT_ACTIVITY_TYPES[c.sport] ?? []).includes(activity.activity_type)
+  );
+  return match?.id ?? null;
 }

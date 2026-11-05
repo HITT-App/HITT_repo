@@ -11,7 +11,16 @@ import {
 import { sha256Hex } from "../_shared/garmin-crypto.ts";
 import { adminClient } from "../_shared/garmin-http.ts";
 import { secretMatches } from "../_shared/garmin-inbox.ts";
-import { type GarminWorkout, type HiitWorkout, type Link, mapWorkout, planSync } from "../_shared/garmin-workout.ts";
+import {
+  type GarminWorkout,
+  type HiitWorkout,
+  type Link,
+  mapOneOff,
+  type MapResult,
+  mapWorkout,
+  type OneOffPayload,
+  planSync,
+} from "../_shared/garmin-workout.ts";
 
 const WINDOW_DAYS = 7;
 const DAILY_PASS_MS = 24 * 60 * 60 * 1000;
@@ -63,7 +72,7 @@ async function loadDue(admin: SupabaseClient, userId: string, today: string, win
   return rows.filter(r => r.status !== "completed" && r.status !== "skipped");
 }
 
-async function toWorkout(admin: SupabaseClient, row: any): Promise<HiitWorkout> {
+async function toWorkout(admin: SupabaseClient, row: any, swimDistance: number | null): Promise<HiitWorkout> {
   let exercises = row.exercises_snapshot ?? [];
   if (!exercises.length && row.workout_id) {
     const { data, error } = await admin
@@ -72,6 +81,10 @@ async function toWorkout(admin: SupabaseClient, row: any): Promise<HiitWorkout> 
       .eq("workout_id", row.workout_id);
     if (error) throw new Error(error.message);
     exercises = data ?? [];
+  }
+  // The app asks for one distance when a swim had none, so it applies to the first exercise.
+  if (swimDistance && exercises.length) {
+    exercises = exercises.map((e: any, i: number) => (i === 0 ? { ...e, distance_m: e.distance_m ?? swimDistance } : e));
   }
   return { title: row.workout_title ?? row.workouts?.title ?? null, category: row.workouts?.category ?? null, exercises };
 }
@@ -95,20 +108,35 @@ async function sendToGarmin(token: string, budget: Budget, workout: GarminWorkou
   }
 }
 
-// Returns true when the user is fully in step, so their dirty mark can be cleared.
-async function syncUser(admin: SupabaseClient, userId: string, budget: Budget): Promise<boolean> {
+async function syncUser(admin: SupabaseClient, userId: string, budget: Budget): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const windowEnd = new Date(Date.now() + (WINDOW_DAYS - 1) * DAILY_PASS_MS).toISOString().slice(0, 10);
 
-  const rows = await loadDue(admin, userId, today, windowEnd);
-  const prepared = await Promise.all(rows.map(async row => {
-    const mapped = mapWorkout(await toWorkout(admin, row));
-    const hash = await sha256Hex(JSON.stringify({ mapped, date: row.scheduled_date }));
-    return { id: row.id as string, date: row.scheduled_date as string, hash, mapped };
-  }));
-
   const { data: linkRows, error } = await admin.from("garmin_workout_links").select("*").eq("user_id", userId);
   if (error) throw new Error(error.message);
+  const swimDistances = new Map((linkRows ?? []).map(l => [l.scheduled_workout_id, l.swim_distance_m as number | null]));
+
+  const rows = await loadDue(admin, userId, today, windowEnd);
+  const { data: oneOffs, error: oneOffError } = await admin
+    .from("garmin_one_off_workouts")
+    .select("id, workout_date, payload")
+    .eq("user_id", userId)
+    .gte("workout_date", today)
+    .lte("workout_date", windowEnd);
+  if (oneOffError) throw new Error(oneOffError.message);
+
+  const prepare = async (id: string, date: string, mapped: MapResult) => ({
+    id,
+    date,
+    mapped,
+    hash: await sha256Hex(JSON.stringify({ mapped, date })),
+  });
+  const prepared = await Promise.all([
+    ...rows.map(async row =>
+      prepare(row.id, row.scheduled_date, mapWorkout(await toWorkout(admin, row, swimDistances.get(row.id) ?? null)))
+    ),
+    ...(oneOffs ?? []).map(o => prepare(o.id, o.workout_date, mapOneOff(o.payload as OneOffPayload))),
+  ]);
 
   const ids = (linkRows ?? []).map(l => l.scheduled_workout_id);
   const dates = new Map<string, string>();
@@ -118,6 +146,12 @@ async function syncUser(admin: SupabaseClient, userId: string, budget: Budget): 
       if (rowsError) throw new Error(rowsError.message);
       for (const r of data ?? []) dates.set(r.id, r.scheduled_date);
     }
+    const { data: oneOffDates, error: datesError } = await admin
+      .from("garmin_one_off_workouts")
+      .select("id, workout_date")
+      .in("id", ids);
+    if (datesError) throw new Error(datesError.message);
+    for (const o of oneOffDates ?? []) dates.set(o.id, o.workout_date);
   }
   const links: Link[] = (linkRows ?? []).map(l => ({
     id: l.scheduled_workout_id,
@@ -129,7 +163,6 @@ async function syncUser(admin: SupabaseClient, userId: string, budget: Budget): 
   const linkById = new Map((linkRows ?? []).map(l => [l.scheduled_workout_id, l]));
   const plan = planSync(prepared, links, windowEnd);
   const token = await getValidAccessToken(admin, userId);
-  let inStep = true;
 
   for (const link of plan.remove) {
     await removeFromGarmin(token, budget, linkById.get(link.id)!);
@@ -152,7 +185,9 @@ async function syncUser(admin: SupabaseClient, userId: string, budget: Budget): 
 
     try {
       const sent = await sendToGarmin(token, budget, item.mapped.workout, due.date);
-      await admin.from("garmin_workout_links").upsert({ ...base, ...sent, sync_status: "sent", last_error: null });
+      await admin.from("garmin_workout_links").upsert({
+        ...base, ...sent, sync_status: "sent", last_error: null, garmin_sport: item.mapped.workout.sport,
+      });
       await admin.from("garmin_connections").update({ last_workout_pushed_at: new Date().toISOString() }).eq("user_id", userId);
     } catch (e) {
       if (e instanceof Rejected) {
@@ -165,12 +200,10 @@ async function syncUser(admin: SupabaseClient, userId: string, budget: Budget): 
           ...base, content_hash: null, garmin_workout_id: null, garmin_schedule_id: null,
           sync_status: "failed", last_error: "Couldn't reach Garmin. We'll keep trying.",
         });
-        inStep = false;
         throw e;
       }
     }
   }
-  return inStep;
 }
 
 serve(async (req) => {
