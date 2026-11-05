@@ -13,6 +13,7 @@ CREATE TABLE public.garmin_connections (
   disconnect_reason text,
   last_activity_at timestamptz,
   last_workout_pushed_at timestamptz,
+  last_workout_sync_at timestamptz,
   workout_import_consented_at timestamptz,
   -- Here, not on profiles, because every signed-in user can read profiles.
   ai_consent_at timestamptz,
@@ -91,7 +92,7 @@ CREATE TABLE public.garmin_workout_links (
   garmin_schedule_id bigint,
   content_hash text,
   sync_status text NOT NULL DEFAULT 'pending'
-    CHECK (sync_status IN ('pending', 'sent', 'too_long', 'failed')),
+    CHECK (sync_status IN ('pending', 'sent', 'too_long', 'unsupported', 'failed')),
   last_error text,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -232,3 +233,54 @@ $$;
 CREATE TRIGGER health_metrics_prefer_garmin
   BEFORE INSERT ON public.health_metrics
   FOR EACH ROW EXECUTE FUNCTION public.prefer_garmin_metric();
+
+-- Users whose schedule changed. A trigger, because shipped app versions write schedules directly.
+CREATE TABLE public.garmin_sync_dirty (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  marked_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.garmin_sync_dirty ENABLE ROW LEVEL SECURITY;
+
+CREATE FUNCTION public.mark_garmin_sync_dirty()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  affected uuid := COALESCE(NEW.user_id, OLD.user_id);
+BEGIN
+  INSERT INTO public.garmin_sync_dirty (user_id)
+  SELECT affected
+  WHERE EXISTS (
+    SELECT 1 FROM public.garmin_connections
+    WHERE user_id = affected AND workout_import_consented_at IS NOT NULL AND status = 'active'
+  )
+  ON CONFLICT (user_id) DO UPDATE SET marked_at = now();
+  RETURN NULL;
+END;
+$$;
+CREATE TRIGGER scheduled_workouts_garmin_dirty
+  AFTER INSERT OR UPDATE OR DELETE ON public.scheduled_workouts
+  FOR EACH ROW EXECUTE FUNCTION public.mark_garmin_sync_dirty();
+CREATE TRIGGER plan_items_garmin_dirty
+  AFTER INSERT OR UPDATE OR DELETE ON public.user_workout_plan_items
+  FOR EACH ROW EXECUTE FUNCTION public.mark_garmin_sync_dirty();
+
+SELECT cron.unschedule('garmin_sync_workouts_5min')
+WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'garmin_sync_workouts_5min');
+SELECT cron.schedule(
+  'garmin_sync_workouts_5min', '*/5 * * * *',
+  $cron$
+  SELECT net.http_post(
+    url := 'https://pbrqdlkjoxvglcdlixbi.supabase.co/functions/v1/garmin-sync-workouts',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || secret.decrypted_secret
+    ),
+    body := '{}'::jsonb
+  )
+  FROM vault.decrypted_secrets AS secret
+  WHERE secret.name = 'garmin_cron_secret';
+  $cron$
+);
