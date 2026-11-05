@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { consentedActivities, consentedMetrics, consentedProgress } from "./ai-consent.ts";
 
 export type WorkoutContext = {
   healthMetricsSummary: string;
@@ -8,25 +9,36 @@ export type WorkoutContext = {
   customResponseStyle: string;
 };
 
+async function readAiHealthConsent(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("ai_health_consent")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data?.ai_health_consent === true;
+}
+
 async function summariseHealthMetrics(
   supabase: SupabaseClient,
   userId: string,
-  days: number
+  days: number,
+  consent: boolean
 ): Promise<string> {
   const since = new Date(Date.now() - days * 86400000).toISOString();
 
   const { data } = await supabase
     .from("health_metrics")
-    .select("metric_type, value, unit, recorded_at")
+    .select("metric_type, value, unit, recorded_at, source_platform, notes")
     .eq("user_id", userId)
     .gte("recorded_at", since)
     .order("recorded_at", { ascending: false });
 
-  if (!data || data.length === 0) return "No health metrics on record.";
+  const rows = consentedMetrics(data ?? [], consent);
+  if (rows.length === 0) return "No health metrics on record.";
 
   // Group by type and compute averages
   const byType: Record<string, number[]> = {};
-  for (const row of data) {
+  for (const row of rows) {
     if (!byType[row.metric_type]) byType[row.metric_type] = [];
     byType[row.metric_type].push(Number(row.value));
   }
@@ -83,30 +95,34 @@ async function summariseGoals(
 async function summariseRecentActivity(
   supabase: SupabaseClient,
   userId: string,
-  days: number
+  days: number,
+  consent: boolean
 ): Promise<string> {
   const since = new Date(Date.now() - days * 86400000).toISOString();
 
-  const [{ data: actLogs }, { data: wkProgress }] = await Promise.all([
+  const [{ data: rawActLogs }, { data: rawProgress }] = await Promise.all([
     supabase
       .from("activity_logs")
-      .select("activity_type, duration_seconds, calories_burned, intensity_level, started_at")
+      .select("activity_type, duration_seconds, calories_burned, intensity_level, started_at, source_platform")
       .eq("user_id", userId)
       .gte("started_at", since)
       .order("started_at", { ascending: false })
       .limit(20),
     supabase
       .from("workout_progress")
-      .select("workout_title, workout_source, duration_seconds, calories_burned, completed_at")
+      .select("workout_id, workout_title, workout_source, duration_seconds, calories_burned, completed_at")
       .eq("user_id", userId)
       .gte("completed_at", since)
       .order("completed_at", { ascending: false })
       .limit(10),
   ]);
 
+  const actLogs = consentedActivities(rawActLogs ?? [], consent);
+  const wkProgress = consentedProgress(rawProgress ?? [], consent);
+
   const lines: string[] = [];
 
-  if (wkProgress && wkProgress.length > 0) {
+  if (wkProgress.length > 0) {
     const totalWorkouts = wkProgress.length;
     const avgDuration = Math.round(
       wkProgress.reduce((s, w) => s + (w.duration_seconds ?? 0), 0) / totalWorkouts / 60
@@ -118,7 +134,7 @@ async function summariseRecentActivity(
     lines.push(`Recent: ${recent.join(" | ")}.`);
   }
 
-  if (actLogs && actLogs.length > 0) {
+  if (actLogs.length > 0) {
     const typeCount: Record<string, number> = {};
     let totalCalories = 0;
     for (const a of actLogs) {
@@ -141,10 +157,12 @@ export async function gatherWorkoutContext(
   userId: string,
   client: { customMemory?: string; customResponseStyle?: string }
 ): Promise<WorkoutContext> {
+  const consent = await readAiHealthConsent(supabase, userId);
+
   const [healthMetricsSummary, goalsSummary, recentActivitySummary] = await Promise.all([
-    summariseHealthMetrics(supabase, userId, 90),
+    summariseHealthMetrics(supabase, userId, 90, consent),
     summariseGoals(supabase, userId),
-    summariseRecentActivity(supabase, userId, 30),
+    summariseRecentActivity(supabase, userId, 30, consent),
   ]);
 
   return {

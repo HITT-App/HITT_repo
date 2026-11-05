@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { consentedActivities, consentedProgress } from "../_shared/ai-consent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,7 +88,7 @@ serve(async (req) => {
     // ── AI insight — user has meaningful data ────────────────────────────────
     const [
       { data: rawActivities },
-      { data: recentWorkouts },
+      { data: rawRecentWorkouts },
       { data: scoreHistory },
       { data: profile },
       { data: prefs },
@@ -101,7 +102,7 @@ serve(async (req) => {
         .limit(20),
       admin
         .from("workout_progress")
-        .select("workout_title, duration_seconds, calories_burned, completed_at")
+        .select("workout_id, workout_source, workout_title, duration_seconds, calories_burned, completed_at")
         .eq("user_id", user.id)
         .not("completed_at", "is", null)
         .gte("completed_at", thirtyDaysAgo)
@@ -128,13 +129,8 @@ serve(async (req) => {
     // HealthKit / Apple Health consent gate (App Store 5.1.3): only include
     // HealthKit-sourced activities in the AI summary with explicit consent.
     const aiHealthConsent = (profile as any)?.ai_health_consent === true;
-    const HEALTHKIT_SOURCES = new Set([
-      "apple_watch", "apple_health_native", "healthkit", "healthkit_other",
-      "garmin", "fitbit", "whoop", "oura", "polar", "suunto", "coros", "wahoo",
-    ]);
-    const recentActivities = aiHealthConsent
-      ? rawActivities
-      : (rawActivities ?? []).filter((a: any) => !HEALTHKIT_SOURCES.has(a.source_platform));
+    const recentActivities = consentedActivities(rawActivities ?? [], aiHealthConsent);
+    const recentWorkouts = consentedProgress(rawRecentWorkouts ?? [], aiHealthConsent);
 
     const totalSessions = (recentActivities?.length ?? 0) + (recentWorkouts?.length ?? 0);
     const totalCalories = [

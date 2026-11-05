@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { enforceAIQuota } from "../_shared/ai-quota.ts";
+import { consentedActivities } from "../_shared/ai-consent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,13 +69,7 @@ serve(async (req) => {
     const goals = goalsResult.data;
     // Only send HealthKit-sourced activities to the AI with explicit consent (5.1.3).
     const aiHealthConsent = (consentResult.data as any)?.ai_health_consent === true;
-    const HEALTHKIT_SOURCES = new Set([
-      "apple_watch", "apple_health_native", "healthkit", "healthkit_other",
-      "garmin", "fitbit", "whoop", "oura", "polar", "suunto", "coros", "wahoo",
-    ]);
-    const recentLogs = aiHealthConsent
-      ? (logsResult.data || [])
-      : (logsResult.data || []).filter((a: any) => !HEALTHKIT_SOURCES.has(a.source_platform));
+    const recentLogs = consentedActivities(logsResult.data || [], aiHealthConsent);
 
     // Calculate weekly stats
     const now = new Date();
