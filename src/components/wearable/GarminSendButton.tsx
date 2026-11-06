@@ -70,7 +70,7 @@ export function GarminSendButton({ payload, tokens: C, tint }: {
         width: "100%", borderRadius: 14, padding: "13px 0", display: "flex", alignItems: "center", justifyContent: "center",
         gap: 9, fontSize: 13.5, fontWeight: 650, color: C.good, background: tint(C.good, 0.1), border: `1px solid ${tint(C.good, 0.4)}`,
       }}>
-        <Check size={16} color={C.good} strokeWidth={2.2} /> Sent to your watch, start it from there
+        <Check size={16} color={C.good} strokeWidth={2.2} /> On its way to Garmin. Sync your watch, then start it from there
       </div>
     );
   }
