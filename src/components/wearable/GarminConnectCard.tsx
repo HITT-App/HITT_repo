@@ -117,7 +117,7 @@ export function GarminConnectCard() {
     setBusy(false);
     setAiWithdrawOpen(false);
     if (error) return showError(error);
-    toast({ title: "Jarvis has stopped using your Garmin data" });
+    toast({ title: "The HIIT Coach has stopped using your Garmin data" });
   };
 
   const disconnect = async (choices: { deleteImported: boolean; deleteAi: boolean; deletePlans: boolean }) => {
@@ -246,10 +246,10 @@ export function GarminConnectCard() {
           />
           {aiEnabled && (
             <ChoiceRow
-              title="Let Jarvis use my Garmin data"
+              title="Let the HIIT Coach use my Garmin data"
               detail={connection.ai_consent_at
-                ? "Jarvis uses your Garmin data in its advice."
-                : "Off. Jarvis can't see your Garmin data."}
+                ? "The HIIT Coach uses your Garmin data in its advice."
+                : "Off. The HIIT Coach can't see your Garmin data."}
               checked={!!connection.ai_consent_at}
               disabled={busy || !online}
               onChange={on => on ? setAiGrantOpen(true) : setAiWithdrawOpen(true)}
@@ -270,7 +270,7 @@ export function GarminConnectCard() {
           <div className="space-y-3 text-sm py-3">
             <p>HIIT will receive your Garmin workouts, including routes and heart rate, plus steps, sleep, stress, Body Battery, weight, VO2 max and HRV.</p>
             <p>We use this to show your history and work out your HIIT Score. Only workouts from now on will appear, not older ones.</p>
-            <p>Jarvis won't use any of it unless you turn that on separately. You can disconnect at any time.</p>
+            <p>The HIIT Coach won't use any of it unless you turn that on separately. You can disconnect at any time.</p>
             <p>
               <Link to={ROUTES.PRIVACY} className="underline">Read our privacy policy</Link>
             </p>
@@ -289,11 +289,11 @@ export function GarminConnectCard() {
       <Sheet open={aiGrantOpen} onOpenChange={setAiGrantOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl">
           <SheetHeader>
-            <SheetTitle>Let Jarvis use your Garmin data?</SheetTitle>
+            <SheetTitle>Let the HIIT Coach use your Garmin data?</SheetTitle>
             <SheetDescription>This is optional. HIIT works without it.</SheetDescription>
           </SheetHeader>
           <div className="space-y-3 text-sm py-3">
-            <p>If you turn this on, your Garmin workouts and health data are sent to Jarvis, our AI coach, which runs on Google's Gemini AI, to personalise your advice, plans and insights.</p>
+            <p>If you turn this on, your Garmin workouts and health data are sent to the HIIT Coach, our AI, which runs on Google's Gemini AI, to personalise your advice, plans and insights.</p>
             <p>It isn't used to train AI models. You can turn this off at any time here, which deletes the chats, memories and insights made since you turned it on.</p>
             <p><Link to={ROUTES.PRIVACY} className="underline">Read our privacy policy</Link></p>
           </div>
@@ -405,14 +405,14 @@ function WithdrawSheet(props: {
     <Sheet open={props.open} onOpenChange={open => { if (!open) props.onClose(); }}>
       <SheetContent side="bottom" className="rounded-t-2xl">
         <SheetHeader>
-          <SheetTitle>Stop Jarvis using your Garmin data?</SheetTitle>
-          <SheetDescription>Jarvis stops seeing it straight away.</SheetDescription>
+          <SheetTitle>Stop the HIIT Coach using your Garmin data?</SheetTitle>
+          <SheetDescription>The HIIT Coach stops seeing it straight away.</SheetDescription>
         </SheetHeader>
         <div className="space-y-3 text-sm py-3">
-          <p>This deletes your Jarvis chats, memories and insights from since you turned this on, and it can't be undone. Your completed workouts stay.</p>
+          <p>This deletes your HIIT Coach chats, memories and insights from since you turned this on, and it can't be undone. Your completed workouts stay.</p>
           <label className="flex items-start gap-2">
             <Checkbox checked={deletePlans} onCheckedChange={v => setDeletePlans(v === true)} className="mt-0.5" />
-            <span>Also delete plans Jarvis made in that time</span>
+            <span>Also delete plans the HIIT Coach made in that time</span>
           </label>
         </div>
         <div className="space-y-2">
@@ -460,17 +460,17 @@ function DisconnectSheet(props: {
                   }}
                   className="mt-0.5"
                 />
-                <span>Delete Jarvis chats, memories and insights from since I let Jarvis use Garmin data</span>
+                <span>Delete HIIT Coach chats, memories and insights from since I let it use Garmin data</span>
               </label>
               {deleteAi && (
                 <label className="flex items-start gap-2 pl-6">
                   <Checkbox checked={deletePlans} onCheckedChange={v => setDeletePlans(v === true)} className="mt-0.5" />
-                  <span>Also delete plans Jarvis made in that time</span>
+                  <span>Also delete plans the HIIT Coach made in that time</span>
                 </label>
               )}
               {!deleteAi && (
                 <p className="text-xs text-muted-foreground">
-                  Jarvis stops using your Garmin workouts, but can still read the chats and memories you keep.
+                  The HIIT Coach stops using your Garmin workouts, but can still read the chats and memories you keep.
                 </p>
               )}
             </>
