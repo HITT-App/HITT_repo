@@ -454,12 +454,11 @@ export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white
         </div>
       )}
       {onPhoto && photoDataUrl && (
-        <img
-          src={photoDataUrl}
-          alt=""
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-          crossOrigin="anonymous"
-        />
+        // A background, not an <img>: html2canvas ignores object-fit, so an <img> gets stretched to the card.
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `url("${photoDataUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center',
+        }} />
       )}
       {onPhoto && (
         // Vertical scrim — darker at the top and bottom, lighter in the
