@@ -85,9 +85,15 @@ Depending on the features and integrations you enable, this can include:
 With your permission, we connect to:
 - **Apple Health (HealthKit)** — to read metrics such as heart rate, steps, sleep, and workouts, and to write your completed HIIT workouts back so they count toward your Activity rings.
 - **Apple Watch** — our Watch app records and syncs heart rate, energy, distance, steps, and workouts.
-- **Garmin** — our Garmin (Connect IQ) app records activities on your watch and can send workout summaries (type, start/end time, duration) to your HIIT account after you pair your watch with a one-time code. Richer metrics recorded on Garmin devices reach us only if you also route them through Garmin Connect and Apple Health.
+- **Garmin** — our Garmin (Connect IQ) app records activities on your watch and can send workout summaries (type, start/end time, duration) to your HIIT account after you pair your watch with a one-time code.
 - **Google Fit** — if you connect it, we store the access tokens needed to read your fitness data.
 - **Other wearables** — the app may detect which fitness apps or brands are installed on your device (for example Fitbit, Whoop, Oura, Polar, Suunto, Coros, Wahoo, or Strava) so it can offer the right integration. Data from these platforms reaches us only through the connections you approve (for example via Apple Health).
+
+**Garmin Connect.** If you connect your Garmin account, we receive your Garmin workouts (including type, times, distance, calories, heart rate, GPS route and device model), plus steps, sleep, stress, Body Battery, weight, VO2 max and HRV. We use this to show your history and calculate your HIIT Score. This can include earlier data held by Garmin when you first connect or your device syncs.
+
+**Sending to Garmin.** If you turn these on, we send your scheduled workouts (names, steps and dates) and the routes you choose to Garmin Connect, so they can reach your device. Garmin then handles that data under its own privacy notice: https://www.garmin.com/privacy/connect. Don't send data to your Garmin Connect account if you're restricted from doing so.
+
+We don't sell Garmin data, use it for advertising, or share it with analytics providers.
 
 **Health-platform data-use commitment.** Data obtained from **Apple Health / HealthKit** and **Google Fit** is used **only to provide health and fitness features to you**. We do **not** use it for advertising, we do **not** sell it, and we do **not** share it with third parties for their own purposes. Apple Health data is not shared with third-party analytics providers.
 
@@ -135,12 +141,12 @@ We share personal information only with providers who process it **on our behalf
 | **PostHog** | Product analytics | User ID, email, feature-usage events | EU (`eu.i.posthog.com`) |
 | **CARTO** | Map images for route and activity maps | Your IP address (shortened by CARTO when received) and the map area being viewed | United States, with images served through a global network |
 | **Sentry** | Crash and error monitoring | Diagnostic/error data | EU |
-| **Google LLC** (Gemini API) | AI coaching, workout/plan generation, and body, food, and form analysis | The inputs you provide (e.g. goals, profile memory, body-scan and food data) | Global (Google data centres) |
+| **Google LLC** (Gemini API) | AI coaching, workout/plan generation, and body, food, and form analysis | The inputs you provide (e.g. goals, profile memory, body-scan and food data) and, only if you opt in separately, your Garmin data | Global (Google data centres) |
 | **ElevenLabs** | Voice (text-to-speech and speech-to-text) for the AI coach | Voice/text input and generated audio | US |
 | **Spoonacular** and **Open Food Facts** | Food and barcode nutrition lookup | The food/barcode you scan or search | US / EU |
 | **Apple** | App distribution, push notifications (APNs), Apple Health, Apple Watch | Push tokens; Health data you authorise | Global |
 | **Google** | Google Sign-In and Google Fit | Google account ID/profile; Fit data you authorise | Global |
-| **Garmin** | Garmin device app and Garmin Connect integration | Workout/activity data you authorise | Global |
+| **Garmin** | Garmin device app and Garmin Connect integration | Workouts and health data you authorise us to receive; workouts and routes you choose to send | Global, including US |
 
 We keep the current list of sub-processors up to date. We may also disclose information: (a) to comply with law, legal process, or lawful government requests; (b) to protect the rights, safety, and security of our users, the public, or us; and (c) in connection with a merger, acquisition, or sale of assets, in which case we will notify you.
 
@@ -150,6 +156,8 @@ We keep the current list of sub-processors up to date. We may also disclose info
 
 Some features use artificial intelligence to generate workout plans, coaching, insights, and analysis of food and body images. When you use these features, the relevant inputs (such as your profile memory, goals, and the photos or text you submit) are sent to our AI provider, **Google LLC** (Gemini API), to generate a response. Google processes the data to return results to us and, under its API terms, does not use this data to train its general models. AI-generated content is for general fitness and wellness guidance only and is **not medical advice** (see Section 15).
 
+**Garmin data and AI.** Our AI coach runs on Google's Gemini. Your Garmin data is only sent to it if you turn on "Let the HIIT Coach use my Garmin data". This is off by default and separate from your Apple Health setting. When it's on, your Garmin workouts and health data are sent to Gemini to personalise your advice, plans and insights. It is not used to train AI models. You can turn it off at any time in Connected Devices. We then stop sending it straight away and delete the chats, memories and insights created since you turned it on. You can also choose to delete plans made in that time. We'll update this statement if the law or Garmin's policies change.
+
 ---
 
 ## 8. International data transfers
@@ -158,11 +166,15 @@ We operate globally, and your information may be processed in countries other th
 
 Where we transfer personal data out of the EU, UK, or other regions with transfer restrictions, we rely on appropriate safeguards such as the **European Commission's Standard Contractual Clauses**, the **UK International Data Transfer Addendum**, and equivalent mechanisms, together with additional technical and organisational measures. You can request a copy of the relevant safeguards using the contact details in Section 1.
 
+Garmin data comes to us from Garmin, which is based in the US, and data you send to Garmin goes there too.
+
 ---
 
 ## 9. Data retention
 
 We keep your personal information for as long as your account is active and as needed to provide the Service. When you delete your account, we delete or de-identify your personal data across our systems, subject to limited retention where we are legally required to keep certain records or need to resolve disputes, prevent abuse, or enforce our terms. Backups are purged on a rolling schedule. Aggregated or de-identified data that can no longer be linked to you may be retained.
+
+We keep Garmin data while your account is open, unless you delete it. When you disconnect Garmin, we remove our access tokens and ask whether to keep or delete what we've imported. Deleting your account deletes all of it. Incoming data waiting to be processed is deleted within 7 days.
 
 ---
 
@@ -183,6 +195,7 @@ No method of transmission or storage is completely secure, so we cannot guarante
 
 - **Permissions:** You can grant or revoke Health, Location, Camera, Photos, Microphone, and Notification permissions at any time in your device settings. Revoking a permission disables the related feature.
 - **Wearables:** You can disconnect Apple Health, Google Fit, or unpair your Garmin/Apple Watch at any time.
+- **Garmin:** Disconnect Garmin at any time in Connected Devices or in Garmin Connect, and turn sending workouts, sending routes and AI use on or off separately.
 - **Notifications:** Turn off push and local notifications in your device settings.
 - **Voice:** Voice features are optional and can be left disabled.
 - **Account deletion:** You can delete your account from within the app. This runs a deletion process that purges your data (profile, activity and health logs, sleep and meal logs, body scans, community content, wearable pairings, tokens, and more) from our systems.
