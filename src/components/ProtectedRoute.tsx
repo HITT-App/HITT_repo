@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { PrivacyPolicyGate } from "@/components/PrivacyPolicyGate";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -29,5 +30,5 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to={seenOnboarding ? "/auth" : "/welcome"} replace />;
   }
 
-  return <>{children}</>;
+  return <PrivacyPolicyGate>{children}</PrivacyPolicyGate>;
 };
