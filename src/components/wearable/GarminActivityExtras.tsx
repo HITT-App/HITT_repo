@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import L from "leaflet";
+import { addBaseMap } from "@/lib/mapTiles";
 import "leaflet/dist/leaflet.css";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +23,7 @@ function RouteMap({ route }: { route: [number, number][] }) {
       doubleClickZoom: false,
       touchZoom: false,
     });
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 19 }).addTo(map);
+    addBaseMap(map);
     L.polyline(route, { color: "#f97316", weight: 4, opacity: 0.9 }).addTo(map);
     map.fitBounds(L.latLngBounds(route), { padding: [24, 24] });
     return () => { map.remove(); };
