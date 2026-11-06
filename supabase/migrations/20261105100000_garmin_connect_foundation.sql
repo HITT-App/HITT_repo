@@ -259,6 +259,12 @@ CREATE TRIGGER health_metrics_prefer_garmin
   BEFORE INSERT ON public.health_metrics
   FOR EACH ROW EXECUTE FUNCTION public.prefer_garmin_metric();
 
+-- Without this, the trigger's lookup walks a user's whole metric history on every
+-- Apple Health insert, for users with no Garmin data too.
+CREATE INDEX health_metrics_garmin_lookup
+  ON public.health_metrics (user_id, metric_type, recorded_at)
+  WHERE source_platform = 'garmin_api';
+
 -- A sport or triathlon the user sent from the app, which isn't a row on their schedule.
 CREATE TABLE public.garmin_one_off_workouts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
