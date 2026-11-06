@@ -1,3 +1,4 @@
+import { PRIVACY_POLICY_VERSION } from "@/lib/privacyPolicy";
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
@@ -173,7 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         emailRedirectTo: Capacitor.isNativePlatform()
           ? 'hiitfitness://auth-callback'
           : `${window.location.origin}/`,
-        data: { display_name: displayName },
+        data: { display_name: displayName, accepted_policy_version: PRIVACY_POLICY_VERSION },
       },
     });
     return { error: error as Error | null };
