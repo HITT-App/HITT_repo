@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { capSessions } from "../_shared/plan-cap.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 import { gatherWorkoutContext } from "../_shared/ai-workout-context.ts";
 
@@ -172,6 +173,8 @@ async function handleRequest(req: Request): Promise<Response> {
     ],
     response_format: { type: "json_object" },
     max_tokens: 32000,
+    // Thinking more than doubled the wait on the sibling plan function (tested 2026-11-06).
+    reasoning_effort: "none",
     timeout_ms: 110000,
   });
 
@@ -206,6 +209,7 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   coercePlanTypes(plan);
+  plan.workouts = capSessions(plan.workouts ?? [], totalWorkouts, w => w.scheduled_date ?? "");
 
   const validationError = validatePlan(plan, totalWorkouts);
   if (validationError) {
