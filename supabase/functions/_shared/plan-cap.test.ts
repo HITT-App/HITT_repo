@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { capSessions } from "./plan-cap";
+import { capSessions, sessionDayIndexes } from "./plan-cap";
 
 describe("capSessions", () => {
   it("keeps the earliest sessions up to the limit", () => {
@@ -20,5 +20,16 @@ describe("capSessions", () => {
     const items = [{ d: 2 }, { d: 1 }];
     capSessions(items, 1, s => s.d);
     expect(items).toEqual([{ d: 2 }, { d: 1 }]);
+  });
+});
+
+describe("sessionDayIndexes", () => {
+  it("spreads sessions evenly and starts today", () => {
+    expect(sessionDayIndexes(4, 8)).toEqual([0, 2, 4, 6]);
+    expect(sessionDayIndexes(12, 16)).toEqual([0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]);
+  });
+
+  it("never uses a day twice or runs past the end", () => {
+    expect(sessionDayIndexes(10, 4)).toEqual([0, 1, 2, 3]);
   });
 });

@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
-import { capSessions } from "../_shared/plan-cap.ts";
+import { capSessions, sessionDayIndexes } from "../_shared/plan-cap.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 
 const corsHeaders = {
@@ -371,6 +371,7 @@ function buildUserPrompt(input: {
     ...bodyScanLines,
     "",
     `Create ${totalSessions} workout sessions spread across ${input.days} days (day_index 0 = today). Omit rest days — just don't include them. Avoid back-to-back sessions targeting the same muscle group.`,
+    `Return exactly ${totalSessions} items, one on each of these day_index values: ${sessionDayIndexes(totalSessions, input.days).join(", ")}.`,
     input.styles.length > 1
       ? `Distribute the ${input.styles.join(", ")} styles roughly evenly across the sessions — every week should include each selected style at least once. Make each session's workout_title reflect its style (e.g. "Pilates Core Flow", "HIIT Burner").`
       : input.styles.length === 1
