@@ -112,6 +112,13 @@ serve(async (req) => {
         .single();
       if (insertError) throw new Error(insertError.message);
       await markDirty();
+      // Sends it now rather than at the next 5-minute run, which still picks it up if this fails.
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/garmin-sync-workouts`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${Deno.env.get("GARMIN_CRON_SECRET")}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id }),
+        signal: AbortSignal.timeout(8000),
+      }).catch(() => undefined);
       return json({ status: "queued", id: created.id });
     }
 

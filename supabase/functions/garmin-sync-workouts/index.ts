@@ -213,19 +213,22 @@ serve(async (req) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  // A user id means one workout was just sent, so only that user is synced now.
+  const onlyUser = ((await req.json().catch(() => ({}))) as { user_id?: string }).user_id;
   const admin = adminClient();
-  const { data: dirty, error } = await admin
+  const dirtyQuery = admin
     .from("garmin_sync_dirty")
     .select("user_id, marked_at")
     .order("marked_at")
     .limit(MAX_USERS);
+  const { data: dirty, error } = await (onlyUser ? dirtyQuery.eq("user_id", onlyUser) : dirtyQuery);
   if (error) {
     console.error("[garmin-sync-workouts]", error.message);
     return new Response("Failed", { status: 500 });
   }
 
   const dailyBefore = new Date(Date.now() - DAILY_PASS_MS).toISOString();
-  const { data: stale } = await admin
+  const { data: stale } = onlyUser ? { data: [] } : await admin
     .from("garmin_connections")
     .select("user_id")
     .eq("status", "active")
@@ -249,15 +252,21 @@ serve(async (req) => {
       continue;
     }
 
+    // Taking the row is the lock: a send and the 5-minute run could otherwise both create the same workout.
+    if (markedAt.has(userId)) {
+      const { data: claimed } = await admin.from("garmin_sync_dirty").delete().eq("user_id", userId).select("user_id");
+      if (!claimed?.length) continue;
+    }
+
     try {
       await syncUser(admin, userId, budget);
-      // Only clears if nothing changed while this ran.
-      if (markedAt.has(userId)) {
-        await admin.from("garmin_sync_dirty").delete().eq("user_id", userId).eq("marked_at", markedAt.get(userId)!);
-      }
       await admin.from("garmin_connections").update({ last_workout_sync_at: new Date().toISOString() }).eq("user_id", userId);
       synced++;
     } catch (e) {
+      // The row was taken above, so put it back or this user waits for the daily pass.
+      if (markedAt.has(userId) && !(e instanceof PermissionOff || e instanceof TokenRejected || e instanceof GarminTokenDead)) {
+        await admin.from("garmin_sync_dirty").upsert({ user_id: userId, marked_at: markedAt.get(userId)! });
+      }
       if (e instanceof RateLimited || e instanceof BudgetSpent) break;
       if (e instanceof PermissionOff) {
         await admin.from("garmin_connections").update({ status: "permission_off" }).eq("user_id", userId);

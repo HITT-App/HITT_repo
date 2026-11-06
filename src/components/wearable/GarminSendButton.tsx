@@ -1,5 +1,6 @@
 // "Send to Garmin" for a chosen sport or race. Garmin can't start a workout remotely, so this
 // puts it on today's watch calendar and the user starts it from there.
+import { openGarminConnect } from "@/lib/garminConnectApp";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -66,11 +67,20 @@ export function GarminSendButton({ payload, tokens: C, tint }: {
 
   if (phase === "sent") {
     return (
-      <div style={{
-        width: "100%", borderRadius: 14, padding: "13px 0", display: "flex", alignItems: "center", justifyContent: "center",
-        gap: 9, fontSize: 13.5, fontWeight: 650, color: C.good, background: tint(C.good, 0.1), border: `1px solid ${tint(C.good, 0.4)}`,
-      }}>
-        <Check size={16} color={C.good} strokeWidth={2.2} /> On its way to Garmin. Sync your watch, then start it from there
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{
+          width: "100%", borderRadius: 14, padding: "13px 12px", display: "flex", alignItems: "center", justifyContent: "center",
+          gap: 9, fontSize: 13.5, fontWeight: 650, color: C.good, background: tint(C.good, 0.1), border: `1px solid ${tint(C.good, 0.4)}`,
+        }}>
+          <Check size={16} color={C.good} strokeWidth={2.2} /> Sent to Garmin. Sync to get it on your watch.
+        </div>
+        <button
+          type="button"
+          onClick={openGarminConnect}
+          style={{ minHeight: 44, fontSize: 13.5, fontWeight: 600, color: C.fg, textDecoration: "underline", background: "none", border: "none" }}
+        >
+          Open Garmin Connect
+        </button>
       </div>
     );
   }
