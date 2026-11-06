@@ -3,7 +3,7 @@
 **HIIT Fitness**
 
 **Effective date:** 3 July 2026
-**Last updated:** 3 July 2026
+**Last updated:** 6 November 2026
 
 This Privacy Policy explains how **HIITFITNESS LTD** ("HIIT Fitness", "we", "us", or "our") collects, uses, shares, and protects your personal information when you use the HIIT Fitness service, including:
 
@@ -133,6 +133,7 @@ We share personal information only with providers who process it **on our behalf
 |---|---|---|---|
 | **Supabase** | Cloud database, authentication, file storage, and backend functions (our core infrastructure) | Account, profile, health/fitness, content, tokens | EU (West EU region) |
 | **PostHog** | Product analytics | User ID, email, feature-usage events | EU (`eu.i.posthog.com`) |
+| **CARTO** | Map images for route and activity maps | Your IP address (shortened by CARTO when received) and the map area being viewed | United States, with images served through a global network |
 | **Sentry** | Crash and error monitoring | Diagnostic/error data | EU |
 | **Google LLC** (Gemini API) | AI coaching, workout/plan generation, and body, food, and form analysis | The inputs you provide (e.g. goals, profile memory, body-scan and food data) | Global (Google data centres) |
 | **ElevenLabs** | Voice (text-to-speech and speech-to-text) for the AI coach | Voice/text input and generated audio | US |
