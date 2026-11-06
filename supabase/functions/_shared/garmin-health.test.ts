@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { mapBodyComp, mapDaily, mapHrv, mapSleep, mapSleepScore, mapStressDetail, mapUserMetrics } from "./garmin-health";
+import { lastPerSourceId, mapBodyComp, mapDaily, mapHrv, mapSleep, mapSleepScore, mapStressDetail, mapUserMetrics } from "./garmin-health";
 
 const summary = (rows: { metric_type: string; value: number }[]) => Object.fromEntries(rows.map(r => [r.metric_type, r.value]));
 
@@ -83,5 +83,17 @@ describe("mapSleep", () => {
 
   it("refuses an incomplete night", () => {
     expect(mapSleep({ calendarDate: "2026-11-05" }, "u")).toBeNull();
+  });
+});
+
+describe("lastPerSourceId", () => {
+  const row = (id: string, value: number, user_id = "u1") => ({ user_id, source_platform_id: id, value });
+
+  it("keeps the last row for a repeated id", () => {
+    expect(lastPerSourceId([row("a", 1), row("b", 2), row("a", 3)])).toEqual([row("a", 3), row("b", 2)]);
+  });
+
+  it("keeps the same id for different users", () => {
+    expect(lastPerSourceId([row("a", 1, "u1"), row("a", 2, "u2")])).toHaveLength(2);
   });
 });

@@ -65,6 +65,14 @@ function metric(
   }];
 }
 
+// One push can repeat a day or summaryId, and a single upsert can't touch the same row twice.
+// Garmin lists a growing summary oldest first, so the last one is the fullest.
+export function lastPerSourceId<T extends { user_id: string; source_platform_id: string }>(rows: T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const row of rows) byId.set(`${row.user_id}|${row.source_platform_id}`, row);
+  return [...byId.values()];
+}
+
 const midday = (date: string) => `${date}T12:00:00Z`;
 const minutes = (seconds: number | undefined) => (seconds == null ? null : Math.round(seconds / 60));
 

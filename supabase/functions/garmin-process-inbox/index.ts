@@ -13,6 +13,7 @@ import {
   type GarminStressDetail,
   type GarminUserMetrics,
   mapBodyComp,
+  lastPerSourceId,
   mapDaily,
   mapHrv,
   mapSleep,
@@ -193,6 +194,13 @@ async function handleManualUpdates(admin: SupabaseClient, summaries: GarminActiv
 
 const SOURCE_KEY = "user_id, source_platform, source_platform_id";
 
+// The inbox records the error name only, so the Postgres code goes there to make failures traceable.
+function dbError(error: { message: string; code?: string }): Error {
+  const e = new Error(error.message);
+  e.name = `db_${error.code ?? "unknown"}`;
+  return e;
+}
+
 async function saveMetrics<T extends { userId?: string }>(
   admin: SupabaseClient,
   items: T[],
@@ -205,8 +213,8 @@ async function saveMetrics<T extends { userId?: string }>(
   });
   if (!rows.length) return;
   // A later summary for the same period must replace the earlier one.
-  const { error } = await admin.from("health_metrics").upsert(rows, { onConflict: SOURCE_KEY });
-  if (error) throw new Error(error.message);
+  const { error } = await admin.from("health_metrics").upsert(lastPerSourceId(rows), { onConflict: SOURCE_KEY });
+  if (error) throw dbError(error);
 }
 
 async function handleSleeps(admin: SupabaseClient, sleeps: GarminSleep[]) {
@@ -217,8 +225,8 @@ async function handleSleeps(admin: SupabaseClient, sleeps: GarminSleep[]) {
     return row ? [row] : [];
   });
   if (rows.length) {
-    const { error } = await admin.from("sleep_logs").upsert(rows, { onConflict: SOURCE_KEY });
-    if (error) throw new Error(error.message);
+    const { error } = await admin.from("sleep_logs").upsert(lastPerSourceId(rows), { onConflict: SOURCE_KEY });
+    if (error) throw dbError(error);
   }
   await saveMetrics(admin, sleeps, mapSleepScore);
 }
