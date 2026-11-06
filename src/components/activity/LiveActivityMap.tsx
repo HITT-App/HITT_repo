@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
+import { addBaseMap } from "@/lib/mapTiles";
 import "leaflet/dist/leaflet.css";
 
 interface GpsPoint {
@@ -54,10 +55,7 @@ const LiveActivityMap = ({ positions, gpsStatus, fitBoundsOnMount, seedPosition 
       doubleClickZoom: false,
     });
 
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-      { maxZoom: 19 }
-    ).addTo(map);
+    addBaseMap(map);
 
     mapRef.current = map;
     setTimeout(() => map.invalidateSize(), 100);
