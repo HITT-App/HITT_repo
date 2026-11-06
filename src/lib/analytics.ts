@@ -8,6 +8,8 @@ export function initAnalytics() {
     capture_pageview: true,
     capture_pageleave: true,
     autocapture: false,
+    // Screens show health data, so recording stays off whatever PostHog's project setting says.
+    disable_session_recording: true,
   });
 }
 
