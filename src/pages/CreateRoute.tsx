@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import L from "leaflet";
+import { addBaseMap } from "@/lib/mapTiles";
 import "leaflet/dist/leaflet.css";
 import { ArrowLeft, Undo2, Save, Trash2, MapPin, CornerDownRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -71,10 +72,7 @@ const CreateRoute = () => {
         zoomControl: false,
         attributionControl: false,
       });
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        { maxZoom: 19 }
-      ).addTo(map);
+      addBaseMap(map);
       mapRef.current = map;
 
       map.on("click", (e: L.LeafletMouseEvent) => {

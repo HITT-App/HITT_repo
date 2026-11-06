@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import L from "leaflet";
+import { addBaseMap } from "@/lib/mapTiles";
 import "leaflet/dist/leaflet.css";
 import { Search, Bookmark, Plus, LocateFixed, ArrowLeft, Mountain, Ruler, Gauge } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -103,9 +104,7 @@ const RoutesExplorer = () => {
       zoomControl: false,
       attributionControl: false,
     });
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-    }).addTo(map);
+    addBaseMap(map);
     mapRef.current = map;
 
     return () => {

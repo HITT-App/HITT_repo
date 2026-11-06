@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import L from "leaflet";
+import { addBaseMap } from "@/lib/mapTiles";
 import "leaflet/dist/leaflet.css";
 import { ArrowLeft, Share2, Bookmark, Mountain, Ruler, Gauge, MapPin, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ const RouteDetail = () => {
 
     const latlngs = route.coordinates.map(c => [c.lat, c.lng] as [number, number]);
     const map = L.map(containerRef.current, { zoomControl: false, attributionControl: false });
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 19 }).addTo(map);
+    addBaseMap(map);
 
     const color = DIFFICULTY_COLORS[route.difficulty] || "#f59e0b";
     L.polyline(latlngs, { color, weight: 4, opacity: 0.9 }).addTo(map);
