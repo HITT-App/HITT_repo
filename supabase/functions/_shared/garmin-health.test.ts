@@ -4,6 +4,12 @@ import { lastPerSourceId, mapBodyComp, mapDaily, mapHrv, mapSleep, mapSleepScore
 const summary = (rows: { metric_type: string; value: number }[]) => Object.fromEntries(rows.map(r => [r.metric_type, r.value]));
 
 describe("mapDaily", () => {
+  it("saves no steps or resting heart rate when the watch recorded none", () => {
+    const rows = mapDaily({ calendarDate: "2026-11-05", steps: 0, restingHeartRateInBeatsPerMinute: 0 }, "u1");
+    expect(rows.map(r => r.metric_type)).not.toContain("steps");
+    expect(rows.map(r => r.metric_type)).not.toContain("resting_heart_rate");
+  });
+
   it("maps synthetic steps, resting heart rate and stress", () => {
     const rows = mapDaily({ calendarDate: "2026-11-05", steps: 4210, restingHeartRateInBeatsPerMinute: 64, averageStressLevel: 30 }, "u");
     expect(summary(rows)).toEqual({ steps: 4210, resting_heart_rate: 64, stress: 30 });

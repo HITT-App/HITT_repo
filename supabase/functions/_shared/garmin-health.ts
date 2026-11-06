@@ -82,8 +82,9 @@ export function mapDaily(s: GarminDaily, userId: string): MetricRow[] {
   // Garmin reports a negative stress level when it couldn't measure one.
   const stress = s.averageStressLevel != null && s.averageStressLevel >= 0 ? s.averageStressLevel : null;
   return [
-    ...metric(userId, "steps", s.steps, "count", midday(date), `steps-${date}`),
-    ...metric(userId, "resting_heart_rate", s.restingHeartRateInBeatsPerMinute, "bpm", midday(date), `rhr-${date}`),
+    // Zero means the watch recorded nothing that day. Saving it would replace a real Apple Health count.
+    ...metric(userId, "steps", s.steps || null, "count", midday(date), `steps-${date}`),
+    ...metric(userId, "resting_heart_rate", s.restingHeartRateInBeatsPerMinute || null, "bpm", midday(date), `rhr-${date}`),
     ...metric(userId, "stress", stress, "score", midday(date), `stress-${date}`),
   ];
 }
