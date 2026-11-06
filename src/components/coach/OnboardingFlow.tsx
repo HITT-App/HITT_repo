@@ -169,7 +169,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
     return (
       <>
       <Overlay onClose={onClose}>
-        <div className="flex flex-col flex-1 px-5 pb-6">
+        <div className="flex flex-col flex-1 min-h-0 px-5 pb-6">
           <h2 className="text-lg font-bold mb-1">Your plan</h2>
           <p className="text-sm text-muted-foreground mb-4">
             {isGenerating
@@ -201,7 +201,7 @@ export function OnboardingFlow({ onClose, activityLevel }: OnboardingFlowProps) 
           )}
 
           {!isGenerating && !error && scheduledItems.length > 0 && (
-            <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-2 mb-4">
               {scheduledItems.slice(0, 12).map((item, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50">
                   <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
