@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
+import { capSessions } from "../_shared/plan-cap.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
 
 const corsHeaders = {
@@ -143,6 +144,8 @@ serve(async (req) => {
       ],
       response_format: { type: "json_object" },
       max_tokens: 32000,
+      // Thinking more than doubled the wait (about 76s against 30s for 12 sessions, tested 2026-11-06).
+      reasoning_effort: "none",
       // 4 weeks of structured workouts is a lot of JSON; the default 55s
       // gateway timeout regularly clipped responses mid-stream and surfaced
       // as a raw AbortError in the UI. 110s comfortably fits Gemini 2.5 Flash
@@ -541,9 +544,10 @@ function validatePlan(
       return { ok: false, reason: "item is not an object" };
     }
     const { day_index, sequence_in_day, workout_title, exercises } = raw as AIPlanItem;
-    if (typeof day_index !== "number" || day_index < 0 || day_index >= constraints.days) {
+    if (typeof day_index !== "number" || day_index < 0) {
       return { ok: false, reason: `invalid day_index: ${day_index}` };
     }
+    if (day_index >= constraints.days) continue;
     if (typeof workout_title !== "string" || !workout_title.trim()) {
       return { ok: false, reason: `missing workout_title on day_index ${day_index}` };
     }
@@ -575,7 +579,7 @@ function validatePlan(
     return { ok: false, reason: `too many items: ${cleaned.length} (expected ~${expected})` };
   }
 
-  return { ok: true, items: cleaned };
+  return { ok: true, items: capSessions(cleaned, expected, item => item.day_index) };
 }
 
 async function logGeneration(
