@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-11-06] — Maps load again (1.0.11)
+
+- **Maps show properly again.** Our map provider, CARTO, began requiring an API key, so map backgrounds showed "API KEY REQUIRED". The live activity map, Routes Explorer, Route Detail and Create Route now send a key
+- **Map credit added.** Every map now shows "© OpenStreetMap contributors, © CARTO", as CARTO's terms require
+- Version 1.0.11 because 1.0.9 is closed and 1.0.10 is used by internal Garmin test builds. Includes the fixes already on `main` since build 335 (SEC-006 to SEC-008, BUG-002, BUG-003)
+
 ## [2026-09-14] — Server-side: workout plan upload and food scan no longer time out
 
 No app build needed — both are edge function deploys and are **already live on every version**.
