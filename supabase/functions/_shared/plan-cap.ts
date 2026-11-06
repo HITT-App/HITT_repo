@@ -9,3 +9,9 @@ export function capSessions<T>(items: T[], max: number, order: (item: T) => numb
     })
     .slice(0, Math.max(0, max));
 }
+
+// Without thinking the model loses count on dense plans, so it's told which days to use.
+export function sessionDayIndexes(sessions: number, days: number): number[] {
+  const count = Math.min(sessions, days);
+  return Array.from({ length: count }, (_, i) => Math.floor((i * days) / count));
+}
