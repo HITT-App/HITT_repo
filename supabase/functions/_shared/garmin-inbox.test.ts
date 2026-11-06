@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import {
   downsample,
+  garminWorkoutPush,
   isStalePermissionChange,
   manualUpdatePatch,
   mapActivityDetail,
@@ -70,6 +71,27 @@ describe("normaliseDeviceName", () => {
     expect(normaliseDeviceName("Forerunner 910XT")).toBe("Forerunner 910XT");
     expect(normaliseDeviceName("unknown")).toBeNull();
     expect(normaliseDeviceName(undefined)).toBeNull();
+  });
+});
+
+describe("garminWorkoutPush", () => {
+  const row = { activity_type: "walking", started_at: "2026-11-05T09:00:00Z", duration_seconds: 600, calories_burned: 40 };
+  const end = new Date("2026-11-05T09:10:00Z").getTime();
+
+  it("describes a recent workout", () => {
+    expect(garminWorkoutPush(row, end + 60_000)).toEqual({
+      title: "Workout logged from Garmin",
+      body: "10-min walk · 40 kcal · Tap to share it.",
+    });
+  });
+
+  it("rounds very short workouts up to a minute and leaves out zero calories", () => {
+    const short = { ...row, duration_seconds: 10, calories_burned: null };
+    expect(garminWorkoutPush(short, end)?.body).toBe("1-min walk · Tap to share it.");
+  });
+
+  it("stays quiet for a workout older than a day", () => {
+    expect(garminWorkoutPush(row, end + 25 * 60 * 60 * 1000)).toBeNull();
   });
 });
 

@@ -1,7 +1,7 @@
 // Run each minute by pg_cron. Every handler is safe to run twice for the same push.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { activityFingerprint, upsertActivities } from "../_shared/activity-upsert.ts";
+import { activityFingerprint, type InsertedSummary, upsertActivities } from "../_shared/activity-upsert.ts";
 import { adminClient } from "../_shared/garmin-http.ts";
 import { matchSentWorkout, type TickCandidate } from "../_shared/garmin-workout.ts";
 import { normaliseActivityType } from "../_shared/activity-types.ts";
@@ -30,6 +30,7 @@ import {
   mapActivityDetail,
   mapGarminActivity,
   type PermissionsChange,
+  garminWorkoutPush,
   secretMatches,
   statusForPermissions,
 } from "../_shared/garmin-inbox.ts";
@@ -73,17 +74,38 @@ async function handleActivities(admin: SupabaseClient, summaries: GarminActivity
   });
   if (!rows.length) return;
 
-  await upsertActivities(admin, rows);
+  const result = await upsertActivities(admin, rows);
   await admin
     .from("garmin_connections")
     .update({ last_activity_at: new Date().toISOString() })
     .in("user_id", [...new Set(rows.map(r => r.user_id))]);
+  await notifyNewWorkouts(result.insertedRows ?? []);
 
   for (const summary of summaries) {
     const userId = summary.userId ? allowed.get(summary.userId) : undefined;
     const row = userId ? mapGarminActivity(summary, userId) : null;
     if (userId && row) await tickOffPlan(admin, userId, row, summary);
   }
+}
+
+// Only rows this run inserted, so a retried push or a workout Apple Health already logged stays quiet.
+async function notifyNewWorkouts(rows: InsertedSummary[]) {
+  await Promise.all(rows.map(async row => {
+    const push = garminWorkoutPush(row, Date.now());
+    if (!push) return;
+    try {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-user`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user_id: row.user_id, category: "workout", ...push, url: `/activity/${row.id}` }),
+      });
+    } catch (e) {
+      console.error("[garmin-process-inbox] workout notification failed:", (e as Error).name);
+    }
+  }));
 }
 
 // Marks the plan row done when a workout we sent comes back from the watch.

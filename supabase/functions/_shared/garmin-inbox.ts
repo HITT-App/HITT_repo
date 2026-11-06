@@ -56,6 +56,27 @@ export function webhookKey(requestUrl: string): string | null {
   return url.searchParams.get("key");
 }
 
+const WORKOUT_NAMES: Record<string, string> = {
+  running: "run", walking: "walk", cycling: "ride", swimming: "swim", hiit: "HIIT",
+  strength: "strength session", yoga: "yoga", hiking: "hike", rowing: "row",
+};
+// A watch catching up after days offline shouldn't buzz the phone once per old workout.
+const NOTIFY_WITHIN_MS = 24 * 60 * 60 * 1000;
+
+export function garminWorkoutPush(
+  row: { activity_type: string; started_at: string; duration_seconds: number; calories_burned?: number | null },
+  nowMs: number,
+): { title: string; body: string } | null {
+  const endMs = new Date(row.started_at).getTime() + row.duration_seconds * 1000;
+  if (!Number.isFinite(endMs) || nowMs - endMs > NOTIFY_WITHIN_MS) return null;
+  const mins = Math.max(1, Math.round(row.duration_seconds / 60));
+  const name = WORKOUT_NAMES[row.activity_type.toLowerCase()] ?? "workout";
+  const parts = [`${mins}-min ${name}`];
+  if (row.calories_burned && row.calories_burned > 0) parts.push(`${row.calories_burned} kcal`);
+  parts.push("Tap to share it.");
+  return { title: "Workout logged from Garmin", body: parts.join(" · ") };
+}
+
 // Attribution adds the "Garmin" prefix, so it's removed here to avoid "Garmin Garmin fenix 8".
 export function normaliseDeviceName(raw: string | null | undefined): string | null {
   if (!raw) return null;
