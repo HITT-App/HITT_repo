@@ -8,5 +8,6 @@ const ATTRIBUTION = "© OpenStreetMap contributors, © CARTO";
 
 export function addBaseMap(map: L.Map) {
   L.control.attribution({ prefix: false }).addTo(map);
-  return L.tileLayer(TILE_URL, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map);
+  // CARTO refuses tiles above zoom 18, so a short route zoomed further stretches zoom 18 instead of going blank.
+  return L.tileLayer(TILE_URL, { maxZoom: 19, maxNativeZoom: 18, attribution: ATTRIBUTION }).addTo(map);
 }
