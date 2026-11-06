@@ -8,6 +8,7 @@ import {
   normaliseDeviceName,
   secretMatches,
   statusForPermissions,
+  webhookKey,
 } from "./garmin-inbox";
 import { normaliseActivityType, sourcePriority } from "./activity-types";
 
@@ -69,6 +70,25 @@ describe("normaliseDeviceName", () => {
     expect(normaliseDeviceName("Forerunner 910XT")).toBe("Forerunner 910XT");
     expect(normaliseDeviceName("unknown")).toBeNull();
     expect(normaliseDeviceName(undefined)).toBeNull();
+  });
+});
+
+describe("webhookKey", () => {
+  const base = "https://x.supabase.co/functions/v1/garmin-webhook";
+
+  it("reads the key from the path", () => {
+    expect(webhookKey(`${base}/abc`)).toBe("abc");
+    expect(webhookKey(`${base}/abc/`)).toBe("abc");
+    expect(webhookKey("http://localhost:9999/garmin-webhook/abc")).toBe("abc");
+  });
+
+  it("still accepts the query string form", () => {
+    expect(webhookKey(`${base}?key=abc`)).toBe("abc");
+  });
+
+  it("finds no key on the bare endpoint", () => {
+    expect(webhookKey(base)).toBeNull();
+    expect(webhookKey("http://localhost:9999/garmin-webhook")).toBeNull();
   });
 });
 

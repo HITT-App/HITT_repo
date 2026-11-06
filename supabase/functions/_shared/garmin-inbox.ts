@@ -47,6 +47,15 @@ export function secretMatches(given: string | null, expected: string | undefined
   return diff === 0;
 }
 
+// Garmin's portal strips query strings when it saves an endpoint, so the key has to live in the path.
+export function webhookKey(requestUrl: string): string | null {
+  const url = new URL(requestUrl);
+  const segments = url.pathname.split("/").filter(Boolean);
+  const last = segments[segments.length - 1];
+  if (last && last !== "garmin-webhook") return last;
+  return url.searchParams.get("key");
+}
+
 // Attribution adds the "Garmin" prefix, so it's removed here to avoid "Garmin Garmin fenix 8".
 export function normaliseDeviceName(raw: string | null | undefined): string | null {
   if (!raw) return null;
