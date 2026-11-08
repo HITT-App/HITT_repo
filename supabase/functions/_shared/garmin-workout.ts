@@ -1,6 +1,8 @@
 // HIIT workout → Training API V2. Only names and steps go to Garmin, which may reuse whatever
 // it receives with no duty to remove it. Exercise and workout descriptions stay here.
 
+import { hiitName } from "./garmin-name.ts";
+
 export type HiitExercise = {
   title: string;
   duration_seconds?: number | null;
@@ -164,7 +166,7 @@ function mapSwim(workout: HiitWorkout, exercises: HiitExercise[]): MapResult {
   return {
     ok: true,
     workout: {
-      workoutName: workout.title?.trim() || "Swim",
+      workoutName: hiitName(workout.title, "Swim"),
       sport: "LAP_SWIMMING",
       workoutProvider: PROVIDER,
       workoutSourceId: PROVIDER,
@@ -250,7 +252,7 @@ export function mapWorkout(workout: HiitWorkout): MapResult {
   return {
     ok: true,
     workout: {
-      workoutName: workout.title?.trim() || "HIIT workout",
+      workoutName: hiitName(workout.title, "Workout"),
       sport,
       workoutProvider: PROVIDER,
       workoutSourceId: PROVIDER,
@@ -341,7 +343,7 @@ export function mapOneOff(payload: OneOffPayload): MapResult {
     return {
       ok: true,
       workout: {
-        workoutName: `${payload.name?.trim() || "Custom"} Triathlon`,
+        workoutName: hiitName(`${payload.name?.trim() || "Custom"} Triathlon`, "Triathlon"),
         sport: "MULTI_SPORT",
         workoutProvider: PROVIDER,
         workoutSourceId: PROVIDER,
@@ -374,7 +376,7 @@ export function mapOneOff(payload: OneOffPayload): MapResult {
   return {
     ok: true,
     workout: {
-      workoutName: payload.sport.trim(),
+      workoutName: hiitName(payload.sport, "Workout"),
       sport,
       workoutProvider: PROVIDER,
       workoutSourceId: PROVIDER,

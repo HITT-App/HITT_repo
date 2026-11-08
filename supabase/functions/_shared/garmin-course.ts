@@ -1,5 +1,7 @@
 // Turns a HIIT route into a Garmin course. Pure, so it can be tested without Garmin.
 
+import { hiitName } from "./garmin-name.ts";
+
 export const COURSE_ACTIVITY_TYPES = [
   "RUNNING",
   "HIKING",
@@ -136,7 +138,7 @@ export function mapCourse(route: HiitRoute, chosenActivity?: unknown): CourseRes
   return {
     ok: true,
     course: {
-      courseName: (route.name ?? "").trim().slice(0, MAX_NAME_LENGTH) || "HIIT route",
+      courseName: hiitName(route.name, "Route").slice(0, MAX_NAME_LENGTH),
       distance: round(distance, 1),
       elevationGain: round(elevationGain, 1),
       elevationLoss: round(loss, 1),

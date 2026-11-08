@@ -56,7 +56,7 @@ describe("courseActivityType", () => {
 describe("mapCourse", () => {
   it("builds the fields Garmin requires", () => {
     const course = ok(mapCourse(route()));
-    expect(course.courseName).toBe("Riverside loop");
+    expect(course.courseName).toBe("HIIT Riverside loop");
     expect(course.coordinateSystem).toBe("WGS84");
     expect(course.activityType).toBe("RUNNING");
     expect(course.distance).toBeCloseTo(55.6, 0);
@@ -128,7 +128,7 @@ describe("mapCourse", () => {
   });
 
   it("always has a name, and trims long ones", () => {
-    expect(ok(mapCourse(route({ name: "  " }))).courseName).toBe("HIIT route");
+    expect(ok(mapCourse(route({ name: "  " }))).courseName).toBe("HIIT Route");
     expect(ok(mapCourse(route({ name: "x".repeat(300) }))).courseName.length).toBe(100);
   });
 

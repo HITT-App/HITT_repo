@@ -177,7 +177,7 @@ describe("mapOneOff", () => {
   it("sends a triathlon as one multisport workout using the chosen distances", () => {
     const r = mapOneOff({ kind: "triathlon", name: "Olympic", swim_km: 1.5, bike_km: 40, run_km: 10 });
     if (!r.ok) throw new Error(r.reason);
-    expect(r.workout).toMatchObject({ workoutName: "Olympic Triathlon", sport: "MULTI_SPORT", isSessionTransitionEnabled: true });
+    expect(r.workout).toMatchObject({ workoutName: "HIIT Olympic Triathlon", sport: "MULTI_SPORT", isSessionTransitionEnabled: true });
     expect(r.workout.segments.map(s => [s.segmentOrder, s.sport, (s.steps[0] as any).durationValue, (s.steps[0] as any).stepOrder])).toEqual([
       [1, "LAP_SWIMMING", 1500, 1],
       [2, "CYCLING", 40000, 2],
