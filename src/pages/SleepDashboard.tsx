@@ -116,7 +116,8 @@ const SleepDashboard = () => {
     }
   };
 
-  if (!preferencesLoading && !preferences?.onboarding_completed) {
+  // Someone whose sleep already arrives (from Garmin or Apple Health) sees it without setting up first.
+  if (!preferencesLoading && !logsLoading && !preferences?.onboarding_completed && logs.length === 0) {
     navigate("/sleep-onboarding");
     return null;
   }

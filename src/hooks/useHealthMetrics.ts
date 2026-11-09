@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-export type MetricType = "heart_rate" | "blood_pressure" | "steps" | "weight" | "hydration" | "body_fat" | "body_chest" | "body_waist" | "body_hips" | "body_bicep_left" | "body_bicep_right" | "body_thigh_left" | "body_thigh_right" | "body_neck";
+export type MetricType = "heart_rate" | "resting_heart_rate" | "blood_pressure" | "steps" | "weight" | "hydration" | "body_fat" | "body_chest" | "body_waist" | "body_hips" | "body_bicep_left" | "body_bicep_right" | "body_thigh_left" | "body_thigh_right" | "body_neck";
 
 interface HealthMetricRow {
   id: string;
@@ -25,7 +25,7 @@ export function useHealthMetrics() {
     queryKey: ["health-metrics-latest", user?.id],
     queryFn: async () => {
       // Get the most recent reading for each metric type
-      const types: MetricType[] = ["heart_rate", "blood_pressure", "steps", "weight", "hydration"];
+      const types: MetricType[] = ["heart_rate", "resting_heart_rate", "blood_pressure", "steps", "weight", "hydration"];
       const results: Record<string, HealthMetricRow | null> = {};
 
       const promises = types.map(async (type) => {

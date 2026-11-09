@@ -16,6 +16,7 @@ const HeartRate = () => {
   const [bpmInput, setBpmInput] = useState("");
 
   const currentBPM = getLatestValue("heart_rate") || "--";
+  const restingBPM = getLatestValue("resting_heart_rate");
 
   const handleLog = async () => {
     const val = Number(bpmInput);
@@ -72,6 +73,9 @@ const HeartRate = () => {
           <p className="text-sm text-green-600">
             {currentBPM !== "--" ? "Within a healthy resting rate." : "No readings yet. Log your first!"}
           </p>
+          {restingBPM && (
+            <p className="text-sm text-muted-foreground mt-2">Resting heart rate: <span className="font-semibold text-foreground">{restingBPM} bpm</span></p>
+          )}
         </Card>
 
         {/* Chart from real data */}
