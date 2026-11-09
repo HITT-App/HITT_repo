@@ -4,6 +4,7 @@ import { ArrowLeft, Moon, Sun, Plus, Calendar, X, Loader2, ChevronRight } from "
 import { useSleep } from "@/hooks/useSleep";
 import { format, parseISO, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { garminSourceLabel } from "@/lib/garmin-state";
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -293,6 +294,9 @@ const SleepDashboard = () => {
                 <p className="text-[10px] text-muted-foreground mt-0.5">Nights</p>
               </div>
             </div>
+            {garminSourceLabel(weeklyLogs) && (
+              <p className="text-[10px] text-muted-foreground mt-1.5">{garminSourceLabel(weeklyLogs)}</p>
+            )}
           </div>
         </div>
 
@@ -301,7 +305,9 @@ const SleepDashboard = () => {
           className="w-full bg-card border border-border/60 rounded-2xl p-4 text-left touch-manipulation active:bg-muted/20 transition-colors"
           onClick={() => openFormForDate(format(new Date(), "yyyy-MM-dd"))}
         >
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Last night</p>
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Last night{lastLog?.source_platform === "garmin_api" && <span className="normal-case font-normal tracking-normal"> · Garmin</span>}
+          </p>
           {logsLoading ? (
             <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           ) : !lastLog ? (

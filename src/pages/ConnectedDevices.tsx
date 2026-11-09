@@ -47,13 +47,14 @@ function canonicalPlatform(raw: string): string {
 
 const FRIENDLY: Record<string, { label: string; caveat?: string }> = {
   apple_watch:  { label: "Apple Watch" },
-  garmin:       { label: "Garmin" },
-  garmin_api:   { label: "Garmin" },
+  garmin:       { label: "Garmin (via Apple Health)" },
+  garmin_api:   { label: "Garmin Connect" },
+  hitt_garmin_watch: { label: "Garmin watch app" },
   fitbit:       { label: "Fitbit" },
   whoop:        { label: "Whoop", caveat: "HR + workouts only — strain & recovery stay in the Whoop app" },
   oura:         { label: "Oura" },
   apple_health: { label: "Apple Health" },
-  hitt_phone:   { label: "HITT iPhone GPS" },
+  hitt_phone:   { label: "HIIT iPhone GPS" },
 };
 
 function friendlyFor(platform: string) {

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { garminSourceLabel } from "@/lib/garmin-state";
 
 const HeartRate = () => {
   const navigate = useNavigate();
@@ -72,6 +73,9 @@ const HeartRate = () => {
           <p className="text-sm text-green-600">
             {currentBPM !== "--" ? "Within a healthy resting rate." : "No readings yet. Log your first!"}
           </p>
+          {history[0] && garminSourceLabel([history[0]]) && (
+            <p className="text-xs text-muted-foreground mt-1">{garminSourceLabel([history[0]])}</p>
+          )}
         </Card>
 
         {/* Chart from real data */}
@@ -85,6 +89,9 @@ const HeartRate = () => {
               })}
             </div>
             <p className="text-xs text-muted-foreground text-center mt-2">Recent readings</p>
+            {garminSourceLabel(history.slice(0, 24)) && (
+              <p className="text-[10.5px] text-muted-foreground text-center mt-1">{garminSourceLabel(history.slice(0, 24))}</p>
+            )}
           </Card>
         )}
 
@@ -128,6 +135,7 @@ const HeartRate = () => {
                       <p className="text-xs text-green-600">
                         {Number(item.value) < 100 ? "Normal Range" : "Elevated"}
                       </p>
+                      {item.source_platform === "garmin_api" && <p className="text-[10.5px] text-muted-foreground">Garmin</p>}
                     </div>
                   </div>
                   <span className="text-xs text-muted-foreground">

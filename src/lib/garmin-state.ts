@@ -43,6 +43,14 @@ export function garminAttribution(deviceName: string | null | undefined): string
 
 export const GARMIN_DERIVED_NOTE = "Insights derived in part from Garmin device-sourced data";
 
+// Garmin's rules: its name under a figure that comes from Garmin, or the derived note when the
+// figure mixes Garmin data with other sources. Null when no Garmin data went into it.
+export function garminSourceLabel(rows: { source_platform?: string | null }[]): string | null {
+  const fromGarmin = rows.filter(r => r.source_platform === "garmin_api").length;
+  if (fromGarmin === 0) return null;
+  return fromGarmin === rows.length ? "Garmin" : GARMIN_DERIVED_NOTE;
+}
+
 export type GarminReturn =
   | { status: "pending"; result: string }
   | { status: "declined" | "failed" };

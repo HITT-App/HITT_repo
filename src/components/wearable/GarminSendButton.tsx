@@ -29,12 +29,18 @@ export function GarminSendButton({ payload, tokens: C, tint }: {
 
   const note = { margin: 0, fontSize: 12, lineHeight: 1.45, color: C.dim };
 
+  const devicesLink = <Link to="/connected-devices" style={{ textDecoration: "underline" }}>Connected Devices</Link>;
+  if (state === "needs_reconnect") {
+    return <p style={note}>Your Garmin connection needs renewing before HIIT can send workouts. Reconnect in {devicesLink}.</p>;
+  }
+  if (state === "permission_off" || (state === "connected" && !connection?.permissions.includes("WORKOUT_IMPORT"))) {
+    return <p style={note}>Garmin isn't letting HIIT send workouts. Turn on workout sharing for HIIT in Garmin Connect, or check {devicesLink}.</p>;
+  }
   if (state !== "connected") return null;
   if (!connection?.workout_import_consented_at) {
     return (
       <p style={note}>
-        To send workouts to your watch, turn that on in{" "}
-        <Link to="/connected-devices" style={{ textDecoration: "underline" }}>Connected Devices</Link>.
+        To send workouts to your watch, turn that on in {devicesLink}.
       </p>
     );
   }

@@ -14,6 +14,7 @@ interface HealthMetricRow {
   notes: string | null;
   recorded_at: string;
   created_at: string;
+  source_platform?: string | null;
 }
 
 export function useHealthMetrics() {
@@ -132,6 +133,26 @@ export function useHealthMetrics() {
     return Math.round(metric.value).toString();
   };
 
+  // Where today's rows came from, for the Garmin label.
+  const useTodaySources = (type: "steps" | "hydration") => {
+    return useQuery({
+      queryKey: ["health-metrics-today-sources", user?.id, type],
+      queryFn: async () => {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const { data, error } = await supabase
+          .from("health_metrics")
+          .select("source_platform")
+          .eq("user_id", user!.id)
+          .eq("metric_type", type)
+          .gte("recorded_at", todayStart.toISOString());
+        if (error) throw error;
+        return (data ?? []) as { source_platform: string | null }[];
+      },
+      enabled: !!user?.id,
+    });
+  };
+
   return {
     latestMetrics,
     isLoading,
@@ -139,5 +160,6 @@ export function useHealthMetrics() {
     getLatestValue,
     useMetricHistory,
     useTodayTotal,
+    useTodaySources,
   };
 }
