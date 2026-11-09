@@ -13,7 +13,7 @@ For each category Google asks you to walk through:
 ## Cross-cutting answers (top of the form)
 
 - **Encrypted in transit?** ☑ Yes (HTTPS to Supabase, Google, Apple, ElevenLabs, PostHog, Sentry)
-- **User can request deletion?** ☑ Yes (in-app: Settings → Delete account; also by email to hiit.co.uk@gmail.com)
+- **User can request deletion?** ☑ Yes (in-app: Settings → Delete account; also by email to casey@hiituk.com)
 - **Committed to Play Families Policy?** No — HIIT is not directed at children under 16 (per Terms §1)
 - **Independent security review?** No (unless we later add SOC 2)
 
@@ -137,7 +137,7 @@ Includes: workouts, exercise sessions, steps, distance, calories burned, GPS rou
 ### App interactions — **Collected**
 - Screen views, feature taps, workouts started/completed, meals logged
 - **Purposes:** Analytics, App functionality
-- **Optional/Required:** Required (analytics via PostHog; users can opt out in Settings)
+- **Optional/Required:** Optional (analytics via PostHog; users can turn off "Share usage data" in Profile → Settings, which stops PostHog starting on that device)
 - **Shared:** No (aggregated to PostHog, disclosed in privacy policy §6)
 
 ### In-app search history — **Not collected**
