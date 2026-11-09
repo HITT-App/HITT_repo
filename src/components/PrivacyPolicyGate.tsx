@@ -54,7 +54,8 @@ export function PrivacyPolicyNotice({ onRead, onAgree, onSignOut, saving, error 
         </button>
       </div>
       <AlertDialog open={confirmingSignOut} onOpenChange={setConfirmingSignOut}>
-        <AlertDialogContent>
+        {/* The notice sits at z-[200], above the dialog's default layer, which hid this. */}
+        <AlertDialogContent className="z-[210]">
           <AlertDialogHeader>
             <AlertDialogTitle>Sign out of HIIT?</AlertDialogTitle>
             <AlertDialogDescription>
