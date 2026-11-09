@@ -5,12 +5,11 @@ export const PRIVACY_POLICY_VERSION = "2026-11-06";
 
 const CHECK_TIMEOUT_MS = 3000;
 
-// The table isn't in the generated types yet.
-const acceptances = () => supabase.from("privacy_policy_acceptances" as never) as ReturnType<typeof supabase.from>;
+const acceptances = () => supabase.from("privacy_policy_acceptances");
 
 export async function recordPolicyAcceptance(userId: string, platform: string) {
   const { error } = await acceptances().upsert(
-    { user_id: userId, policy_version: PRIVACY_POLICY_VERSION, platform } as never,
+    { user_id: userId, policy_version: PRIVACY_POLICY_VERSION, platform },
     { onConflict: "user_id,policy_version", ignoreDuplicates: true },
   );
   if (error) throw error;
