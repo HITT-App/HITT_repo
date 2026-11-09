@@ -109,17 +109,30 @@ serve(async (req) => {
       "You MUST return valid JSON matching the schema exactly. No prose, no markdown fences.",
     ].join(" ");
 
-    const userPrompt = buildUserPrompt({
+    // One call for 4 weeks took 50-70s at 5-6 sessions a week, past the app's ~60s limit, so
+    // longer plans are built as two fortnights at once.
+    const allDays = sessionDayIndexes(sessionsPerWeek * Math.ceil(days / 7), days);
+    const parts = days > PART_DAYS
+      ? [
+        { dayIndexes: allDays.filter(d => d < PART_DAYS), part: `This is the first ${PART_DAYS} days of a ${days}-day plan.` },
+        { dayIndexes: allDays.filter(d => d >= PART_DAYS), part: `This is the rest of a ${days}-day plan, after the first ${PART_DAYS} days. Progress the difficulty a little from the opening fortnight.` },
+      ]
+      : [{ dayIndexes: allDays, part: null }];
+    if (parts.some(p => p.dayIndexes.length === 0)) parts.splice(0, parts.length, { dayIndexes: allDays, part: null });
+    const userPrompts = parts.map(p => buildUserPrompt({
       goal,
       styles,
       fitnessLevel,
       sessionsPerWeek,
       targetDuration,
       days,
+      dayIndexes: p.dayIndexes,
+      part: p.part,
       targetBodyAreas: prefs?.target_body_areas ?? [],
       availableEquipment,
       bodyScan: body.body_scan ?? null,
-    });
+    }));
+    const userPrompt = userPrompts.join("\n\n----- next part -----\n\n");
 
     // Persist equipment so it sticks for future plans and other surfaces.
     if (body.equipment?.length) {
@@ -136,49 +149,57 @@ serve(async (req) => {
       prompt: { system: systemPrompt, user: userPrompt },
     });
 
-    const aiResponse = await aiChatCompletion({
-      model: "gemini-2.5-flash",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: 32000,
-      // Thinking more than doubled the wait (about 76s against 30s for 12 sessions, tested 2026-11-06).
-      reasoning_effort: "none",
-      // 4 weeks of structured workouts is a lot of JSON; the default 55s
-      // gateway timeout regularly clipped responses mid-stream and surfaced
-      // as a raw AbortError in the UI. 110s comfortably fits Gemini 2.5 Flash
-      // on this workload while staying inside the Supabase edge function wall.
-      timeout_ms: 110_000,
-    });
+    const results = await Promise.all(userPrompts.map(async (prompt) => {
+      const response = await aiChatCompletion({
+        model: "gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 32000,
+        // Thinking more than doubled the wait (about 76s against 30s for 12 sessions, tested 2026-11-06).
+        reasoning_effort: "none",
+        // Stays inside the edge function's wall time; the default 55s clipped long plans mid-stream.
+        timeout_ms: 110_000,
+      });
+      return { ok: response.ok, status: response.status, text: await response.text() };
+    }));
 
-    const aiResponseText = await aiResponse.text();
-
-    if (!aiResponse.ok) {
+    const failed = results.find(r => !r.ok);
+    if (failed) {
       await logGeneration(admin, {
         userId: user.id,
         prompt: { system: systemPrompt, user: userPrompt },
         response: null,
-        error: `LLM responded ${aiResponse.status}: ${aiResponseText}`,
+        error: `LLM responded ${failed.status}: ${failed.text}`,
         latencyMs: Date.now() - started,
         model: "gemini-2.5-flash",
       });
       return json({ error: "AI plan generator failed — please try again." }, 502);
     }
 
-    const parsed = parseLLMJSON(aiResponseText);
-    if (!parsed) {
+    const parsedParts = results.map(r => parseLLMJSON(r.text) as { items?: AIPlanItem[] } | null);
+    if (parsedParts.some(p => !p || !Array.isArray(p.items))) {
       await logGeneration(admin, {
         userId: user.id,
         prompt: { system: systemPrompt, user: userPrompt },
-        response: { raw: aiResponseText },
+        response: { raw: results.map(r => r.text) },
         error: "Could not parse JSON from LLM response",
         latencyMs: Date.now() - started,
         model: "gemini-2.5-flash",
       });
       return json({ error: "AI returned malformed response — please try again." }, 502);
     }
+    // Each part only keeps sessions inside its own fortnight, so the two can't overlap.
+    const parsed = {
+      items: parsedParts.flatMap((p, i) =>
+        (p!.items ?? []).filter(item => {
+          const day = item?.day_index as number;
+          return parts.length === 1 || (i === 0 ? day < PART_DAYS : day >= PART_DAYS);
+        })
+      ),
+    };
 
     const validation = validatePlan(parsed, { days, sessionsPerWeek });
     if (!validation.ok) {
@@ -319,6 +340,8 @@ function capitalise(s: string): string {
   return s.length ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
+const PART_DAYS = 14;
+
 function buildUserPrompt(input: {
   goal: string;
   styles: string[];
@@ -326,6 +349,8 @@ function buildUserPrompt(input: {
   sessionsPerWeek: number;
   targetDuration: number;
   days: number;
+  dayIndexes: number[];
+  part?: string | null;
   targetBodyAreas: string[];
   availableEquipment: string[];
   bodyScan?: {
@@ -335,7 +360,7 @@ function buildUserPrompt(input: {
     keyObservations?: string[];
   } | null;
 }): string {
-  const totalSessions = input.sessionsPerWeek * Math.ceil(input.days / 7);
+  const totalSessions = input.dayIndexes.length;
   const exCount = suggestedExerciseCount(input.targetDuration);
 
   const bodyScanLines: (string | null)[] = [];
@@ -370,8 +395,9 @@ function buildUserPrompt(input: {
       : `- Equipment: bodyweight only`,
     ...bodyScanLines,
     "",
-    `Create ${totalSessions} workout sessions spread across ${input.days} days (day_index 0 = today). Omit rest days — just don't include them. Avoid back-to-back sessions targeting the same muscle group.`,
-    `Return exactly ${totalSessions} items, one on each of these day_index values: ${sessionDayIndexes(totalSessions, input.days).join(", ")}.`,
+    `Create ${totalSessions} workout sessions (day_index 0 = today). Omit rest days — just don't include them. Avoid back-to-back sessions targeting the same muscle group.`,
+    input.part,
+    `Return exactly ${totalSessions} items, one on each of these day_index values: ${input.dayIndexes.join(", ")}.`,
     input.styles.length > 1
       ? `Distribute the ${input.styles.join(", ")} styles roughly evenly across the sessions — every week should include each selected style at least once. Make each session's workout_title reflect its style (e.g. "Pilates Core Flow", "HIIT Burner").`
       : input.styles.length === 1
