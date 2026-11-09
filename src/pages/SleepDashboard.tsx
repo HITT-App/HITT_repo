@@ -286,7 +286,7 @@ const SleepDashboard = () => {
                 <p className="text-[10px] text-muted-foreground mt-0.5">Avg sleep</p>
               </div>
               <div>
-                <p className="text-[12px] font-semibold text-foreground leading-none">{weeklyStats.avgQuality}%</p>
+                <p className="text-[12px] font-semibold text-foreground leading-none">{weeklyStats.avgQuality == null ? '—' : `${weeklyStats.avgQuality}%`}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">Quality</p>
               </div>
               <div>
