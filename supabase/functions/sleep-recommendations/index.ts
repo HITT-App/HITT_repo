@@ -72,9 +72,11 @@ serve(async (req) => {
     const avgDuration = recentLogs.length > 0
       ? recentLogs.reduce((sum, log) => sum + (log.duration_minutes || 0), 0) / recentLogs.length
       : 0;
-    const avgQuality = recentLogs.length > 0
-      ? recentLogs.reduce((sum, log) => sum + (log.sleep_quality || 0), 0) / recentLogs.length
-      : 0;
+    // Imported sleep (Garmin, Apple Health) has no quality rating, so only rated nights count.
+    const ratedLogs = recentLogs.filter((log: any) => log.sleep_quality != null);
+    const avgQuality = ratedLogs.length > 0
+      ? ratedLogs.reduce((sum: number, log: any) => sum + log.sleep_quality, 0) / ratedLogs.length
+      : null;
 
     const prompt = `You are an AI sleep coach analyzing a user's sleep data to provide personalized recommendations.
 
@@ -92,7 +94,7 @@ CURRENT SLEEP SCHEDULE:
 RECENT SLEEP STATS (last 14 days):
 - Nights logged: ${recentLogs.length}
 - Average duration: ${Math.round(avgDuration)} minutes (${Math.floor(avgDuration / 60)}h ${Math.round(avgDuration % 60)}m)
-- Average quality: ${Math.round(avgQuality)}%
+- Average quality: ${avgQuality == null ? 'not recorded' : `${Math.round(avgQuality)}%`}
 ${recentLogs.slice(0, 5).map(log => 
   `- ${log.sleep_date}: ${Math.floor((log.duration_minutes || 0) / 60)}h ${(log.duration_minutes || 0) % 60}m, quality ${log.sleep_quality}%`
 ).join("\n")}
@@ -227,7 +229,7 @@ Based on this data, provide 3-4 actionable sleep improvement recommendations. Co
         stats: {
           nightsLogged: recentLogs.length,
           avgDuration: Math.round(avgDuration),
-          avgQuality: Math.round(avgQuality),
+          avgQuality: avgQuality == null ? null : Math.round(avgQuality),
         },
       }),
       {
