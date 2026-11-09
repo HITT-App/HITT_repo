@@ -76,7 +76,7 @@ export function GarminSendButton({ payload, tokens: C, tint }: {
         </div>
         <button
           type="button"
-          onClick={openGarminConnect}
+          onClick={() => void openGarminConnect()}
           style={{ minHeight: 44, fontSize: 13.5, fontWeight: 600, color: C.fg, textDecoration: "underline", background: "none", border: "none" }}
         >
           Open Garmin Connect

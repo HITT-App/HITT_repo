@@ -11,6 +11,7 @@ interface WatchPluginInterface {
   endMirroredWorkout(): Promise<void>;
   prepareHealthAuth(): Promise<void>;
   isSimulator(): Promise<{ isSimulator: boolean }>;
+  openGarminConnect(): Promise<{ opened: "app" | "store" }>;
   addListener(event: "workoutEvent", handler: (data: WatchWorkoutEvent) => void): Promise<{ remove: () => void }>;
 }
 
@@ -170,4 +171,16 @@ export const onWatchWorkoutEvent = (handler: (event: WatchWorkoutEvent) => void)
     listenerHandle = h;
   }).catch(() => {});
   return () => listenerHandle?.remove();
+};
+
+// Opens Garmin Connect, or its App Store page when it isn't installed. False when there's
+// no native support (Android, web, or an older iOS build).
+export const openGarminConnectNative = async (): Promise<boolean> => {
+  if (!isIOSNative()) return false;
+  try {
+    await WatchPluginImpl.openGarminConnect();
+    return true;
+  } catch {
+    return false;
+  }
 };
