@@ -527,7 +527,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
           body: JSON.stringify({
             goal: params.goal,
-            days: params.daysPerWeek * 4,
+            days: 28,
             sessions_per_week: params.daysPerWeek,
             duration_minutes: params.sessionMinutes,
             title: `${params.goal} Plan`,

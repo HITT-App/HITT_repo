@@ -95,7 +95,7 @@ export function useOnboardingPlan() {
             goal: answers.goal,
             styles: answers.styles,
             equipment: answers.equipment,
-            days: answers.daysPerWeek * 4,
+            days: 28,
             sessions_per_week: answers.daysPerWeek,
             duration_minutes: answers.sessionMinutes,
             title: `${answers.goal} Plan`,
