@@ -25,12 +25,20 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
     // or its App Store page when it isn't installed. Here because this plugin is registered.
     @objc func openGarminConnect(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
-            let app = URL(string: "gcm-ios-6573://")!
+            // gcm-ciq opens current Garmin Connect (reported on Garmin's forum, not documented);
+            // the older scheme is kept in case some versions only answer to that.
+            let schemes = ["gcm-ciq://", "gcm-ios-6573://"].compactMap(URL.init(string:))
             let store = URL(string: "https://apps.apple.com/app/garmin-connect/id583446403")!
-            UIApplication.shared.open(app, options: [:]) { opened in
-                if opened { return call.resolve(["opened": "app"]) }
-                UIApplication.shared.open(store, options: [:]) { _ in call.resolve(["opened": "store"]) }
+            func attempt(_ index: Int) {
+                guard index < schemes.count else {
+                    UIApplication.shared.open(store, options: [:]) { _ in call.resolve(["opened": "store"]) }
+                    return
+                }
+                UIApplication.shared.open(schemes[index], options: [:]) { opened in
+                    if opened { call.resolve(["opened": "app"]) } else { attempt(index + 1) }
+                }
             }
+            attempt(0)
         }
     }
 
