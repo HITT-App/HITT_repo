@@ -27,14 +27,16 @@ serve(async (req) => {
       }
 
       const weekAgoISO = new Date(Date.now() - 7 * 86400000).toISOString();
-      const [workouts, meals, checkins] = await Promise.all([
+      const [workouts, activities, meals, checkins] = await Promise.all([
         admin.from("scheduled_workouts").select("user_id").gte("completed_at", weekAgoISO),
+        admin.from("activity_logs").select("user_id").is("deleted_at", null).gte("started_at", weekAgoISO),
         admin.from("meal_logs").select("user_id").gte("logged_at", weekAgoISO),
         admin.from("daily_checkins").select("user_id").gte("created_at", weekAgoISO),
       ]);
 
       const activeUsers = new Set<string>();
       for (const row of workouts.data ?? []) activeUsers.add(row.user_id);
+      for (const row of activities.data ?? []) activeUsers.add(row.user_id);
       for (const row of meals.data ?? []) activeUsers.add(row.user_id);
       for (const row of checkins.data ?? []) activeUsers.add(row.user_id);
 
@@ -78,10 +80,16 @@ async function computeAndStore(admin: SupabaseClient, userId: string) {
   const weekAgoISO = new Date(now - 7 * 86400000).toISOString();
   const weekAgoDate = new Date(now - 7 * 86400000).toISOString().split("T")[0];
 
-  const [workoutsRes, streakRes, goalRes, mealsRes, sleepRes] = await Promise.all([
-    admin.from("scheduled_workouts")
-      .select("duration_minutes, completed_at")
-      .eq("user_id", userId).eq("status", "completed").gte("completed_at", weekAgoISO),
+  // Every recorded workout counts: tracked in HIIT, or from Apple Health, Garmin or a watch app.
+  // The workout player writes workout_progress instead, so its sessions are added; imports can
+  // also add PB rows there, which have no workout_id and so aren't counted twice.
+  const [activitiesRes, playerRes, streakRes, goalRes, mealsRes, sleepRes] = await Promise.all([
+    admin.from("activity_logs")
+      .select("duration_seconds")
+      .eq("user_id", userId).is("deleted_at", null).gte("started_at", weekAgoISO),
+    admin.from("workout_progress")
+      .select("duration_seconds")
+      .eq("user_id", userId).not("workout_id", "is", null).gte("created_at", weekAgoISO),
     admin.from("user_streaks")
       .select("current_streak").eq("user_id", userId).maybeSingle(),
     admin.from("nutrition_goals")
@@ -92,10 +100,10 @@ async function computeAndStore(admin: SupabaseClient, userId: string) {
       .select("duration_minutes, sleep_date").eq("user_id", userId).gte("sleep_date", weekAgoDate),
   ]);
 
-  const workouts = workoutsRes.data ?? [];
+  const workouts = [...(activitiesRes.data ?? []), ...(playerRes.data ?? [])];
   const workoutCount = workouts.length;
   const avgDuration = workoutCount > 0
-    ? workouts.reduce((a, w) => a + (w.duration_minutes ?? 0), 0) / workoutCount
+    ? workouts.reduce((a, w) => a + (w.duration_seconds ?? 0) / 60, 0) / workoutCount
     : 0;
 
   const streakDays = streakRes.data?.current_streak ?? 0;
