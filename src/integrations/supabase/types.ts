@@ -1974,6 +1974,27 @@ export type Database = {
         }
         Relationships: []
       }
+      privacy_policy_acceptances: {
+        Row: {
+          accepted_at: string
+          platform: string | null
+          policy_version: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          platform?: string | null
+          policy_version: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          platform?: string | null
+          policy_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
