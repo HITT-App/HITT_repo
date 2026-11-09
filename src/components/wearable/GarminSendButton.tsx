@@ -13,7 +13,7 @@ export type GarminSendPayload =
   | { action: "send_sport"; sport: string }
   | { action: "send_triathlon"; name: string; swim_km: number; bike_km: number; run_km: number };
 
-type Phase = "idle" | "sending" | "sent" | "start_on_watch" | "needs_distance";
+type Phase = "idle" | "sending" | "sent" | "already_sent" | "start_on_watch" | "needs_distance";
 
 const MAX_SWIM_METRES = 100_000;
 
@@ -42,7 +42,7 @@ export function GarminSendButton({ payload, tokens: C, tint }: {
   const send = async (distanceM?: number) => {
     setPhase("sending");
     setError(null);
-    const { data, error: callError } = await callGarmin("garmin-workouts", {
+    const { data, error: callError } = await callGarmin<{ status?: string; already?: boolean }>("garmin-workouts", {
       ...payload,
       date: format(new Date(), "yyyy-MM-dd"),
       ...(distanceM ? { distance_m: distanceM } : {}),
@@ -53,7 +53,7 @@ export function GarminSendButton({ payload, tokens: C, tint }: {
         ? "Turn on sending workouts in Connected Devices first."
         : garminErrorMessage(callError));
     }
-    if (data?.status === "queued") return setPhase("sent");
+    if (data?.status === "queued") return setPhase(data.already ? "already_sent" : "sent");
     if (data?.status === "start_on_watch") return setPhase("start_on_watch");
     if (data?.status === "needs_distance") {
       // A triathlon reaching this has a leg set to zero, and its distances are on this screen.
@@ -65,14 +65,15 @@ export function GarminSendButton({ payload, tokens: C, tint }: {
     setError(garminErrorMessage(null));
   };
 
-  if (phase === "sent") {
+  if (phase === "sent" || phase === "already_sent") {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{
           width: "100%", borderRadius: 14, padding: "13px 12px", display: "flex", alignItems: "center", justifyContent: "center",
           gap: 9, fontSize: 13.5, fontWeight: 650, color: C.good, background: tint(C.good, 0.1), border: `1px solid ${tint(C.good, 0.4)}`,
         }}>
-          <Check size={16} color={C.good} strokeWidth={2.2} /> Sent to Garmin. Sync to get it on your watch.
+          <Check size={16} color={C.good} strokeWidth={2.2} />
+          {phase === "sent" ? "Sent to Garmin. Sync to get it on your watch." : "Already sent today. Sync to get it on your watch."}
         </div>
         <button
           type="button"

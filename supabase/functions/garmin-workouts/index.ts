@@ -2,7 +2,7 @@
 // Garmin may keep and reuse what it receives, so the app shows that notice first.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { adminClient, corsHeaders, json, requireUser } from "../_shared/garmin-http.ts";
-import { mapOneOff, type OneOffPayload } from "../_shared/garmin-workout.ts";
+import { mapOneOff, type OneOffPayload, sameOneOff } from "../_shared/garmin-workout.ts";
 
 const MAX_ONE_OFFS_PER_DAY = 10;
 const MAX_LEG_KM = 1000;
@@ -97,20 +97,27 @@ serve(async (req) => {
       const mapped = mapOneOff(payload);
       if (!mapped.ok) return json({ status: mapped.reason === "unsupported" ? "start_on_watch" : mapped.reason });
 
-      const { count, error: countError } = await admin
+      const { data: sameDay, error: sameDayError } = await admin
         .from("garmin_one_off_workouts")
-        .select("id", { count: "exact", head: true })
+        .select("id, payload")
         .eq("user_id", user.id)
         .eq("workout_date", body.date);
-      if (countError) throw new Error(countError.message);
-      if ((count ?? 0) >= MAX_ONE_OFFS_PER_DAY) return json({ error: "too_many" }, 429);
+      if (sameDayError) throw new Error(sameDayError.message);
+      // Sending the same thing again keeps the one already on the watch rather than adding a copy.
+      // The sync still runs, so one that failed to reach Garmin gets another go.
+      const already = (sameDay ?? []).find(o => sameOneOff(o.payload as OneOffPayload, payload));
+      if (!already && (sameDay?.length ?? 0) >= MAX_ONE_OFFS_PER_DAY) return json({ error: "too_many" }, 429);
 
-      const { data: created, error: insertError } = await admin
-        .from("garmin_one_off_workouts")
-        .insert({ user_id: user.id, workout_date: body.date, payload })
-        .select("id")
-        .single();
-      if (insertError) throw new Error(insertError.message);
+      let id = already?.id as string | undefined;
+      if (!id) {
+        const { data: created, error: insertError } = await admin
+          .from("garmin_one_off_workouts")
+          .insert({ user_id: user.id, workout_date: body.date, payload })
+          .select("id")
+          .single();
+        if (insertError) throw new Error(insertError.message);
+        id = created.id;
+      }
       await markDirty();
       // Sends it now rather than at the next 5-minute run, which still picks it up if this fails.
       await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/garmin-sync-workouts`, {
@@ -119,7 +126,7 @@ serve(async (req) => {
         body: JSON.stringify({ user_id: user.id }),
         signal: AbortSignal.timeout(8000),
       }).catch(() => undefined);
-      return json({ status: "queued", id: created.id });
+      return json({ status: "queued", id, already: !!already });
     }
 
     return json({ error: "unknown_action" }, 400);

@@ -288,6 +288,14 @@ export type OneOffPayload =
   | { kind: "sport"; sport: string; distance_m?: number | null }
   | { kind: "triathlon"; name?: string | null; swim_km: number; bike_km: number; run_km: number };
 
+// The same sport or race sent twice on one day. A missing distance or name counts as none.
+export function sameOneOff(a: OneOffPayload, b: OneOffPayload): boolean {
+  const key = (p: OneOffPayload) => p.kind === "sport"
+    ? ["sport", p.sport.trim().toLowerCase(), p.distance_m ?? null]
+    : ["triathlon", p.name?.trim().toLowerCase() || null, p.swim_km, p.bike_km, p.run_km];
+  return JSON.stringify(key(a)) === JSON.stringify(key(b));
+}
+
 // Only sports Garmin's workout list has. Anything else starts on the watch and comes back on its own.
 const SPORT_NAMES: Record<string, string> = {
   run: "RUNNING",

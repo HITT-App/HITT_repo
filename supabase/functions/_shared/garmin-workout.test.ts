@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { exerciseEnum, garminSport, garminSportForName, inferCategory, mapOneOff, mapWorkout, matchSentWorkout, parseDistanceMetres, planSync } from "./garmin-workout";
+import { exerciseEnum, garminSport, garminSportForName, inferCategory, mapOneOff, sameOneOff, mapWorkout, matchSentWorkout, parseDistanceMetres, planSync } from "./garmin-workout";
 
 const ok = (r: ReturnType<typeof mapWorkout>) => {
   if (!r.ok) throw new Error(r.reason);
@@ -238,5 +238,21 @@ describe("garminSportForName with the app's sport names", () => {
     for (const sport of ["Walk", "Hike", "Tennis", "Kayak", "Skiing"]) {
       expect(garminSportForName(sport)).toBeNull();
     }
+  });
+});
+
+describe("sameOneOff", () => {
+  it("matches the same sport whatever the case or spacing", () => {
+    expect(sameOneOff({ kind: "sport", sport: "Run" }, { kind: "sport", sport: " run ", distance_m: null })).toBe(true);
+  });
+  it("tells different sports and swim distances apart", () => {
+    expect(sameOneOff({ kind: "sport", sport: "Run" }, { kind: "sport", sport: "Walk" })).toBe(false);
+    expect(sameOneOff({ kind: "sport", sport: "Swim", distance_m: 1000 }, { kind: "sport", sport: "Swim", distance_m: 1500 })).toBe(false);
+  });
+  it("matches races on name and every leg", () => {
+    const race = { kind: "triathlon" as const, name: "Olympic", swim_km: 1.5, bike_km: 40, run_km: 10 };
+    expect(sameOneOff(race, { ...race })).toBe(true);
+    expect(sameOneOff(race, { ...race, run_km: 5 })).toBe(false);
+    expect(sameOneOff(race, { kind: "sport", sport: "Olympic" })).toBe(false);
   });
 });
