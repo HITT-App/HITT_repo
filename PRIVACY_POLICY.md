@@ -185,6 +185,7 @@ No method of transmission or storage is completely secure, so we cannot guarante
 - **Wearables:** You can disconnect Apple Health, Google Fit, or unpair your Garmin/Apple Watch at any time.
 - **Notifications:** Turn off push and local notifications in your device settings.
 - **Voice:** Voice features are optional and can be left disabled.
+- **Usage analytics:** Turn off "Share usage data" in Profile → Settings to stop sending usage events to PostHog from that device. Crash reports are still sent so we can fix problems.
 - **Account deletion:** You can delete your account from within the app. This runs a deletion process that purges your data (profile, activity and health logs, sleep and meal logs, body scans, community content, wearable pairings, tokens, and more) from our systems.
 
 ---

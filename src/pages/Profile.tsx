@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { isAnalyticsEnabled, setAnalyticsEnabled } from '@/lib/analytics';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StreakCard } from '@/components/gamification/StreakCard';
@@ -73,6 +74,7 @@ export default function Profile() {
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [analyticsOn, setAnalyticsOn] = useState(isAnalyticsEnabled);
 
   // Account deletion
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -586,6 +588,16 @@ export default function Profile() {
             <p className="text-xs text-muted-foreground">
               Private profiles are only visible to approved followers
             </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 p-4 bg-secondary rounded-xl">
+            <div>
+              <p className="font-medium text-sm">Share usage data</p>
+              <p className="text-xs text-muted-foreground">
+                Which screens and features you use, to help us improve HIIT. Applies to this device. Crash reports still reach us so we can fix problems.
+              </p>
+            </div>
+            <Switch checked={analyticsOn} onCheckedChange={(on) => { setAnalyticsEnabled(on); setAnalyticsOn(on); }} />
           </div>
 
           {/* All wearables — Apple Watch, Garmin, Fitbit, Whoop, Oura via HealthKit */}
