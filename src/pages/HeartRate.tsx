@@ -11,12 +11,13 @@ import { garminSourceLabel } from "@/lib/garmin-state";
 
 const HeartRate = () => {
   const navigate = useNavigate();
-  const { logMetric, useMetricHistory, getLatestValue } = useHealthMetrics();
+  const { logMetric, useMetricHistory, getLatestValue, latestMetrics } = useHealthMetrics();
   const { data: history = [], isLoading } = useMetricHistory("heart_rate", 20);
   const [showLogForm, setShowLogForm] = useState(false);
   const [bpmInput, setBpmInput] = useState("");
 
   const currentBPM = getLatestValue("heart_rate") || "--";
+  const restingBPM = getLatestValue("resting_heart_rate");
 
   const handleLog = async () => {
     const val = Number(bpmInput);
@@ -75,6 +76,14 @@ const HeartRate = () => {
           </p>
           {history[0] && garminSourceLabel([history[0]]) && (
             <p className="text-xs text-muted-foreground mt-1">{garminSourceLabel([history[0]])}</p>
+          )}
+          {restingBPM && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Resting heart rate: <span className="font-semibold text-foreground">{restingBPM} bpm</span>
+              {latestMetrics?.resting_heart_rate && garminSourceLabel([latestMetrics.resting_heart_rate]) && (
+                <span className="block text-xs">{garminSourceLabel([latestMetrics.resting_heart_rate])}</span>
+              )}
+            </p>
           )}
         </Card>
 

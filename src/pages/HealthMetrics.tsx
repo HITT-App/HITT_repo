@@ -76,6 +76,17 @@ const HealthMetrics = () => {
       path: "/heart-rate",
     },
     {
+      label: "Resting Heart Rate",
+      value: getLatestValue("resting_heart_rate"),
+      source: latestMetrics?.resting_heart_rate ? garminSourceLabel([latestMetrics.resting_heart_rate]) : null,
+      fallback: "--",
+      unit: "bpm",
+      icon: Heart,
+      color: "text-rose-400",
+      bgColor: "bg-rose-100",
+      path: "/heart-rate",
+    },
+    {
       label: "Blood Pressure",
       value: getLatestValue("blood_pressure"),
       fallback: "--/--",
@@ -158,7 +169,7 @@ const HealthMetrics = () => {
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          metrics.map((metric) => {
+          metrics.filter(m => m.label !== "Resting Heart Rate" || m.value).map((metric) => {
             const Icon = metric.icon;
             const displayValue = metric.value || metric.fallback;
             return (
