@@ -63,6 +63,8 @@ export default function WorkoutSchedule() {
     return new Date()
   })
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  // Week view: the day tapped in the strip. Null means "follow the next workout".
+  const [weekPick, setWeekPick] = useState<Date | null>(null)
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null)
@@ -223,6 +225,7 @@ export default function WorkoutSchedule() {
   const navigatePeriod = (dir: 'prev' | 'next') => {
     if (view === 'week') {
       setCurrentDate(prev => addDays(prev, dir === 'next' ? 7 : -7))
+      setWeekPick(null)
     } else {
       setCurrentDate(prev => addMonths(prev, dir === 'next' ? 1 : -1))
       setSelectedDay(null)
@@ -258,11 +261,18 @@ export default function WorkoutSchedule() {
     .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
   const nextUp = upcomingWorkouts[0] ?? null
 
+  // The week view shows the tapped day, or the next workout until a day is tapped.
+  const pickedWorkouts = weekPick ? getWorkoutsForDate(weekPick) : []
+  const hero = weekPick
+    ? pickedWorkouts.find(w => w.status !== 'completed') ?? pickedWorkouts[0] ?? null
+    : nextUp
+  const focusDay = weekPick ?? (nextUp ? parseISO(nextUp.scheduled_date) : null)
+
   // When label for the hero
-  const heroWhen = nextUp
-    ? isToday(parseISO(nextUp.scheduled_date)) ? 'Today'
-      : isSameDay(parseISO(nextUp.scheduled_date), addDays(today, 1)) ? 'Tomorrow'
-      : format(parseISO(nextUp.scheduled_date), 'EEEE')
+  const heroWhen = focusDay
+    ? isToday(focusDay) ? 'Today'
+      : isSameDay(focusDay, addDays(today, 1)) ? 'Tomorrow'
+      : format(focusDay, 'EEEE d')
     : ''
 
   // Start workout helper
@@ -274,10 +284,10 @@ export default function WorkoutSchedule() {
     }
   }
 
-  // Rail: days after nextUp's date to end of week, with their workouts
-  const railDays = nextUp
+  // Rail: days after the shown day to the end of its week, with their workouts
+  const railDays = focusDay
     ? weekDays
-        .filter(d => d > parseISO(nextUp.scheduled_date))
+        .filter(d => startOfDay(d) > startOfDay(focusDay))
         .map(d => ({ day: d, workouts: getWorkoutsForDate(d) }))
     : []
 
@@ -325,13 +335,17 @@ export default function WorkoutSchedule() {
         </div>
         <div className="flex gap-1.5">
           {weekDays.map((day, i) => {
-            const sel = isSameDay(day, currentDate)
+            const sel = view === 'week' && focusDay ? isSameDay(day, focusDay) : isSameDay(day, currentDate)
             const todayDay = isToday(day)
             const dayWorkouts = getWorkoutsForDate(day)
             return (
               <button
                 key={i}
-                onClick={() => setCurrentDate(day)}
+                onClick={() => {
+                  setCurrentDate(day)
+                  // Tapping the shown day again goes back to the next workout.
+                  setWeekPick(prev => prev && isSameDay(prev, day) ? null : day)
+                }}
                 className="flex-1 rounded-[14px] py-2 pb-1.5 flex flex-col items-center gap-1.5 transition-colors"
                 style={{
                   background: sel ? 'linear-gradient(160deg, #FFA84B, #f97316)' : 'hsl(var(--card))',
@@ -360,8 +374,9 @@ export default function WorkoutSchedule() {
       {/* WEEK VIEW */}
       {view === 'week' && (
         <div className="px-5 space-y-3.5 overflow-y-auto">
-          {nextUp ? (
+          {focusDay ? (
             <>
+              {hero ? (<>
               {/* Hero */}
               <div style={{
                 position: 'relative', borderRadius: 22, padding: 20, overflow: 'hidden',
@@ -370,7 +385,7 @@ export default function WorkoutSchedule() {
               }}>
                 <div style={{ position: 'absolute', top: -40, right: -30, width: 150, height: 150, borderRadius: 999, background: 'rgba(255,255,255,0.16)' }} />
                 <button
-                  onClick={(e) => openActions(nextUp, e)}
+                  onClick={(e) => openActions(hero, e)}
                   aria-label="More actions"
                   style={{
                     position: 'absolute', top: 4, right: 4, width: 36, height: 36, borderRadius: 12,
@@ -388,22 +403,30 @@ export default function WorkoutSchedule() {
                     {heroWhen}
                   </span>
                   <h2 style={{ margin: '14px 0 0', fontSize: 27, fontWeight: 800, color: '#1a0a00', letterSpacing: '-0.5px', lineHeight: 1.05 }}>
-                    {nextUp.workout_title ?? nextUp.workout?.title ?? 'Workout'}
+                    {hero.workout_title ?? hero.workout?.title ?? 'Workout'}
                   </h2>
                   <div style={{ display: 'flex', gap: 16, margin: '12px 0 16px', color: 'rgba(26,10,0,0.72)', fontSize: 13, fontWeight: 600 }}>
                     <span className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" style={{ color: '#1a0a00' }} />
-                      {(nextUp.estimated_duration_minutes ?? nextUp.workout?.duration_minutes) ?? '—'} min
+                      {(hero.estimated_duration_minutes ?? hero.workout?.duration_minutes) ?? '—'} min
                     </span>
-                    {nextUp.workout?.category && (
+                    {hero.workout?.category && (
                       <span className="flex items-center gap-1.5">
                         <Layers className="w-3.5 h-3.5" style={{ color: '#1a0a00' }} />
-                        <span className="capitalize">{nextUp.workout.category}</span>
+                        <span className="capitalize">{hero.workout.category}</span>
                       </span>
                     )}
                   </div>
+                  {hero.status === 'completed' ? (
+                    <div style={{
+                      width: '100%', background: 'rgba(26,10,0,0.18)', color: '#1a0a00', borderRadius: 14, padding: '13px 0',
+                      fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                    }}>
+                      <Check className="w-4 h-4" /> Done
+                    </div>
+                  ) : (
                   <button
-                    onClick={() => startWorkout(nextUp)}
+                    onClick={() => startWorkout(hero)}
                     style={{
                       width: '100%', background: '#1a0a00', color: '#fff', borderRadius: 14, padding: '13px 0',
                       fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer',
@@ -412,8 +435,27 @@ export default function WorkoutSchedule() {
                   >
                     <Play className="w-4 h-4 fill-white" style={{ color: '#fff' }} /> Start workout
                   </button>
+                  )}
                 </div>
               </div>
+              </>) : (
+                /* A tapped day with nothing scheduled */
+                <div className="rounded-[22px] border border-border p-5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10.5px] font-bold text-muted-foreground tracking-[0.05em] uppercase">{heroWhen}</p>
+                    <p className="text-[20px] font-extrabold text-foreground mt-1 flex items-center gap-2">
+                      <Moon className="w-4 h-4 text-muted-foreground" /> Rest day
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.dispatchEvent(new CustomEvent('hitt:open-jarvis', { detail: { prefillMessage: `I'd like to add a workout for ${format(focusDay, 'EEEE d MMMM')}` } }))}
+                  >
+                    Add
+                  </Button>
+                </div>
+              )}
 
               {/* Rest of week rail */}
               {railDays.length > 0 && (
