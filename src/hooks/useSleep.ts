@@ -95,26 +95,30 @@ export const useSleep = () => {
 
   // Calculate sleep score (0-100)
   const calculateSleepScore = () => {
-    if (!preferences || weeklyLogs.length === 0) return 0;
+    if (weeklyLogs.length === 0) return 0;
 
-    const targetMinutes = (Number(preferences.target_hours) || 8) * 60 + (preferences.target_minutes || 0);
+    // Without a goal from sleep setup (Garmin and Apple Health users can skip it), aim for 8 hours.
+    const targetMinutes = (Number(preferences?.target_hours) || 8) * 60 + (preferences?.target_minutes || 0);
     const avgDuration = weeklyLogs.reduce((sum, log) => sum + (log.duration_minutes || 0), 0) / weeklyLogs.length;
-    const avgQuality = weeklyLogs.reduce((sum, log) => sum + (log.sleep_quality || 70), 0) / weeklyLogs.length;
+    const durationRatio = Math.min(avgDuration / targetMinutes, 1);
 
-    // Score based on duration (50%) and quality (50%)
-    const durationScore = Math.min((avgDuration / targetMinutes) * 50, 50);
-    const qualityScore = (avgQuality / 100) * 50;
+    // Imported sleep has no quality rating, so the score then rests on duration alone.
+    const rated = weeklyLogs.filter(log => log.sleep_quality != null);
+    if (rated.length === 0) return Math.round(durationRatio * 100);
 
-    return Math.round(durationScore + qualityScore);
+    const avgQuality = rated.reduce((sum, log) => sum + (log.sleep_quality ?? 0), 0) / rated.length;
+    return Math.round(durationRatio * 50 + (avgQuality / 100) * 50);
   };
 
   // Get weekly stats
   const getWeeklyStats = () => {
     const totalMinutes = weeklyLogs.reduce((sum, log) => sum + (log.duration_minutes || 0), 0);
     const avgMinutes = weeklyLogs.length > 0 ? totalMinutes / weeklyLogs.length : 0;
-    const avgQuality = weeklyLogs.length > 0 
-      ? weeklyLogs.reduce((sum, log) => sum + (log.sleep_quality || 0), 0) / weeklyLogs.length 
-      : 0;
+    const rated = weeklyLogs.filter(log => log.sleep_quality != null);
+    // Null when no night has a quality rating, so screens show a dash rather than 0%.
+    const avgQuality = rated.length > 0
+      ? rated.reduce((sum, log) => sum + (log.sleep_quality ?? 0), 0) / rated.length
+      : null;
     const totalDeep = weeklyLogs.reduce((sum, log) => sum + (log.deep_sleep_minutes || 0), 0);
     const totalRem = weeklyLogs.reduce((sum, log) => sum + (log.rem_sleep_minutes || 0), 0);
     const totalLight = weeklyLogs.reduce((sum, log) => sum + (log.light_sleep_minutes || 0), 0);
@@ -125,7 +129,7 @@ export const useSleep = () => {
       avgMinutes: Math.round(avgMinutes),
       avgHours: Math.floor(avgMinutes / 60),
       avgRemainingMinutes: Math.round(avgMinutes % 60),
-      avgQuality: Math.round(avgQuality),
+      avgQuality: avgQuality == null ? null : Math.round(avgQuality),
       deepSleep: Math.round(totalDeep / Math.max(weeklyLogs.length, 1)),
       remSleep: Math.round(totalRem / Math.max(weeklyLogs.length, 1)),
       lightSleep: Math.round(totalLight / Math.max(weeklyLogs.length, 1)),

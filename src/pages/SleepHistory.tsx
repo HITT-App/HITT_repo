@@ -107,9 +107,11 @@ const SleepHistory = () => {
                               {Math.floor((log.duration_minutes || 0) / 60)}h {(log.duration_minutes || 0) % 60}m
                             </p>
                             {log.source_platform === "garmin_api" && <p className="text-[10.5px] text-muted-foreground">Garmin</p>}
-                            <Badge className={cn("mt-1", getQualityColor(log.sleep_quality || 0))}>
-                              {log.sleep_quality || 0} sleep score
-                            </Badge>
+                            {log.sleep_quality != null && (
+                              <Badge className={cn("mt-1", getQualityColor(log.sleep_quality || 0))}>
+                                {log.sleep_quality || 0} sleep score
+                              </Badge>
+                            )}
                           </div>
                           <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         </div>
@@ -163,9 +165,11 @@ const SleepHistory = () => {
                                     {Math.floor((log.duration_minutes || 0) / 60)}h {(log.duration_minutes || 0) % 60}m
                                   </p>
                                   {log.source_platform === "garmin_api" && <p className="text-[10.5px] text-muted-foreground">Garmin</p>}
-                                  <Badge className={cn(getQualityColor(log.sleep_quality || 0))}>
-                                    {log.sleep_quality || 0} sleep score
-                                  </Badge>
+                                  {log.sleep_quality != null && (
+                                    <Badge className={cn(getQualityColor(log.sleep_quality || 0))}>
+                                      {log.sleep_quality || 0} sleep score
+                                    </Badge>
+                                  )}
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">
                                   {format(parseISO(log.bedtime), "h:mm a")} - {format(parseISO(log.wake_time), "h:mm a")}
@@ -198,9 +202,11 @@ const SleepHistory = () => {
                                 {Math.floor((log.duration_minutes || 0) / 60)}h {(log.duration_minutes || 0) % 60}m
                               </p>
                               {log.source_platform === "garmin_api" && <p className="text-[10.5px] text-muted-foreground">Garmin</p>}
-                              <Badge className={cn(getQualityColor(log.sleep_quality || 0))}>
-                                {log.sleep_quality || 0}%
-                              </Badge>
+                              {log.sleep_quality != null && (
+                                <Badge className={cn(getQualityColor(log.sleep_quality || 0))}>
+                                  {log.sleep_quality || 0}%
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
                               {format(parseISO(log.sleep_date), "MMM d, yyyy")}
