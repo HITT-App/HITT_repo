@@ -1,5 +1,11 @@
 # HITT App Changelog
 
+## [2026-11-17] — App opens on iOS 27.2 again (1.0.11 build 348, Garmin 1.0.13 build 347)
+
+- **Fixed: the app closed straight away on iOS 27.2.** iOS 27.2 won't open apps built with the iOS 27 tools unless they use Apple's "scene" startup. HIIT now does (`SceneDelegate.swift` plus a scene manifest in `Info.plist`). Builds 345 and 346 crash on launch on iOS 27.2; 347 and 348 open normally. Tested on an iPhone on iOS 27.2.1
+- The app-icon badge is now cleared from `SceneDelegate.sceneDidBecomeActive`, because iOS no longer calls `applicationDidBecomeActive` once scenes are used
+- Builds 345 to 348 set their build numbers at archive time, so the numbers aren't recorded in `project.pbxproj`
+
 ## [2026-11-06] — Maps load again (1.0.11)
 
 - **Maps show properly again.** Our map provider, CARTO, began requiring an API key, so map backgrounds showed "API KEY REQUIRED". The live activity map, Routes Explorer, Route Detail and Create Route now send a key
