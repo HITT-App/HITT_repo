@@ -7,6 +7,8 @@ export type GarminDaily = {
   steps?: number;
   restingHeartRateInBeatsPerMinute?: number;
   averageStressLevel?: number;
+  activeKilocalories?: number;
+  bmrKilocalories?: number;
 };
 export type GarminStressDetail = {
   userId?: string;
@@ -86,6 +88,8 @@ export function mapDaily(s: GarminDaily, userId: string): MetricRow[] {
     ...metric(userId, "steps", s.steps || null, "count", midday(date), `steps-${date}`),
     ...metric(userId, "resting_heart_rate", s.restingHeartRateInBeatsPerMinute || null, "bpm", midday(date), `rhr-${date}`),
     ...metric(userId, "stress", stress, "score", midday(date), `stress-${date}`),
+    ...metric(userId, "active_calories", s.activeKilocalories || null, "kcal", midday(date), `active-kcal-${date}`),
+    ...metric(userId, "resting_calories", s.bmrKilocalories || null, "kcal", midday(date), `resting-kcal-${date}`),
   ];
 }
 

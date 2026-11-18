@@ -47,6 +47,15 @@ describe("consentedMetrics", () => {
   it("keeps everything with consent", () => {
     expect(consentedMetrics(rows, HEALTH)).toEqual(rows);
   });
+
+  it("holds back Garmin calories even with Garmin consent", () => {
+    const garmin = [
+      { metric_type: "steps", source_platform: "garmin_api", notes: null },
+      { metric_type: "active_calories", source_platform: "garmin_api", notes: null },
+      { metric_type: "resting_calories", source_platform: "garmin_api", notes: null },
+    ];
+    expect(consentedMetrics(garmin, BOTH)).toEqual([garmin[0]]);
+  });
 });
 
 describe("consentedProgress", () => {

@@ -21,6 +21,11 @@ describe("mapDaily", () => {
     });
   });
 
+  it("maps active and resting calories", () => {
+    const rows = mapDaily({ calendarDate: "2026-11-05", activeKilocalories: 420, bmrKilocalories: 1650 }, "u");
+    expect(summary(rows)).toEqual({ active_calories: 420, resting_calories: 1650 });
+  });
+
   it("keeps one ID per day, so a later summary replaces the earlier one", () => {
     const morning = mapDaily({ calendarDate: "2026-11-05", steps: 100 }, "u")[0];
     const evening = mapDaily({ calendarDate: "2026-11-05", steps: 9000 }, "u")[0];

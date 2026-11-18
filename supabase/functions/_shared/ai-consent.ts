@@ -12,7 +12,7 @@ export type AiConsent = {
 };
 
 type ActivityRow = { source_platform?: string | null; garmin_activity_id?: string | null };
-type MetricRow = { source_platform?: string | null; notes?: string | null };
+type MetricRow = { source_platform?: string | null; notes?: string | null; metric_type?: string | null };
 type ProgressRow = { workout_id?: string | null; workout_source?: string | null };
 
 // Garmin data has its own consent, whatever the health consent says. A merged row can
@@ -31,9 +31,13 @@ export function consentedActivities<T extends ActivityRow>(rows: T[], consent: A
 }
 
 // useWatchSync writes watch readings with no source_platform, marked only in notes.
+// Garmin calories are stored but not used anywhere until Garmin has had 30 days' notice
+// of the screen that shows them (Agreement 6.6). Remove a type from here once it's cleared.
+const GARMIN_HELD_METRICS = new Set(["active_calories", "resting_calories"]);
+
 export function consentedMetrics<T extends MetricRow>(rows: T[], consent: AiConsent): T[] {
   return rows.filter(r => {
-    if (r.source_platform === "garmin_api") return consent.garmin;
+    if (r.source_platform === "garmin_api") return consent.garmin && !GARMIN_HELD_METRICS.has(r.metric_type ?? "");
     if (consent.health) return true;
     return r.source_platform == null && !r.notes?.startsWith("watch_sync");
   });
