@@ -311,6 +311,7 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       if (error || !data?.token) {
         console.error('Failed to get scribe token:', error);
         isConnectingRef.current = false;
+        toast.error("Voice isn't available right now. You can type your message instead.");
         return;
       }
 
@@ -340,6 +341,10 @@ export function JarvisMode({ onClose, healthProfile, sharePromptDetail, prefillM
       isListeningRef.current = false;
       isConnectingRef.current = false;
       setIsListening(false);
+      const denied = (error as { name?: string })?.name === 'NotAllowedError';
+      toast.error(denied
+        ? 'Allow microphone access for HIIT in Settings to talk to Jarvis.'
+        : "Voice isn't available right now. You can type your message instead.");
     }
   }, [updateVisualizer]); // scribe added below after declaration
 
