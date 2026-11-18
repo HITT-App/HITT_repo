@@ -1,4 +1,5 @@
-import { ArrowLeft, Heart, Activity, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles, Loader2, ScanLine } from "lucide-react";
+import { ArrowLeft, Heart, Activity, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles, Loader2, ScanLine, Flame } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,12 +9,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useTodayCalories } from "@/hooks/useTodayCalories";
 
 const HealthMetrics = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { getLatestValue, isLoading: metricsLoading } = useHealthMetrics();
   const { weeklyStats } = useSleep();
+  const { data: calories } = useTodayCalories();
 
   // Get today's mood from daily_checkins
   const { data: todayMood } = useQuery({
@@ -59,7 +62,23 @@ const HealthMetrics = () => {
     ? todayMood.charAt(0).toUpperCase() + todayMood.slice(1)
     : null;
 
-  const metrics = [
+  const caloriesTotal = (calories?.active ?? 0) + (calories?.resting ?? 0);
+  const healthAppName = Capacitor.getPlatform() === "android" ? "Health Connect" : "Apple Health";
+  const caloriesDetail = caloriesTotal > 0
+    ? `Active ${calories?.active?.toLocaleString() ?? "--"} · Resting ${calories?.resting?.toLocaleString() ?? "--"}`
+    : `No data yet. Check your watch app shares with ${healthAppName}.`;
+
+  const metrics: {
+    label: string;
+    value: string | number | null;
+    fallback: string;
+    unit: string;
+    icon: typeof Heart;
+    color: string;
+    bgColor: string;
+    path?: string;
+    detail?: string;
+  }[] = [
     {
       label: "Heart Rate",
       value: getLatestValue("heart_rate"),
@@ -99,6 +118,16 @@ const HealthMetrics = () => {
       color: "text-primary",
       bgColor: "bg-primary/10",
       path: "/steps",
+    },
+    {
+      label: "Calories burned today",
+      value: caloriesTotal > 0 ? caloriesTotal.toLocaleString() : null,
+      fallback: "--",
+      unit: "kcal",
+      icon: Flame,
+      color: "text-orange-500",
+      bgColor: "bg-orange-100",
+      detail: caloriesDetail,
     },
     {
       label: "Weight",
@@ -167,8 +196,8 @@ const HealthMetrics = () => {
             return (
               <Card
                 key={metric.label}
-                className="p-4 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate(metric.path)}
+                className={`p-4 flex items-center gap-4 ${metric.path ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+                onClick={metric.path ? () => navigate(metric.path!) : undefined}
               >
                 <div className={`w-12 h-12 rounded-full ${metric.bgColor} flex items-center justify-center`}>
                   <Icon className={`w-6 h-6 ${metric.color}`} />
@@ -179,8 +208,9 @@ const HealthMetrics = () => {
                     {displayValue}{" "}
                     {metric.unit && <span className="text-sm font-normal text-muted-foreground">{metric.unit}</span>}
                   </p>
+                  {metric.detail && <p className="text-xs text-muted-foreground mt-0.5">{metric.detail}</p>}
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                {metric.path && <ChevronRight className="w-5 h-5 text-muted-foreground" />}
               </Card>
             );
           })
