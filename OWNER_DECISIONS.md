@@ -89,6 +89,12 @@ Voice responses and wake word detection have been switched off for v1.0 via a ki
 
 Safe to ship v1.0 as-is.
 
+**Clarified 2026-11-18:** the kill switch covers Jarvis *speaking* and the wake word only. The **mic for talking to Jarvis was never switched off**. It looked disabled because the ElevenLabs key had stopped working; a new key went in on 2026-11-18 and it works again. Jarvis now shows a message if voice can't start. Turning Jarvis's spoken replies back on is still Casey's call (one line plus a build).
+
+### ✅ Calories burned tile (Casey's request, 2026-11-18)
+
+"Calories burned today" on My Fitness Metrics: total, with active and resting, from Apple Health / Health Connect. In Garmin TestFlight 1.0.13 (349) and on `main`. Garmin's own figures can be shown from **18 December 2026** at the earliest (Garmin notice sent 18 November); until then they're stored but unused.
+
 ### RevenueCat account — subscription wiring
 
 RevenueCat does not appear anywhere in the codebase. The subscription UI and admin panel are built, but no real IAP purchase can be made. The investor demo has no end-to-end monetisation flow without it.

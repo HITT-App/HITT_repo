@@ -1,5 +1,13 @@
 # HITT App Changelog
 
+## [2026-11-18] — Jarvis mic works again; calories burned tile (Garmin 1.0.13 build 349)
+
+- **Fixed: the Jarvis mic did nothing.** It was never switched off. The ElevenLabs key on the server had stopped working, so speech-to-text (and text-to-speech) were refused with a 400. A new key, `hiit-app-server`, from Vanessa's ElevenLabs workspace is now in Supabase, and both functions are verified. Server-only, so it's live on every version. `HANDOFF.md` corrected: the ElevenLabs workspace is Vanessa's, with Casey as a member
+- **Jarvis now says when voice can't start**, instead of doing nothing: "Voice isn't available right now. You can type your message instead.", or a prompt to allow microphone access in Settings
+- **New: "Calories burned today" on My Fitness Metrics** (Casey's request). Shows today's total, with active and resting underneath, read from Apple Health (Health Connect on Android, where resting = total − active, because the basal permission was removed under Play's Minimum Scope policy). iOS asks once to read Resting Energy. Garmin users need Garmin Connect set to share with Apple Health
+- **Garmin's own calorie figures** are mapped on the Garmin branch but held back from every screen and the AI coach until Garmin's notice period ends on 18 December 2026 (notice sent 18 November)
+- On TestFlight in Garmin 1.0.13 (349). Not yet in a main-line build
+
 ## [2026-11-17] — App opens on iOS 27.2 again (1.0.11 build 348, Garmin 1.0.13 build 347)
 
 - **Fixed: the app closed straight away on iOS 27.2.** iOS 27.2 won't open apps built with the iOS 27 tools unless they use Apple's "scene" startup. HIIT now does (`SceneDelegate.swift` plus a scene manifest in `Info.plist`). Builds 345 and 346 crash on launch on iOS 27.2; 347 and 348 open normally. Tested on an iPhone on iOS 27.2.1
