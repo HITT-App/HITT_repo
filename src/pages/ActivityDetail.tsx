@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Flame, Ruler, Heart, Zap, MapPin, FileText, Calendar, Share, Square, Smartphone, Moon, ImageIcon, ChevronDown, ChevronUp, Layers, Circle, CircleDot, Users, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import html2canvas from "html2canvas";
 import { ActivityShareCard } from "@/components/workout/ActivityShareCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -150,6 +151,23 @@ const ActivityDetail = () => {
   // builds. The visible preview is demonstrably drawn correctly, so capturing
   // it is the safest way to hand off pixel-identical output to the share sheet.
   const captureRef = useRef<HTMLDivElement>(null);
+
+  const garminActivityId = log?.garmin_activity_id ?? null;
+  const { data: garminRoute } = useQuery({
+    queryKey: ["garmin", "route", garminActivityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("garmin_activity_details")
+        .select("route")
+        .eq("user_id", user!.id)
+        .eq("garmin_activity_id", garminActivityId!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.route ?? null) as [number, number][] | null;
+    },
+    enabled: !!user && !!garminActivityId,
+    staleTime: 10 * 60 * 1000,
+  });
 
   useEffect(() => {
     if (!user || !id) return;
@@ -356,6 +374,7 @@ const ActivityDetail = () => {
     avgHR: log.avg_heart_rate ?? null,
     volumeKg: log.total_volume_kg ?? null,
     deviceAttribution: activityAttribution(log),
+    route: garminRoute ?? null,
   };
 
   return (

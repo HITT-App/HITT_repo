@@ -7,6 +7,15 @@ import { ActivityShareCard, resolveActivityKey } from '@/components/workout/Acti
 
 // Sample metrics per activity — chosen to mimic the reference design
 // numbers (1 Jul 2026 stamps).
+// A park loop with an out-and-back spur, for checking the route outline.
+const SAMPLE_ROUTE: [number, number][] = Array.from({ length: 120 }, (_, i) => {
+  const t = (i / 119) * 2 * Math.PI;
+  return [
+    51.5 + 0.006 * Math.sin(t) + 0.0012 * Math.sin(4 * t + 1) + 0.0004 * Math.sin(11 * t),
+    -0.16 + 0.011 * Math.cos(t) + 0.0025 * Math.cos(3 * t + 0.5) + 0.0006 * Math.sin(9 * t),
+  ];
+});
+
 const SAMPLES = [
   { key: 'hiit',      raw: 'hiit',       props: { activityType: 'hiit',      durationSeconds: 24 * 60,        calories: 386, avgHR: 162 } },
   { key: 'triathlon', raw: 'triathlon',  props: { activityType: 'triathlon', durationSeconds: 2 * 3600 + 41 * 60 + 18, calories: 2145,
@@ -22,6 +31,7 @@ const SAMPLES = [
   // Fallback verification — martial-arts and 'other' should both route to cardio.
   { key: 'martial-arts→cardio', raw: 'martial-arts', props: { activityType: 'martial-arts', durationSeconds: 45 * 60, calories: 520, avgHR: 155 } },
   { key: 'other→cardio',        raw: 'other',        props: { activityType: 'other',        durationSeconds: 30 * 60, calories: 210, avgHR: 128 } },
+  { key: 'run · Garmin route',  raw: 'running',      props: { activityType: 'running', durationSeconds: 8.1 * 5.3 * 60, distanceKm: 8.1, calories: 512, deviceAttribution: 'Garmin Forerunner 165', route: SAMPLE_ROUTE } },
 ];
 
 const DATE_ISO = '2026-07-01T00:00:00Z';

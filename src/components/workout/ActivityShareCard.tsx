@@ -7,6 +7,7 @@
 // mounted directly to visible UI.
 
 import { format as formatDate } from 'date-fns';
+import { routeOutlinePath, type LatLng } from '@/lib/route-outline';
 
 // ── Theme ───────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,8 @@ type Metric =
 
 export interface ActivityShareData {
   activityType: string;
+  // GPS points as [lat, lng]. When present, the route outline replaces the signature curve.
+  route?: LatLng[] | null;
   durationSeconds: number;
   calories?: number | null;
   distanceKm?: number | null;
@@ -264,14 +267,21 @@ const CURVES: Record<CurveType, string> = {
     'M 60 1730 C 240 1660, 420 1810, 600 1730 C 780 1650, 960 1780, 1080 1730',
 };
 
-function ActivityLine({ format, curve }: { format: 'story' | 'square'; curve: CurveType }) {
+// Below the metric stack and clear of the device attribution line.
+const ROUTE_BOX = {
+  story: { x: 160, y: 1400, width: 760, height: 360 },
+  square: { x: 240, y: 580, width: 600, height: 370 },
+};
+
+function ActivityLine({ format, curve, route }: { format: 'story' | 'square'; curve: CurveType; route?: LatLng[] | null }) {
   const H = format === 'square' ? 1080 : 1920;
   const shift = format === 'square' ? -800 : 0;
+  const outline = route ? routeOutlinePath(route, ROUTE_BOX[format]) : null;
   return (
     <svg width={1080} height={H} viewBox={`0 0 1080 ${H}`} style={{ display: 'block' }}>
       <path
-        d={CURVES[curve]}
-        transform={shift ? `translate(0 ${shift})` : undefined}
+        d={outline ?? CURVES[curve]}
+        transform={shift && !outline ? `translate(0 ${shift})` : undefined}
         fill="none"
         stroke={T.primary}
         strokeWidth={5}
@@ -472,7 +482,7 @@ export function ActivityShareCard({ data, format = 'story', dateISO, bg = 'white
       {/* Signature activity curve — still drawn on both modes; the orange
           reads over the scrim without help. */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        <ActivityLine format={format} curve={spec.curve} />
+        <ActivityLine format={format} curve={spec.curve} route={data.route} />
       </div>
 
       {/* Content stack */}
