@@ -3,7 +3,7 @@
 **HIIT Fitness**
 
 **Effective date:** 3 July 2026
-**Last updated:** 6 November 2026
+**Last updated:** 20 November 2026
 
 This Privacy Policy explains how **HIITFITNESS LTD** ("HIIT Fitness", "we", "us", or "our") collects, uses, shares, and protects your personal information when you use the HIIT Fitness service, including:
 

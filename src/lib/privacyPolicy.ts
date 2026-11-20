@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Raise this when the policy changes materially: every user is asked to agree once more.
-export const PRIVACY_POLICY_VERSION = "2026-11-06";
+export const PRIVACY_POLICY_VERSION = "2026-11-20";
 
 const CHECK_TIMEOUT_MS = 3000;
 
