@@ -31,9 +31,8 @@ export function consentedActivities<T extends ActivityRow>(rows: T[], consent: A
 }
 
 // useWatchSync writes watch readings with no source_platform, marked only in notes.
-// Garmin calories are stored but not used anywhere until Garmin has had 30 days' notice
-// of the screen that shows them (Agreement 6.6). Remove a type from here once it's cleared.
-const GARMIN_HELD_METRICS = new Set(["active_calories", "resting_calories"]);
+// Garmin metric types stored but not yet usable, pending a 30-day screen notice (Agreement 6.6).
+const GARMIN_HELD_METRICS = new Set<string>();
 
 export function consentedMetrics<T extends MetricRow>(rows: T[], consent: AiConsent): T[] {
   return rows.filter(r => {
