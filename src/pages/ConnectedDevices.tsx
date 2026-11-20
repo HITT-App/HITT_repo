@@ -9,7 +9,6 @@ import { Capacitor } from "@capacitor/core";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { GarminSetupSheet } from "@/components/wearable/GarminSetupSheet";
-import { PairGarminWatchDialog } from "@/components/wearable/PairGarminWatchDialog";
 import { PairedWatchesList } from "@/components/wearable/PairedWatchesList";
 import { GarminConnectCard } from "@/components/wearable/GarminConnectCard";
 import { useGarminConnection } from "@/hooks/useGarminConnection";
@@ -122,7 +121,6 @@ export default function ConnectedDevices() {
   const [devices, setDevices] = useState<DeviceRow[] | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [garminSheetOpen, setGarminSheetOpen] = useState(false);
-  const [pairWatchOpen, setPairWatchOpen] = useState(false);
   const { connected: garminConnected } = useGarminConnection();
 
   const refresh = async () => {
@@ -217,23 +215,10 @@ export default function ConnectedDevices() {
               Set up Garmin sync (via Apple Health)
             </Button>
           )}
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setPairWatchOpen(true)}
-          >
-            Pair Garmin watch (HITT Connect IQ app)
-          </Button>
-          <p className="text-[11px] text-muted-foreground text-center leading-relaxed pt-1">
-            {!garminConnected && `"Set up Garmin sync" enables sharing through Apple Health. `}
-            "Pair Garmin watch" is for users who've installed the HITT app on their Garmin — workouts come
-            straight to HITT with no Apple Health middleman.
-          </p>
         </div>
       </main>
 
       <GarminSetupSheet open={garminSheetOpen} onOpenChange={setGarminSheetOpen} />
-      <PairGarminWatchDialog open={pairWatchOpen} onOpenChange={setPairWatchOpen} />
     </div>
   );
 }
