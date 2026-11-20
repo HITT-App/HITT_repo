@@ -136,6 +136,7 @@ const HealthMetrics = () => {
       color: "text-orange-500",
       bgColor: "bg-orange-100",
       detail: caloriesDetail,
+      source: caloriesTotal > 0 && calories?.fromGarmin ? "Garmin" : null,
     },
     {
       label: "Weight",

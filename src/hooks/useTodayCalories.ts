@@ -1,11 +1,15 @@
 import { useQuery } from "@tanstack/react-query"
 import { Capacitor } from "@capacitor/core"
 import type { HealthDataType, HealthSample } from "@capgo/capacitor-health"
+import { supabase } from "@/integrations/supabase/client"
+import { useAuth } from "@/hooks/useAuth"
 
 export type TodayCalories = {
   active: number | null
   resting: number | null
 }
+
+export type TodayCaloriesWithSource = TodayCalories & { fromGarmin: boolean }
 
 const EMPTY: TodayCalories = { active: null, resting: null }
 
@@ -61,12 +65,49 @@ async function readTodayCalories(): Promise<TodayCalories> {
   return { active: rounded(active), resting: rounded(resting) }
 }
 
+const localDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+
+// garmin-health.ts keys each day's calories by the user's Garmin calendar date.
+async function readGarminCalories(userId: string): Promise<TodayCalories> {
+  const date = localDate(new Date())
+  const { data, error } = await supabase
+    .from("health_metrics")
+    .select("metric_type, value")
+    .eq("user_id", userId)
+    .eq("source_platform", "garmin_api")
+    .in("source_platform_id", [`active-kcal-${date}`, `resting-kcal-${date}`])
+  if (error) throw error
+  const value = (type: string) => {
+    const row = (data ?? []).find((r) => r.metric_type === type)
+    return row ? rounded(Number(row.value)) : null
+  }
+  return { active: value("active_calories"), resting: value("resting_calories") }
+}
+
+export function pickTodayCalories(
+  phone: TodayCalories | undefined,
+  garmin: TodayCalories | undefined,
+): TodayCaloriesWithSource {
+  if (garmin && (garmin.active != null || garmin.resting != null)) return { ...garmin, fromGarmin: true }
+  return { ...(phone ?? EMPTY), fromGarmin: false }
+}
+
 export function useTodayCalories() {
-  return useQuery({
+  const { user } = useAuth()
+  const phone = useQuery({
     queryKey: ["today-calories"],
     queryFn: readTodayCalories,
     enabled: Capacitor.isNativePlatform(),
     staleTime: 60_000,
     refetchOnWindowFocus: true,
   })
+  const garmin = useQuery({
+    queryKey: ["today-calories", "garmin", user?.id],
+    queryFn: () => readGarminCalories(user!.id),
+    enabled: !!user?.id,
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+  })
+  return { data: pickTodayCalories(phone.data, garmin.data) }
 }
