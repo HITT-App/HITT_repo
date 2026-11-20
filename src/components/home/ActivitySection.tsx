@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, isToday, isYesterday } from "date-fns";
+import { GarminAttribution } from "@/components/wearable/GarminAttribution";
 
 interface ActivityLog {
   id: string;
@@ -13,6 +14,8 @@ interface ActivityLog {
   duration_seconds: number | null;
   calories_burned: number | null;
   avg_heart_rate: number | null;
+  garmin_activity_id: string | null;
+  garmin_device_name: string | null;
 }
 
 function formatActivityDate(iso: string) {
@@ -60,7 +63,7 @@ export function ActivitySection() {
     if (!user) return;
     supabase
       .from("activity_logs")
-      .select("id, activity_type, started_at, ended_at, duration_seconds, calories_burned, avg_heart_rate")
+      .select("id, activity_type, started_at, ended_at, duration_seconds, calories_burned, avg_heart_rate, garmin_activity_id, garmin_device_name")
       .eq("user_id", user.id)
       .eq("status", "completed")
       .order("started_at", { ascending: false })
@@ -134,6 +137,7 @@ export function ActivitySection() {
                 <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--foreground)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {formatActivityType(activity.activity_type)}
                 </p>
+                <GarminAttribution log={activity} style={{ fontSize: 10.5, color: 'var(--muted-foreground)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} />
                 {/* Date + duration */}
                 <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginBottom: 8 }}>
                   {formatActivityDate(activity.started_at)}{activity.duration_seconds ? ` · ${Math.round(activity.duration_seconds / 60)} min` : ''}

@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiChatCompletion } from "../_shared/ai-client.ts";
 import { checkAIQuota, quotaExceededResponse, DEFAULT_QUOTAS } from "../_shared/ai-quota.ts";
-import { consentedActivities, consentedProgress } from "../_shared/ai-consent.ts";
+import { consentedActivities, consentedProgress, readAiConsent } from "../_shared/ai-consent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,14 +60,15 @@ serve(async (req) => {
       supabase.from("workout_progress").select("workout_id, workout_source, duration_seconds, completed_at, created_at").eq("user_id", userId).gte("created_at", weekAgo),
       supabase.from("health_metrics").select("value, recorded_at").eq("user_id", userId).eq("metric_type", "sleep").gte("recorded_at", weekAgo).order("recorded_at", { ascending: false }).limit(7),
       supabase.from("daily_checkins").select("mood, energy, date").eq("user_id", userId).order("date", { ascending: false }).limit(3),
-      supabase.from("activity_logs").select("activity_type, duration_seconds, calories_burned, distance_km, started_at, source_platform").eq("user_id", userId).gte("started_at", weekAgo).order("started_at", { ascending: false }),
+      supabase.from("activity_logs").select("activity_type, duration_seconds, calories_burned, distance_km, started_at, source_platform, garmin_activity_id").eq("user_id", userId).gte("started_at", weekAgo).order("started_at", { ascending: false }),
       supabase.from("meal_logs").select("calories, protein_grams, carbs_grams, fat_grams, logged_at").eq("user_id", userId).gte("logged_at", weekAgo),
     ]);
 
     const profile = profileRes.data;
     const prefs = prefsRes.data;
     const streak = streakRes.data;
-    const workouts = consentedProgress(workoutsRes.data || [], (profileRes.data as any)?.ai_health_consent === true);
+    const aiConsent = await readAiConsent(supabase, userId);
+    const workouts = consentedProgress(workoutsRes.data || [], aiConsent);
     const moods = moodRes.data || [];
     const meals = mealsRes.data || [];
 
@@ -75,7 +76,7 @@ serve(async (req) => {
     // and HealthKit-sourced activities to the AI provider with explicit consent.
     const aiHealthConsent = (profileRes.data as any)?.ai_health_consent === true;
     const sleepData = aiHealthConsent ? (sleepRes.data || []) : [];
-    const activities = consentedActivities(activityRes.data || [], aiHealthConsent);
+    const activities = consentedActivities(activityRes.data || [], aiConsent);
 
     const avgSleep = sleepData.length > 0 ? (sleepData.reduce((a, s) => a + (s.value || 0), 0) / sleepData.length).toFixed(1) : null;
     const totalWorkouts = workouts.length;

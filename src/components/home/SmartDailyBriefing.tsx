@@ -1,3 +1,4 @@
+import { GarminAiNote } from "@/components/wearable/GarminAttribution";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, RefreshCw, ChevronRight } from "lucide-react";
@@ -100,6 +101,7 @@ export function SmartDailyBriefing() {
                 {insight}
               </p>
             ) : null}
+            {insight && <GarminAiNote className="text-[10.5px] text-muted-foreground mt-1.5" />}
 
             {insight && (
               <button

@@ -12,6 +12,8 @@ import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { getSportConfig } from "@/lib/sports";
 import { format, isToday, isYesterday } from "date-fns";
 import { cn } from "@/lib/utils";
+import { activityAttribution, GarminAttribution } from "@/components/wearable/GarminAttribution";
+import { GarminActivityExtras } from "@/components/wearable/GarminActivityExtras";
 
 const C = {
   bg:      '#0a0a0a',
@@ -42,6 +44,8 @@ interface ActivityLog {
   status: string | null;
   source_platform: string | null;
   total_volume_kg: number | null;
+  garmin_activity_id: string | null;
+  garmin_device_name: string | null;
 }
 
 function fmtDuration(secs: number): string {
@@ -151,7 +155,7 @@ const ActivityDetail = () => {
     if (!user || !id) return;
     supabase
       .from('activity_logs')
-      .select('id, activity_type, started_at, ended_at, duration_seconds, distance_km, calories_burned, avg_heart_rate, intensity_level, route_start_address, route_end_address, notes, score_impact, status, source_platform, total_volume_kg')
+      .select('id, activity_type, started_at, ended_at, duration_seconds, distance_km, calories_burned, avg_heart_rate, intensity_level, route_start_address, route_end_address, notes, score_impact, status, source_platform, total_volume_kg, garmin_activity_id, garmin_device_name')
       .eq('id', id)
       .eq('user_id', user.id)
       .maybeSingle()
@@ -296,6 +300,7 @@ const ActivityDetail = () => {
           type: log.activity_type ?? undefined,
           duration: log.duration_seconds ? Math.round(log.duration_seconds / 60) : undefined,
           calories: log.calories_burned ?? undefined,
+          device: activityAttribution(log) ?? undefined,
         },
       });
       if (created) {
@@ -350,6 +355,7 @@ const ActivityDetail = () => {
     distanceKm: log.distance_km ?? null,
     avgHR: log.avg_heart_rate ?? null,
     volumeKg: log.total_volume_kg ?? null,
+    deviceAttribution: activityAttribution(log),
   };
 
   return (
@@ -566,6 +572,7 @@ const ActivityDetail = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: 17, fontWeight: 750, color: C.fg, marginBottom: 4 }}>{activityName}</div>
+                  <GarminAttribution log={log} style={{ fontSize: 12, color: C.dim, marginBottom: 4 }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: C.dim }}>
                     <Calendar size={13} color={C.dim2} strokeWidth={2} />
                     {fmtDate(log.started_at)}
@@ -662,8 +669,16 @@ const ActivityDetail = () => {
                 </div>
               )}
 
+              {log.garmin_activity_id && (
+                <GarminActivityExtras
+                  garminActivityId={log.garmin_activity_id}
+                  attribution={activityAttribution(log)!}
+                  tokens={{ card: C.card, line: C.line, dim: C.dim, primary: C.primary }}
+                />
+              )}
+
               {/* Source */}
-              {log.source_platform && (
+              {log.source_platform && !log.garmin_activity_id && (
                 <p style={{ fontSize: 11, color: C.dim2, textAlign: 'center' }}>
                   Synced from {log.source_platform.replace(/_/g, ' ')}
                 </p>

@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { useActivity } from "@/hooks/useActivity";
+import { GarminAttribution } from "@/components/wearable/GarminAttribution";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -169,6 +170,7 @@ const ActivityHistory = () => {
                                       </span>
                                     )}
                                   </div>
+                                  <GarminAttribution log={log} className="text-xs text-muted-foreground" />
                                   <p className="text-sm text-muted-foreground">
                                     {format(parseISO(log.started_at), "h:mm a")} -{" "}
                                     {Math.round((log.duration_seconds || 0) / 60)} min

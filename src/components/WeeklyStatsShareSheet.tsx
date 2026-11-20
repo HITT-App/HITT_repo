@@ -1,3 +1,5 @@
+import { useHasGarminData } from "@/components/wearable/GarminAttribution"
+import { GARMIN_DERIVED_NOTE } from "@/lib/garmin-state"
 import { useState, useRef, useCallback, useMemo } from 'react'
 import { Share2, X, Smartphone, Square, Loader2, ImagePlus, Trash2 } from 'lucide-react'
 import html2canvas from 'html2canvas'
@@ -40,6 +42,7 @@ function buildWeekRange(): string {
 }
 
 export function WeeklyStatsShareSheet({ workouts, minutes, streak, calories, onClose }: Props) {
+  const hasGarminData = useHasGarminData()
   const [format, setFormat] = useState<WeeklyStatsFormat>('post')
   const [bgVariant, setBgVariant] = useState<WeeklyStatsBg>('white')
   const [bgPhotoUrl, setBgPhotoUrl] = useState<string | null>(null)
@@ -58,7 +61,8 @@ export function WeeklyStatsShareSheet({ workouts, minutes, streak, calories, onC
       { label: 'Calories', value: calories.toLocaleString(), unit: 'kcal' },
       { label: 'Streak', value: streak.toString(), unit: streak === 1 ? 'wk' : 'wks' },
     ],
-  }), [workouts, minutes, calories, streak, dateRange])
+    garminNote: hasGarminData ? GARMIN_DERIVED_NOTE : null,
+  }), [workouts, minutes, calories, streak, dateRange, hasGarminData])
 
   // A photo background means light ink is more legible on top — use the
   // transparent card variant when a photo is set so the photo shows through.

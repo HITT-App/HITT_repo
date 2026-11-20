@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { consentedActivities, consentedMetrics, consentedProgress } from "./ai-consent.ts";
+import { type AiConsent, consentedActivities, consentedMetrics, consentedProgress, readAiConsent } from "./ai-consent.ts";
 
 export type WorkoutContext = {
   healthMetricsSummary: string;
@@ -9,20 +9,11 @@ export type WorkoutContext = {
   customResponseStyle: string;
 };
 
-async function readAiHealthConsent(supabase: SupabaseClient, userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from("profiles")
-    .select("ai_health_consent")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return data?.ai_health_consent === true;
-}
-
 async function summariseHealthMetrics(
   supabase: SupabaseClient,
   userId: string,
   days: number,
-  consent: boolean
+  consent: AiConsent
 ): Promise<string> {
   const since = new Date(Date.now() - days * 86400000).toISOString();
 
@@ -96,14 +87,14 @@ async function summariseRecentActivity(
   supabase: SupabaseClient,
   userId: string,
   days: number,
-  consent: boolean
+  consent: AiConsent
 ): Promise<string> {
   const since = new Date(Date.now() - days * 86400000).toISOString();
 
   const [{ data: rawActLogs }, { data: rawProgress }] = await Promise.all([
     supabase
       .from("activity_logs")
-      .select("activity_type, duration_seconds, calories_burned, intensity_level, started_at, source_platform")
+      .select("activity_type, duration_seconds, calories_burned, intensity_level, started_at, source_platform, garmin_activity_id")
       .eq("user_id", userId)
       .gte("started_at", since)
       .order("started_at", { ascending: false })
@@ -157,7 +148,7 @@ export async function gatherWorkoutContext(
   userId: string,
   client: { customMemory?: string; customResponseStyle?: string }
 ): Promise<WorkoutContext> {
-  const consent = await readAiHealthConsent(supabase, userId);
+  const consent = await readAiConsent(supabase, userId);
 
   const [healthMetricsSummary, goalsSummary, recentActivitySummary] = await Promise.all([
     summariseHealthMetrics(supabase, userId, 90, consent),

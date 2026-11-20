@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Medal, Route, ChevronRight, ArrowRight, Waves, Bike, Footprints } from "lucide-react";
 import { Drawer, DrawerContent, DrawerClose } from "@/components/ui/drawer";
 import { SPORT_CONFIG, SPORT_CATEGORIES, getTrackerRoute } from "@/lib/sports";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { GarminSendButton } from "@/components/wearable/GarminSendButton";
+import { useGarminConnection } from "@/hooks/useGarminConnection";
 
 interface ChooseSportSheetProps {
   open: boolean;
@@ -136,10 +139,34 @@ function StageFlow() {
 export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<string>('All');
+  const { state: garminState } = useGarminConnection();
+  const [garminChoice, setGarminChoice] = useState<string | null>(null);
+  // Opening the sheet while the drawer is still closing left the screen locked when the sheet
+  // closed (both lock the page), so it opens once the drawer has finished.
+  const [pendingGarminChoice, setPendingGarminChoice] = useState<string | null>(null);
+  // In case the drawer's animation-end never fires (reduced motion, for example).
+  useEffect(() => {
+    if (!pendingGarminChoice) return;
+    const timer = window.setTimeout(() => {
+      setGarminChoice(pendingGarminChoice);
+      setPendingGarminChoice(null);
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [pendingGarminChoice]);
+
+  const startTracking = (sport: string) => {
+    navigate(`${getTrackerRoute(sport)}?sport=${encodeURIComponent(sport)}`);
+  };
 
   const handleSelect = (sport: string) => {
     onOpenChange(false);
-    navigate(`${getTrackerRoute(sport)}?sport=${encodeURIComponent(sport)}`);
+    // Timer sports start counting as soon as they open, so the choice has to come first.
+    // GPS sports get the same button on their own pre-start screen.
+    if (garminState === "connected" && getTrackerRoute(sport) === "/gym-timer") {
+      setPendingGarminChoice(sport);
+      return;
+    }
+    startTracking(sport);
   };
 
   const handleTriathlon = () => {
@@ -165,7 +192,54 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
   })();
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <>
+    <Sheet
+      open={!!garminChoice}
+      onOpenChange={next => {
+        if (next) return;
+        setGarminChoice(null);
+        // Belt and braces: never leave the page unable to take taps.
+        window.setTimeout(() => {
+          if (document.body.style.pointerEvents === 'none') document.body.style.pointerEvents = '';
+        }, 400);
+      }}
+    >
+      <SheetContent side="bottom" className="rounded-t-2xl border-0" style={{ background: C.bg, color: C.fg }}>
+        <SheetHeader>
+          <SheetTitle style={{ color: C.fg }}>{garminChoice}</SheetTitle>
+          <SheetDescription style={{ color: C.dim }}>Track it here, or from your Garmin.</SheetDescription>
+        </SheetHeader>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 14 }}>
+          {garminChoice && (
+            <GarminSendButton
+              key={garminChoice}
+              payload={{ action: "send_sport", sport: garminChoice }}
+              tokens={{ card: C.cardHi, line2: C.border, fg: C.fg, dim: C.dim, good: '#22c55e' }}
+              tint={(_hex, a) => `rgba(34,197,94,${a})`}
+            />
+          )}
+          <button
+            onClick={() => {
+              const sport = garminChoice;
+              setGarminChoice(null);
+              if (sport) startTracking(sport);
+            }}
+            style={{ width: '100%', height: 50, borderRadius: 14, border: 'none', background: C.gold, color: '#2a1c05', fontSize: 15, fontWeight: 750, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+          >
+            Track on this phone
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      onAnimationEnd={isOpen => {
+        if (isOpen || !pendingGarminChoice) return;
+        setGarminChoice(pendingGarminChoice);
+        setPendingGarminChoice(null);
+      }}
+    >
       <DrawerContent
         className="flex flex-col border-0 outline-none"
         style={{
@@ -348,5 +422,6 @@ export const ChooseSportSheet = ({ open, onOpenChange }: ChooseSportSheetProps) 
         </div>
       </DrawerContent>
     </Drawer>
+    </>
   );
 };

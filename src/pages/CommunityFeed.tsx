@@ -637,6 +637,9 @@ const CommunityFeed = () => {
                       </div>
                     )}
                   </div>
+                  {post.workout_data.device && (
+                    <p className="text-[11px] text-muted-foreground mt-1.5">{post.workout_data.device}</p>
+                  )}
                 </div>
               )}
 

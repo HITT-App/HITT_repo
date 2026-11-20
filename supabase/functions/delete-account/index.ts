@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { revokeGarminRegistration } from "../_shared/garmin-connection.ts";
 
 // Account deletion — Apple Guideline 5.1.1(v) + GDPR Article 17.
 // INSTANT HARD DELETE. There is no restore window.
@@ -128,6 +129,19 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
     const uid = user.id;
+
+    // Garmin requires this call for Delete My Account, and it needs the stored
+    // tokens, so it runs first. Deletion stops here if Garmin can't be reached.
+    let removeInGarminConnect = false;
+    try {
+      removeInGarminConnect = (await revokeGarminRegistration(admin, uid)) === "token_dead";
+    } catch (e) {
+      console.error("[delete-account] Garmin revoke:", (e as Error).message);
+      return new Response(JSON.stringify({ error: "Could not reach Garmin. Please try again shortly." }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Step 1: hard-delete every user-scoped row. profiles keys on `id`,
     // everything else on `user_id`. We fire all deletes in parallel —

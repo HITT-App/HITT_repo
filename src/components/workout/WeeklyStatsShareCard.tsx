@@ -31,6 +31,7 @@ export interface WeeklyStatsData {
   title: string
   dateRange: string
   metrics: [WeeklyStatsMetric, WeeklyStatsMetric, WeeklyStatsMetric, WeeklyStatsMetric]
+  garminNote?: string | null
 }
 
 const SZ = {
@@ -215,6 +216,22 @@ export function WeeklyStatsShareCard({
         fontFamily: T.cond,
       }}
     >
+      {data.garminNote && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 40,
+            right: 40,
+            bottom: square ? 16 : 36,
+            zIndex: 5,
+            textAlign: 'center',
+            fontSize: 24,
+            color: 'rgba(0,0,0,0.6)',
+          }}
+        >
+          {data.garminNote}
+        </div>
+      )}
       {square ? (
         <div
           style={{

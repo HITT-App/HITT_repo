@@ -511,6 +511,7 @@ const Triathlon = () => {
             <WearableLaunchCard
               wearable={primaryWearable}
               activityType="triathlon"
+              garminSend={{ action: "send_triathlon", name: raceName, swim_km: targetKm[0], bike_km: targetKm[1], run_km: targetKm[2] }}
               tokens={C}
               tint={tint}
               onLaunchAppleWatch={sendToWatch}

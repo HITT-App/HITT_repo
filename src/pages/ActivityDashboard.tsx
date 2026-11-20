@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivity } from "@/hooks/useActivity";
+import { GarminAttribution, GarminDerivedNote } from "@/components/wearable/GarminAttribution";
 import { useProfile } from "@/hooks/useProfile";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -100,6 +101,7 @@ const ActivityDashboard = () => {
             <div className="text-xs text-muted-foreground">min</div>
           </div>
         </div>
+        <GarminDerivedNote className="text-[10.5px] text-muted-foreground text-center pb-2" />
       </header>
 
       <div className="p-4 space-y-6">
@@ -124,6 +126,7 @@ const ActivityDashboard = () => {
                 ? `You've burned a total of ${weeklyStats.calories} kcal this week` 
                 : "No data to show yet. Log your first activity!"}
             </p>
+            <GarminDerivedNote className="text-[10.5px] text-muted-foreground mt-2" />
           </Card>
         </div>
 
@@ -164,6 +167,7 @@ const ActivityDashboard = () => {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-medium capitalize">{log.activity_type.replace("-", " ")}</h3>
+                      <GarminAttribution log={log} className="text-xs text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">
                         {format(parseISO(log.started_at), "MMM d, h:mm a")}
                       </p>
@@ -224,6 +228,7 @@ const ActivityDashboard = () => {
             <p className="text-xs text-muted-foreground text-center mt-2">
               {weeklyStats.activities} of {goals?.weekly_activities || 5} activities this week
             </p>
+            <GarminDerivedNote className="text-[10.5px] text-muted-foreground text-center mt-1" />
           </Card>
         </div>
 

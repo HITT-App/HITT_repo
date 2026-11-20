@@ -106,6 +106,7 @@ const SleepHistory = () => {
                             <p className="font-medium">
                               {Math.floor((log.duration_minutes || 0) / 60)}h {(log.duration_minutes || 0) % 60}m
                             </p>
+                            {log.source_platform === "garmin_api" && <p className="text-[10.5px] text-muted-foreground">Garmin</p>}
                             {log.sleep_quality != null && (
                               <Badge className={cn("mt-1", getQualityColor(log.sleep_quality || 0))}>
                                 {log.sleep_quality || 0} sleep score
@@ -163,6 +164,7 @@ const SleepHistory = () => {
                                   <p className="font-medium">
                                     {Math.floor((log.duration_minutes || 0) / 60)}h {(log.duration_minutes || 0) % 60}m
                                   </p>
+                                  {log.source_platform === "garmin_api" && <p className="text-[10.5px] text-muted-foreground">Garmin</p>}
                                   {log.sleep_quality != null && (
                                     <Badge className={cn(getQualityColor(log.sleep_quality || 0))}>
                                       {log.sleep_quality || 0} sleep score
@@ -199,6 +201,7 @@ const SleepHistory = () => {
                               <p className="font-medium">
                                 {Math.floor((log.duration_minutes || 0) / 60)}h {(log.duration_minutes || 0) % 60}m
                               </p>
+                              {log.source_platform === "garmin_api" && <p className="text-[10.5px] text-muted-foreground">Garmin</p>}
                               {log.sleep_quality != null && (
                                 <Badge className={cn(getQualityColor(log.sleep_quality || 0))}>
                                   {log.sleep_quality || 0}%

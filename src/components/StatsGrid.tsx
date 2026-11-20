@@ -1,3 +1,4 @@
+import { GarminDerivedNote } from "@/components/wearable/GarminAttribution"
 import { Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -154,6 +155,8 @@ export const StatsGrid = () => {
           </div>
         ))}
       </div>
+
+      <GarminDerivedNote className="mt-2 text-[10.5px] text-white/50 text-center" />
 
       <button
         onClick={() => setShowShareSheet(true)}

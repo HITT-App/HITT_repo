@@ -7,10 +7,11 @@ import { useState } from "react";
 import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { garminSourceLabel } from "@/lib/garmin-state";
 
 const HeartRate = () => {
   const navigate = useNavigate();
-  const { logMetric, useMetricHistory, getLatestValue } = useHealthMetrics();
+  const { logMetric, useMetricHistory, getLatestValue, latestMetrics } = useHealthMetrics();
   const { data: history = [], isLoading } = useMetricHistory("heart_rate", 20);
   const [showLogForm, setShowLogForm] = useState(false);
   const [bpmInput, setBpmInput] = useState("");
@@ -73,8 +74,16 @@ const HeartRate = () => {
           <p className="text-sm text-green-600">
             {currentBPM !== "--" ? "Within a healthy resting rate." : "No readings yet. Log your first!"}
           </p>
+          {history[0] && garminSourceLabel([history[0]]) && (
+            <p className="text-xs text-muted-foreground mt-1">{garminSourceLabel([history[0]])}</p>
+          )}
           {restingBPM && (
-            <p className="text-sm text-muted-foreground mt-2">Resting heart rate: <span className="font-semibold text-foreground">{restingBPM} bpm</span></p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Resting heart rate: <span className="font-semibold text-foreground">{restingBPM} bpm</span>
+              {latestMetrics?.resting_heart_rate && garminSourceLabel([latestMetrics.resting_heart_rate]) && (
+                <span className="block text-xs">{garminSourceLabel([latestMetrics.resting_heart_rate])}</span>
+              )}
+            </p>
           )}
         </Card>
 
@@ -89,6 +98,9 @@ const HeartRate = () => {
               })}
             </div>
             <p className="text-xs text-muted-foreground text-center mt-2">Recent readings</p>
+            {garminSourceLabel(history.slice(0, 24)) && (
+              <p className="text-[10.5px] text-muted-foreground text-center mt-1">{garminSourceLabel(history.slice(0, 24))}</p>
+            )}
           </Card>
         )}
 
@@ -132,6 +144,7 @@ const HeartRate = () => {
                       <p className="text-xs text-green-600">
                         {Number(item.value) < 100 ? "Normal Range" : "Elevated"}
                       </p>
+                      {item.source_platform === "garmin_api" && <p className="text-[10.5px] text-muted-foreground">Garmin</p>}
                     </div>
                   </div>
                   <span className="text-xs text-muted-foreground">

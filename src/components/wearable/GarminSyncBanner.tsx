@@ -10,6 +10,7 @@ import { AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGarminSyncStatus, type GarminSyncTier } from "@/hooks/useGarminSyncStatus";
 import { GarminSetupSheet } from "./GarminSetupSheet";
+import { useGarminConnection } from "@/hooks/useGarminConnection";
 
 interface TierCopy {
   headline: string;
@@ -38,8 +39,10 @@ const COPY: Record<Exclude<GarminSyncTier, 0>, TierCopy> = {
 export function GarminSyncBanner() {
   const { tier, dismissCurrentTier, loading } = useGarminSyncStatus();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { connected } = useGarminConnection();
 
-  if (loading || tier === 0) return null;
+  // Directly connected users don't need Apple Health, so these nudges would be wrong for them.
+  if (loading || tier === 0 || connected) return null;
   const copy = COPY[tier];
 
   return (

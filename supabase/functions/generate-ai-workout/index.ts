@@ -37,6 +37,7 @@ Output must be valid JSON matching EXACTLY this shape:
 Rules:
 - Match workout intensity to the user's fitness level and recent activity
 - Each exercise must have EITHER sets+reps OR duration_seconds — not both, not neither
+- Swimming exercises must also include "distance_m": the distance in metres for one set (for example 100). Leave it out for every other exercise
 - order_index starts at 1 and increments by 1
 - Aim for 4–8 exercises in a typical workout
 - Estimated calories should be realistic for the duration and intensity

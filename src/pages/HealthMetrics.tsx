@@ -9,13 +9,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { garminSourceLabel } from "@/lib/garmin-state";
 import { useTodayCalories } from "@/hooks/useTodayCalories";
 
 const HealthMetrics = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getLatestValue, isLoading: metricsLoading } = useHealthMetrics();
-  const { weeklyStats } = useSleep();
+  const { getLatestValue, latestMetrics, isLoading: metricsLoading } = useHealthMetrics();
+  const { weeklyStats, weeklyLogs } = useSleep();
   const { data: calories } = useTodayCalories();
 
   // Get today's mood from daily_checkins
@@ -42,11 +43,14 @@ const HealthMetrics = () => {
       todayStart.setHours(0, 0, 0, 0);
       const { data } = await supabase
         .from("health_metrics")
-        .select("value")
+        .select("value, source_platform")
         .eq("user_id", user!.id)
         .eq("metric_type", "steps")
         .gte("recorded_at", todayStart.toISOString());
-      return (data || []).reduce((sum, row) => sum + Number(row.value), 0);
+      return {
+        total: (data || []).reduce((sum, row) => sum + Number(row.value), 0),
+        source: garminSourceLabel(data || []),
+      };
     },
     enabled: !!user?.id,
   });
@@ -78,10 +82,12 @@ const HealthMetrics = () => {
     bgColor: string;
     path?: string;
     detail?: string;
+    source?: string | null;
   }[] = [
     {
       label: "Heart Rate",
       value: getLatestValue("heart_rate"),
+      source: latestMetrics?.heart_rate ? garminSourceLabel([latestMetrics.heart_rate]) : null,
       fallback: "--",
       unit: "bpm",
       icon: Heart,
@@ -92,6 +98,7 @@ const HealthMetrics = () => {
     {
       label: "Resting Heart Rate",
       value: getLatestValue("resting_heart_rate"),
+      source: latestMetrics?.resting_heart_rate ? garminSourceLabel([latestMetrics.resting_heart_rate]) : null,
       fallback: "--",
       unit: "bpm",
       icon: Heart,
@@ -111,7 +118,8 @@ const HealthMetrics = () => {
     },
     {
       label: "Steps",
-      value: todaySteps != null && todaySteps > 0 ? todaySteps.toLocaleString() : null,
+      value: todaySteps && todaySteps.total > 0 ? todaySteps.total.toLocaleString() : null,
+      source: todaySteps?.total ? todaySteps.source : null,
       fallback: "0",
       unit: "steps",
       icon: Footprints,
@@ -143,6 +151,7 @@ const HealthMetrics = () => {
     {
       label: "Sleep",
       value: sleepValue,
+      source: sleepValue ? garminSourceLabel(weeklyLogs) : null,
       fallback: "--",
       unit: "",
       icon: Moon,
@@ -209,6 +218,9 @@ const HealthMetrics = () => {
                     {metric.unit && <span className="text-sm font-normal text-muted-foreground">{metric.unit}</span>}
                   </p>
                   {metric.detail && <p className="text-xs text-muted-foreground mt-0.5">{metric.detail}</p>}
+                  {"source" in metric && metric.source && (
+                    <p className="text-[11px] text-muted-foreground">{metric.source}</p>
+                  )}
                 </div>
                 {metric.path && <ChevronRight className="w-5 h-5 text-muted-foreground" />}
               </Card>

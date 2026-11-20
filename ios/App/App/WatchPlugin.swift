@@ -18,7 +18,29 @@ public class WatchPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "endMirroredWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "prepareHealthAuth", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "isSimulator", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openGarminConnect", returnType: CAPPluginReturnPromise),
     ]
+
+    // A web view can't follow another app's URL scheme, so Garmin Connect is opened natively,
+    // or its App Store page when it isn't installed. Here because this plugin is registered.
+    @objc func openGarminConnect(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            // gcm-ciq opens current Garmin Connect (reported on Garmin's forum, not documented);
+            // the older scheme is kept in case some versions only answer to that.
+            let schemes = ["gcm-ciq://", "gcm-ios-6573://"].compactMap(URL.init(string:))
+            let store = URL(string: "https://apps.apple.com/app/garmin-connect/id583446403")!
+            func attempt(_ index: Int) {
+                guard index < schemes.count else {
+                    UIApplication.shared.open(store, options: [:]) { _ in call.resolve(["opened": "store"]) }
+                    return
+                }
+                UIApplication.shared.open(schemes[index], options: [:]) { opened in
+                    if opened { call.resolve(["opened": "app"]) } else { attempt(index + 1) }
+                }
+            }
+            attempt(0)
+        }
+    }
 
     /// Returns true when running in the iOS Simulator. Used by JS to skip
     /// Live Activity starts — iOS 26 sim has a recurring XPC crash in the

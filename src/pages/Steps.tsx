@@ -9,6 +9,7 @@ import { useHealthMetrics } from "@/hooks/useHealthMetrics";
 import { usePedometer } from "@/hooks/usePedometer";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { garminSourceLabel } from "@/lib/garmin-state";
 
 const formatTime = (s: number) => {
   const m = Math.floor(s / 60);
@@ -18,9 +19,11 @@ const formatTime = (s: number) => {
 
 const Steps = () => {
   const navigate = useNavigate();
-  const { logMetric, useMetricHistory, useTodayTotal } = useHealthMetrics();
+  const { logMetric, useMetricHistory, useTodayTotal, useTodaySources } = useHealthMetrics();
   const { data: history = [] } = useMetricHistory("steps", 20);
   const { data: todaySteps = 0 } = useTodayTotal("steps");
+  const { data: todaySources = [] } = useTodaySources("steps");
+  const todaySource = garminSourceLabel(todaySources);
   const [showLogForm, setShowLogForm] = useState(false);
   const [stepsInput, setStepsInput] = useState("");
   const pedometer = usePedometer();
@@ -81,6 +84,7 @@ const Steps = () => {
       <div className="p-4 pb-28 space-y-6">
         {/* Today's Progress */}
         <Card className="p-6 text-center">
+          {todaySource && <p className="text-xs text-muted-foreground mb-1">{todaySource}</p>}
           <div className="flex items-center justify-center gap-2 mb-2">
             <Footprints className="w-6 h-6 text-primary" />
             <span className="text-4xl font-bold text-foreground">{todaySteps.toLocaleString()}</span>
@@ -244,7 +248,11 @@ const Steps = () => {
                       <p className="font-semibold text-foreground">
                         {Math.round(Number(item.value)).toLocaleString()} steps
                       </p>
-                      {item.notes === "health_connect_sync" ? (
+                      {item.source_platform === "garmin_api" ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                          Garmin
+                        </span>
+                      ) : item.notes === "health_connect_sync" ? (
                         <span className="inline-flex items-center gap-1 text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
                           <ShieldCheck className="w-3 h-3" />
                           Verified · Auto-synced

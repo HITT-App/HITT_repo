@@ -111,6 +111,27 @@ const TRIATHLON: Record<NonAppleWearable, LaunchCopy> = {
   },
 };
 
+// For users connected directly, where HIIT no longer depends on Apple Health.
+const GARMIN_CONNECTED: Record<LaunchActivityType, LaunchCopy> = {
+  gps: {
+    title: "Track on your Garmin",
+    body: "Start it on your watch and the workout comes into HIIT when your watch syncs. Or send it to today's calendar on your watch and start it from there.",
+  },
+  structured: {
+    title: "Run this here, or from your watch",
+    body: "Use Start below to run it in the HIIT player. If you've turned on sending workouts, your scheduled workouts are also on your Garmin calendar.",
+  },
+  gym: {
+    title: "Track strength on your Garmin",
+    body: "Send it to your watch or start a Strength activity there, and it comes into HIIT when your watch syncs. Set rep counts in the timer below.",
+  },
+  triathlon: {
+    title: "Send this race to your Garmin",
+    body: "Your distances go to your watch as one multisport workout, on today's calendar. Start it from your watch, and it comes into HIIT when your watch syncs.",
+    footer: "Multisport workouts only run on Garmin models that support them.",
+  },
+};
+
 const MATRIX: Record<LaunchActivityType, Record<NonAppleWearable, LaunchCopy>> = {
   gps: GPS,
   structured: STRUCTURED,
@@ -137,8 +158,10 @@ const APPLE_WATCH_LABELS: Record<LaunchActivityType, string> = {
 export function getLaunchCopy(
   activityType: LaunchActivityType,
   wearable: PrimaryWearable,
+  garminConnected = false,
 ): LaunchCopy | null {
   if (wearable === "phone_only" || wearable === "apple_watch") return null;
+  if (wearable === "garmin" && garminConnected) return GARMIN_CONNECTED[activityType];
   return MATRIX[activityType][wearable];
 }
 
