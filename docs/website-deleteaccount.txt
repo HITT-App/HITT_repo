@@ -1,0 +1,55 @@
+Delete your HIIT Fitness account
+
+Last updated: 21 November 2026
+
+You can delete your HIIT Fitness account, and all the data linked to it, at any time.
+
+
+In the app (fastest)
+
+1. Open the HIIT Fitness app.
+2. Tap your picture at the top right of the Home screen to open your profile.
+3. Scroll to the bottom and tap Delete my account.
+4. Type DELETE to confirm.
+
+Your account and its data are deleted straight away.
+
+
+By email (if you can't use the app)
+
+Email casey@hiituk.com from the email address on your account, with the subject "Account deletion request". Tell us the email address of the account and confirm that you want it and all its data deleted.
+
+We reply within 5 working days and complete the deletion within a further 7 days.
+
+
+What we delete
+
+- Your profile, display name, picture and preferences
+- Workouts, activity logs, GPS routes and personal bests
+- Meal logs, nutrition data, body scans and progress photos
+- Health data received from Apple Health, Health Connect or Garmin Connect
+- Community posts, comments, messages and reactions
+- AI coach conversations and memory
+- Notification settings and device tokens
+- Your Garmin connection: we tell Garmin to remove HIIT's access, and we delete our copy of your Garmin data
+
+
+What we keep, and why
+
+- Aggregated, anonymous statistics that can't be linked to you
+- Security logs used to protect against fraud and abuse, kept for up to 12 months
+- Records we must keep by UK law
+
+None of these can be used to identify you.
+
+
+Services you connected
+
+Deleting your HIIT account doesn't delete data held in Apple Health, Health Connect or Garmin Connect. Delete it there if you want it removed from those services too.
+
+
+Contact
+
+casey@hiituk.com
+
+HIITFITNESS LTD, 14 Highland Avenue, Bryncethin, Bridgend, Wales, CF32 9YH, United Kingdom. Company number 16893850.
