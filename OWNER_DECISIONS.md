@@ -6,6 +6,15 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
+### ✅ Garmin Connect release — launch now (Casey, 2026-11-20)
+
+Casey decided to go live straight away rather than on 10 December, after Garmin's reply that HIIT "may proceed" (Agreement 6.6).
+- **Jarvis may use Garmin data** for users who agree (`ff_garmin_ai` on at launch). Correction email sent to Garmin
+- **Manual release** on both stores; Vanessa presses Release / Publish once approved
+- **Garmin on for everyone** (`ff_garmin_cloud`) once released
+- **Route outline on share cards** for Garmin GPS workouts; courtesy notice sent 21 Nov
+- Submitted 21 Nov 2026: iOS 1.0.14 (350), Android versionCode 22
+
 ### ✅ v1.0.6 / Build 332 APPROVED on the App Store (2026-07-30, approved 2026-08-01)
 
 **Approved.** 1.0.6 supersedes 1.0.2 as the live App Store version — it carried four
@@ -93,7 +102,7 @@ Safe to ship v1.0 as-is.
 
 ### ✅ Calories burned tile (Casey's request, 2026-11-18)
 
-"Calories burned today" on My Fitness Metrics: total, with active and resting, from Apple Health / Health Connect. In Garmin TestFlight 1.0.13 (349) and on `main`. Garmin's own figures can be shown from **18 December 2026** at the earliest (Garmin notice sent 18 November); until then they're stored but unused.
+"Calories burned today" on My Fitness Metrics: total, with active and resting. Uses Garmin's figures for connected users (labelled "Garmin"), otherwise Apple Health / Health Connect. Casey chose (21 Nov) to ship the Garmin version now rather than wait for 18 December. In 1.0.14 (350) / versionCode 22.
 
 ### RevenueCat account — subscription wiring
 

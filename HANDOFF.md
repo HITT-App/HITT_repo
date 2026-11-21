@@ -24,7 +24,7 @@ These are currently under Vanessa's personal accounts. The owner needs their own
 
 | Service | What to do | Effort | Status |
 |---|---|---|---|
-| **Supabase** | Settings → Team → Invite owner as Owner role. Owner accepts, Vanessa removes herself. All data, secrets, and edge functions transfer automatically. | 5 min | ⬜ Pending |
+| **Supabase** | ⚠️ The HIIT project sits in Vanessa's **Shamalama** org alongside her other apps, so inviting Casey to the org would give him all of them. Instead: Casey creates his own org → Project Settings → General → **Transfer project** into it. Data, secrets and edge functions move with it. Checked 2026-11-21: only Vanessa is a member today. | 15 min | ⬜ Pending |
 | **Sentry** | ✅ **Done (2026-08-01)** — Transfer Project to Casey's own free EU org. Project ID preserved so history is intact. DSN swapped (needs the next build to take effect on devices); digest secrets swapped to Casey's user auth token + verified. | — | ✅ Done |
 | **PostHog** | ✅ **Done (2026-07-13)** — project `169007` (EU) transferred to Casey as org owner. Client key + all history preserved, so no `.env` change / no rebuild. Only the digest's `POSTHOG_PERSONAL_API_KEY` was swapped to Casey's personal key (yours would die when you leave the org) + verified. | — | ✅ Done |
 | **GitHub repo** | Repo is at `https://github.com/HITT-App/HITT_repo`. Owner needs to be added as org owner or repo transferred to their GitHub account | 5 min | ⬜ Pending |

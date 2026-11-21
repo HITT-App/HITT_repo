@@ -13,7 +13,7 @@ For each category Google asks you to walk through:
 ## Cross-cutting answers (top of the form)
 
 - **Encrypted in transit?** ☑ Yes (HTTPS to Supabase, Google, Apple, ElevenLabs, PostHog, Sentry)
-- **User can request deletion?** ☑ Yes (in-app: Settings → Delete account; also by email to casey@hiituk.com)
+- **User can request deletion?** ☑ Yes (in-app: Profile → Delete my account; web link https://www.hiituk.com/deleteaccount, rewritten 2026-11-21, which gives casey@hiituk.com)
 - **Committed to Play Families Policy?** No — HIIT is not directed at children under 16 (per Terms §1)
 - **Independent security review?** No (unless we later add SOC 2)
 
@@ -64,7 +64,9 @@ For each category Google asks you to walk through:
 ### Health info — **Collected**
 Includes: heart rate, resting heart rate, sleep data, weight, body fat, blood pressure (only if user manually enters), body composition from AI body scan
 
-> **Do not re-add HRV.** It was removed from the manifest, the permission request and this form on 2026-08-01 after a Health Connect *Minimum Scope* rejection. Verified 2026-08-18: no code reads or writes it and `health_metrics` holds zero HRV rows. Re-declaring it would contradict the Health Connect declaration.
+> **HRV: Health Connect permission stays removed.** The HRV *permission* was removed from the manifest and the Health Connect declaration on 2026-08-01 after a Minimum Scope rejection; never re-add it. Since 1.0.14 (Nov 2026) HRV does arrive from **Garmin** (Garmin Health API, not Health Connect), so it's covered by Health info on this form. Play's form has no per-metric field, so nothing extra is ticked.
+
+Since 1.0.14, Health info, Fitness info, Precise location and User IDs also include data from a connected **Garmin** (workouts, routes, steps, sleep, stress, Body Battery, HRV, resting heart rate, calories, Garmin user ID). Still not Shared: Garmin is the source, and sending a workout to Garmin is user-initiated.
 - **Purposes:** App functionality, Personalisation
 - **Optional/Required:** Optional (each integration is opt-in — HealthKit / Health Connect / manual entry)
 - **Shared:** No (with the narrow user-opt-in exception: when the "Use my health data for AI coaching" toggle is ON in Settings, a subset is sent to Google Gemini for personalised coaching responses — default OFF; disclosed in privacy policy §3.7)

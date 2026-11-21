@@ -1,5 +1,18 @@
 # HITT App Changelog
 
+## [2026-11-21] — Garmin Connect release (1.0.14 build 350, Android versionCode 22)
+
+Submitted to App Review and Google Play on 21 November 2026, both set to manual release. Casey chose to launch now, not on 10 December, after Garmin replied that HIIT "may proceed" (Agreement 6.6).
+
+- **Garmin Connect is in the main app.** `feature/garmin-cloud` merged into `main` (`e4721f8`): connect a Garmin, import workouts, routes, steps, sleep, stress, Body Battery and HRV, and send workouts and routes to the watch. Switched on by `ff_garmin_cloud` and `ff_garmin_ai` once the stores release
+- **Garmin data in the AI coach**, for users who agree to it (Casey's decision). Garmin calories are no longer held back from the coach (`afd3e91`). Casey sent Garmin a correction to his earlier "no AI in the first release" email
+- **Calories tile uses Garmin's figures** for connected users, labelled "Garmin", and falls back to Apple Health or Health Connect (`d366b02`). Android Garmin users get calories for the first time. `garmin-process-inbox` redeployed so Garmin calories are actually stored
+- **Share cards draw the real route** for Garmin workouts with GPS, in place of the decorative line (`05b56fa`). Courtesy notice sent to Garmin 21 November
+- **Privacy policy re-agreement:** `PRIVACY_POLICY_VERSION` raised to 2026-11-20, so every user agrees to the Garmin wording (`b353332`)
+- **Connect IQ pairing retired:** the "Pair Garmin watch" button is gone; existing pairings stay listed so they can be unpaired (`eefc483`, guarded by CIQ-11)
+- **Housekeeping:** iOS Capacitor package files synced to 8.5.1; `project.pbxproj` build number aligned with TestFlight at 350 (`21b6e83`), so `deploy-ios.sh hitt` works again
+- **Store and website:** Apple App Privacy now lists Analytics for Fitness data (workout events go to PostHog). hiituk.com/deleteaccount rewritten: casey@hiituk.com, immediate in-app deletion, Garmin, body scans (text in `docs/website-deleteaccount.txt`)
+
 ## [2026-11-18] — Jarvis mic works again; calories burned tile (Garmin 1.0.13 build 349)
 
 - **Fixed: the Jarvis mic did nothing.** It was never switched off. The ElevenLabs key on the server had stopped working, so speech-to-text (and text-to-speech) were refused with a 400. A new key, `hiit-app-server`, from Vanessa's ElevenLabs workspace is now in Supabase, and both functions are verified. Server-only, so it's live on every version. `HANDOFF.md` corrected: the ElevenLabs workspace is Vanessa's, with Casey as a member
