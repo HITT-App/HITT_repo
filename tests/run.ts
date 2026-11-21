@@ -3130,14 +3130,16 @@ async function runGarminCiqAuditTests() {
     fail('CIQ-10', 'PairGarminWatchDialog read', e.message);
   }
 
-  // ── CIQ-11: ConnectedDevices exposes "Pair Garmin watch" entry
+  // ── CIQ-11: Connect IQ pairing is retired (Garmin Connect API replaced it, 1.0.14).
+  // New pairings must not be offered; existing pairings stay listed so users can unpair.
   try {
     const src = readRepo('src/pages/ConnectedDevices.tsx');
-    if (src.includes('PairGarminWatchDialog') && src.includes('Pair Garmin watch')) {
-      pass('CIQ-11', 'ConnectedDevices exposes Pair Garmin watch entry');
+    const offersPairing = src.includes('PairGarminWatchDialog') || src.includes('Pair Garmin watch');
+    if (!offersPairing && src.includes('<PairedWatchesList')) {
+      pass('CIQ-11', 'ConnectedDevices offers no new CIQ pairing and still lists paired watches');
     } else {
-      fail('CIQ-11', 'ConnectedDevices Pair entry',
-        'PairGarminWatchDialog or entry button missing');
+      fail('CIQ-11', 'ConnectedDevices CIQ retirement',
+        offersPairing ? 'Pair Garmin watch entry is back' : 'PairedWatchesList missing');
     }
   } catch (e: any) {
     fail('CIQ-11', 'ConnectedDevices read', e.message);

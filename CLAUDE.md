@@ -405,6 +405,8 @@ outranks their Garmin secondary. Never hide the affordance behind detection.
 
 ## Garmin CIQ direct push — the pairing + JWT + push flow
 
+**Retired for new users in 1.0.14 (Nov 2026):** the Garmin Connect API replaced it, and the "Pair Garmin watch" button is gone (CIQ-11 guards that). The backend and `<PairedWatchesList />` stay so existing pairings keep working and can be unpaired.
+
 The HITT Connect IQ watch app (`~/hitt-garmin/garmin/`, v0.2.0+) can push completed workouts
 straight to our backend, bypassing HealthKit entirely. Belt-and-braces alongside the
 HealthKit-mediated path — if the direct push fails, Garmin Connect → Apple Health → HITT still
