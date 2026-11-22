@@ -185,7 +185,7 @@ export function WeeklyChallengeCard() {
             variant="ghost"
             size="sm"
             className="h-8 px-2 text-primary"
-            onClick={() => navigate(`/challenges/${challenge.id}`)}
+            onClick={() => navigate(`/challenge/${challenge.id}`)}
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -214,7 +214,7 @@ export function WeeklyChallengeCard() {
         ) : (
           <Button
             className="w-full mb-3 bg-primary hover:bg-primary/90"
-            onClick={() => navigate(`/challenges/${challenge.id}`)}
+            onClick={() => navigate(`/challenge/${challenge.id}`)}
           >
             Join Challenge
           </Button>

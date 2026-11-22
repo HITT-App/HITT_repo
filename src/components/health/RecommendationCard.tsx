@@ -1,5 +1,4 @@
-import { ChevronRight, Droplet, Activity as ActivityIcon, Moon, Sparkles } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Droplet, Activity as ActivityIcon, Moon, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 export type RecommendationType = "hydration" | "activity" | "sleep";
@@ -37,14 +36,10 @@ const TYPE_CONFIG: Record<RecommendationType, {
 };
 
 export function RecommendationCard({ rec }: { rec: Recommendation }) {
-  const navigate = useNavigate();
   const config = TYPE_CONFIG[rec.type];
 
   return (
-    <Card
-      className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-      onClick={() => navigate(`/health-recommendation/${rec.id}`)}
-    >
+    <Card className="p-4">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
           {config.icon}
@@ -63,7 +58,6 @@ export function RecommendationCard({ rec }: { rec: Recommendation }) {
             <span className="text-sm text-primary font-medium">+{rec.scoreGain} Score Increase</span>
           </div>
         </div>
-        <ChevronRight className="w-5 h-5 text-muted-foreground" />
       </div>
     </Card>
   );

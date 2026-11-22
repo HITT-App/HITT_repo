@@ -127,7 +127,7 @@ export function AccountabilityPartnerCard() {
             variant="outline"
             className="w-full mt-3"
             size="sm"
-            onClick={() => navigate(`/community/messages?user=${partner.partner_id}`)}
+            onClick={() => navigate(`/community/chat/${partner.partner_id}`)}
           >
             <MessageCircle className="w-4 h-4 mr-2" />
             Send Message

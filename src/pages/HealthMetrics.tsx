@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart, Activity, Scale, Footprints, Moon, Smile, ChevronRight, Sparkles, Loader2, ScanLine, Flame } from "lucide-react";
+import { ArrowLeft, Heart, Activity, Scale, Footprints, Moon, Smile, ChevronRight, Loader2, ScanLine, Flame } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -228,21 +228,6 @@ const HealthMetrics = () => {
             );
           })
         )}
-
-        {/* AI Recommendations */}
-        <Card
-          className="p-4 bg-primary/5 border-primary/20 cursor-pointer"
-          onClick={() => navigate("/health-recommendations")}
-        >
-          <div className="flex items-center gap-3">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <div className="flex-1">
-              <p className="font-semibold text-foreground">AI Recommendations</p>
-              <p className="text-sm text-muted-foreground">Personalized health suggestions</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-primary" />
-          </div>
-        </Card>
       </div>
       </div>
     </div>

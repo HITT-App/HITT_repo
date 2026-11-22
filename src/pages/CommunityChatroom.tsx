@@ -1133,7 +1133,7 @@ export default function CommunityChatroom() {
                       key={u.user_id}
                       onClick={() => {
                         if (!isMe) {
-                          navigate(`/community/profile/${u.user_id}`);
+                          navigate(`/community/user/${u.user_id}`);
                           setShowUserList(false);
                         }
                       }}
@@ -1183,7 +1183,7 @@ export default function CommunityChatroom() {
                       <button
                         key={u.user_id}
                         onClick={() => {
-                          navigate(`/community/profile/${u.user_id}`);
+                          navigate(`/community/user/${u.user_id}`);
                           setShowUserList(false);
                         }}
                         className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors text-left"

@@ -14,6 +14,7 @@
  */
 
 import { readFileSync, readdirSync } from 'fs';
+import { spawnSync } from 'child_process';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // ── Config ───────────────────────────────────────────────────────────────────
@@ -4537,6 +4538,23 @@ function platformAudits() {
 // MAIN
 // ════════════════════════════════════════════════════════════════════════════
 
+async function runRouteLinkTests() {
+  section('IN-APP LINKS (every link has a route)');
+
+  // ── ROUTES-01: no link points at a route App.tsx doesn't declare (tests/test-route-links.ts)
+  const run = spawnSync('npx', ['tsx', 'tests/test-route-links.ts'], {
+    cwd: '/Users/vanessa/hitt-app',
+    encoding: 'utf-8',
+  });
+  const out = `${run.stdout ?? ''}${run.stderr ?? ''}`.trim();
+  if (run.status === 0) {
+    pass('ROUTES-01', out.split('\n')[0]);
+  } else {
+    const deadLinks = out.split('\n').filter(l => l.startsWith('  ')).map(l => l.trim());
+    fail('ROUTES-01', 'Every in-app link has a route', deadLinks.length ? deadLinks.join('; ') : out);
+  }
+}
+
 async function main() {
   console.log('\n\x1b[1m\x1b[37m HITT App — Automated QA Test Runner\x1b[0m');
   console.log(' ─────────────────────────────────────');
@@ -4562,6 +4580,7 @@ async function main() {
   platformAudits();
   await runGarminCoachingAuditTests();
   await runGarminCiqAuditTests();
+  await runRouteLinkTests();
 
   // ── Summary ───────────────────────────────────────────────────────────────
 
