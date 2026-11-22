@@ -4,6 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { recordActiveDay } from "@/lib/activeDay";
 import { startOfWeek, endOfWeek, subDays, differenceInMinutes, parseISO, format } from "date-fns";
 
+type SleepLogLike = { sleep_date: string; source_platform: string | null }
+
+// An imported night wins over a hand-logged one for the same date, so forms never shadow it.
+export function sleepLogForDate<T extends SleepLogLike>(logs: T[], date: string): T | undefined {
+  const onDate = logs.filter(l => l.sleep_date === date)
+  return onDate.find(l => l.source_platform) ?? onDate[0]
+}
+
 export const useSleep = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -230,7 +238,8 @@ export const useSleep = () => {
 
   // Log sleep
   const logSleep = useMutation({
-    mutationFn: async (data: {
+    mutationFn: async ({ id, ...data }: {
+      id?: string;
       sleep_date: string;
       bedtime: string;
       wake_time: string;
@@ -246,12 +255,14 @@ export const useSleep = () => {
       const durationMinutes = differenceInMinutes(wakeTime, bedtime);
       const targetHours = preferences?.target_hours || 8;
 
-      const { error } = await supabase.from("sleep_logs").insert({
-        user_id: user?.id,
+      const row = {
         ...data,
         duration_minutes: durationMinutes,
         score_impact: calculateSleepScoreImpact(durationMinutes, data.sleep_quality, targetHours),
-      });
+      };
+      const { error } = id
+        ? await supabase.from("sleep_logs").update(row).eq("id", id).eq("user_id", user!.id).is("source_platform", null)
+        : await supabase.from("sleep_logs").insert({ user_id: user?.id, ...row });
 
       if (error) throw error;
       recordActiveDay(supabase, user!.id).catch(() => {})

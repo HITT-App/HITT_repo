@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useSleep } from "@/hooks/useSleep";
+import { useSleep, sleepLogForDate } from "@/hooks/useSleep";
 import { format, subDays } from "date-fns";
 
 const QUALITY_OPTIONS = [
@@ -23,6 +23,7 @@ export function SleepSection() {
   const [bedtime, setBedtime] = useState("22:30");
   const [wakeTime, setWakeTime] = useState("07:00");
   const [quality, setQuality] = useState<number>(70);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -60,6 +61,21 @@ export function SleepSection() {
   };
   const stageMax = Math.max(stages.awake, stages.rem, stages.deep, stages.light, 60);
 
+  const openForm = () => {
+    const existing = sleepLogForDate(logs, todayStr);
+    if (existing?.source_platform) {
+      navigate(`/sleep/${existing.id}`);
+      return;
+    }
+    setEditingId(existing?.id ?? null);
+    if (existing) {
+      setBedtime(format(new Date(existing.bedtime), "HH:mm"));
+      setWakeTime(format(new Date(existing.wake_time), "HH:mm"));
+      if (existing.sleep_quality != null) setQuality(existing.sleep_quality);
+    }
+    setShowForm(true);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -72,6 +88,7 @@ export function SleepSection() {
       const wakeISO = `${format(today, "yyyy-MM-dd")}T${wakeTime}:00`;
 
       await logSleep.mutateAsync({
+        id: editingId ?? undefined,
         sleep_date: sleepDate,
         bedtime: bedtimeISO,
         wake_time: wakeISO,
@@ -90,7 +107,7 @@ export function SleepSection() {
         <div className="flex items-center gap-2">
           {hasData && (
             <button
-              onClick={() => setShowForm(true)}
+              onClick={openForm}
               className="p-1 rounded-full hover:bg-secondary transition-colors"
               aria-label="Log sleep"
             >

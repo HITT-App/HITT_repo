@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Moon, Sun, Plus, Calendar, X, Loader2, ChevronRight } from "lucide-react";
-import { useSleep } from "@/hooks/useSleep";
+import { useSleep, sleepLogForDate } from "@/hooks/useSleep";
 import { format, parseISO, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { garminSourceLabel } from "@/lib/garmin-state";
@@ -72,11 +72,17 @@ const SleepDashboard = () => {
   const [bedtime, setBedtime] = useState("22:30");
   const [wakeTime, setWakeTime] = useState("07:00");
   const [quality, setQuality] = useState<number>(70);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * SLEEP_TIPS.length));
 
   const openFormForDate = (dateStr: string) => {
-    const existing = logs.find(l => l.sleep_date === dateStr);
+    const existing = sleepLogForDate(logs, dateStr);
+    if (existing?.source_platform) {
+      navigate(`/sleep/${existing.id}`);
+      return;
+    }
+    setEditingId(existing?.id ?? null);
     if (existing) {
       setBedtime(format(new Date(existing.bedtime), "HH:mm"));
       setWakeTime(format(new Date(existing.wake_time), "HH:mm"));
@@ -96,20 +102,12 @@ const SleepDashboard = () => {
       const bedtimeISO = `${format(subDays(parseISO(selectedDate), 1), "yyyy-MM-dd")}T${bedtime}:00`;
       const wakeISO = `${selectedDate}T${wakeTime}:00`;
 
-      let bedMins = parseInt(bedtime.split(":")[0]) * 60 + parseInt(bedtime.split(":")[1]);
-      let wakeMins = parseInt(wakeTime.split(":")[0]) * 60 + parseInt(wakeTime.split(":")[1]);
-      if (wakeMins < bedMins) wakeMins += 24 * 60;
-      const totalMins = wakeMins - bedMins;
-
       await logSleep.mutateAsync({
+        id: editingId ?? undefined,
         sleep_date: selectedDate,
         bedtime: bedtimeISO,
         wake_time: wakeISO,
         sleep_quality: quality,
-        deep_sleep_minutes: Math.round(totalMins * 0.2),
-        rem_sleep_minutes: Math.round(totalMins * 0.25),
-        light_sleep_minutes: Math.round(totalMins * 0.5),
-        awake_minutes: Math.round(totalMins * 0.05),
       });
       setShowForm(false);
     } finally {
@@ -131,7 +129,7 @@ const SleepDashboard = () => {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + 1);
+    startOfWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7));
     return DAY_LABELS.map((_, i) => {
       const d = new Date(startOfWeek);
       d.setDate(startOfWeek.getDate() + i);

@@ -62,6 +62,7 @@ const SleepOnboarding = lazy(() => import("./pages/SleepOnboarding"));
 const SleepDashboard = lazy(() => import("./pages/SleepDashboard"));
 const SleepSchedule = lazy(() => import("./pages/SleepSchedule"));
 const SleepHistory = lazy(() => import("./pages/SleepHistory"));
+const SleepDetail = lazy(() => import("./pages/SleepDetail"));
 const StartSleep = lazy(() => import("./pages/StartSleep"));
 const Sleeping = lazy(() => import("./pages/Sleeping"));
 const LogSleep = lazy(() => import("./pages/LogSleep"));
@@ -214,6 +215,7 @@ const App = () => (
             <Route path="/sleep-dashboard" element={<ProtectedRoute><SleepDashboard /></ProtectedRoute>} />
             <Route path="/sleep-schedule" element={<ProtectedRoute><SleepSchedule /></ProtectedRoute>} />
             <Route path="/sleep-history" element={<ProtectedRoute><SleepHistory /></ProtectedRoute>} />
+            <Route path="/sleep/:id" element={<ProtectedRoute><SleepDetail /></ProtectedRoute>} />
             <Route path="/start-sleep" element={<ProtectedRoute><StartSleep /></ProtectedRoute>} />
             <Route path="/sleeping" element={<ProtectedRoute><Sleeping /></ProtectedRoute>} />
             <Route path="/log-sleep" element={<ProtectedRoute><LogSleep /></ProtectedRoute>} />
