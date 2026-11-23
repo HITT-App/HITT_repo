@@ -1,5 +1,17 @@
 # HITT App Changelog
 
+## [2026-11-23] — Sleep detail page and dead-link fixes (1.0.14 build 351)
+
+TestFlight only, for testing. Build 350 stays in App Review unchanged.
+
+- **Fixed: tapping a night in Sleep History opened a 404 page** (Casey's report). It now opens a view-only page with duration, sleep score, bedtime and wake time, sleep stages and notes (`0024d34`)
+- **Fixed: duplicate sleep nights.** Logging sleep from the dashboard or home card on a night Garmin had already imported added a second entry (Casey's Nov 18). Imported nights now open their detail page, and editing a hand-logged night updates it. The form no longer invents a stage split
+- **Fixed: on Sundays the sleep week strip showed next week**, with every day greyed out
+- **Fixed: dead links** (`dd9b8a7`). Tapping a name in the chatroom member list opened a 404; it now opens their profile. Health Metrics no longer links to the placeholder "AI Recommendations" screen
+- **Deleted posts no longer show** in the feed or on profiles (`ce680ed`)
+- **Server-side, already live on every version:** profile Posts, Likes and Following counts now match reality (they showed 0). Three posts left over from July's soft-delete were removed
+- **New tests in `tests/run.ts`:** ROUTES-01 fails on any in-app link with no matching route; COUNTERS-01 checks every stored counter against live data
+
 ## [2026-11-21] — Garmin Connect release (1.0.14 build 350, Android versionCode 22)
 
 Submitted to App Review and Google Play on 21 November 2026, both set to manual release. Casey chose to launch now, not on 10 December, after Garmin replied that HIIT "may proceed" (Agreement 6.6).
