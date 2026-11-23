@@ -6,6 +6,20 @@ Design calls that need the owner's sign-off. Keep items open until decided, then
 
 ## Open
 
+### Placeholder areas hidden until there's real content (Vanessa, 2026-11-23)
+
+Found by the dead-link test (ROUTES-01). These screens show made-up content, so they're hidden or
+unreachable rather than fixed. Casey to decide whether each is built properly or removed:
+- **Resources** (articles, courses, shorts, workshops): "Tag Name" tags, invented view counts and
+  authors, one short credited to a real public figure. Only reachable from the home section behind
+  `resources_enabled` (off). Its 16 internal links are parked in `tests/test-route-links.ts`
+- **AI Recommendations** (`/health-recommendations`): a fixed list shown to everyone under "based on
+  our health LLMs". Entry removed from Health Metrics in build 351 (`dd9b8a7`)
+- **Coaching** (`coaching_enabled` off): the 5 coaches carry seeded review counts (e.g. "203
+  reviews") with 0 real reviews, and the profile's message button has no target, because coaches
+  aren't app accounts. Needs real data, and a decision on whether users can message coaches
+  directly or only by booking, before coaching is switched on
+
 ### ✅ Garmin Connect release — launch now (Casey, 2026-11-20)
 
 Casey decided to go live straight away rather than on 10 December, after Garmin's reply that HIIT "may proceed" (Agreement 6.6).

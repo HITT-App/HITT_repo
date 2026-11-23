@@ -548,7 +548,15 @@ If you regenerate types, delete the shim rather than adding more casts around it
 - `conversations` + `messages` — Jarvis chat history (one "Jarvis" conversation per user)
 - `workouts` — library of 28 workouts (seed data; real content from owner pending)
 - `workout_preferences` — user's goal, fitness level, days/week, session duration, body areas, equipment
-- `community_posts` — user posts with optional image URLs
+- `community_posts` — user posts with optional image URLs. Deletion is a hard delete; `deleted_at`
+  is a leftover from the retired 30-day soft delete, but feed and profile queries still filter on it
+- `community_profiles` — counts (`posts_count`, `likes_received`, `followers_count`,
+  `following_count`) are recomputed by `refresh_community_profile_counts()` from triggers on posts,
+  likes and profile insert (migration `20261123100000`). Don't increment them from the client
+- `sleep_logs` — one row per night. Imported rows have `source_platform` set (`garmin_api`, HealthKit)
+  and are view-only in the app (`/sleep/:id`); hand-logged rows have it null and are edited in place.
+  Use `sleepLogForDate()` in `useSleep.ts`, which prefers the imported row, never insert a second row
+  for a date that already has one
 - `body_scans` — `{ user_id, scanned_at, estimated_body_fat, confidence_level, analysis, photo_path }`; `photo_path` NULL unless the user opted into storing a progress photo
 - `recipes` + `ingredients` + `steps` — the ~957 owner recipes behind Browse Meals. Macros are **derived from the ingredients** (see `scripts/recipe-nutrition/`), not authored separately; regenerate rather than hand-editing them
 
@@ -556,8 +564,18 @@ If you regenerate types, delete the shim rather than adding more casts around it
 
 Three layers:
 
-**1. Source-file audit suite** (`tests/run.ts` — ~150 tests, ~18 pre-existing failures unrelated to
-current work). Enforces structural contracts by regex-grepping source files. Groups:
+**1. Source-file audit suite** (`tests/run.ts` — ~205 tests with QA credentials, ~18 pre-existing
+failures unrelated to current work). Enforces structural contracts by regex-grepping source files. Groups:
+- **ROUTES-01** — every in-app link (`navigate("/…")`, `to="/…"`, `path: "/…"`) matches a `<Route>` in
+  `App.tsx` (`tests/test-route-links.ts`). Added after Sleep History linked to a `/sleep/:id` page that
+  didn't exist (Nov 2026): build, tsc and lint all pass on a dead link. When you add a link, add its
+  route in the same change. Links into switched-off areas go in the file's `PARKED` list with a reason
+  (currently Resources and coach chat); delete the entry when that area ships.
+- **COUNTERS-01** — every stored counter column (`*_count`, `likes_received`, `total_*`) matches the
+  rows it counts in the live DB (`tests/test-counters.ts`, read-only via `supabase db query --linked`).
+  Added after profiles showed "0 Posts" for ten months: `posts_count` and `likes_received` had no
+  trigger. A new counter column fails the test until it's listed in `COUNTERS` (with its real-count
+  query) or `NOT_DERIVED` (with a reason). Coach review counts are parked (demo data, coaching off).
 - **NF-01..04** — Primary CTA UI feedback contract. Async click handlers must flip a
   screen-transition setter (or show a loading state) *before* the first `await`. Fails loudly if
   someone reintroduces the pattern that caused the "Finish button does nothing" bug on 2026-06-29.
@@ -606,7 +624,9 @@ current work). Enforces structural contracts by regex-grepping source files. Gro
 - `tests/smoke-body-scan-prompt.ts` — inserts a body scan, asks the coach its body-fat %, asserts the reply reflects it (guards the "recall turn" fix above)
 
 ```bash
-npx tsx tests/run.ts                                            # ~150 tests, ~18 pre-existing fails
+npx tsx tests/run.ts                                            # ~205 tests, ~18 pre-existing fails
+npx tsx tests/test-route-links.ts                               # every link has a route (ROUTES-01)
+npx tsx tests/test-counters.ts                                  # stored counters match live data (COUNTERS-01)
 npx tsx tests/test-activity-dedupe.ts                           # 17 unit tests (dedupe pipeline)
 npx tsx tests/test-garmin-sync-tier.ts                          # 8 unit tests (3/7/14 day tier)
 npx tsx tests/test-garmin-pairing.ts                            # 8 unit tests (CIQ JWT + code hashing)

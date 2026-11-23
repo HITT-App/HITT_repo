@@ -2,7 +2,7 @@
 
 ## [2026-11-23] — Sleep detail page and dead-link fixes (1.0.14 build 351)
 
-TestFlight only, for testing. Build 350 stays in App Review unchanged.
+Uploaded to TestFlight 23 November 2026 (delivery `5ef9135e-b59f-4f4e-adf2-302c4025ec5f`), for testing only. Build 350 stays in App Review unchanged. No Android build yet.
 
 - **Fixed: tapping a night in Sleep History opened a 404 page** (Casey's report). It now opens a view-only page with duration, sleep score, bedtime and wake time, sleep stages and notes (`0024d34`)
 - **Fixed: duplicate sleep nights.** Logging sleep from the dashboard or home card on a night Garmin had already imported added a second entry (Casey's Nov 18). Imported nights now open their detail page, and editing a hand-logged night updates it. The form no longer invents a stage split
