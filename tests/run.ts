@@ -4555,6 +4555,23 @@ async function runRouteLinkTests() {
   }
 }
 
+async function runCounterTests() {
+  section('STORED COUNTERS (match the rows they count)');
+
+  // ── COUNTERS-01: every count-like column is checked or explained, and matches live data (tests/test-counters.ts)
+  const run = spawnSync('npx', ['tsx', 'tests/test-counters.ts'], {
+    cwd: '/Users/vanessa/hitt-app',
+    encoding: 'utf-8',
+  });
+  const out = `${run.stdout ?? ''}${run.stderr ?? ''}`.trim();
+  if (run.status === 0) {
+    pass('COUNTERS-01', out.split('\n').filter(l => /^(Coverage|Live)/.test(l)).join(', '));
+  } else {
+    const problems = out.split('\n').filter(l => l.trim().startsWith('✗ ') && !/counter problem/.test(l)).map(l => l.trim().slice(2));
+    fail('COUNTERS-01', 'Stored counters match their data', problems.length ? problems.join('; ') : out);
+  }
+}
+
 async function main() {
   console.log('\n\x1b[1m\x1b[37m HITT App — Automated QA Test Runner\x1b[0m');
   console.log(' ─────────────────────────────────────');
@@ -4581,6 +4598,7 @@ async function main() {
   await runGarminCoachingAuditTests();
   await runGarminCiqAuditTests();
   await runRouteLinkTests();
+  await runCounterTests();
 
   // ── Summary ───────────────────────────────────────────────────────────────
 

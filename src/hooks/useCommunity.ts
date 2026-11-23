@@ -80,6 +80,7 @@ async function fetchPostsPage(
     .from('community_posts')
     .select('*')
     .eq('moderation_hidden', false)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(PAGE_SIZE);
 
